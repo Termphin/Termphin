@@ -1141,6 +1141,7 @@ class _TerminalPaneState extends State<TerminalPane> {
       scrollController: _scrollController,
       focusNode: _focusNode,
       theme: _terminalTheme,
+      textScaler: app_theme.AppTheme.terminalTextScaler(context),
       textStyle: TerminalStyle(
         fontSize: _fontSize,
         height: _lineHeight,

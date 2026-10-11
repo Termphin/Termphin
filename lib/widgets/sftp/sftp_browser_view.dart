@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:dartssh2/dartssh2.dart';
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/gestures.dart' show kDoubleTapTimeout;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
@@ -13,6 +14,7 @@ import '../../i18n/strings.g.dart';
 import '../../models/active_session.dart';
 import '../../screens/sftp/sftp_editor_screen.dart';
 import '../../screens/sftp/sftp_image_preview_screen.dart';
+import '../../services/app/app_commands.dart';
 import '../../services/settings/sftp_settings.dart';
 import '../../services/sftp/cancel_token.dart';
 import '../../services/sftp/download_service.dart';
@@ -32,12 +34,15 @@ import '../ui/app_sheet.dart';
 import '../ui/clipboard_and_links.dart';
 import '../ui/confirm_dialog.dart';
 import '../ui/context_menu.dart';
+import '../ui/shortcut_hint.dart';
 import '../ui/text_input_dialog.dart';
+import '../window/app_menu.dart';
 import 'sftp_file_actions_menu.dart';
 import 'sftp_file_row.dart';
 import 'sftp_folder_picker.dart';
 import 'sftp_path_bar.dart';
 import 'sftp_selection_bar.dart';
+import 'sftp_shortcuts.dart';
 import 'sftp_sort_sheet.dart';
 import 'transfer_conflict_dialog.dart';
 import 'transfer_progress_dialog.dart';
@@ -88,7 +93,15 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
   int _loadGeneration = 0;
 
   final Set<String> _selected = {};
-  bool get _selectionMode => _selected.isNotEmpty;
+
+  /// Whether the selection has the bar of its own in place of the path bar.
+  ///
+  /// On a phone that is any selection: it starts with a long press and means
+  /// the user is picking. On a desktop a click selects, as in a file manager,
+  /// so one selected row is the ordinary state of the listing - the path bar
+  /// stays, and the bar for the selection comes with the second row.
+  bool get _selectionMode =>
+      isDesktopPlatform ? _selected.length > 1 : _selected.isNotEmpty;
 
   /// The last few copy and move destinations per machine, for the picker.
   /// Memory only: a folder picked last week is as likely gone as useful.
@@ -188,6 +201,8 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
 
   @override
   void dispose() {
+    _doubleClickTimer?.cancel();
+    _listScroll.dispose();
     _keysFocus.dispose();
     sftpShowHiddenSetting.removeListener(_onShowHiddenChanged);
     for (final opener in _fileMenuOpeners.values) {
@@ -297,6 +312,8 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
         _isLoading = false;
         _isRefreshing = false;
         _selected.clear();
+        _lastClicked = null;
+        if (!_items.any((i) => i.filename == _cursor)) _cursor = null;
       });
     } catch (e) {
       if (!mounted || generation != _loadGeneration) return;
@@ -407,32 +424,140 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
 
   void _clearSelection() => setState(_selected.clear);
 
-  /// The row a Shift-click extends a selection from.
+  /// The row a Shift-click or Shift-arrow extends a selection from.
   String? _lastClicked;
 
-  /// Takes the keyboard on a desktop: arrows aside, the browser answers the
-  /// keys a file manager does.
+  /// The row the keyboard is on, on a desktop: where the arrows move from,
+  /// what Enter opens and Space toggles. Usually the one selected row, but
+  /// Ctrl (Cmd) with the arrows walks it past a selection without touching
+  /// it.
+  String? _cursor;
+
+  /// The row a click just landed on, while a second click would still make
+  /// it a double click. A timer rather than two timestamps, so the first
+  /// click acts at once instead of waiting to learn whether it is half of a
+  /// pair.
+  String? _clickedOnce;
+  Timer? _doubleClickTimer;
+
+  final _listScroll = ScrollController();
+
+  /// Takes the keyboard on a desktop: the browser answers the keys a file
+  /// manager does.
   final _keysFocus = FocusNode(debugLabel: 'sftpBrowserKeys');
 
+  /// Makes the rows between [from] and [to] the selection, both included.
   void _selectRange(String from, String to) {
-    final names = _items
-        .where((i) => i.filename != '..')
-        .map((i) => i.filename)
-        .toList();
+    final names = _items.map((i) => i.filename).toList();
     final a = names.indexOf(from);
     final b = names.indexOf(to);
     if (a < 0 || b < 0) return;
     setState(() {
-      _selected.addAll(names.sublist(math.min(a, b), math.max(a, b) + 1));
+      _selected
+        ..clear()
+        ..addAll(names.sublist(math.min(a, b), math.max(a, b) + 1))
+        ..remove('..');
     });
+  }
+
+  /// A click on a desktop row, as a file manager takes it: it selects the
+  /// row, Ctrl (Cmd) adds or removes it, Shift takes in everything from the
+  /// row the selection started at, and a second click in time opens it.
+  void _onDesktopClick(SftpName item) {
+    final name = item.filename;
+    if (rangeModifierPressed) {
+      final from = _lastClicked ?? _cursor ?? name;
+      _lastClicked = from;
+      _cursor = name;
+      _selectRange(from, name);
+      return;
+    }
+    if (selectionModifierPressed) {
+      _lastClicked = name;
+      _cursor = name;
+      if (name != '..') _toggleSelected(name);
+      return;
+    }
+    if (_clickedOnce == name) {
+      _doubleClickTimer?.cancel();
+      _clickedOnce = null;
+      unawaited(_navigateTo(item));
+      return;
+    }
+    _doubleClickTimer?.cancel();
+    _clickedOnce = name;
+    _doubleClickTimer = Timer(kDoubleTapTimeout, () => _clickedOnce = null);
+    _selectOnly(name);
+  }
+
+  /// Puts the cursor on [name] and makes it the whole selection; `..` takes
+  /// the cursor and leaves nothing selected, there being nothing to do to
+  /// it but open it.
+  void _selectOnly(String name) {
+    setState(() {
+      _cursor = name;
+      _lastClicked = name;
+      _selected.clear();
+      if (name != '..') _selected.add(name);
+    });
+  }
+
+  /// Moves the cursor [step] rows. Plain, the row it lands on becomes the
+  /// selection; with [extend] (Shift) the selection grows or shrinks from
+  /// where it started; with [keep] (Ctrl, Cmd) only the cursor moves.
+  void _moveCursor(int step, {required bool extend, required bool keep}) {
+    if (_items.isEmpty) return;
+    final names = _items.map((i) => i.filename).toList();
+    final at = _cursor == null ? -1 : names.indexOf(_cursor!);
+    final index = at < 0
+        ? (step > 0 ? 0 : names.length - 1)
+        : (at + step).clamp(0, names.length - 1);
+    final name = names[index];
+    if (extend) {
+      final from = _lastClicked ?? (at < 0 ? name : names[at]);
+      _lastClicked = from;
+      _cursor = name;
+      _selectRange(from, name);
+    } else if (keep) {
+      setState(() => _cursor = name);
+    } else {
+      _selectOnly(name);
+    }
+    _revealRow(index);
+  }
+
+  /// Scrolls just far enough that row [index] is on screen. The desktop's
+  /// rows are all [kSftpRowHeight] tall, so where one is needs no measuring.
+  void _revealRow(int index) {
+    if (!_listScroll.hasClients) return;
+    final position = _listScroll.position;
+    final top = index * kSftpRowHeight;
+    final bottom = top + kSftpRowHeight;
+    if (top < position.pixels) {
+      _listScroll.jumpTo(top);
+    } else if (bottom > position.pixels + position.viewportDimension) {
+      _listScroll.jumpTo(bottom - position.viewportDimension);
+    }
+  }
+
+  /// How many rows Page Up and Page Down move by: a screenful less one, so
+  /// the row that was at the edge stays in view.
+  int get _pageRows {
+    if (!_listScroll.hasClients) return 10;
+    final rows = _listScroll.position.viewportDimension ~/ kSftpRowHeight;
+    return math.max(rows - 1, 1);
   }
 
   /// A right click: the row's own menu, opened where its `⋮` would open it -
   /// or, over a selection, what can be done to all of it.
+  ///
+  /// A row outside the selection becomes the selection first, so the menu is
+  /// never about something other than what was clicked.
   void _onRowSecondaryTap(SftpName item, Offset globalPosition) {
     final t = Translations.of(context);
+    _keysFocus.requestFocus();
+    if (!_selected.contains(item.filename)) _selectOnly(item.filename);
     if (_selectionMode) {
-      if (!_selected.contains(item.filename)) _toggleSelected(item.filename);
       unawaited(
         showAppContextMenu(
           context,
@@ -441,12 +566,27 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
             ContextMenuEntry(
               label: t.sftp.download,
               icon: PhosphorIconsRegular.downloadSimple,
+              shortcut: AppCommands.describeActivator(SftpShortcuts.download),
               onSelected: () => unawaited(_downloadSelected()),
+            ),
+            if (_copyAvailable)
+              ContextMenuEntry(
+                label: t.sftp.copyTo,
+                icon: PhosphorIconsRegular.folders,
+                shortcut: AppCommands.describeActivator(SftpShortcuts.copyTo),
+                onSelected: () => unawaited(_transferSelected(move: false)),
+              ),
+            ContextMenuEntry(
+              label: t.sftp.moveTo,
+              icon: PhosphorIconsRegular.arrowSquareRight,
+              shortcut: AppCommands.describeActivator(SftpShortcuts.moveTo),
+              onSelected: () => unawaited(_transferSelected(move: true)),
             ),
             null,
             ContextMenuEntry(
               label: t.common.delete,
               icon: PhosphorIconsRegular.trash,
+              shortcut: AppCommands.describeActivator(SftpShortcuts.delete),
               destructive: true,
               onSelected: () => unawaited(_deleteSelected()),
             ),
@@ -458,14 +598,195 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
     _menuOpenerFor(_joinPath(item.filename)).value = Object();
   }
 
+  /// The browser's menu in the title bar: everything its keys do, each with
+  /// its key, greyed out while there is nothing selected for it to act on.
+  List<AppMenu> menus(Translations t) {
+    final ready = _sftp != null;
+    final some = ready && _selected.isNotEmpty;
+    final one = ready && _selected.length == 1;
+    return [
+      AppMenu(t.window.menuFiles, [
+        [
+          AppMenuItem(
+            label: t.sftp.newFolder,
+            icon: PhosphorIconsRegular.folderPlus,
+            activator: SftpShortcuts.newFolder,
+            enabled: ready,
+            onSelected: () => unawaited(_createFolder()),
+          ),
+          AppMenuItem(
+            label: t.sftp.newFile,
+            icon: PhosphorIconsRegular.filePlus,
+            activator: SftpShortcuts.newFile,
+            enabled: ready,
+            onSelected: () => unawaited(_createFile()),
+          ),
+          AppMenuItem(
+            label: t.sftp.uploadAction,
+            icon: PhosphorIconsRegular.uploadSimple,
+            enabled: ready,
+            onSelected: () => unawaited(_uploadFile()),
+          ),
+        ],
+        [
+          AppMenuItem(
+            label: t.common.rename,
+            icon: PhosphorIconsRegular.pencilSimple,
+            activator: SftpShortcuts.rename,
+            enabled: one,
+            onSelected: _renameSelected,
+          ),
+          AppMenuItem(
+            label: t.sftp.download,
+            icon: PhosphorIconsRegular.downloadSimple,
+            activator: SftpShortcuts.download,
+            enabled: some,
+            onSelected: () => unawaited(_downloadSelected()),
+          ),
+          AppMenuItem(
+            label: t.sftp.copyTo,
+            icon: PhosphorIconsRegular.folders,
+            activator: SftpShortcuts.copyTo,
+            enabled: some && _copyAvailable,
+            onSelected: () => unawaited(_transferSelected(move: false)),
+          ),
+          AppMenuItem(
+            label: t.sftp.moveTo,
+            icon: PhosphorIconsRegular.arrowSquareRight,
+            activator: SftpShortcuts.moveTo,
+            enabled: some,
+            onSelected: () => unawaited(_transferSelected(move: true)),
+          ),
+          AppMenuItem(
+            label: t.common.delete,
+            icon: PhosphorIconsRegular.trash,
+            activator: SftpShortcuts.delete,
+            enabled: some,
+            onSelected: () => unawaited(_deleteSelected()),
+          ),
+        ],
+        [
+          AppMenuItem(
+            label: t.sftp.selectAll,
+            icon: PhosphorIconsRegular.checks,
+            activator: SftpShortcuts.selectAll,
+            enabled: ready,
+            onSelected: _selectAll,
+          ),
+        ],
+        [
+          AppMenuItem(
+            label: t.sftp.parentFolder,
+            icon: PhosphorIconsRegular.arrowUp,
+            activator: SftpShortcuts.parentFolder,
+            enabled: ready,
+            onSelected: _goUp,
+          ),
+          AppMenuItem(
+            label: t.sftp.back,
+            icon: PhosphorIconsRegular.arrowLeft,
+            activator: SftpShortcuts.back,
+            enabled: canGoBackHistory,
+            onSelected: goBackHistory,
+          ),
+          AppMenuItem(
+            label: t.common.refresh,
+            icon: PhosphorIconsRegular.arrowClockwise,
+            activator: SftpShortcuts.refresh,
+            enabled: ready,
+            onSelected: () => unawaited(_loadDirectory(showSpinner: false)),
+          ),
+          AppMenuItem(
+            label: t.sftp.showHidden,
+            checked: _showHidden,
+            activator: SftpShortcuts.toggleHidden,
+            onSelected: () => unawaited(_toggleShowHidden()),
+          ),
+        ],
+      ]),
+    ];
+  }
+
+  void _renameSelected() {
+    if (_selected.length != 1) return;
+    final item = _items.where((i) => i.filename == _selected.first);
+    if (item.isNotEmpty) unawaited(_renameItem(item.first));
+  }
+
+  /// The keys a file manager answers. Arrows, Page Up and Down, Home and
+  /// End move the cursor and repeat while held; Shift extends the selection
+  /// with them and Ctrl (Cmd) moves without selecting. Enter opens the row
+  /// the cursor is on, Space adds it to the selection or takes it out. The
+  /// rest - new folder, hidden files, rename, download and so on - are
+  /// [SftpShortcuts], the list the menu and the tooltips print them from.
   KeyEventResult _onBrowserKey(FocusNode node, KeyEvent event) {
-    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    if (event is KeyUpEvent) return KeyEventResult.ignored;
     final keyboard = HardwareKeyboard.instance;
     final primary = isMacOSPlatform
         ? keyboard.isMetaPressed
         : keyboard.isControlPressed;
     final key = event.logicalKey;
-    if (key == LogicalKeyboardKey.escape && _selectionMode) {
+    final step = switch (key) {
+      LogicalKeyboardKey.arrowDown => 1,
+      LogicalKeyboardKey.arrowUp => -1,
+      LogicalKeyboardKey.pageDown => _pageRows,
+      LogicalKeyboardKey.pageUp => -_pageRows,
+      LogicalKeyboardKey.end => _items.length,
+      LogicalKeyboardKey.home => -_items.length,
+      _ => null,
+    };
+    if (step != null && !keyboard.isAltPressed) {
+      _moveCursor(step, extend: keyboard.isShiftPressed, keep: primary);
+      return KeyEventResult.handled;
+    }
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    bool pressed(SingleActivator activator) =>
+        activator.accepts(event, keyboard);
+    if (pressed(SftpShortcuts.back)) {
+      goBackHistory();
+      return KeyEventResult.handled;
+    }
+    if (pressed(SftpShortcuts.newFolder)) {
+      unawaited(_createFolder());
+      return KeyEventResult.handled;
+    }
+    if (pressed(SftpShortcuts.newFile)) {
+      unawaited(_createFile());
+      return KeyEventResult.handled;
+    }
+    if (pressed(SftpShortcuts.toggleHidden)) {
+      unawaited(_toggleShowHidden());
+      return KeyEventResult.handled;
+    }
+    if (pressed(SftpShortcuts.download)) {
+      if (_selected.isNotEmpty) unawaited(_downloadSelected());
+      return KeyEventResult.handled;
+    }
+    if (pressed(SftpShortcuts.moveTo)) {
+      if (_selected.isNotEmpty) unawaited(_transferSelected(move: true));
+      return KeyEventResult.handled;
+    }
+    if (pressed(SftpShortcuts.copyTo)) {
+      if (_selected.isNotEmpty && _copyAvailable) {
+        unawaited(_transferSelected(move: false));
+      }
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.numpadEnter) {
+      final item = _items.where((i) => i.filename == _cursor).firstOrNull;
+      if (item == null) return KeyEventResult.ignored;
+      unawaited(_navigateTo(item));
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.space) {
+      final cursor = _cursor;
+      if (cursor == null || cursor == '..') return KeyEventResult.ignored;
+      _lastClicked = cursor;
+      _toggleSelected(cursor);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.escape && _selected.isNotEmpty) {
       _clearSelection();
       return KeyEventResult.handled;
     }
@@ -478,7 +799,7 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
       unawaited(_loadDirectory(showSpinner: false));
       return KeyEventResult.handled;
     }
-    if (key == LogicalKeyboardKey.delete && _selectionMode) {
+    if (key == LogicalKeyboardKey.delete && _selected.isNotEmpty) {
       unawaited(_deleteSelected());
       return KeyEventResult.handled;
     }
@@ -487,8 +808,7 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.f2 && _selected.length == 1) {
-      final item = _items.where((i) => i.filename == _selected.first);
-      if (item.isNotEmpty) unawaited(_renameItem(item.first));
+      _renameSelected();
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
@@ -1228,7 +1548,7 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
                   onPathSubmitted: _navigateToTypedPath,
                   onRefresh: () =>
                       unawaited(_loadDirectory(showSpinner: false)),
-                  onSort: _showSortMenu,
+                  onSort: isDesktopPlatform ? null : _showSortMenu,
                   onToggleHidden: () => unawaited(_toggleShowHidden()),
                   onEditingChanged: (editing) =>
                       setState(() => _editingPath = editing),
@@ -1292,6 +1612,7 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
           child: AppDropdownItem(
             icon: PhosphorIconsFill.folderPlus,
             label: t.sftp.newFolder,
+            trailing: ShortcutHint.of(SftpShortcuts.newFolder),
           ),
         ),
         DropdownItem(
@@ -1300,6 +1621,7 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
           child: AppDropdownItem(
             icon: PhosphorIconsFill.filePlus,
             label: t.sftp.newFile,
+            trailing: ShortcutHint.of(SftpShortcuts.newFile),
           ),
         ),
       ],
@@ -1396,6 +1718,10 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
     );
   }
 
+  /// Pulling the list down refreshes it on a phone only. A desktop has no
+  /// pull - a wheel at the top of a list is just a wheel at the top - and
+  /// refreshes on [SftpShortcuts.refresh], the path bar's button or the
+  /// Files menu.
   Widget _buildList() {
     if (_isLoading) return const Center(child: CircularProgressIndicator());
     if (_error.isNotEmpty) {
@@ -1406,40 +1732,68 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
         ),
       );
     }
-    return Column(
-      children: [
-        if (_isRefreshing)
-          LinearProgressIndicator(
-            minHeight: 2,
-            color: _accent,
-            backgroundColor: _surface.invisible,
-          ),
-        Expanded(
-          child: RefreshIndicator(
-            onRefresh: () => _loadDirectory(showSpinner: false),
-            child: ListView.builder(
-              padding: EdgeInsets.zero,
-              physics: const AlwaysScrollableScrollPhysics(),
-              itemCount: _items.length,
-              itemBuilder: (context, index) => _buildItem(_items[index]),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = isDesktopPlatform
+            ? SftpColumns.forWidth(constraints.maxWidth)
+            : null;
+        final list = ListView.builder(
+          controller: _listScroll,
+          padding: EdgeInsets.zero,
+          physics: columns == null
+              ? const AlwaysScrollableScrollPhysics()
+              : null,
+          itemExtent: columns == null ? null : kSftpRowHeight,
+          itemCount: _items.length,
+          itemBuilder: (context, index) =>
+              _buildItem(_items[index], columns: columns),
+        );
+        return Column(
+          children: [
+            if (_isRefreshing)
+              LinearProgressIndicator(
+                minHeight: 2,
+                color: _accent,
+                backgroundColor: _surface.invisible,
+              ),
+            if (columns != null)
+              SftpColumnHeader(
+                columns: columns,
+                field: _sortField,
+                descending: _sortDescending,
+                onSort: (field, descending) =>
+                    unawaited(_setSort(field, descending)),
+              ),
+            Expanded(
+              child: columns != null
+                  ? list
+                  : RefreshIndicator(
+                      onRefresh: () => _loadDirectory(showSpinner: false),
+                      child: list,
+                    ),
             ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 
-  /// A desktop also takes a click with modifiers - Shift takes in every row
-  /// from the last one clicked, Ctrl (Cmd) picks one more, as a long press
-  /// does - and a right click opens the row's menu.
-  Widget _buildItem(SftpName item) {
+  /// A phone opens a row on a tap and selects on a long press. A desktop
+  /// selects on a click and opens on the second ([_onDesktopClick]), opens
+  /// the row's menu on a right click, and lays the listing out as a table
+  /// ([columns]) under a header that sorts it. Its rows carry no checkmark:
+  /// the highlight says which are selected, and the `⋮` stays where it was.
+  Widget _buildItem(SftpName item, {required SftpColumns? columns}) {
     final isUp = item.filename == '..';
     final path = _joinPath(item.filename);
+    final desktop = isDesktopPlatform;
     final row = SftpFileRow(
       item: item,
+      columns: columns,
+      isCursor: desktop && _cursor == item.filename,
       path: path,
       isSelected: _selected.contains(item.filename),
-      selectionMode: _selectionMode,
+      selectionMode: !desktop && _selectionMode,
       isProbing: _probingPaths.contains(path),
       probe: _textProbes[path],
       runProbe: () => _probeText(item),
@@ -1447,30 +1801,23 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
       copyAvailable: _copyAvailable,
       onTap: () {
         _keysFocus.requestFocus();
-        if (!isUp && rangeModifierPressed && _lastClicked != null) {
-          _selectRange(_lastClicked!, item.filename);
-          return;
-        }
-        if (!isUp && selectionModifierPressed) {
-          _lastClicked = item.filename;
-          _toggleSelected(item.filename);
+        if (desktop) {
+          _onDesktopClick(item);
           return;
         }
         if (_selectionMode && !isUp) {
-          _lastClicked = item.filename;
           _toggleSelected(item.filename);
           return;
         }
-        _lastClicked = item.filename;
         _navigateTo(item);
       },
       onLongPress: () {
-        if (isUp) return;
+        if (isUp || desktop) return;
         _toggleSelected(item.filename);
       },
       onAction: (action) => _handleFileAction(action, item, path),
     );
-    if (isUp || !isDesktopPlatform) return row;
+    if (isUp || !desktop) return row;
     return GestureDetector(
       onSecondaryTapDown: (details) =>
           _onRowSecondaryTap(item, details.globalPosition),

@@ -60,11 +60,43 @@ know which they got.
 - **`pushAppPage` opened from outside a section** (a form's dialog, a session)
   has no sidebar to open beside, so it falls back to `pushAppWindow`.
 
+## Density
+
+`AppTheme.themeFor` builds a denser theme on a desktop (`isDesktopPlatform`,
+not `isWideLayout` - a tablet on its side is wide and still a touch screen):
+
+- **Controls**: compact `VisualDensity`, shrink-wrapped tap targets, buttons
+  `AppTheme.desktopControlHeight` (36) tall instead of 48, dense fields, a 44 px
+  app bar.
+- **A modal's buttons** go through `ModalActions`
+  (`lib/widgets/ui/modal_actions.dart`): full width on a phone, their own
+  width at the right on a desktop, the secondary before the primary.
+- **Corners**: `AppTheme.radiusXs…radiusXxl` are getters, 4-14 on a desktop and
+  10-40 on a phone, so an expression that uses one is never `const`. Dialogs
+  are square on both.
+- **Text**: `_ScaledMediaQuery` multiplies the text scale by
+  `AppTheme.desktopTextScale` (13/14), which reaches every hardcoded
+  `fontSize` at once. The terminal takes it back out with
+  `AppTheme.terminalTextScaler` - its size is the user's own setting - so a
+  new `TerminalView` must pass that as its `textScaler`.
+- **Ink**: no splash anywhere (`NoSplash`); a press is the highlight alone.
+- **Scrollbars** are thin and thicken under the pointer; **tooltips** open
+  after 350 ms. A button with a shortcut names it in its tooltip:
+  `AppCommands.tooltip(label, command)`, or `tooltipFor(label, activator)` for
+  a key a screen answers itself. A menu row prints it with `ShortcutHint`.
+- **Motion**: sections switch at once, pages and dialogs fade in 90 ms.
+
+`test/theme/desktop_theme_test.dart` pins the above.
+
 ## Shell and navigation
 
 - **One sidebar.** On a desktop `MainShell` keeps a `SectionNavigator` per
   destination, so a page opened from Settings or a list stays beside the
   sidebar. A click on the section already selected goes back to its root.
+- **The sidebar's edge drags.** `SidebarBuilder` (`nav_rail.dart`) builds both
+  rails and puts a resize edge down the right of an expanded one; a double
+  click restores the default. The width is `sidebarWidthSetting` (180-420),
+  device state like the window's bounds and so left out of the backup.
 - **No back arrows.** `DesktopPageRoute` implies none. The path to the page is
   published on `desktopBreadcrumb` and drawn in the title bar, every step but
   the last a link back. Esc and the mouse's back button go up one page;
@@ -94,7 +126,18 @@ Left to right: the logo and the Termphin / View / Help menus (on a Mac, room
 for the traffic lights instead, and the same menus as the system menu bar via
 `AppMenuBar`), the breadcrumb over the drag area (double click maximizes), the
 search pill with its shortcut, and minimize / maximize / close painted by
-`WindowButtons`. Linux gets resize edges (`DragToResizeArea`) since an
+`WindowButtons`.
+
+**The menus follow the screen.** Between Termphin and View stand the menus of
+whatever is in front, published through a `ContextMenuScope`
+(`lib/widgets/window/app_menu.dart`) and read from `ContextMenus`: Machines on
+the machines list, Session while a terminal is on screen
+(`TerminalScreenState.menus` - new session, terminal or files, find, tabs,
+text size, detach or close, end session), and Files after it while that
+session shows its files (`SftpBrowserViewState.menus`). View keeps only what
+is true everywhere. An entry with nothing to act on is disabled, not removed;
+a menu is read again as it opens. A new screen with actions of its own
+publishes a menu the same way rather than adding to a fixed list. Linux gets resize edges (`DragToResizeArea`) since an
 undecorated GTK window has none. The window's own title follows the session on
 screen.
 
@@ -151,6 +194,8 @@ root navigator).
 | Next / previous tab | Ctrl+Tab, Ctrl+PgDn / Ctrl+Shift+Tab, Ctrl+PgUp | ⌃Tab, ⇧⌘] / ⌃⇧Tab, ⇧⌘[ |
 | Tab 1-9 | Alt+1…9 | ⌘1…9 |
 | Find in terminal | Ctrl+Shift+F | ⌘F |
+| Terminal or files | Ctrl+Shift+E | ⌘E |
+| End the persistent session (asks first) | Ctrl+Alt+Shift+W | ⇧⌘W |
 | Fast upload (pick a file, upload it into the session) | Ctrl+Shift+O (Ctrl+Shift+U is IBus's) | ⌘O |
 | Text size | Ctrl+= / Ctrl+− / Ctrl+0, Ctrl+wheel | ⌘= / ⌘− / ⌘0 |
 | Settings, sidebar, shortcuts, manual | Ctrl+Shift+, / B / / , F1 | ⌘, / ⌘B / ⌘/ , F1 |
@@ -192,6 +237,21 @@ A handler registers with `AppCommands.instance.register(command, handler)` and
 keeps the returned callback to unregister; the last one registered is asked
 first, and one that returns false passes the command on.
 
+Closing a tab (Ctrl+Shift+W) is what detaches a persistent session; the tab
+menu prints the key beside Detach and End session.
+
+**Lists take the arrow keys.** `ListKeyNavigation`
+(`lib/widgets/ui/list_key_navigation.dart`) wraps a screen's body -
+`LargeTitleScaffold` does it for every screen built on it - and moves the
+focus highlight from row to row with Up, Down, Home and End; Enter opens the
+focused row. It picks the next row by geometry, so a row's own `⋮` button is
+never a stop. `MainShell` excludes the sections off screen from focus and
+turns their `TickerMode` off, which is how a list knows to take the keyboard
+when its section comes back.
+
+**A confirm dialog answers to the keyboard**: `showConfirmDialog` focuses its
+confirm button, so Enter confirms and Esc cancels.
+
 **Esc** closes whatever is on top: dialogs, sheets, forms and windows (through
 the route), menus (Flutter's own), the terminal's
 and the editor's find bars, a section's page. A screen with something of its
@@ -219,11 +279,45 @@ those are never asked while a `TerminalView` has focus, where Esc is vim's.
   and a drag that selects would otherwise leave Ctrl+C with nowhere to go.
 - **The tab swipe is a finger's only.** `SessionSwipeController` ignores mouse
   pointers: a sideways mouse drag over the terminal is a text selection.
-- **SFTP** takes files dropped from the file manager (`desktop_drop`), and the
-  keys a file manager answers: Backspace up a folder, F5 refresh, F2 rename,
-  Delete, Ctrl+A, Esc.
+- **SFTP is a file manager.** The listing is a table (`SftpFileRow` with
+  `SftpColumns`, rows `kSftpRowHeight` tall) under `SftpColumnHeader`, whose
+  columns sort on a click - so there is no sort button, and no pull to
+  refresh. A click selects, a second opens; Ctrl (Cmd) click adds, Shift
+  click takes the range. The arrows, Page Up/Down, Home and End move a
+  cursor and the selection with it, Shift extends, Ctrl moves without
+  selecting, Space toggles, Enter opens. One selected row keeps the path
+  bar; the selection bar comes with the second. The rest of its keys are
+  `SftpShortcuts` (`lib/widgets/sftp/sftp_shortcuts.dart`), the one list the
+  handler, the Files menu, the tooltips and the shortcuts sheet read:
+
+  | Key | Does |
+  |---|---|
+  | Backspace / Alt+← | Parent folder / back |
+  | F5 | Refresh |
+  | F7 / Shift+F7 | New folder / new file |
+  | F2 / Delete | Rename / delete |
+  | F6 / Shift+F6 | Move to / copy to |
+  | Ctrl+D (⌘D) | Download |
+  | Ctrl+H (⇧⌘.) | Show hidden files |
+  | Ctrl+A (⌘A), Esc | Select all, clear |
+
+  It also takes files dropped from the file manager (`desktop_drop`).
+- **Copy to and Move to open a file dialog.** `SftpFolderPicker` on a desktop
+  has tight rows, a click that puts the cursor on a folder and a second that
+  opens it, the arrows, Enter (open the folder under the cursor, or take the
+  one shown when the cursor is on none), Ctrl (Cmd) + Enter to take the one
+  shown from anywhere, Backspace up, F7 for a new folder, and Cancel beside
+  the action; Esc closes it.
 
 ## Smaller things
+
+- The keys screen lists the private keys in the user's `~/.ssh` that the app
+  does not have yet (`LocalSshKeys`, `lib/services/platform/local_ssh_keys.dart`,
+  behind `PlatformFeature.localSshFolder`), each with an Import button and
+  Import all over them; one with a passphrase asks for it. The folder is
+  `HOME/.ssh`, `USERPROFILE\.ssh` on Windows. The Mac build is sandboxed, so
+  there the folder is only readable if the sandbox allows it - otherwise the
+  section is absent.
 
 - On Linux without a keyring the master key falls back to a private file, with
   a warning in Settings → Security (`docs/secrets-architecture.md`, D1).

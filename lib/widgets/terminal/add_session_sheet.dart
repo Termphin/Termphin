@@ -388,7 +388,7 @@ class _ProfileRowState extends ConsumerState<_ProfileRow> {
     final t = Translations.of(context);
     final profile = widget.profile;
     final radius = hasBelow
-        ? const BorderRadius.vertical(top: Radius.circular(AppTheme.radiusMd))
+        ? BorderRadius.vertical(top: Radius.circular(AppTheme.radiusMd))
         : BorderRadius.circular(AppTheme.radiusMd);
     return Material(
       color: context.colors.surfaceElevated.invisible,
@@ -489,9 +489,7 @@ class _StatusRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final radius = isLast
-        ? const BorderRadius.vertical(
-            bottom: Radius.circular(AppTheme.radiusMd),
-          )
+        ? BorderRadius.vertical(bottom: Radius.circular(AppTheme.radiusMd))
         : BorderRadius.zero;
     return Container(
       decoration: BoxDecoration(
@@ -523,7 +521,7 @@ class _NewSessionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Translations.of(context);
-    const radius = BorderRadius.vertical(
+    final radius = BorderRadius.vertical(
       bottom: Radius.circular(AppTheme.radiusMd),
     );
     return Material(
@@ -595,9 +593,7 @@ class _RemoteSessionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = Translations.of(context);
     final radius = isLast
-        ? const BorderRadius.vertical(
-            bottom: Radius.circular(AppTheme.radiusMd),
-          )
+        ? BorderRadius.vertical(bottom: Radius.circular(AppTheme.radiusMd))
         : BorderRadius.zero;
     return Material(
       color: context.colors.surfaceElevated.invisible,
@@ -693,9 +689,7 @@ class _ResumableSessionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = Translations.of(context);
     final radius = isLast
-        ? const BorderRadius.vertical(
-            bottom: Radius.circular(AppTheme.radiusMd),
-          )
+        ? BorderRadius.vertical(bottom: Radius.circular(AppTheme.radiusMd))
         : BorderRadius.zero;
     return Material(
       color: context.colors.surfaceElevated.invisible,

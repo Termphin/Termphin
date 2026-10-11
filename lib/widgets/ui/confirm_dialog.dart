@@ -10,6 +10,10 @@ import '../../theme/theme.dart';
 /// A [destructive] action - deleting, ending, overwriting - draws its
 /// confirm button in the palette's error colour, so every dialog that can
 /// lose something looks the same.
+///
+/// The confirm button has the focus when the dialog opens, so with a
+/// keyboard Enter confirms and Esc - which dismisses the dialog - cancels,
+/// as a dialog asked for by a key should be answerable by one.
 Future<bool> showConfirmDialog(
   BuildContext context, {
   required String title,
@@ -29,7 +33,8 @@ Future<bool> showConfirmDialog(
           onPressed: () => Navigator.pop(ctx, false),
           child: Text(cancelLabel ?? t.common.cancel),
         ),
-        TextButton(
+                TextButton(
+          autofocus: true,
           onPressed: () => Navigator.pop(ctx, true),
           child: Text(
             confirmLabel,

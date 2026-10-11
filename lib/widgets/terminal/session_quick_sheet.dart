@@ -79,7 +79,7 @@ class _LiveSurface extends StatelessWidget {
   Widget build(BuildContext context) {
     final shape =
         Theme.of(context).bottomSheetTheme.shape ??
-        const RoundedRectangleBorder(
+        RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(
             top: Radius.circular(AppTheme.radiusXl),
           ),

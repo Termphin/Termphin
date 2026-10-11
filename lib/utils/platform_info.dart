@@ -85,8 +85,12 @@ enum PlatformFeature {
   /// The app draws its own title bar in place of the system's.
   customWindowChrome,
 
-  /// The menu bar along the top of the screen that the system owns.
+    /// The menu bar along the top of the screen that the system owns.
   nativeMenuBar,
+
+  /// The user keeps their own SSH keys in a `.ssh` folder the app can look
+  /// in. A phone has no such folder to look in.
+  localSshFolder,
 }
 
 bool platformHas(PlatformFeature feature) => switch (feature) {
@@ -109,7 +113,8 @@ bool platformHas(PlatformFeature feature) => switch (feature) {
   PlatformFeature.haptics => isAndroidPlatform || isIOSPlatform,
   PlatformFeature.touchControls => !isDesktopPlatform,
   PlatformFeature.customWindowChrome => isDesktopPlatform,
-  PlatformFeature.nativeMenuBar => isMacOSPlatform,
+    PlatformFeature.nativeMenuBar => isMacOSPlatform,
+  PlatformFeature.localSshFolder => isDesktopPlatform,
 };
 
 /// True when there's enough room for the sidebar layout: a desktop window,

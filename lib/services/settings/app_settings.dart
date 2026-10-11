@@ -39,6 +39,7 @@ Future<void> loadAppSettings() async {
     remoteAgentSetting.load(),
     lastBackupAtSetting.load(),
     sidebarCollapsedSetting.load(),
+    sidebarWidthSetting.load(),
     commandSuggestionsSetting.load(),
     sftpShowHiddenSetting.load(),
     sftpFollowTerminalSetting.load(),

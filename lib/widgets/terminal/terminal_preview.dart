@@ -106,6 +106,7 @@ class _TerminalPreviewState extends State<TerminalPreview> {
           child: TerminalView(
             _terminal,
             theme: _theme,
+            textScaler: app_theme.AppTheme.terminalTextScaler(context),
             textStyle: TerminalStyle(
               fontSize: widget.fontSize,
               height: widget.lineHeight,

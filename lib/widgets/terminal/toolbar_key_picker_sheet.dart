@@ -8,6 +8,7 @@ import '../../i18n/strings.g.dart';
 import '../../services/settings/toolbar_layout.dart';
 import '../../theme/theme.dart';
 import '../ui/app_sheet.dart';
+import '../ui/modal_actions.dart';
 import '../ui/toolbar_key_button.dart';
 import 'special_keys_toolbar.dart' show toolbarSchemeFromTheme;
 
@@ -291,10 +292,9 @@ class _CustomKeyBuilderScreenState extends State<_CustomKeyBuilderScreen> {
         decoration: BoxDecoration(
           border: Border(top: BorderSide(color: context.colors.surfaceBorder)),
         ),
-        child: SizedBox(
-          width: double.infinity,
-          height: 48,
-          child: FilledButton(
+        child: ModalActions(
+          phoneHeight: 48,
+          primary: FilledButton(
             onPressed: !canSave
                 ? null
                 : (_textMode ? _submitText : _submitCombo),

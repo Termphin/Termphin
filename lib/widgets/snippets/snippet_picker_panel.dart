@@ -13,6 +13,7 @@ import '../../providers/groups_provider.dart';
 import '../../providers/snippets_provider.dart';
 import '../../theme/theme.dart';
 import '../../utils/group_match.dart';
+import '../../utils/platform_info.dart';
 import '../terminal/terminal_scheme_theme.dart';
 import '../ui/group_filter_chips.dart';
 import 'snippet_args_dialog.dart';
@@ -38,7 +39,7 @@ Future<void> showSnippetSpotlight(
     barrierDismissible: true,
     barrierLabel: Translations.of(context).commandPalette.insertSnippetTitle,
     barrierColor: Colors.black54,
-    transitionDuration: const Duration(milliseconds: 260),
+    transitionDuration: Duration(milliseconds: isDesktopPlatform ? 110 : 260),
     transitionBuilder: (ctx, animation, _, child) {
       final curved = CurvedAnimation(
         parent: animation,

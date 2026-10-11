@@ -72,10 +72,10 @@ class DesktopPageRoute<T> extends MaterialPageRoute<T> {
   bool get impliesAppBarDismissal => false;
 
   @override
-  Duration get transitionDuration => const Duration(milliseconds: 140);
+  Duration get transitionDuration => const Duration(milliseconds: 90);
 
   @override
-  Duration get reverseTransitionDuration => const Duration(milliseconds: 100);
+  Duration get reverseTransitionDuration => const Duration(milliseconds: 70);
 
   @override
   Widget buildTransitions(

@@ -160,6 +160,7 @@ class _SnippetsScreenState extends ConsumerState<SnippetsScreen> {
     unawaited(AnalyticsService.instance.screen(AnalyticsScreen.snippetRuns));
     return pushAppPage<void>(
       context,
+      window: true,
       title: Translations.of(context).snippets.runsTitle,
       builder: (_) => const SnippetRunsScreen(),
     );

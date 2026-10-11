@@ -35,6 +35,7 @@ import '../widgets/ui/app_sheet.dart';
 import '../widgets/ui/manual_link.dart';
 import '../widgets/ui/nav_rail.dart';
 import '../widgets/ui/section_navigator.dart';
+import '../widgets/window/app_menu.dart';
 import '../widgets/window/shortcuts_dialog.dart';
 import 'home_screen.dart';
 import 'keys/key_manager_screen.dart';
@@ -219,6 +220,8 @@ class _MainShellState extends ConsumerState<MainShell> {
       AppCommand.uploadFile,
       (_) => terminal((s) => s.uploadToActiveSession()),
     );
+    on(AppCommand.toggleFiles, (_) => terminal((s) => s.toggleActiveFiles()));
+    on(AppCommand.endSession, (_) => terminal((s) => s.endActiveSession()));
     on(AppCommand.zoomIn, (_) => _zoomTerminal(1));
     on(AppCommand.zoomOut, (_) => _zoomTerminal(-1));
     on(AppCommand.zoomReset, (_) {
@@ -429,9 +432,8 @@ class _MainShellState extends ConsumerState<MainShell> {
             builder: (context, _) {
               final manager = _manager;
               final dockSession = desktop ? null : manager.lastSession;
-              return ValueListenableBuilder<bool>(
-                valueListenable: sidebarCollapsedSetting,
-                builder: (context, collapsed, _) => _Sidebar(
+              return SidebarBuilder(
+                builder: (context, collapsed) => _Sidebar(
                   key: const ValueKey('sidebarNav'),
                   currentIndex: _currentIndex,
                   onSelected: _selectSection,
@@ -460,6 +462,7 @@ class _MainShellState extends ConsumerState<MainShell> {
               removeLeft: true,
               child: _AnimatedNavBody(
                 currentIndex: _currentIndex,
+                covered: desktop && _terminalVisible,
                 children: _sectionBodies(t),
               ),
             ),
@@ -467,6 +470,32 @@ class _MainShellState extends ConsumerState<MainShell> {
         ],
       ),
     );
+  }
+
+  /// What the title bar's menus hold for where the user is: the session's
+  /// while one is on screen, the list's on a list. A section with nothing
+  /// of its own to offer adds no menu rather than an empty one.
+  List<AppMenu> _contextMenus(Translations t) {
+    if (_terminalVisible) {
+      return _terminalKey.currentState?.menus(t) ?? const [];
+    }
+    if (_currentIndex != 0) return const [];
+    return [
+      AppMenu(t.window.menuMachines, [
+        [
+          AppMenuItem.command(
+            t,
+            AppCommand.newMachine,
+            icon: PhosphorIconsRegular.plus,
+          ),
+          AppMenuItem.command(
+            t,
+            AppCommand.newSession,
+            icon: PhosphorIconsRegular.terminalWindow,
+          ),
+        ],
+      ]),
+    ];
   }
 
   @override
@@ -507,34 +536,38 @@ class _MainShellState extends ConsumerState<MainShell> {
           _selectTab(0);
         }
       },
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          isWideLayout(context)
-              ? _buildDesktopScaffold(t)
-              : _buildMobileScaffold(t),
-          if (_terminalSession != null)
-            IgnorePointer(
-              ignoring: !_terminalVisible,
-              child: AnimatedOpacity(
-                opacity: _terminalVisible ? 1.0 : 0.0,
-                duration: AppTheme.motionSlow,
-                curve: Curves.easeOutCubic,
-                child: TerminalSchemeTheme(
-                  child: TerminalScreen(
-                    key: _terminalKey,
-                    initialSessionId: _terminalSession!.$1,
-                    initialProfile: _terminalSession!.$2,
-                    siblingScope: _siblingScope,
-                    onClose: _onTerminalClose,
-                    onHide: _hideTerminal,
-                    navItems: isDesktopPlatform ? _navItems(t) : const [],
-                    onNavigate: _selectSection,
+      child: ContextMenuScope(
+        active: isDesktopPlatform,
+        menus: _contextMenus,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            isWideLayout(context)
+                ? _buildDesktopScaffold(t)
+                : _buildMobileScaffold(t),
+            if (_terminalSession != null)
+              IgnorePointer(
+                ignoring: !_terminalVisible,
+                child: AnimatedOpacity(
+                  opacity: _terminalVisible ? 1.0 : 0.0,
+                  duration: AppTheme.motionSlow,
+                  curve: Curves.easeOutCubic,
+                  child: TerminalSchemeTheme(
+                    child: TerminalScreen(
+                      key: _terminalKey,
+                      initialSessionId: _terminalSession!.$1,
+                      initialProfile: _terminalSession!.$2,
+                      siblingScope: _siblingScope,
+                      onClose: _onTerminalClose,
+                      onHide: _hideTerminal,
+                      navItems: isDesktopPlatform ? _navItems(t) : const [],
+                      onNavigate: _selectSection,
+                    ),
                   ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -688,10 +721,18 @@ class _SessionDock extends ConsumerWidget {
 }
 
 class _AnimatedNavBody extends StatelessWidget {
-  const _AnimatedNavBody({required this.currentIndex, required this.children});
+  const _AnimatedNavBody({
+    required this.currentIndex,
+    required this.children,
+    this.covered = false,
+  });
 
   final int currentIndex;
   final List<Widget> children;
+
+  /// Whether something is drawn over every section - a session on a
+  /// desktop - so that none of them is the page in front.
+  final bool covered;
 
   @override
   Widget build(BuildContext context) {
@@ -703,9 +744,15 @@ class _AnimatedNavBody extends StatelessWidget {
             ignoring: i != currentIndex,
             child: AnimatedOpacity(
               opacity: i == currentIndex ? 1 : 0,
-              duration: AppTheme.motionSlow,
+              duration: isDesktopPlatform ? Duration.zero : AppTheme.motionSlow,
               curve: Curves.easeOutCubic,
-              child: children[i],
+              child: ExcludeFocus(
+                excluding: i != currentIndex || covered,
+                child: TickerMode(
+                  enabled: i == currentIndex && !covered,
+                  child: children[i],
+                ),
+              ),
             ),
           ),
       ],
@@ -892,7 +939,7 @@ class _Sidebar extends StatelessWidget {
     final itemInset = collapsed ? 8.0 : 12.0;
 
     return AnimatedContainer(
-      duration: AppTheme.motionSlow,
+      duration: navRailMotion,
       curve: AppTheme.interactiveCurve,
       width: width,
       decoration: BoxDecoration(
@@ -942,7 +989,10 @@ class _Sidebar extends StatelessWidget {
                             ),
                             if (!collapsed)
                               StripActionButton(
-                                tooltip: t.terminal.selectDevice,
+                                tooltip: AppCommands.tooltip(
+                                  t.terminal.selectDevice,
+                                  AppCommand.newSession,
+                                ),
                                 icon: PhosphorIconsRegular.plus,
                                 onTap: () => AppCommands.instance.run(
                                   AppCommand.newSession,

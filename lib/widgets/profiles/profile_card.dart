@@ -68,7 +68,7 @@ class ProfileCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final radius = attachedBelow
-        ? const BorderRadius.vertical(top: Radius.circular(AppTheme.radiusMd))
+        ? BorderRadius.vertical(top: Radius.circular(AppTheme.radiusMd))
         : BorderRadius.circular(AppTheme.radiusMd);
     final anonymize = ref.watch(anonymizeProvider);
     final displayName = anonymize

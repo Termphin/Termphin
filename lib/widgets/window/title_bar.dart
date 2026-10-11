@@ -12,7 +12,11 @@ import '../../theme/theme.dart';
 import '../../utils/platform_info.dart';
 import '../ui/app_sheet.dart';
 import '../ui/section_navigator.dart';
+import 'app_menu.dart';
+import 'page_bar.dart';
 import 'window_buttons.dart';
+
+export 'app_menu.dart';
 
 /// Height of the app's own title bar on a desktop.
 const double kTitleBarHeight = 36;
@@ -64,6 +68,7 @@ class DesktopTitleBar extends StatelessWidget {
                 _TitleMenus(navigatorContext: navigatorContext),
               ],
               const Expanded(child: _DragArea(child: _Breadcrumb())),
+              const _PageActions(),
               const _SearchButton(),
               const SizedBox(width: 8),
               if (!mac) const WindowButtons() else const SizedBox(width: 6),
@@ -105,7 +110,7 @@ class _Breadcrumb extends StatelessWidget {
     return ValueListenableBuilder<List<BreadcrumbEntry>>(
       valueListenable: desktopBreadcrumb,
       builder: (context, entries, _) {
-        if (entries.isEmpty) return const SizedBox.expand();
+        if (entries.isEmpty) return const _PageTitle();
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Align(
@@ -133,6 +138,80 @@ class _Breadcrumb extends StatelessWidget {
                   ],
                 ],
               ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// The name of the page in front, where it has no path to show: at a
+/// section's root the page publishes its title here instead of drawing a
+/// bar of its own ([DesktopPageBar]).
+class _PageTitle extends StatelessWidget {
+  const _PageTitle();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return ListenableBuilder(
+      listenable: DesktopPageBar.instance,
+      builder: (context, _) {
+        final page = DesktopPageBar.instance.current;
+        if (page == null) return const SizedBox.expand();
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              page.title,
+              key: const ValueKey('desktopPageTitle'),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: colors.uiSmall.copyWith(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: colors.textPrimary,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// The actions of the page in front, drawn at the bar's size: what its own
+/// `AppBar` would have held on a phone.
+class _PageActions extends StatelessWidget {
+  const _PageActions();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return ListenableBuilder(
+      listenable: DesktopPageBar.instance,
+      builder: (context, _) {
+        final actions = DesktopPageBar.instance.current?.actions ?? const [];
+        if (actions.isEmpty) return const SizedBox.shrink();
+        return IconButtonTheme(
+          data: IconButtonThemeData(
+            style: IconButton.styleFrom(
+              iconSize: 16,
+              minimumSize: const Size.square(28),
+              fixedSize: const Size.square(28),
+              padding: EdgeInsets.zero,
+              foregroundColor: colors.textSecondary,
+              shape: const RoundedRectangleBorder(),
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Row(
+              key: const ValueKey('desktopPageActions'),
+              mainAxisSize: MainAxisSize.min,
+              children: actions,
             ),
           ),
         );
@@ -266,9 +345,13 @@ class _SearchButton extends StatelessWidget {
   }
 }
 
-/// Termphin / View / Help, off a Mac - where the same menus are the system's
-/// menu bar instead (see `AppMenuBar`). Styled as a desktop menu: square,
-/// tight, small type - not a phone's card.
+/// The menus, off a Mac - where the same ones are the system's menu bar
+/// instead (see `AppMenuBar`): Termphin, the menus of whatever is on screen,
+/// View and Help. Styled as a desktop menu: square, tight, small type - not
+/// a phone's card.
+///
+/// A menu is read again as it opens, since what its entries can do follows
+/// state the bar does not watch - what is selected in a list, say.
 class _TitleMenus extends StatelessWidget {
   const _TitleMenus({required this.navigatorContext});
 
@@ -277,102 +360,89 @@ class _TitleMenus extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Translations.of(context);
-    final menus = appMenuModel(t, navigatorContext);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (final menu in menus)
-          MenuAnchor(
-            alignmentOffset: const Offset(0, 4),
-            style: MenuStyle(
-              shape: WidgetStatePropertyAll(
-                RoundedRectangleBorder(
-                  side: BorderSide(color: context.colors.surfaceBorderStrong),
+    final colors = context.colors;
+    return ListenableBuilder(
+      listenable: ContextMenus.instance,
+      builder: (context, _) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final menu in appMenuModel(t, navigatorContext))
+            MenuAnchor(
+              key: ValueKey('titleMenu-${menu.label}'),
+              alignmentOffset: const Offset(0, 4),
+              style: MenuStyle(
+                shape: WidgetStatePropertyAll(
+                  RoundedRectangleBorder(
+                    side: BorderSide(color: colors.surfaceBorderStrong),
+                  ),
+                ),
+                backgroundColor: WidgetStatePropertyAll(colors.surfaceCard),
+                elevation: const WidgetStatePropertyAll(6),
+                padding: const WidgetStatePropertyAll(
+                  EdgeInsets.symmetric(vertical: 4),
                 ),
               ),
-              backgroundColor: WidgetStatePropertyAll(
-                context.colors.surfaceCard,
-              ),
-              elevation: const WidgetStatePropertyAll(6),
-              padding: const WidgetStatePropertyAll(
-                EdgeInsets.symmetric(vertical: 6),
-              ),
-            ),
-            menuChildren: [
-              for (final group in menu.groups) ...[
-                if (group != menu.groups.first)
-                  Divider(
-                    height: 13,
-                    thickness: 1,
-                    color: context.colors.surfaceDivider,
-                  ),
-                for (final item in group)
-                  MenuItemButton(
-                    style: MenuItemButton.styleFrom(
-                      shape: const RoundedRectangleBorder(),
-                      minimumSize: const Size(260, 40),
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      iconSize: 18,
-                      textStyle: context.colors.uiSmall.copyWith(fontSize: 15),
-                      foregroundColor: context.colors.textPrimary,
-                      iconColor: context.colors.textSecondary,
+              menuChildren: [
+                for (final group in menu.groups) ...[
+                  if (group != menu.groups.first)
+                    Divider(
+                      height: 9,
+                      thickness: 1,
+                      color: colors.surfaceDivider,
                     ),
-                    leadingIcon: item.icon == null
-                        ? const SizedBox(width: 18)
-                        : Icon(item.icon, size: 18),
-                    shortcut: item.command == null
-                        ? null
-                        : AppCommands.activatorsFor(item.command!).firstOrNull,
-                    onPressed: item.onSelected,
-                    child: Text(item.label),
-                  ),
+                  for (final item in group)
+                    MenuItemButton(
+                      style: MenuItemButton.styleFrom(
+                        shape: const RoundedRectangleBorder(),
+                        minimumSize: const Size(240, 30),
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        iconSize: 16,
+                        textStyle: colors.uiSmall.copyWith(fontSize: 13.5),
+                        foregroundColor: colors.textPrimary,
+                        iconColor: colors.textSecondary,
+                        disabledForegroundColor: colors.textTertiary,
+                        disabledIconColor: colors.textTertiary,
+                      ),
+                      leadingIcon: item.checked == true
+                          ? const Icon(PhosphorIconsRegular.check, size: 16)
+                          : item.icon == null || item.checked == false
+                          ? const SizedBox(width: 16)
+                          : Icon(item.icon, size: 16),
+                      shortcut: item.shortcut,
+                      onPressed: item.enabled ? item.onSelected : null,
+                      child: Text(item.label),
+                    ),
+                ],
               ],
-            ],
-            builder: (context, controller, _) => _HoverBox(
-              onTap: () =>
-                  controller.isOpen ? controller.close() : controller.open(),
-              child: Text(
-                menu.label,
-                style: context.colors.uiSmall.copyWith(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w500,
-                  color: context.colors.textSecondary,
+              builder: (context, controller, _) => _HoverBox(
+                onTap: () {
+                  if (controller.isOpen) {
+                    controller.close();
+                    return;
+                  }
+                  ContextMenus.instance.refresh();
+                  WidgetsBinding.instance
+                    ..addPostFrameCallback((_) => controller.open())
+                    ..ensureVisualUpdate();
+                },
+                child: Text(
+                  menu.label,
+                  style: colors.uiSmall.copyWith(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w500,
+                    color: colors.textSecondary,
+                  ),
                 ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }
 
-/// One entry of the app's menus, shared by the title bar's and the Mac's
-/// menu bar so the two list the same things.
-class AppMenuItem {
-  const AppMenuItem({
-    required this.label,
-    required this.onSelected,
-    this.icon,
-    this.command,
-  });
-
-  AppMenuItem.command(Translations t, AppCommand this.command, {this.icon})
-    : label = AppCommands.label(t, command),
-      onSelected = (() => AppCommands.instance.runFromMenu(command));
-
-  final String label;
-  final VoidCallback onSelected;
-  final IconData? icon;
-  final AppCommand? command;
-}
-
-class AppMenu {
-  const AppMenu(this.label, this.groups);
-
-  final String label;
-  final List<List<AppMenuItem>> groups;
-}
-
+/// The menus as they stand right now: Termphin, whatever the screen in
+/// front published ([ContextMenus]), then View and Help.
 List<AppMenu> appMenuModel(
   Translations t,
   BuildContext? Function() navigatorContext,
@@ -405,6 +475,7 @@ List<AppMenu> appMenuModel(
         ),
       ],
     ]),
+    ...ContextMenus.instance.build(t),
     AppMenu(t.window.menuView, [
       [
         AppMenuItem.command(
@@ -416,23 +487,6 @@ List<AppMenu> appMenuModel(
           t,
           AppCommand.toggleSidebar,
           icon: PhosphorIconsRegular.sidebarSimple,
-        ),
-      ],
-      [
-        AppMenuItem.command(
-          t,
-          AppCommand.zoomIn,
-          icon: PhosphorIconsRegular.magnifyingGlassPlus,
-        ),
-        AppMenuItem.command(
-          t,
-          AppCommand.zoomOut,
-          icon: PhosphorIconsRegular.magnifyingGlassMinus,
-        ),
-        AppMenuItem.command(
-          t,
-          AppCommand.zoomReset,
-          icon: PhosphorIconsRegular.textAa,
         ),
       ],
     ]),
@@ -467,7 +521,10 @@ List<AppMenu> appMenuModel(
 /// elsewhere. A Mac app with nothing but the system's default menu reads as
 /// unfinished, and the menu bar is where a Mac user looks for the shortcuts:
 /// each item shows its command's key equivalent. Should the same keystroke
-/// also reach the keyboard handler, `runFromMenu` runs it once.
+/// also reach the keyboard handler, `runFromMenu` runs it once. A key a
+/// screen answers itself is left off its item here: the system would make
+/// it a key equivalent, and it would then fire with that screen nowhere
+/// near the keyboard.
 class AppMenuBar extends StatelessWidget {
   const AppMenuBar({
     super.key,
@@ -482,31 +539,36 @@ class AppMenuBar extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!platformHas(PlatformFeature.nativeMenuBar)) return child;
     final t = Translations.of(context);
-    final model = appMenuModel(t, navigatorContext);
-    return PlatformMenuBar(
-      menus: [
-        for (final menu in model)
-          PlatformMenu(
-            label: menu.label,
-            menus: [
-              for (final group in menu.groups)
-                PlatformMenuItemGroup(
-                  members: [
-                    for (final item in group)
-                      PlatformMenuItem(
-                        label: item.label,
-                        shortcut: item.command == null
-                            ? null
-                            : AppCommands.activatorsFor(
-                                item.command!,
-                              ).firstOrNull,
-                        onSelected: item.onSelected,
-                      ),
-                  ],
-                ),
-            ],
-          ),
-      ],
+    return ListenableBuilder(
+      listenable: ContextMenus.instance,
+      builder: (context, child) => PlatformMenuBar(
+        menus: [
+          for (final menu in appMenuModel(t, navigatorContext))
+            PlatformMenu(
+              label: menu.label,
+              menus: [
+                for (final group in menu.groups)
+                  PlatformMenuItemGroup(
+                    members: [
+                      for (final item in group)
+                        PlatformMenuItem(
+                          label: item.checked == true
+                              ? '✓ ${item.label}'
+                              : item.label,
+                          shortcut: item.command == null
+                              ? null
+                              : AppCommands.activatorsFor(
+                                  item.command!,
+                                ).firstOrNull,
+                          onSelected: item.enabled ? item.onSelected : null,
+                        ),
+                    ],
+                  ),
+              ],
+            ),
+        ],
+        child: child!,
+      ),
       child: child,
     );
   }

@@ -17,6 +17,8 @@ enum AppCommand {
   previousTab,
   selectTab,
   findInTerminal,
+  toggleFiles,
+  endSession,
   uploadFile,
   zoomIn,
   zoomOut,
@@ -255,6 +257,21 @@ class AppCommands {
       ],
       AppCommand.selectTab => const [],
       AppCommand.findInTerminal => [primary(LogicalKeyboardKey.keyF)],
+      AppCommand.toggleFiles => [primary(LogicalKeyboardKey.keyE)],
+      AppCommand.endSession => [
+        mac
+            ? const SingleActivator(
+                LogicalKeyboardKey.keyW,
+                meta: true,
+                shift: true,
+              )
+            : const SingleActivator(
+                LogicalKeyboardKey.keyW,
+                control: true,
+                shift: true,
+                alt: true,
+              ),
+      ],
       AppCommand.uploadFile => [primary(LogicalKeyboardKey.keyO)],
       AppCommand.zoomIn => [
         SingleActivator(LogicalKeyboardKey.equal, control: !mac, meta: mac),
@@ -301,6 +318,20 @@ class AppCommands {
     };
   }
 
+  /// A button's tooltip with its shortcut after it - "New session
+  /// (Ctrl+Shift+T)" - which is where a desktop user learns the key. A
+  /// phone has no keyboard to press it on and gets [label] alone.
+  static String tooltip(String label, AppCommand command) {
+    if (!isDesktopPlatform) return label;
+    final shortcut = shortcutLabel(command);
+    return shortcut == null ? label : '$label ($shortcut)';
+  }
+
+  /// [tooltip] for a key that is not an [AppCommand]'s - one a screen
+  /// answers itself while it has the keyboard, like the file browser's.
+  static String tooltipFor(String label, SingleActivator activator) =>
+      isDesktopPlatform ? '$label (${describeActivator(activator)})' : label;
+
   /// The shortcut as a menu prints it: "Ctrl+Shift+T", or "⌘T" on a Mac.
   static String? shortcutLabel(AppCommand command) {
     if (command == AppCommand.selectTab) {
@@ -339,6 +370,17 @@ class AppCommands {
     if (key == LogicalKeyboardKey.tab) return 'Tab';
     if (key == LogicalKeyboardKey.bracketLeft) return '[';
     if (key == LogicalKeyboardKey.bracketRight) return ']';
+    if (key == LogicalKeyboardKey.period) return '.';
+    if (key == LogicalKeyboardKey.arrowUp) return '↑';
+    if (key == LogicalKeyboardKey.arrowDown) return '↓';
+    if (key == LogicalKeyboardKey.arrowLeft) return '←';
+    if (key == LogicalKeyboardKey.arrowRight) return '→';
+    if (key == LogicalKeyboardKey.delete) return 'Del';
+    if (key == LogicalKeyboardKey.backspace) {
+      return isMacOSPlatform ? '⌫' : 'Backspace';
+    }
+    if (key == LogicalKeyboardKey.enter) return isMacOSPlatform ? '↩' : 'Enter';
+    if (key == LogicalKeyboardKey.space) return 'Space';
     return key.keyLabel.toUpperCase();
   }
 
@@ -351,6 +393,8 @@ class AppCommands {
     AppCommand.previousTab => t.commands.previousTab,
     AppCommand.selectTab => t.commands.selectTab,
     AppCommand.findInTerminal => t.commands.findInTerminal,
+    AppCommand.toggleFiles => t.commands.toggleFiles,
+    AppCommand.endSession => t.commands.endSession,
     AppCommand.uploadFile => t.commands.uploadFile,
     AppCommand.zoomIn => t.commands.zoomIn,
     AppCommand.zoomOut => t.commands.zoomOut,

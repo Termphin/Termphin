@@ -59,6 +59,7 @@ import '../../widgets/ui/nav_rail.dart';
 import '../../widgets/ui/reorder_drag.dart';
 import '../../widgets/ui/section_header.dart';
 import '../../widgets/ui/section_navigator.dart';
+import '../../widgets/window/app_menu.dart';
 import '../settings/terminal_appearance_screen.dart';
 import '../settings/toolbar_profiles_screen.dart';
 import 'state/session_swipe.dart';
@@ -1099,9 +1100,8 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
   /// collapsing one and finding the other still at full width would read as
   /// the sidebar having forgotten.
   Widget _buildTabRail() {
-    return ValueListenableBuilder<bool>(
-      valueListenable: sidebarCollapsedSetting,
-      builder: (context, collapsed, _) {
+    return SidebarBuilder(
+      builder: (context, collapsed) {
         if (_desktopRail) return _buildDesktopRailBody(collapsed);
         return _buildTabRailBody(collapsed);
       },
@@ -1120,7 +1120,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
     final itemInset = collapsed ? 8.0 : 12.0;
     return Builder(
       builder: (context) => AnimatedContainer(
-        duration: AppTheme.motionSlow,
+        duration: navRailMotion,
         curve: AppTheme.interactiveCurve,
         width: width,
         decoration: BoxDecoration(
@@ -1596,13 +1596,18 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
       enabled: false,
       child: TabMenuLeave(
         sessionId: session.$1,
-        closeLabel: persistent
-            ? t.session.detach
-            : (connected ? t.terminal.disconnect : t.common.close),
+        closeLabel: AppCommands.tooltip(
+          persistent
+              ? t.session.detach
+              : (connected ? t.terminal.disconnect : t.common.close),
+          AppCommand.closeTab,
+        ),
         closeIcon: persistent
             ? PhosphorIconsRegular.arrowLineDown
             : PhosphorIconsRegular.x,
-        endLabel: persistent ? t.session.endSession : null,
+        endLabel: persistent
+            ? AppCommands.tooltip(t.session.endSession, AppCommand.endSession)
+            : null,
         onClose: () => _onTabAction(session, state, _TabConnectionAction.close),
         onEndSession: persistent
             ? () =>
@@ -1711,7 +1716,10 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
   Widget _buildAddTabButton() {
     return _buildTabBarAction(
       key: const ValueKey('tabBarAddButton'),
-      tooltip: Translations.of(context).terminal.selectDevice,
+      tooltip: AppCommands.tooltip(
+        Translations.of(context).terminal.selectDevice,
+        AppCommand.newSession,
+      ),
       icon: PhosphorIconsRegular.plus,
       onTap: _showAddSessionSheet,
     );
@@ -2077,6 +2085,120 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
     if (_sessions.isEmpty) return;
     final session = _sessionKeys[_sessions[_activeIndex].$1]?.currentState;
     if (session != null) unawaited(session.uploadFileToTerminal());
+  }
+
+  /// Ends the persistent session on screen, after the same confirmation its
+  /// tab menu asks for. A tab with nothing kept on the server has nothing to
+  /// end; closing it is all there is.
+  void endActiveSession() {
+    if (_sessions.isEmpty) return;
+    final session = _sessions[_activeIndex];
+    if (!_isPersistent(session)) return;
+    unawaited(_endSession(session.$1));
+  }
+
+  /// Flips the session on screen between its terminal and its files.
+  void toggleActiveFiles() {
+    if (_sessions.isEmpty) return;
+    final id = _sessions[_activeIndex].$1;
+    final files = _modeFor(id) == SessionViewMode.sftp;
+    _setMode(id, files ? SessionViewMode.terminal : SessionViewMode.sftp);
+    ContextMenus.instance.refresh();
+    if (files) focusActiveTerminal();
+  }
+
+  bool _isPersistent((String, SshProfile) session) =>
+      ref.read(sshConnectionProvider(session)).multiplexer.isPersistent;
+
+  /// The title bar's menus while a session is on screen: what can be done
+  /// to the tab in front, and - with its files showing - the browser's own.
+  ///
+  /// Leaving is named for what it does to this tab: a persistent session is
+  /// detached and goes on running, anything else is closed.
+  List<AppMenu> menus(Translations t) {
+    if (_sessions.isEmpty) return const [];
+    final session = _sessions[_activeIndex];
+    final persistent = _isPersistent(session);
+    final files = _modeFor(session.$1) == SessionViewMode.sftp;
+    return [
+      AppMenu(t.window.menuSession, [
+        [
+          AppMenuItem.command(
+            t,
+            AppCommand.newSession,
+            icon: PhosphorIconsRegular.plus,
+          ),
+          AppMenuItem.command(
+            t,
+            AppCommand.toggleFiles,
+            icon: files
+                ? PhosphorIconsRegular.terminalWindow
+                : PhosphorIconsRegular.folders,
+          ),
+        ],
+        [
+          AppMenuItem.command(
+            t,
+            AppCommand.findInTerminal,
+            icon: PhosphorIconsRegular.magnifyingGlass,
+            enabled: !files,
+          ),
+          AppMenuItem.command(
+            t,
+            AppCommand.uploadFile,
+            icon: PhosphorIconsRegular.uploadSimple,
+          ),
+        ],
+        [
+          AppMenuItem.command(
+            t,
+            AppCommand.nextTab,
+            icon: PhosphorIconsRegular.arrowRight,
+            enabled: _sessions.length > 1,
+          ),
+          AppMenuItem.command(
+            t,
+            AppCommand.previousTab,
+            icon: PhosphorIconsRegular.arrowLeft,
+            enabled: _sessions.length > 1,
+          ),
+        ],
+        [
+          AppMenuItem.command(
+            t,
+            AppCommand.zoomIn,
+            icon: PhosphorIconsRegular.magnifyingGlassPlus,
+          ),
+          AppMenuItem.command(
+            t,
+            AppCommand.zoomOut,
+            icon: PhosphorIconsRegular.magnifyingGlassMinus,
+          ),
+          AppMenuItem.command(
+            t,
+            AppCommand.zoomReset,
+            icon: PhosphorIconsRegular.textAa,
+          ),
+        ],
+        [
+          AppMenuItem.command(
+            t,
+            AppCommand.closeTab,
+            label: persistent ? t.session.detach : null,
+            icon: persistent
+                ? PhosphorIconsRegular.arrowLineDown
+                : PhosphorIconsRegular.x,
+          ),
+          if (persistent)
+            AppMenuItem.command(
+              t,
+              AppCommand.endSession,
+              icon: PhosphorIconsRegular.trash,
+            ),
+        ],
+      ]),
+      if (files) ...?_sftpKeys[session.$1]?.currentState?.menus(t),
+    ];
   }
 
   /// Puts the keyboard on the session on screen. On a phone that would

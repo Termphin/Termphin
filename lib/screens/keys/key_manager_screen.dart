@@ -10,6 +10,7 @@ import '../../providers/groups_provider.dart';
 import '../../providers/profiles_provider.dart';
 import '../../providers/ssh_keys_provider.dart';
 import '../../services/app/app_commands.dart';
+import '../../services/platform/local_ssh_keys.dart';
 import '../../services/storage/group_storage.dart';
 import '../../services/storage/ssh_key_storage.dart';
 import '../../theme/theme.dart';
@@ -25,7 +26,11 @@ import '../../widgets/ui/group_filter_chips.dart';
 import '../../widgets/ui/group_picker_sheet.dart';
 import '../../widgets/ui/group_section_header.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
+import '../../widgets/ui/list_key_navigation.dart';
+import '../../widgets/ui/list_section_header.dart';
 import '../../widgets/ui/selection_action_bar.dart';
+import '../../widgets/ui/text_input_dialog.dart';
+import '../../widgets/window/page_bar.dart';
 import '../search/global_search_launcher.dart';
 import 'key_form_screen.dart';
 
@@ -44,6 +49,8 @@ class _KeyManagerScreenState extends ConsumerState<KeyManagerScreen> {
   String _selectedGroup = '';
   final Set<String> _selectedKeyIds = <String>{};
   List<SshKey> _keys = [];
+  List<LocalSshKey> _localKeys = [];
+  final Set<String> _importingLocal = <String>{};
   bool _loading = true;
   bool _showCollapsedTitle = false;
   static const double _collapseTitleOffset = 56;
@@ -105,15 +112,97 @@ class _KeyManagerScreenState extends ConsumerState<KeyManagerScreen> {
     setState(() => _showCollapsedTitle = shouldShow);
   }
 
+  /// Also looks in the user's own `.ssh` folder where there is one, for the
+  /// keys there that are not in the app yet - listed above the rest, each an
+  /// Import button away.
   Future<void> _loadKeys({bool showLoading = true}) async {
     if (showLoading) setState(() => _loading = true);
     final keys = await _storage.loadKeys();
+    final local = platformHas(PlatformFeature.localSshFolder)
+        ? await ref.read(localSshKeysProvider).scan(imported: keys)
+        : const <LocalSshKey>[];
     if (mounted) {
       setState(() {
         _keys = keys;
+        _localKeys = local;
         _loading = false;
       });
     }
+  }
+
+  /// Imports [local] into the group being looked at, asking for its
+  /// passphrase first if it has one. Returns whether it went in.
+  ///
+  /// The passphrase only reads the key's public half and is not kept, as in
+  /// the key form: the profile that uses the key asks for it again.
+  Future<bool> _importLocalKey(LocalSshKey local, {bool notify = true}) async {
+    final t = Translations.of(context);
+    String? passphrase;
+    if (local.encrypted) {
+      passphrase = await showTextInputDialog(
+        context,
+        title: t.keys.localPassphraseTitle(name: local.name),
+        confirmLabel: t.keys.localImport,
+        labelText: t.keys.keyPassphraseLabel,
+        obscureText: true,
+      );
+      if (passphrase == null || passphrase.isEmpty || !mounted) return false;
+    }
+    setState(() => _importingLocal.add(local.name));
+    try {
+      await _storage.importFromPem(
+        local.name,
+        local.pem,
+        group: _selectedGroup.isEmpty
+            ? GroupStorage.defaultGroup
+            : _selectedGroup,
+        passphrase: passphrase,
+      );
+      if (!mounted) return true;
+      if (notify) {
+        AppNotifications.success(
+          context,
+          t.keys.importSuccess(name: local.name),
+        );
+      }
+      return true;
+    } on KeyImportException catch (error) {
+      if (mounted) {
+        AppNotifications.error(context, switch (error.reason) {
+          KeyImportFailure.wrongPassphrase => t.keys.importWrongPassphrase,
+          KeyImportFailure.passphraseRequired =>
+            t.keys.importPassphraseRequired,
+        });
+      }
+      return false;
+    } catch (error) {
+      if (mounted) {
+        AppNotifications.error(context, t.keys.importFailed(error: '$error'));
+      }
+      return false;
+    } finally {
+      if (mounted) setState(() => _importingLocal.remove(local.name));
+    }
+  }
+
+  Future<void> _importOneLocalKey(LocalSshKey local) async {
+    await _importLocalKey(local);
+    if (mounted) await _loadKeys(showLoading: false);
+  }
+
+  /// Every key found, the ones with a passphrase asking for theirs in turn.
+  Future<void> _importAllLocalKeys() async {
+    final t = Translations.of(context);
+    var imported = 0;
+    for (final local in List.of(_localKeys)) {
+      if (!mounted) return;
+      if (await _importLocalKey(local, notify: false)) imported++;
+    }
+    if (!mounted) return;
+    if (imported > 0) {
+      AppNotifications.success(context, t.keys.localImportedCount(n: imported));
+    }
+    await _loadKeys(showLoading: false);
   }
 
   Future<void> _deleteKey(SshKey key) async {
@@ -296,188 +385,150 @@ class _KeyManagerScreenState extends ConsumerState<KeyManagerScreen> {
       behavior: HitTestBehavior.translucent,
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
-        appBar: AppBar(
-          shape: collapsed
-              ? Border(
-                  bottom: BorderSide(
-                    color: context.colors.surfaceBorder,
-                    width: 1,
+        appBar: DesktopPageHeader.replacesAppBar(context)
+            ? null
+            : AppBar(
+                shape: collapsed
+                    ? Border(
+                        bottom: BorderSide(
+                          color: context.colors.surfaceBorder,
+                          width: 1,
+                        ),
+                      )
+                    : const Border(),
+                title: AnimatedOpacity(
+                  duration: AppTheme.interactiveDuration,
+                  opacity: collapsed ? 1 : 0,
+                  child: Text(
+                    t.keys.title,
+                    style: Theme.of(context).textTheme.titleLarge,
                   ),
-                )
-              : const Border(),
-          title: AnimatedOpacity(
-            duration: AppTheme.interactiveDuration,
-            opacity: collapsed ? 1 : 0,
-            child: Text(
-              t.keys.title,
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-          ),
-        ),
-        body: SelectionActionHost(
-          bar: _isSelectionMode
-              ? SelectionActionBar(
-                  count: _selectedKeyIds.length,
-                  onMove: _moveSelectedKeys,
-                  onDelete: _deleteSelectedKeys,
-                  onClear: () => setState(() => _selectedKeyIds.clear()),
-                  onSelectAll:
-                      visibleKeys.isNotEmpty &&
-                          visibleKeys.every(
-                            (k) => _selectedKeyIds.contains(k.id),
-                          )
-                      ? null
-                      : () {
-                          setState(() {
-                            _selectedKeyIds.addAll(
-                              visibleKeys.map((k) => k.id),
-                            );
-                          });
-                        },
-                )
-              : null,
-          child: SafeArea(
-            top: false,
-            child: _loading
-                ? const Center(child: CircularProgressIndicator())
-                : ContentGutter(
-                    builder: (context, gutter) => CustomScrollView(
-                      controller: _scrollController,
-                      slivers: [
-                        SliverPadding(
-                          padding: gutter,
-                          sliver: SliverMainAxisGroup(
-                            slivers: [
-                              SliverToBoxAdapter(
-                                child: LargeTitleHeader(
-                                  title: t.keys.title,
-                                  subtitle: t.keys.subtitle,
-                                ),
-                              ),
-                              if (_keys.isNotEmpty) ...[
-                                const SliverPadding(
-                                  padding: EdgeInsets.fromLTRB(16, 16, 16, 12),
-                                  sliver: SliverToBoxAdapter(
-                                    child: GlobalSearchLauncher(
-                                      heroTag: 'globalSearch-keys',
+                ),
+              ),
+        body: DesktopPageHeader(
+          title: t.keys.title,
+          child: ListKeyNavigation(
+            child: SelectionActionHost(
+              bar: _isSelectionMode
+                  ? SelectionActionBar(
+                      count: _selectedKeyIds.length,
+                      onMove: _moveSelectedKeys,
+                      onDelete: _deleteSelectedKeys,
+                      onClear: () => setState(() => _selectedKeyIds.clear()),
+                      onSelectAll:
+                          visibleKeys.isNotEmpty &&
+                              visibleKeys.every(
+                                (k) => _selectedKeyIds.contains(k.id),
+                              )
+                          ? null
+                          : () {
+                              setState(() {
+                                _selectedKeyIds.addAll(
+                                  visibleKeys.map((k) => k.id),
+                                );
+                              });
+                            },
+                    )
+                  : null,
+              child: SafeArea(
+                top: false,
+                child: _loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : ContentGutter(
+                        builder: (context, gutter) => CustomScrollView(
+                          controller: _scrollController,
+                          slivers: [
+                            SliverPadding(
+                              padding: gutter,
+                              sliver: SliverMainAxisGroup(
+                                slivers: [
+                                  SliverToBoxAdapter(
+                                    child: LargeTitleHeader(
+                                      title: t.keys.title,
+                                      subtitle: t.keys.subtitle,
                                     ),
                                   ),
-                                ),
-                                SliverToBoxAdapter(
-                                  child: GroupFilterChips(
-                                    groups: populatedGroups,
-                                    selected: _selectedGroup,
-                                    onChanged: (group) =>
-                                        setState(() => _selectedGroup = group),
-                                  ),
-                                ),
-                              ],
-                              if (_keys.isEmpty)
-                                SliverFillRemaining(
-                                  hasScrollBody: false,
-                                  child: _buildEmptyState(),
-                                )
-                              else ...[
-                                for (final (i, group)
-                                    in displayGroups.indexed) ...[
-                                  GroupSectionHeader.sliver(
-                                    group: group,
-                                    count: keysByGroup[group.name]?.length ?? 0,
-                                    onAdd: () async {
-                                      await showKeyFormScreen(
-                                        context,
-                                        initialGroup: group.name,
-                                      );
-                                      if (mounted) {
-                                        await _loadKeys(showLoading: false);
-                                      }
-                                    },
-                                    addTooltip: t.keys.addKey,
-                                    padding: EdgeInsets.fromLTRB(
-                                      16,
-                                      i == 0 ? 4 : 16,
-                                      16,
-                                      4,
+                                  if (_keys.isNotEmpty) ...[
+                                    const SliverPadding(
+                                      padding: EdgeInsets.fromLTRB(
+                                        16,
+                                        16,
+                                        16,
+                                        12,
+                                      ),
+                                      sliver: SliverToBoxAdapter(
+                                        child: GlobalSearchLauncher(
+                                          heroTag: 'globalSearch-keys',
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                  SliverPadding(
-                                    padding: const EdgeInsets.fromLTRB(
-                                      16,
-                                      4,
-                                      16,
-                                      12,
+                                    SliverToBoxAdapter(
+                                      child: GroupFilterChips(
+                                        groups: populatedGroups,
+                                        selected: _selectedGroup,
+                                        onChanged: (group) => setState(
+                                          () => _selectedGroup = group,
+                                        ),
+                                      ),
                                     ),
-                                    sliver: SliverList.separated(
-                                      itemCount:
-                                          keysByGroup[group.name]!.length,
-                                      separatorBuilder: (_, _) =>
-                                          const SizedBox(height: 10),
-                                      itemBuilder: (context, index) {
-                                        final key =
-                                            keysByGroup[group.name]![index];
-                                        final selected = _selectedKeyIds
-                                            .contains(key.id);
-                                        Future<void> edit() async {
+                                  ],
+                                  if (_localKeys.isNotEmpty)
+                                    SliverToBoxAdapter(
+                                      child: _LocalKeysSection(
+                                        keys: _localKeys,
+                                        importing: _importingLocal,
+                                        onImport: _importOneLocalKey,
+                                        onImportAll: _importAllLocalKeys,
+                                      ),
+                                    ),
+                                  if (_keys.isEmpty)
+                                    SliverFillRemaining(
+                                      hasScrollBody: false,
+                                      child: _buildEmptyState(),
+                                    )
+                                  else ...[
+                                    for (final (i, group)
+                                        in displayGroups.indexed) ...[
+                                      GroupSectionHeader.sliver(
+                                        group: group,
+                                        count:
+                                            keysByGroup[group.name]?.length ??
+                                            0,
+                                        onAdd: () async {
                                           await showKeyFormScreen(
                                             context,
-                                            existing: key,
+                                            initialGroup: group.name,
                                           );
                                           if (mounted) {
                                             await _loadKeys(showLoading: false);
                                           }
-                                        }
-
-                                        return ContextMenuRegion(
-                                          entries: () => [
-                                            ContextMenuEntry(
-                                              label: t.contextMenu.edit,
-                                              icon: PhosphorIconsRegular
-                                                  .pencilSimple,
-                                              onSelected: () =>
-                                                  unawaited(edit()),
-                                            ),
-                                            ContextMenuEntry(
-                                              label: t.keys.copyPublicKey,
-                                              icon: PhosphorIconsRegular.copy,
-                                              onSelected: () =>
-                                                  _copyPublicKey(key),
-                                            ),
-                                            ContextMenuEntry(
-                                              label: t.contextMenu.select,
-                                              icon: PhosphorIconsRegular
-                                                  .checkSquare,
-                                              onSelected: () =>
-                                                  _toggleSelection(key.id),
-                                            ),
-                                            null,
-                                            ContextMenuEntry(
-                                              label: t.contextMenu.delete,
-                                              icon: PhosphorIconsRegular.trash,
-                                              destructive: true,
-                                              onSelected: () => _deleteKey(key),
-                                            ),
-                                          ],
-                                          child: _KeyTile(
-                                            sshKey: key,
-                                            selected: selected,
-                                            isSelectionMode: _isSelectionMode,
-                                            onTap: () {
-                                              if (_isSelectionMode ||
-                                                  selectionModifierPressed) {
-                                                _toggleSelection(key.id);
-                                              }
-                                            },
-                                            onLongPress: () {
-                                              if (!_isSelectionMode) {
-                                                setState(() {
-                                                  _selectedKeyIds.add(key.id);
-                                                });
-                                              } else {
-                                                _toggleSelection(key.id);
-                                              }
-                                            },
-                                            onDelete: () => _deleteKey(key),
-                                            onEdit: () async {
+                                        },
+                                        addTooltip: t.keys.addKey,
+                                        padding: EdgeInsets.fromLTRB(
+                                          16,
+                                          i == 0 ? 4 : 16,
+                                          16,
+                                          4,
+                                        ),
+                                      ),
+                                      SliverPadding(
+                                        padding: const EdgeInsets.fromLTRB(
+                                          16,
+                                          4,
+                                          16,
+                                          12,
+                                        ),
+                                        sliver: SliverList.separated(
+                                          itemCount:
+                                              keysByGroup[group.name]!.length,
+                                          separatorBuilder: (_, _) =>
+                                              const SizedBox(height: 10),
+                                          itemBuilder: (context, index) {
+                                            final key =
+                                                keysByGroup[group.name]![index];
+                                            final selected = _selectedKeyIds
+                                                .contains(key.id);
+                                            Future<void> edit() async {
                                               await showKeyFormScreen(
                                                 context,
                                                 existing: key,
@@ -487,29 +538,99 @@ class _KeyManagerScreenState extends ConsumerState<KeyManagerScreen> {
                                                   showLoading: false,
                                                 );
                                               }
-                                            },
-                                            onCopyPublicKey: () =>
-                                                _copyPublicKey(key),
-                                          ),
-                                        );
-                                      },
+                                            }
+
+                                            return ContextMenuRegion(
+                                              entries: () => [
+                                                ContextMenuEntry(
+                                                  label: t.contextMenu.edit,
+                                                  icon: PhosphorIconsRegular
+                                                      .pencilSimple,
+                                                  onSelected: () =>
+                                                      unawaited(edit()),
+                                                ),
+                                                ContextMenuEntry(
+                                                  label: t.keys.copyPublicKey,
+                                                  icon:
+                                                      PhosphorIconsRegular.copy,
+                                                  onSelected: () =>
+                                                      _copyPublicKey(key),
+                                                ),
+                                                ContextMenuEntry(
+                                                  label: t.contextMenu.select,
+                                                  icon: PhosphorIconsRegular
+                                                      .checkSquare,
+                                                  onSelected: () =>
+                                                      _toggleSelection(key.id),
+                                                ),
+                                                null,
+                                                ContextMenuEntry(
+                                                  label: t.contextMenu.delete,
+                                                  icon: PhosphorIconsRegular
+                                                      .trash,
+                                                  destructive: true,
+                                                  onSelected: () =>
+                                                      _deleteKey(key),
+                                                ),
+                                              ],
+                                              child: _KeyTile(
+                                                sshKey: key,
+                                                selected: selected,
+                                                isSelectionMode:
+                                                    _isSelectionMode,
+                                                onTap: () {
+                                                  if (_isSelectionMode ||
+                                                      selectionModifierPressed) {
+                                                    _toggleSelection(key.id);
+                                                  }
+                                                },
+                                                onLongPress: () {
+                                                  if (!_isSelectionMode) {
+                                                    setState(() {
+                                                      _selectedKeyIds.add(
+                                                        key.id,
+                                                      );
+                                                    });
+                                                  } else {
+                                                    _toggleSelection(key.id);
+                                                  }
+                                                },
+                                                onDelete: () => _deleteKey(key),
+                                                onEdit: () async {
+                                                  await showKeyFormScreen(
+                                                    context,
+                                                    existing: key,
+                                                  );
+                                                  if (mounted) {
+                                                    await _loadKeys(
+                                                      showLoading: false,
+                                                    );
+                                                  }
+                                                },
+                                                onCopyPublicKey: () =>
+                                                    _copyPublicKey(key),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                    SliverToBoxAdapter(
+                                      child: SizedBox(
+                                        height: _isSelectionMode
+                                            ? SelectionActionBar.reservedHeight
+                                            : 32,
+                                      ),
                                     ),
-                                  ),
+                                  ],
                                 ],
-                                SliverToBoxAdapter(
-                                  child: SizedBox(
-                                    height: _isSelectionMode
-                                        ? SelectionActionBar.reservedHeight
-                                        : 32,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ),
+                      ),
+              ),
+            ),
           ),
         ),
       ),
@@ -611,30 +732,9 @@ class _KeyTile extends StatelessWidget {
                           style: Theme.of(context).textTheme.labelLarge,
                         ),
                         const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _typeColor(context).withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(
-                              AppTheme.radiusXs,
-                            ),
-                            border: Border.all(
-                              color: _typeColor(
-                                context,
-                              ).withValues(alpha: 0.45),
-                            ),
-                          ),
-                          child: Text(
-                            _typeLabel,
-                            style: TextStyle(
-                              color: _typeColor(context),
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                        _KeyTypeBadge(
+                          label: _typeLabel,
+                          color: _typeColor(context),
                         ),
                       ],
                     ),
@@ -708,6 +808,204 @@ class _KeyTile extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The keys found in the user's own `.ssh` folder that the app does not have
+/// yet, each one click from being imported.
+///
+/// Laid out as one more group of the list it sits over - the same header
+/// with a count, the same cards - so it reads as keys, not as a banner. What
+/// tells it apart is what its rows offer: Import where a stored key has its
+/// menu, and the path where a stored key has its date.
+class _LocalKeysSection extends StatelessWidget {
+  const _LocalKeysSection({
+    required this.keys,
+    required this.importing,
+    required this.onImport,
+    required this.onImportAll,
+  });
+
+  final List<LocalSshKey> keys;
+
+  /// Names of the keys being imported right now, whose buttons wait.
+  final Set<String> importing;
+  final ValueChanged<LocalSshKey> onImport;
+  final VoidCallback onImportAll;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Translations.of(context);
+    final colors = context.colors;
+    final busy = importing.isNotEmpty;
+    return Column(
+      key: const ValueKey('localKeysSection'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ListSectionHeader(
+          title: t.keys.localTitle,
+          count: keys.length,
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          actions: [
+            if (keys.length > 1)
+              TextButton.icon(
+                onPressed: busy ? null : onImportAll,
+                icon: const Icon(PhosphorIconsRegular.downloadSimple, size: 16),
+                label: Text(t.keys.localImportAll),
+              ),
+          ],
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 2, 16, 8),
+          child: Text(
+            t.keys.localSubtitle,
+            style: TextStyle(color: colors.textTertiary, fontSize: 12),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: Column(
+            children: [
+              for (final (i, key) in keys.indexed) ...[
+                if (i > 0) const SizedBox(height: 10),
+                _LocalKeyTile(
+                  localKey: key,
+                  importing: importing.contains(key.name),
+                  onImport: busy ? null : () => onImport(key),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// A key waiting in `~/.ssh`, drawn as the stored keys under it are: the
+/// same card, its name with what kind of key it is beside it, and under
+/// that where it is. A lock says it will ask for a passphrase.
+class _LocalKeyTile extends StatelessWidget {
+  const _LocalKeyTile({
+    required this.localKey,
+    required this.importing,
+    required this.onImport,
+  });
+
+  final LocalSshKey localKey;
+  final bool importing;
+  final VoidCallback? onImport;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Translations.of(context);
+    final colors = context.colors;
+    final algorithm = localKey.algorithm;
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surfaceCard,
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        border: Border.all(color: colors.surfaceBorder),
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        localKey.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
+                    ),
+                    if (algorithm != null) ...[
+                      const SizedBox(width: 8),
+                      _KeyTypeBadge(
+                        label: algorithm,
+                        color: algorithm == 'ed25519'
+                            ? colors.success
+                            : colors.primary,
+                      ),
+                    ],
+                    if (localKey.encrypted) ...[
+                      const SizedBox(width: 8),
+                      Tooltip(
+                        message: t.keys.localEncrypted,
+                        child: Icon(
+                          PhosphorIconsRegular.lockKey,
+                          size: 15,
+                          color: colors.textTertiary,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  localKey.displayPath,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: colors.monoStyle.copyWith(
+                    color: colors.textTertiary,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          FilledButton.icon(
+            key: ValueKey('importLocalKey-${localKey.name}'),
+            onPressed: onImport,
+            icon: importing
+                ? SizedBox.square(
+                    dimension: 14,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: colors.onPrimary,
+                    ),
+                  )
+                : const Icon(PhosphorIconsRegular.downloadSimple, size: 16),
+            label: Text(t.keys.localImport),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The pill naming a key's algorithm, tinted with the colour that goes with
+/// it - shared by a stored key's card and one still in `~/.ssh`.
+class _KeyTypeBadge extends StatelessWidget {
+  const _KeyTypeBadge({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(AppTheme.radiusXs),
+        border: Border.all(color: color.withValues(alpha: 0.45)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );

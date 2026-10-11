@@ -1023,9 +1023,7 @@ class _SessionRow extends ConsumerWidget {
     final hasMenu = onRename != null || onDetach != null || onEnd != null;
     final anonymize = ref.watch(anonymizeProvider);
     final radius = isLast
-        ? const BorderRadius.vertical(
-            bottom: Radius.circular(AppTheme.radiusMd),
-          )
+        ? BorderRadius.vertical(bottom: Radius.circular(AppTheme.radiusMd))
         : BorderRadius.zero;
 
     return Material(
@@ -1168,7 +1166,7 @@ class _NewSessionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Translations.of(context);
-    const radius = BorderRadius.vertical(
+    final radius = BorderRadius.vertical(
       bottom: Radius.circular(AppTheme.radiusMd),
     );
     return Material(

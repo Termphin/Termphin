@@ -21,6 +21,7 @@ import '../../widgets/ui/app_sheet.dart';
 import '../../widgets/ui/empty_state.dart';
 import '../../widgets/ui/group_filter_chips.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
+import '../../widgets/ui/modal_actions.dart';
 import '../../widgets/ui/section_header.dart';
 
 /// Picks the machines a snippet should run on, collecting any
@@ -262,14 +263,8 @@ class _SnippetRunScreenState extends ConsumerState<SnippetRunScreen> {
               Divider(height: 1, color: context.colors.surfaceDivider),
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 16).add(gutter),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                      ),
-                    ),
+                child: ModalActions(
+                  primary: FilledButton(
                     onPressed: _selected.isEmpty ? null : _start,
                     child: Text(t.snippets.runNow(count: _selected.length)),
                   ),

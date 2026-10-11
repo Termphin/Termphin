@@ -6,6 +6,10 @@ import '../../i18n/strings.g.dart';
 /// trimmed text when [confirmLabel] is pressed or the field is submitted and
 /// [validator] (if any) accepts it; null when cancelled.
 ///
+/// [obscureText] is for a secret - a passphrase - which is hidden as it is
+/// typed and returned exactly as typed: a space at either end of one is
+/// part of it.
+///
 /// The controller is disposed a frame late: the dialog's exit transition can
 /// still rebuild the field for a frame after the route is popped, and
 /// disposing synchronously would trip "TextEditingController used after
@@ -16,8 +20,9 @@ Future<String?> showTextInputDialog(
   required String confirmLabel,
   String initialValue = '',
   String? labelText,
-  String? hintText,
+    String? hintText,
   FormFieldValidator<String>? validator,
+  bool obscureText = false,
 }) async {
   final t = Translations.of(context);
   final controller = TextEditingController(text: initialValue);
@@ -25,7 +30,9 @@ Future<String?> showTextInputDialog(
 
   void submit(BuildContext ctx) {
     if (formKey.currentState?.validate() ?? false) {
-      Navigator.of(ctx).pop(controller.text.trim());
+            Navigator.of(
+        ctx,
+      ).pop(obscureText ? controller.text : controller.text.trim());
     }
   }
 
@@ -37,7 +44,8 @@ Future<String?> showTextInputDialog(
         key: formKey,
         child: TextFormField(
           controller: controller,
-          autofocus: true,
+                    autofocus: true,
+          obscureText: obscureText,
           onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
           decoration: InputDecoration(labelText: labelText, hintText: hintText),
           validator: validator,

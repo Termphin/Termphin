@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../theme/theme.dart';
 import '../../utils/platform_info.dart';
+import '../window/page_bar.dart';
+import 'list_key_navigation.dart';
 
 /// The reading width body content is capped to on a wide window.
 const double kContentMaxWidth = 860;
@@ -159,7 +161,10 @@ class LargeTitleScaffold extends StatefulWidget {
   State<LargeTitleScaffold> createState() => _LargeTitleScaffoldState();
 }
 
-/// Desktop and landscape keep a plain, fixed-size, centered bar instead of
+/// A desktop has no bar here at all: the title and the actions go to the
+/// window's title bar ([DesktopPageHeader]), unless the page is in a dialog,
+/// which keeps its own. Landscape keeps a plain, fixed-size, centered bar
+/// instead of
 /// the mobile-style large title that collapses into it on scroll - there
 /// isn't the spare height for a giant heading to grow into. The body's
 /// bottom safe area is kept: edge to edge, a list that runs past the
@@ -192,33 +197,42 @@ class _LargeTitleScaffoldState extends State<LargeTitleScaffold> {
   @override
   Widget build(BuildContext context) {
     final collapsed = isWideLayout(context) || _showCollapsedTitle;
-    return Scaffold(
-      resizeToAvoidBottomInset: widget.resizeToAvoidBottomInset,
-      appBar: AppBar(
-        shape: collapsed
-            ? Border(
-                bottom: BorderSide(
-                  color: context.colors.surfaceBorder,
-                  width: 1,
+    final inTitleBar = DesktopPageHeader.replacesAppBar(context);
+    return DesktopPageHeader(
+      title: widget.title,
+      actions: widget.actions ?? const [],
+      child: Scaffold(
+        resizeToAvoidBottomInset: widget.resizeToAvoidBottomInset,
+        appBar: inTitleBar
+            ? null
+            : AppBar(
+                shape: collapsed
+                    ? Border(
+                        bottom: BorderSide(
+                          color: context.colors.surfaceBorder,
+                          width: 1,
+                        ),
+                      )
+                    : const Border(),
+                title: AnimatedOpacity(
+                  duration: AppTheme.interactiveDuration,
+                  opacity: collapsed ? 1 : 0,
+                  child: Text(
+                    widget.title,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
                 ),
-              )
-            : const Border(),
-        title: AnimatedOpacity(
-          duration: AppTheme.interactiveDuration,
-          opacity: collapsed ? 1 : 0,
-          child: Text(
-            widget.title,
-            style: Theme.of(context).textTheme.titleLarge,
+                actions: widget.actions,
+              ),
+        floatingActionButton: widget.floatingActionButton,
+        body: SafeArea(
+          top: false,
+          child: ListKeyNavigation(
+            child: ContentGutter(
+              builder: (context, gutter) =>
+                  widget.bodyBuilder(context, _scrollController, gutter),
+            ),
           ),
-        ),
-        actions: widget.actions,
-      ),
-      floatingActionButton: widget.floatingActionButton,
-      body: SafeArea(
-        top: false,
-        child: ContentGutter(
-          builder: (context, gutter) =>
-              widget.bodyBuilder(context, _scrollController, gutter),
         ),
       ),
     );

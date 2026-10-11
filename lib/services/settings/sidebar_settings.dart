@@ -12,3 +12,23 @@ final Setting<bool> sidebarCollapsedSetting = Setting.boolean(
   kSidebarCollapsedPrefsKey,
   fallback: false,
 );
+
+const kSidebarWidthPrefsKey = 'sidebar_width';
+
+/// The narrowest and widest a desktop sidebar can be dragged to: under the
+/// first a label has no room left, over the second it is taking the window
+/// from what it navigates.
+const double kSidebarMinWidth = 180;
+const double kSidebarMaxWidth = 420;
+
+/// The width a desktop sidebar was dragged to, labels showing.
+///
+/// Device state like the window's own bounds, so it stays out of the backup:
+/// it fits this screen, not the one a backup is restored on.
+final Setting<double> sidebarWidthSetting = Setting.number(
+  kSidebarWidthPrefsKey,
+  fallback: 240,
+  min: kSidebarMinWidth,
+  max: kSidebarMaxWidth,
+  track: false,
+);

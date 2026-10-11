@@ -599,6 +599,30 @@ class Translations$keys$en {
 	/// en: 'Key "{name}" imported.'
 	String importSuccess({required Object name}) => 'Key "${name}" imported.';
 
+	/// en: 'On this computer'
+	String get localTitle => 'On this computer';
+
+	/// en: 'Found in ~/.ssh and not in Termphin yet'
+	String get localSubtitle => 'Found in ~/.ssh and not in Termphin yet';
+
+	/// en: 'Import'
+	String get localImport => 'Import';
+
+	/// en: 'Import all'
+	String get localImportAll => 'Import all';
+
+	/// en: 'Protected by a passphrase'
+	String get localEncrypted => 'Protected by a passphrase';
+
+	/// en: 'Passphrase for {name}'
+	String localPassphraseTitle({required Object name}) => 'Passphrase for ${name}';
+
+	/// en: '(one) {{n} key imported.} (other) {{n} keys imported.}'
+	String localImportedCount({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n,
+		one: '${n} key imported.',
+		other: '${n} keys imported.',
+	);
+
 	/// en: 'Add SSH Key'
 	String get addKey => 'Add SSH Key';
 
@@ -1029,6 +1053,18 @@ class Translations$sftp$en {
 
 	/// en: 'Drop to upload to {folder}'
 	String dropToUpload({required Object folder}) => 'Drop to upload to ${folder}';
+
+	/// en: 'Show hidden files'
+	String get showHidden => 'Show hidden files';
+
+	/// en: 'Parent folder'
+	String get parentFolder => 'Parent folder';
+
+	/// en: 'Back'
+	String get back => 'Back';
+
+	/// en: 'Open'
+	String get openItem => 'Open';
 }
 
 // Path: editor
@@ -3640,6 +3676,15 @@ class Translations$commands$en {
 	/// en: 'Terminal'
 	String get shortcutsTerminal => 'Terminal';
 
+	/// en: 'Files'
+	String get shortcutsFiles => 'Files';
+
+	/// en: 'End session'
+	String get endSession => 'End session';
+
+	/// en: 'Switch between terminal and files'
+	String get toggleFiles => 'Switch between terminal and files';
+
 	/// en: 'Copy the selection'
 	String get shortcutsCopy => 'Copy the selection';
 
@@ -3681,6 +3726,15 @@ class Translations$window$en {
 
 	/// en: 'Help'
 	String get menuHelp => 'Help';
+
+	/// en: 'Session'
+	String get menuSession => 'Session';
+
+	/// en: 'Files'
+	String get menuFiles => 'Files';
+
+	/// en: 'Machines'
+	String get menuMachines => 'Machines';
 
 	/// en: 'What's new'
 	String get releaseNotes => 'What\'s new';
@@ -4086,6 +4140,13 @@ extension on Translations {
 			'keys.keyFileEmpty' => 'The selected file is empty.',
 			'keys.keyFileReadFailed' => ({required Object error}) => 'Could not read key file: ${error}',
 			'keys.importSuccess' => ({required Object name}) => 'Key "${name}" imported.',
+			'keys.localTitle' => 'On this computer',
+			'keys.localSubtitle' => 'Found in ~/.ssh and not in Termphin yet',
+			'keys.localImport' => 'Import',
+			'keys.localImportAll' => 'Import all',
+			'keys.localEncrypted' => 'Protected by a passphrase',
+			'keys.localPassphraseTitle' => ({required Object name}) => 'Passphrase for ${name}',
+			'keys.localImportedCount' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '${n} key imported.', other: '${n} keys imported.', ), 
 			'keys.addKey' => 'Add SSH Key',
 			'keys.generateEd25519' => 'Generate Ed25519',
 			'keys.generateEd25519Subtitle' => 'Fast, secure modern key',
@@ -4235,6 +4296,10 @@ extension on Translations {
 			'sftp.copyFailedCount' => ({required Object count, required Object error}) => 'Could not copy ${count} items. ${error}',
 			'sftp.moveFailedCount' => ({required Object count, required Object error}) => 'Could not move ${count} items. ${error}',
 			'sftp.dropToUpload' => ({required Object folder}) => 'Drop to upload to ${folder}',
+			'sftp.showHidden' => 'Show hidden files',
+			'sftp.parentFolder' => 'Parent folder',
+			'sftp.back' => 'Back',
+			'sftp.openItem' => 'Open',
 			'editor.unsavedTitle' => 'Unsaved changes',
 			'editor.discardConfirm' => 'Discard changes?',
 			'editor.savedSuccess' => 'File saved successfully',
@@ -4433,6 +4498,8 @@ extension on Translations {
 			'settings.knownHostsAddedAt' => ({required Object date}) => 'Pinned ${date}',
 			'settings.knownHostsForget' => 'Forget',
 			'settings.knownHostsForgetTitle' => 'Forget this host key?',
+			_ => null,
+		} ?? switch (path) {
 			'settings.knownHostsForgetBody' => ({required Object host}) => 'The next connection to ${host} will ask you to accept its key again.',
 			'settings.knownHostsForgotten' => 'Host key forgotten.',
 			'settings.toolbarProfiles' => 'Toolbar layouts',
@@ -4444,8 +4511,6 @@ extension on Translations {
 			'settings.toolbarProfileRenameTitle' => 'Rename layout',
 			'settings.toolbarProfileNameLabel' => 'Layout name',
 			'settings.toolbarProfileDeleteTitle' => 'Delete this layout?',
-			_ => null,
-		} ?? switch (path) {
 			'settings.toolbarProfileDeleteConfirm' => ({required Object name}) => '“${name}” and the keys arranged in it are gone.',
 			'settings.toolbarProfileDeleteLast' => 'This is the only layout left - the toolbar needs one.',
 			'settings.toolbarProfileSummary' => ({required Object count, required Object columns, required Object rows, required Object pages}) => '${count} keys · ${columns}x${rows}, ${pages} page(s)',
@@ -4947,6 +5012,8 @@ extension on Translations {
 			'hostKey.acceptChanged' => 'Accept new key',
 			'hostKey.reject' => 'Do not connect',
 			'keyboardInteractive.title' => 'The server is asking',
+			_ => null,
+		} ?? switch (path) {
 			'keyboardInteractive.fallbackPrompt' => 'Response',
 			'keyboardInteractive.submit' => 'Send',
 			'manual.title' => 'Manual',
@@ -4958,8 +5025,6 @@ extension on Translations {
 			'manual.howToFix' => 'How to fix this',
 			'manual.troubleshooting' => 'Troubleshooting guide',
 			'manual.readMore' => 'Read more in the manual',
-			_ => null,
-		} ?? switch (path) {
 			'manual.whatIsThis' => 'What is this?',
 			'tagMigration.title' => 'Convert tags to groups',
 			'tagMigration.explanation' => 'Tags have been replaced by groups. Each machine and snippet now belongs to a single group. Choose which tags to convert into groups.',
@@ -5021,6 +5086,9 @@ extension on Translations {
 			'commands.shortcutsTitle' => 'Keyboard shortcuts',
 			'commands.shortcutsGeneral' => 'General',
 			'commands.shortcutsTerminal' => 'Terminal',
+			'commands.shortcutsFiles' => 'Files',
+			'commands.endSession' => 'End session',
+			'commands.toggleFiles' => 'Switch between terminal and files',
 			'commands.shortcutsCopy' => 'Copy the selection',
 			'commands.shortcutsPaste' => 'Paste',
 			'commands.shortcutsSelectAll' => 'Select all',
@@ -5032,6 +5100,9 @@ extension on Translations {
 			'window.menuApp' => 'Termphin',
 			'window.menuView' => 'View',
 			'window.menuHelp' => 'Help',
+			'window.menuSession' => 'Session',
+			'window.menuFiles' => 'Files',
+			'window.menuMachines' => 'Machines',
 			'window.releaseNotes' => 'What\'s new',
 			'window.reportIssue' => 'Report an issue',
 			'window.quit' => 'Quit Termphin',

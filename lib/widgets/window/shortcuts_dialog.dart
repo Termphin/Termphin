@@ -5,6 +5,7 @@ import '../../i18n/strings.g.dart';
 import '../../services/app/app_commands.dart';
 import '../../theme/theme.dart';
 import '../../utils/platform_info.dart';
+import '../sftp/sftp_shortcuts.dart';
 import '../ui/app_sheet.dart';
 import '../ui/section_header.dart';
 
@@ -37,6 +38,8 @@ class _ShortcutsList extends StatelessWidget {
     AppCommand.previousTab,
     AppCommand.selectTab,
     AppCommand.findInTerminal,
+    AppCommand.toggleFiles,
+    AppCommand.endSession,
     AppCommand.uploadFile,
     AppCommand.zoomIn,
     AppCommand.zoomOut,
@@ -95,6 +98,25 @@ class _ShortcutsList extends StatelessWidget {
           label: t.commands.shortcutsSelectAll,
           keys: terminalKey(LogicalKeyboardKey.keyA),
         ),
+        const SizedBox(height: 16),
+        SectionHeader(t.commands.shortcutsFiles),
+        const SizedBox(height: 6),
+        for (final (label, activator) in [
+          (t.sftp.openItem, SftpShortcuts.open),
+          (t.sftp.parentFolder, SftpShortcuts.parentFolder),
+          (t.sftp.back, SftpShortcuts.back),
+          (t.sftp.newFolder, SftpShortcuts.newFolder),
+          (t.sftp.newFile, SftpShortcuts.newFile),
+          (t.common.rename, SftpShortcuts.rename),
+          (t.sftp.download, SftpShortcuts.download),
+          (t.sftp.copyTo, SftpShortcuts.copyTo),
+          (t.sftp.moveTo, SftpShortcuts.moveTo),
+          (t.common.delete, SftpShortcuts.delete),
+          (t.sftp.selectAll, SftpShortcuts.selectAll),
+          (t.common.refresh, SftpShortcuts.refresh),
+          (t.sftp.showHidden, SftpShortcuts.toggleHidden),
+        ])
+          _Row(label: label, keys: AppCommands.describeActivator(activator)),
       ],
     );
   }

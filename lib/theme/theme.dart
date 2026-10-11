@@ -442,12 +442,17 @@ class AppTheme {
   static const Color terminalFg = kTerminalChromeForeground;
   static const Color terminalCursor = kTerminalChromeCursor;
 
-  static const double radiusXs = 10;
-  static const double radiusSm = 14;
-  static const double radiusMd = 20;
-  static const double radiusLg = 26;
-  static const double radiusXl = 32;
-  static const double radiusXxl = 40;
+  /// Corner radii. A desktop gets a tight scale: the generous one is drawn
+  /// for a thumb-sized control on a phone, and around a 32 px button beside a
+  /// square dialog it reads as a toy. Getters rather than constants so the
+  /// one name answers for both, which makes every expression that uses them
+  /// non-`const`.
+  static double get radiusXs => isDesktopPlatform ? 4 : 10;
+  static double get radiusSm => isDesktopPlatform ? 6 : 14;
+  static double get radiusMd => isDesktopPlatform ? 8 : 20;
+  static double get radiusLg => isDesktopPlatform ? 10 : 26;
+  static double get radiusXl => isDesktopPlatform ? 12 : 32;
+  static double get radiusXxl => isDesktopPlatform ? 14 : 40;
   static const double radiusPill = 999;
 
   static const double spaceXs = 4;
@@ -521,25 +526,48 @@ class AppTheme {
   static const String headingFamily = 'Geist';
   static const String uiFamily = 'Geist';
 
-  static TextTheme textThemeFor(AppColors c) {
+  /// How much smaller the interface's text is drawn on a desktop: 13 where a
+  /// phone has 14. A screen at arm's length and a pointer that needs no
+  /// target size leave room for the denser type every desktop app uses.
+  /// `_ScaledMediaQuery` applies it to the whole app, and `TerminalPane`
+  /// takes it back out, since the terminal's size is the user's own setting.
+  static const double desktopTextScale = 13 / 14;
+
+  /// The text scale a terminal is drawn at: the app's, with
+  /// [desktopTextScale] taken back out. The terminal's font size is a number
+  /// the user set, and the interface getting denser must not change it.
+  static TextScaler terminalTextScaler(BuildContext context) {
+    final scaler = MediaQuery.textScalerOf(context);
+    if (!isDesktopPlatform) return scaler;
+    return TextScaler.linear(scaler.scale(1) / desktopTextScale);
+  }
+
+  /// Button height on a desktop, where the phone's 48 is a thumb's target.
+  /// Not the 28-32 of a toolbar's buttons: these are a dialog's actions, and
+  /// under that they read as links.
+  static const double desktopControlHeight = 36;
+
+  /// Headings shrink further than body text on a [desktop]: a phone's large
+  /// title announces a screen, a window already has its title bar for that.
+  static TextTheme textThemeFor(AppColors c, {bool desktop = false}) {
     return TextTheme(
       displayLarge: TextStyle(
         fontFamily: headingFamily,
-        fontSize: 30,
+        fontSize: desktop ? 26 : 30,
         fontWeight: FontWeight.w700,
         letterSpacing: -0.7,
         color: c.textPrimary,
       ),
       titleLarge: TextStyle(
         fontFamily: headingFamily,
-        fontSize: 20,
+        fontSize: desktop ? 18 : 20,
         fontWeight: FontWeight.w700,
         letterSpacing: -0.25,
         color: c.textPrimary,
       ),
       titleMedium: TextStyle(
         fontFamily: headingFamily,
-        fontSize: 16,
+        fontSize: desktop ? 15 : 16,
         fontWeight: FontWeight.w600,
         color: c.textPrimary,
       ),
@@ -551,7 +579,7 @@ class AppTheme {
       ),
       bodyLarge: TextStyle(
         fontFamily: uiFamily,
-        fontSize: 16,
+        fontSize: desktop ? 15 : 16,
         fontWeight: FontWeight.w400,
         color: c.textPrimary,
       ),
@@ -627,11 +655,85 @@ class AppTheme {
   /// full width there would read as a form stretched edge to edge. It has no
   /// border side, unlike the other surfaces over a scrim, because it already
   /// announces its edge with the grab handle `showAppSheet` draws.
+  ///
+  /// A desktop gets a denser variant of everything a pointer does not need
+  /// at thumb size: compact density, shrink-wrapped tap targets, 36 px
+  /// buttons, tighter fields, a short app bar. That follows
+  /// [isDesktopPlatform] and not [wideLayout], because a tablet on its side
+  /// is wide and still a touch screen.
+  ///
+  /// Buttons opt out of the compact density: it takes 8 px off whatever
+  /// height they are given, and theirs is already the desktop's own.
+  ///
+  /// Its scrollbar is thin until the pointer is over it, and tooltips open
+  /// after a short wait instead of a long press's worth.
   static ThemeData themeFor(AppColors c, {bool? wideLayout}) {
     final wide = wideLayout ?? isDesktopPlatform;
+    final desktop = isDesktopPlatform;
+    final buttonSize = desktop ? const Size(0, desktopControlHeight) : null;
+    final buttonDensity = desktop ? VisualDensity.standard : null;
+    final buttonPadding = desktop
+        ? const EdgeInsets.symmetric(horizontal: 16)
+        : null;
     return ThemeData(
       brightness: c.brightness,
       useMaterial3: true,
+      visualDensity: desktop ? VisualDensity.compact : null,
+      materialTapTargetSize: desktop ? MaterialTapTargetSize.shrinkWrap : null,
+      listTileTheme: ListTileThemeData(dense: desktop ? true : null),
+      scrollbarTheme: desktop
+          ? ScrollbarThemeData(
+              interactive: true,
+              radius: const Radius.circular(radiusPill),
+              crossAxisMargin: 2,
+              mainAxisMargin: 2,
+              minThumbLength: 36,
+              thickness: WidgetStateProperty.resolveWith(
+                (states) =>
+                    states.contains(WidgetState.hovered) ||
+                        states.contains(WidgetState.dragged)
+                    ? 10
+                    : 6,
+              ),
+              thumbColor: WidgetStateProperty.resolveWith(
+                (states) => c.textTertiary.withValues(
+                  alpha: states.contains(WidgetState.dragged)
+                      ? 0.75
+                      : states.contains(WidgetState.hovered)
+                      ? 0.6
+                      : 0.35,
+                ),
+              ),
+              trackVisibility: WidgetStateProperty.resolveWith(
+                (states) => states.contains(WidgetState.hovered),
+              ),
+              trackColor: WidgetStatePropertyAll(
+                c.textTertiary.withValues(alpha: 0.08),
+              ),
+              trackBorderColor: WidgetStatePropertyAll(
+                c.textTertiary.invisible,
+              ),
+            )
+          : null,
+      tooltipTheme: TooltipThemeData(
+        waitDuration: desktop ? const Duration(milliseconds: 350) : null,
+        exitDuration: desktop ? Duration.zero : null,
+        verticalOffset: desktop ? 18 : null,
+        padding: desktop
+            ? const EdgeInsets.symmetric(horizontal: 8, vertical: 5)
+            : null,
+        decoration: BoxDecoration(
+          color: c.surfaceElevated,
+          borderRadius: BorderRadius.circular(radiusXs),
+          border: Border.all(color: c.surfaceBorderStrong),
+        ),
+        textStyle: TextStyle(
+          fontFamily: uiFamily,
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          color: c.textPrimary,
+        ),
+      ),
       extensions: [c],
       scaffoldBackgroundColor: c.backgroundPrimary,
       colorScheme: ColorScheme(
@@ -657,7 +759,7 @@ class AppTheme {
       highlightColor: c.primary.withValues(alpha: 0.06),
       hoverColor: c.primary.withValues(alpha: 0.05),
       focusColor: c.primary.withValues(alpha: 0.10),
-      textTheme: textThemeFor(c),
+      textTheme: textThemeFor(c, desktop: desktop),
       appBarTheme: AppBarTheme(
         backgroundColor: c.backgroundPrimary.invisible,
         foregroundColor: c.textPrimary,
@@ -666,9 +768,10 @@ class AppTheme {
         surfaceTintColor: c.backgroundPrimary.invisible,
         shape: Border(bottom: BorderSide(color: c.surfaceBorder, width: 1)),
         systemOverlayStyle: systemOverlayStyleFor(c),
+        toolbarHeight: desktop ? 44 : null,
         titleTextStyle: TextStyle(
           fontFamily: headingFamily,
-          fontSize: 20,
+          fontSize: desktop ? 16 : 20,
           fontWeight: FontWeight.w600,
           letterSpacing: -0.2,
           color: c.textPrimary,
@@ -681,7 +784,7 @@ class AppTheme {
         focusElevation: 0,
         hoverElevation: 0,
         highlightElevation: 0,
-        shape: const RoundedRectangleBorder(
+        shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(radiusMd)),
         ),
       ),
@@ -698,9 +801,10 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: c.fieldFill,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 14,
+        isDense: desktop,
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: desktop ? 10 : 14,
+          vertical: desktop ? 10 : 14,
         ),
         labelStyle: TextStyle(
           fontFamily: uiFamily,
@@ -735,7 +839,7 @@ class AppTheme {
         ),
         titleTextStyle: TextStyle(
           fontFamily: headingFamily,
-          fontSize: 20,
+          fontSize: desktop ? 17 : 20,
           fontWeight: FontWeight.w600,
           color: c.textPrimary,
         ),
@@ -795,7 +899,9 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: c.primary,
           foregroundColor: c.onPrimary,
-          minimumSize: const Size(0, 48),
+          minimumSize: buttonSize ?? const Size(0, 48),
+          padding: buttonPadding,
+          visualDensity: buttonDensity,
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusSm),
@@ -811,7 +917,9 @@ class AppTheme {
         style: OutlinedButton.styleFrom(
           foregroundColor: c.textPrimary,
           side: BorderSide(color: c.surfaceBorder),
-          minimumSize: const Size(0, 46),
+          minimumSize: buttonSize ?? const Size(0, 46),
+          padding: buttonPadding,
+          visualDensity: buttonDensity,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusSm),
           ),
@@ -825,6 +933,9 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: c.primary,
+          minimumSize: buttonSize,
+          padding: buttonPadding,
+          visualDensity: buttonDensity,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusXs),
           ),
@@ -839,7 +950,9 @@ class AppTheme {
         style: FilledButton.styleFrom(
           backgroundColor: c.primary,
           foregroundColor: c.onPrimary,
-          minimumSize: const Size(0, 48),
+          minimumSize: buttonSize ?? const Size(0, 48),
+          padding: buttonPadding,
+          visualDensity: buttonDensity,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusSm),
           ),
@@ -855,7 +968,7 @@ class AppTheme {
         modalBackgroundColor: c.surfaceCard,
         surfaceTintColor: c.surfaceCard.invisible,
         constraints: wide ? const BoxConstraints(maxWidth: 560) : null,
-        shape: const RoundedRectangleBorder(
+        shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(radiusXl)),
         ),
       ),

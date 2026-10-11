@@ -4,6 +4,7 @@ import '../../i18n/strings.g.dart';
 import '../../services/app/tag_migration_service.dart';
 import '../../theme/theme.dart';
 import '../ui/app_divider.dart';
+import '../ui/modal_actions.dart';
 
 /// A ceiling, not a height: four tags are four rows tall. Past this the list
 /// scrolls inside the card rather than growing the dialog off a short screen.
@@ -192,31 +193,27 @@ class _TagMigrationModalState extends State<TagMigrationModal> {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  FilledButton(
-                    onPressed: _busy ? null : _primary,
-                    child: _busy
-                        ? const SizedBox.square(
-                            dimension: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Text(
-                            _selected.isNotEmpty
-                                ? t.tagMigration.createGroups
-                                : t.tagMigration.startFresh,
-                          ),
-                  ),
-                  if (_selected.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    TextButton(
-                      onPressed: _busy ? null : _skip,
-                      child: Text(t.tagMigration.startFresh),
-                    ),
-                  ],
-                ],
+              child: ModalActions(
+                gap: 4,
+                primary: FilledButton(
+                  onPressed: _busy ? null : _primary,
+                  child: _busy
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(
+                          _selected.isNotEmpty
+                              ? t.tagMigration.createGroups
+                              : t.tagMigration.startFresh,
+                        ),
+                ),
+                secondary: _selected.isNotEmpty
+                    ? TextButton(
+                        onPressed: _busy ? null : _skip,
+                        child: Text(t.tagMigration.startFresh),
+                      )
+                    : null,
               ),
             ),
           ],

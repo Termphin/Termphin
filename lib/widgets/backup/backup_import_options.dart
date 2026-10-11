@@ -10,6 +10,7 @@ import '../ui/app_divider.dart';
 import '../ui/app_form_field.dart';
 import '../ui/app_sheet.dart';
 import '../ui/large_title_scaffold.dart';
+import '../ui/modal_actions.dart';
 import '../ui/section_header.dart';
 import 'backup_option_tile.dart';
 
@@ -97,22 +98,16 @@ class _PassphraseSheetState extends State<_PassphraseSheet> {
             onSubmitted: (_) => _submit(),
           ),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text(t.common.cancel),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _submit,
-                  child: Text(t.exportScreen.unlock),
-                ),
-              ),
-            ],
+          ModalActions(
+            layout: ModalActionsLayout.sideBySide,
+            secondary: OutlinedButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(t.common.cancel),
+            ),
+            primary: ElevatedButton(
+              onPressed: _submit,
+              child: Text(t.exportScreen.unlock),
+            ),
           ),
         ],
       ),

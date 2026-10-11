@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
+import '../../services/app/app_commands.dart';
 import '../../services/sftp/remote_path.dart';
 import '../../theme/theme.dart';
 import '../../utils/sftp_path.dart';
 import '../ui/clipboard_and_links.dart';
+import 'sftp_shortcuts.dart';
 
 /// The breadcrumb row above the listing: where the current folder is, and the
 /// refresh, sort and hidden-files controls. Tapping the path turns it into a
@@ -22,7 +24,7 @@ class SftpPathBar extends StatefulWidget {
     required this.onNavigateToRoot,
     required this.onPathSubmitted,
     required this.onRefresh,
-    required this.onSort,
+    this.onSort,
     required this.onToggleHidden,
     required this.onEditingChanged,
     this.trailing,
@@ -37,7 +39,10 @@ class SftpPathBar extends StatefulWidget {
   /// The trimmed text the user typed or pasted, still in display form.
   final ValueChanged<String> onPathSubmitted;
   final VoidCallback onRefresh;
-  final VoidCallback onSort;
+
+  /// Null where the listing sorts itself - a desktop's is a table whose
+  /// header does it, and a button for the same would be a second way in.
+  final VoidCallback? onSort;
   final VoidCallback onToggleHidden;
   final ValueChanged<bool> onEditingChanged;
 
@@ -183,7 +188,10 @@ class _SftpPathBarState extends State<SftpPathBar> {
           ),
           const SizedBox(width: 4),
           Tooltip(
-            message: t.common.refresh,
+            message: AppCommands.tooltipFor(
+              t.common.refresh,
+              SftpShortcuts.refresh,
+            ),
             child: GestureDetector(
               onTap: widget.refreshing ? null : widget.onRefresh,
               child: Padding(
@@ -196,27 +204,34 @@ class _SftpPathBarState extends State<SftpPathBar> {
               ),
             ),
           ),
-          GestureDetector(
-            onTap: widget.onSort,
-            child: Padding(
-              padding: const EdgeInsets.all(4),
-              child: Icon(
-                PhosphorIconsFill.sortAscending,
-                color: textTertiary,
-                size: 18,
+          if (widget.onSort != null)
+            GestureDetector(
+              onTap: widget.onSort,
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: Icon(
+                  PhosphorIconsFill.sortAscending,
+                  color: textTertiary,
+                  size: 18,
+                ),
               ),
             ),
-          ),
-          GestureDetector(
-            onTap: widget.onToggleHidden,
-            child: Padding(
-              padding: const EdgeInsets.all(4),
-              child: Icon(
-                widget.showHidden
-                    ? PhosphorIconsFill.eye
-                    : PhosphorIconsFill.eyeSlash,
-                color: widget.showHidden ? accent : textTertiary,
-                size: 18,
+          Tooltip(
+            message: AppCommands.tooltipFor(
+              t.sftp.showHidden,
+              SftpShortcuts.toggleHidden,
+            ),
+            child: GestureDetector(
+              onTap: widget.onToggleHidden,
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: Icon(
+                  widget.showHidden
+                      ? PhosphorIconsFill.eye
+                      : PhosphorIconsFill.eyeSlash,
+                  color: widget.showHidden ? accent : textTertiary,
+                  size: 18,
+                ),
               ),
             ),
           ),

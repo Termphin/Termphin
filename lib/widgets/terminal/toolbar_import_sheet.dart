@@ -11,6 +11,7 @@ import '../../services/settings/toolbar_share_link.dart';
 import '../../theme/theme.dart';
 import '../ui/app_notifications.dart';
 import '../ui/app_sheet.dart';
+import '../ui/modal_actions.dart';
 import 'session_quick_sheet.dart' show ToolbarLayoutPreview;
 
 /// Asks before a toolbar from a link becomes one of the user's layouts.
@@ -131,24 +132,18 @@ class _ToolbarImportSheetState extends State<ToolbarImportSheet> {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    key: const ValueKey('toolbarImportAdd'),
-                    onPressed: _busy ? null : () => unawaited(_add(use: false)),
-                    child: Text(t.toolbar.importAdd),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: ElevatedButton(
-                    key: const ValueKey('toolbarImportAddAndUse'),
-                    onPressed: _busy ? null : () => unawaited(_add(use: true)),
-                    child: Text(t.toolbar.importAddAndUse),
-                  ),
-                ),
-              ],
+            child: ModalActions(
+              layout: ModalActionsLayout.sideBySide,
+              secondary: OutlinedButton(
+                key: const ValueKey('toolbarImportAdd'),
+                onPressed: _busy ? null : () => unawaited(_add(use: false)),
+                child: Text(t.toolbar.importAdd),
+              ),
+              primary: ElevatedButton(
+                key: const ValueKey('toolbarImportAddAndUse'),
+                onPressed: _busy ? null : () => unawaited(_add(use: true)),
+                child: Text(t.toolbar.importAddAndUse),
+              ),
             ),
           ),
         ],

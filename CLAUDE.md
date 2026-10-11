@@ -149,6 +149,12 @@ after editing the JSON.
   (`docs/architecture/desktop.md`).
 - **Anything that closes closes with Esc on a desktop**, and a desktop
   shortcut is an `AppCommand`, never a `Shortcuts` widget of its own.
+- **A desktop action with a key shows the key** - in its tooltip
+  (`AppCommands.tooltip`), its menu row (`ShortcutHint`) and the title bar's
+  menus, which a screen fills through a `ContextMenuScope` rather than a
+  fixed list (`docs/architecture/desktop.md`).
+- **Radii are `AppTheme.radiusXs…`, never a number**: they are smaller on a
+  desktop, and getters, so the expression is not `const`.
 - **No sliders.** Numeric settings use `StepperRow`/`ValueStepperRow`.
 - **Scrolling content takes its reading width from `ContentGutter`**, not
   `DesktopContentWidth`, which boxes the scroll view.

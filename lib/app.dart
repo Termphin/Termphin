@@ -209,6 +209,9 @@ class _DesktopChrome extends StatelessWidget {
 /// Clamping keeps every one of them legible without any of them collapsing,
 /// and the place where big text actually matters, the terminal itself, has
 /// its own font size in settings that this does not touch.
+///
+/// A desktop draws the interface one step smaller on top of that
+/// ([AppTheme.desktopTextScale]); the terminal undoes it for itself.
 class _ScaledMediaQuery extends StatelessWidget {
   const _ScaledMediaQuery({required this.child});
 
@@ -220,12 +223,15 @@ class _ScaledMediaQuery extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final query = MediaQuery.of(context);
+    final clamped = query.textScaler.clamp(
+      minScaleFactor: _minScale,
+      maxScaleFactor: _maxScale,
+    );
     return MediaQuery(
       data: query.copyWith(
-        textScaler: query.textScaler.clamp(
-          minScaleFactor: _minScale,
-          maxScaleFactor: _maxScale,
-        ),
+        textScaler: isDesktopPlatform
+            ? TextScaler.linear(clamped.scale(1) * AppTheme.desktopTextScale)
+            : clamped,
       ),
       child: child,
     );

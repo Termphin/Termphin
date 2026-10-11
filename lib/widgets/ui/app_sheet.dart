@@ -265,6 +265,14 @@ class AppDialogRoute<T> extends DialogRoute<T> {
     required super.builder,
     super.settings,
   }) : super(barrierDismissible: true);
+
+  /// Shorter than Material's own: a window opened by a click or a key should
+  /// be there, not arrive.
+  @override
+  Duration get transitionDuration => const Duration(milliseconds: 90);
+
+  @override
+  Duration get reverseTransitionDuration => const Duration(milliseconds: 70);
 }
 
 /// Pushes [builder] as a dialog over the whole window.

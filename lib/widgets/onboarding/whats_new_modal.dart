@@ -8,6 +8,7 @@ import '../../services/app/whats_new_service.dart';
 import '../../services/completion/command_completion.dart';
 import '../../services/settings/setting.dart';
 import '../../theme/theme.dart';
+import '../ui/modal_actions.dart';
 
 /// The settings a highlight may offer a switch for, by preferences key.
 ///
@@ -251,9 +252,8 @@ class _WhatsNewModalState extends State<WhatsNewModal> {
               ),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-              child: SizedBox(
-                width: double.infinity,
-                child: FilledButton(
+              child: ModalActions(
+                primary: FilledButton(
                   onPressed: _advance,
                   child: Text(_isLast ? t.whatsNew.gotIt : t.whatsNew.next),
                 ),

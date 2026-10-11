@@ -5,8 +5,10 @@ import 'package:flutter/services.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
+import '../../services/app/app_commands.dart';
 import '../../services/settings/sidebar_settings.dart';
 import '../../theme/theme.dart';
+import '../../utils/platform_info.dart';
 
 /// Width of a wide-layout side rail with its labels showing.
 const double kNavRailWidth = 240;
@@ -16,8 +18,119 @@ const double kNavRailWidth = 240;
 /// still sits in a 48pt tap target rather than against the edges.
 const double kNavRailCollapsedWidth = 64;
 
-double navRailWidth(bool collapsed) =>
-    collapsed ? kNavRailCollapsedWidth : kNavRailWidth;
+/// The width while the edge is being dragged, null otherwise. The setting is
+/// written once, when the drag ends, rather than on every pointer move.
+final ValueNotifier<double?> _draggedWidth = ValueNotifier(null);
+
+/// A desktop's rail is as wide as the user dragged it; a tablet's is fixed.
+double navRailWidth(bool collapsed) {
+  if (collapsed) return kNavRailCollapsedWidth;
+  if (!isDesktopPlatform) return kNavRailWidth;
+  return _draggedWidth.value ?? sidebarWidthSetting.value;
+}
+
+/// How long a rail takes to reach a new width: nothing while it follows the
+/// pointer, where an animation would trail behind the hand.
+Duration get navRailMotion =>
+    _draggedWidth.value == null ? AppTheme.motionSlow : Duration.zero;
+
+/// Rebuilds a rail when it collapses or is resized, and on a desktop puts the
+/// edge that resizes it down its right side.
+///
+/// Both rails are built through this, so the handle and the width are one
+/// thing to both, as [sidebarCollapsedSetting] already is. Collapsed there is
+/// no edge to drag: the hamburger is the way back.
+class SidebarBuilder extends StatelessWidget {
+  const SidebarBuilder({super.key, required this.builder});
+
+  final Widget Function(BuildContext context, bool collapsed) builder;
+
+  static final Listenable _changes = Listenable.merge([
+    sidebarCollapsedSetting,
+    sidebarWidthSetting,
+    _draggedWidth,
+  ]);
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: _changes,
+      builder: (context, _) {
+        final collapsed = sidebarCollapsedSetting.value;
+        final rail = builder(context, collapsed);
+        if (!isDesktopPlatform || collapsed) return rail;
+        return Stack(
+          children: [
+            rail,
+            const Positioned(
+              top: 0,
+              bottom: 0,
+              right: 0,
+              width: _SidebarResizeEdge.hitWidth,
+              child: _SidebarResizeEdge(),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// The strip along a desktop rail's right edge that drags it wider or
+/// narrower. A double click puts the default width back.
+class _SidebarResizeEdge extends StatefulWidget {
+  const _SidebarResizeEdge();
+
+  static const double hitWidth = 6;
+
+  @override
+  State<_SidebarResizeEdge> createState() => _SidebarResizeEdgeState();
+}
+
+class _SidebarResizeEdgeState extends State<_SidebarResizeEdge> {
+  bool _hovered = false;
+
+  void _drag(DragUpdateDetails details) {
+    final from = _draggedWidth.value ?? sidebarWidthSetting.value;
+    _draggedWidth.value = (from + details.delta.dx)
+        .clamp(kSidebarMinWidth, kSidebarMaxWidth)
+        .toDouble();
+  }
+
+  void _settle() {
+    final width = _draggedWidth.value;
+    _draggedWidth.value = null;
+    if (width != null) unawaited(sidebarWidthSetting.set(width));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final active = _hovered || _draggedWidth.value != null;
+    return MouseRegion(
+      cursor: SystemMouseCursors.resizeColumn,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onHorizontalDragUpdate: _drag,
+        onHorizontalDragEnd: (_) => _settle(),
+        onHorizontalDragCancel: _settle,
+        onDoubleTap: () =>
+            unawaited(sidebarWidthSetting.set(sidebarWidthSetting.fallback)),
+        child: Align(
+          alignment: Alignment.centerRight,
+          child: AnimatedContainer(
+            duration: AppTheme.motionFast,
+            width: 2,
+            color: active
+                ? context.colors.primary
+                : context.colors.primary.invisible,
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 /// The hamburger that collapses either rail, and the only writer of
 /// [sidebarCollapsedSetting].
@@ -37,7 +150,10 @@ class NavRailToggleButton extends StatelessWidget {
       borderRadius: BorderRadius.circular(AppTheme.radiusSm),
     );
     return Tooltip(
-      message: collapsed ? t.nav.expandSidebar : t.nav.collapseSidebar,
+      message: AppCommands.tooltip(
+        collapsed ? t.nav.expandSidebar : t.nav.collapseSidebar,
+        AppCommand.toggleSidebar,
+      ),
       child: Material(
         color: context.colors.backgroundPrimary.invisible,
         shape: shape,
