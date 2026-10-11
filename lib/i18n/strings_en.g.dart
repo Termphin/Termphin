@@ -1372,8 +1372,8 @@ class Translations$settings$en {
 	/// en: 'Dock actions'
 	String get actionDockLayout => 'Dock actions';
 
-	/// en: 'A draggable button on the terminal that opens these actions. Long-press a tile and drag it onto another to swap the two; tap one to move it in or out of the tray below.'
-	String get actionDockSubtitle => 'A draggable button on the terminal that opens these actions. Long-press a tile and drag it onto another to swap the two; tap one to move it in or out of the tray below.';
+	/// en: 'A draggable button on the terminal that opens these actions. Drag a tile to move it, tap − to hide it and + to bring it back.'
+	String get actionDockSubtitle => 'A draggable button on the terminal that opens these actions. Drag a tile to move it, tap − to hide it and + to bring it back.';
 
 	/// en: 'Dock'
 	String get actionDockPreview => 'Dock';
@@ -1381,11 +1381,29 @@ class Translations$settings$en {
 	/// en: 'Hidden'
 	String get actionDockHiddenLabel => 'Hidden';
 
-	/// en: 'Every tile is hidden. Tap one below to bring it back.'
-	String get actionDockAllHidden => 'Every tile is hidden. Tap one below to bring it back.';
+	/// en: 'Every tile is hidden. Tap + below or drag one here.'
+	String get actionDockAllHidden => 'Every tile is hidden. Tap + below or drag one here.';
 
-	/// en: 'Nothing hidden - every tile is on the dock.'
-	String get actionDockNoneHidden => 'Nothing hidden - every tile is on the dock.';
+	/// en: 'Nothing hidden - drag a tile here to hide it.'
+	String get actionDockNoneHidden => 'Nothing hidden - drag a tile here to hide it.';
+
+	/// en: 'Hide {name}'
+	String actionDockHide({required Object name}) => 'Hide ${name}';
+
+	/// en: 'Add {name} to the dock'
+	String actionDockShow({required Object name}) => 'Add ${name} to the dock';
+
+	/// en: 'Reset dock'
+	String get actionDockReset => 'Reset dock';
+
+	/// en: 'Reset the dock?'
+	String get actionDockResetTitle => 'Reset the dock?';
+
+	/// en: 'The default actions come back, in the default order.'
+	String get actionDockResetMessage => 'The default actions come back, in the default order.';
+
+	/// en: 'Dock reset'
+	String get actionDockResetDone => 'Dock reset';
 
 	/// en: 'Disable lock?'
 	String get disableLockTitle => 'Disable lock?';
@@ -4028,11 +4046,17 @@ extension on Translations {
 			'settings.commandSuggestionsSubtitle' => 'Suggests commands and paths as you type',
 			'settings.howItWorks' => 'How it works',
 			'settings.actionDockLayout' => 'Dock actions',
-			'settings.actionDockSubtitle' => 'A draggable button on the terminal that opens these actions. Long-press a tile and drag it onto another to swap the two; tap one to move it in or out of the tray below.',
+			'settings.actionDockSubtitle' => 'A draggable button on the terminal that opens these actions. Drag a tile to move it, tap − to hide it and + to bring it back.',
 			'settings.actionDockPreview' => 'Dock',
 			'settings.actionDockHiddenLabel' => 'Hidden',
-			'settings.actionDockAllHidden' => 'Every tile is hidden. Tap one below to bring it back.',
-			'settings.actionDockNoneHidden' => 'Nothing hidden - every tile is on the dock.',
+			'settings.actionDockAllHidden' => 'Every tile is hidden. Tap + below or drag one here.',
+			'settings.actionDockNoneHidden' => 'Nothing hidden - drag a tile here to hide it.',
+			'settings.actionDockHide' => ({required Object name}) => 'Hide ${name}',
+			'settings.actionDockShow' => ({required Object name}) => 'Add ${name} to the dock',
+			'settings.actionDockReset' => 'Reset dock',
+			'settings.actionDockResetTitle' => 'Reset the dock?',
+			'settings.actionDockResetMessage' => 'The default actions come back, in the default order.',
+			'settings.actionDockResetDone' => 'Dock reset',
 			'settings.disableLockTitle' => 'Disable lock?',
 			'settings.disableLockContent' => 'PIN and biometric lock will be removed.',
 			'settings.layoutLabel' => ({required Object number}) => 'Layout ${number}',
@@ -4122,14 +4146,14 @@ extension on Translations {
 			'settings.toolbarProfileNewName' => ({required Object number}) => 'Layout ${number}',
 			'settings.toolbarProfileRenameTitle' => 'Rename layout',
 			'settings.toolbarProfileNameLabel' => 'Layout name',
+			_ => null,
+		} ?? switch (path) {
 			'settings.toolbarProfileDeleteTitle' => 'Delete this layout?',
 			'settings.toolbarProfileDeleteConfirm' => ({required Object name}) => '“${name}” and the keys arranged in it are gone.',
 			'settings.toolbarProfileDeleteLast' => 'This is the only layout left - the toolbar needs one.',
 			'settings.toolbarProfileSummary' => ({required Object count, required Object columns, required Object rows, required Object pages}) => '${count} keys · ${columns}x${rows}, ${pages} page(s)',
 			'settings.toolbarGridSize' => 'Grid size',
 			'settings.toolbarReset' => 'Reset layout',
-			_ => null,
-		} ?? switch (path) {
 			'settings.toolbarResetTitle' => 'Reset this layout?',
 			'settings.toolbarResetMessage' => 'Every slot goes back to the default arrangement.',
 			'settings.toolbarResetDone' => 'Layout reset',
@@ -4636,14 +4660,14 @@ extension on Translations {
 			'selection.moved' => ({required num n, required Object count, required Object group}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: 'Moved ${count} to ${group}', other: 'Moved ${count} to ${group}', ), 
 			'selection.deleted' => ({required num n, required Object count}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: 'Deleted ${count} item', other: 'Deleted ${count} items', ), 
 			'selection.machinesInUseBody' => ({required num n, required Object count}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '1 machine connects through one you are deleting and will stop connecting:', other: '${count} machines connect through one you are deleting and will stop connecting:', ), 
+			_ => null,
+		} ?? switch (path) {
 			'selection.keysInUseBody' => ({required num n, required Object count}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '1 machine uses a key you are deleting and will stop connecting:', other: '${count} machines use a key you are deleting and will stop connecting:', ), 
 			'selection.inUseTitle' => 'Still in use',
 			'globalSearch.hint' => 'Search everything',
 			'globalSearch.back' => 'Back',
 			'globalSearch.clear' => 'Clear',
 			'globalSearch.machines' => 'Machines',
-			_ => null,
-		} ?? switch (path) {
 			'globalSearch.sessions' => 'Sessions',
 			'globalSearch.groups' => 'Groups',
 			'globalSearch.snippets' => 'Snippets',
