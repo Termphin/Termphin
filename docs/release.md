@@ -33,10 +33,18 @@ build has to uninstall first.
 
 ## Release workflow
 
-`.github/workflows/release.yml` fires on a `vX.Y.Z` tag and publishes a GitHub
-release rendered from that version's entry in `assets/release_notes.yaml`. It
-fails rather than guessing when the entry is missing or the tag is not a dotted
-number, so give the `Unreleased` entry its real number before tagging.
+`.github/workflows/release.yml` fires on a `vX.Y.Z` tag. It first checks the
+tag - a dotted version matching `pubspec.yaml`, on a commit that is on
+`main` - and runs `flutter analyze` and the tests. Then it creates a **draft**
+release with notes rendered from that version's entry in
+`assets/release_notes.yaml` (plus how to verify the APK), the Android and iOS
+builds run in parallel, and only when every build succeeded is the draft
+published. A failed build leaves a draft to delete, never a public release
+without its files. It fails rather than guessing when the entry is
+missing or the tag is not a dotted number, so give the `Unreleased` entry its
+real number before tagging. Release tags are protected: once pushed, a `v*`
+tag cannot be moved or deleted, so a broken release is fixed with the next
+version (or the next `+N`), not by re-tagging.
 
 A tag ending in `-ios.N` or `-android.N` (`v1.12.0-ios.22`) is a test build
 for that platform alone: only that build runs, and its release is a

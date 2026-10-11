@@ -5,39 +5,88 @@ on:
     tags:
       - 'v*'
 
-# A tag ending in -ios.N or -android.N (v1.12.0-ios.22) is a test build for
-# that platform alone, N being the build number after the + in pubspec.yaml:
-# only its build runs, and the release it lands in is a prerelease so it
-# never shows as the latest. A plain vX.Y.Z builds both.
+# vX.Y.Z builds both platforms and publishes the release. A tag ending in
+# -ios.N or -android.N (v1.12.0-ios.22) is a test build for that platform
+# alone, N being the build number after the + in pubspec.yaml; its release is
+# a prerelease, so it never shows as the latest.
+#
+# The release is created as a draft and published only once every build has
+# uploaded into it, so nobody ever sees a release without its files, and a
+# failed build leaves a draft to delete rather than a public half-release.
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
 jobs:
-  release:
+  verify:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     outputs:
-      platform: ${{ steps.platform.outputs.platform }}
+      platform: ${{ steps.tag.outputs.platform }}
     steps:
-      - name: Read the platform from the tag
-        id: platform
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Check the tag
+        id: tag
         env:
           TAG: ${{ github.ref_name }}
         run: |
-          if [[ ! "$TAG" =~ ^v[0-9]+(\.[0-9]+)*(-(ios|android)\.[0-9]+)?$ ]]; then
+          if [[ ! "$TAG" =~ ^v([0-9]+(\.[0-9]+)*)(-(ios|android)\.([0-9]+))?$ ]]; then
             echo "$TAG is neither vX.Y.Z nor vX.Y.Z-ios.N / vX.Y.Z-android.N" >&2
             exit 1
           fi
-          echo "platform=${BASH_REMATCH[3]:-all}" >> "$GITHUB_OUTPUT"
+          TAG_VERSION="${BASH_REMATCH[1]}"
+          TAG_BUILD="${BASH_REMATCH[5]}"
+          echo "platform=${BASH_REMATCH[4]:-all}" >> "$GITHUB_OUTPUT"
 
+          VERSION="$(grep '^version:' pubspec.yaml | awk '{print $2}')"
+          if [ "$TAG_VERSION" != "${VERSION%%+*}" ]; then
+            echo "Tag $TAG does not match pubspec version $VERSION" >&2
+            exit 1
+          fi
+          if [ -n "$TAG_BUILD" ] && [ "$TAG_BUILD" != "${VERSION#*+}" ]; then
+            echo "Tag $TAG names build $TAG_BUILD, pubspec has $VERSION" >&2
+            exit 1
+          fi
+
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "Tag $TAG points at a commit that is not on main" >&2
+            exit 1
+          fi
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: '3.47.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Analyze and test
+        run: |
+          flutter pub get
+          flutter analyze
+          flutter test --exclude-tags live
+
+  draft:
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
       - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install PyYAML
-        run: pip install --quiet pyyaml
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Render release notes
         env:
           TAG: ${{ github.ref_name }}
         run: |
+          pip install --quiet pyyaml
           python3 - "$TAG" <<'PY' > notes.md
           import pathlib
           import re
@@ -45,16 +94,8 @@ jobs:
 
           import yaml
 
-          # The tag carries the leading v and maybe a platform suffix;
-          # assets/release_notes.yaml carries neither.
           tag = sys.argv[1]
-          version = tag[1:] if tag.startswith("v") else tag
-          version = re.sub(r"-(ios|android)\.\d+$", "", version)
-
-          # What isReleasedVersion accepts in the app: a dotted number. Without
-          # this, a tag of vUnreleased would publish the working entry.
-          if not re.fullmatch(r"\d+(\.\d+)*", version):
-              sys.exit(f"{tag} is not a released version number.")
+          version = re.sub(r"-(ios|android)\.\d+$", "", tag[1:])
 
           entries = yaml.safe_load(pathlib.Path("assets/release_notes.yaml").read_text())
           entry = next((e for e in entries if str(e.get("version")) == version), None)
@@ -64,48 +105,51 @@ jobs:
                   "Give the Unreleased entry its real number before tagging."
               )
 
-          # The order and labels the app's ReleaseNotesScreen and the landing
-          # site's changelog page both use - a release reads the same in all
-          # three places or it reads as three different releases.
           categories = ("added", "changed", "deprecated", "removed", "fixed", "security")
-
           lines = []
           for key in categories:
               items = entry.get(key)
               if not items:
                   continue
-              lines.append(f"## {key.capitalize()}")
+              lines += [f"## {key.capitalize()}", ""]
+              lines += [f"- {item}" for item in items]
               lines.append("")
-              lines.extend(f"- {item}" for item in items)
-              lines.append("")
-
           if not lines:
               sys.exit(f"The entry for {version} carries no categories.")
 
+          lines += [
+              "## Verifying the APK",
+              "",
+              "Each file comes with a `.sha256` checksum and a build provenance",
+              "attestation proving it was built from this tag by this repository:",
+              "",
+              "```",
+              f"gh attestation verify termphin-{version}.apk -R Termphin/Termphin",
+              "```",
+              "",
+              "The APK is signed with a different key than the Google Play build,",
+              "so one does not update the other.",
+          ]
           print("\n".join(lines))
           PY
 
-      - name: Create release
+      - name: Create the draft release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
-          PLATFORM: ${{ steps.platform.outputs.platform }}
+          PLATFORM: ${{ needs.verify.outputs.platform }}
         run: |
           PRERELEASE=false
           [ "$PLATFORM" != all ] && PRERELEASE=true
-          # `gh release create` fails on a tag that already has a release,
-          # which is the override the Gitea workflow used to do.
-          gh release create "$TAG" --title "Termphin $TAG" --notes-file notes.md --prerelease="$PRERELEASE" \
-            || gh release edit "$TAG" --title "Termphin $TAG" --notes-file notes.md --prerelease="$PRERELEASE"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --title "Termphin $TAG" --notes-file notes.md --prerelease="$PRERELEASE" --draft
+          else
+            gh release create "$TAG" --title "Termphin $TAG" --notes-file notes.md --prerelease="$PRERELEASE" --draft --verify-tag
+          fi
 
-  # Both builds upload into the release above, so they cannot start until it
-  # exists. They are independent of each other and run in parallel.
-  # The repository's default token is read-only, and a called workflow cannot
-  # ask for more than the job calling it was granted - so the grant has to be
-  # made here, not only inside the workflow being called.
   android:
-    needs: release
-    if: needs.release.outputs.platform != 'ios'
+    needs: [verify, draft]
+    if: needs.verify.outputs.platform != 'ios'
     permissions:
       contents: write
       id-token: write
@@ -113,14 +157,50 @@ jobs:
     uses: ./.github/workflows/build-android.yml
     with:
       tag: ${{ github.ref_name }}
-    secrets: inherit
+    secrets:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
 
   ios:
-    needs: release
-    if: needs.release.outputs.platform != 'android'
+    needs: [verify, draft]
+    if: needs.verify.outputs.platform != 'android'
     permissions:
-      contents: write
+      contents: read
     uses: ./.github/workflows/build-ios.yml
     with:
       tag: ${{ github.ref_name }}
-    secrets: inherit
+    secrets:
+      IOS_DIST_CERT_BASE64: ${{ secrets.IOS_DIST_CERT_BASE64 }}
+      IOS_DIST_CERT_PASSWORD: ${{ secrets.IOS_DIST_CERT_PASSWORD }}
+      IOS_KEYCHAIN_PASSWORD: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
+      IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+      IOS_PROVISIONING_PROFILE_NAME: ${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}
+      APPSTORE_API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+      APPSTORE_API_ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
+      APPSTORE_API_PRIVATE_KEY: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
+      POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
+
+  publish:
+    needs: [verify, android, ios]
+    if: >-
+      !cancelled() &&
+      !contains(needs.*.result, 'failure') &&
+      !contains(needs.*.result, 'cancelled')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          PLATFORM: ${{ needs.verify.outputs.platform }}
+        run: |
+          if [ "$PLATFORM" = all ]; then
+            gh release edit "$TAG" -R "$GITHUB_REPOSITORY" --draft=false --latest
+          else
+            gh release edit "$TAG" -R "$GITHUB_REPOSITORY" --draft=false
+          fi
