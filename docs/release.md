@@ -75,9 +75,9 @@ documentation is filed and Apple issues a code - never `false`.
 
 ## Signing
 
-The upload key and `android/key.properties` live in
-`~/.config/termphin/signing/`, outside the checkout, with a copy in the password
-manager; `android/key.properties` here is a symlink to it. Play App Signing
+A local release build reads `android/key.properties` (git-ignored: `storeFile`,
+`storePassword`, `keyAlias`, `keyPassword`); without it the release build falls
+back to the debug key. CI writes that file from its secrets. Play App Signing
 holds the real app signing key, so the upload key is resettable from the Play
 Console if it is ever lost. The committed `android/app/debug-keystore.jks` is
 the public AOSP debug key and is meant to be there - it keeps the debug

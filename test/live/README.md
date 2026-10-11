@@ -47,21 +47,6 @@ on.
 
 `offline_edges_test.dart` needs nothing and runs in the normal suite.
 
-## Windows
-
-`live_windows_test.dart` runs the same ground against Win32-OpenSSH on a
-Windows Server VM (qemu/KVM, outside this repository - see
-`~/vm/win2025/run-vm.sh`): PowerShell quoting, `/C:/Users/...` paths, the
-helper under `%LOCALAPPDATA%`, and a power cut through qemu's monitor socket.
-
-```bash
-TERMPHIN_LIVE_WIN_PORT=22222 TERMPHIN_LIVE_WIN_PASSWORD=... \
-  flutter test test/live/live_windows_test.dart --concurrency=1
-```
-
-Setting `TERMPHIN_LIVE_WIN_VM_DIR` to the VM directory additionally enables the
-power-cut test, which kills the machine and boots it again.
-
 ## Containerfile
 
 ```dockerfile

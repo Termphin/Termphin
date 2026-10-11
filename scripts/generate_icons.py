@@ -10,10 +10,7 @@ Produces:
   assets/icons/termphin_foreground.png    512 glyph on transparent, adaptive fg
   assets/icons/termphin_background.png    512 gradient, adaptive bg
   assets/icons/termphin_monochrome.png    512 silhouette, adaptive monochrome
-  ../termphin-assets/landing/public/*    favicons, PWA icons, apple-touch
-                                          (only when that checkout exists)
   macos/Runner/Assets.xcassets/...        the AppIcon set
-  ../termphin-assets/promo-assets/stores/play/img/logo.png  the Play deck
   android/.../drawable-*/ic_stat_termphin.png  the notification small icon
 
 After running this, run `dart run flutter_launcher_icons` to rebuild the
@@ -32,7 +29,6 @@ import tempfile
 
 ROOT = next(p for p in pathlib.Path(__file__).resolve().parents if (p / "pubspec.yaml").exists())
 LOGO_SVG = ROOT / "assets" / "logo.svg"
-ASSETS = "../termphin-assets"
 
 # Android masks and animates the outer ring of an adaptive icon, so a glyph
 # drawn edge to edge gets its nose clipped by a circular mask. This is the
@@ -180,25 +176,8 @@ def main():
                 size,
             )
 
-        if (ROOT / ASSETS / "landing/public").is_dir():
-            for name, size in [
-                ("app-icon.png", 512), ("icon-512.png", 512), ("icon-192.png", 192),
-                ("apple-touch-icon.png", 180), ("favicon-32x32.png", 32),
-                ("favicon-16x16.png", 16),
-            ]:
-                emit(tile, f"{ASSETS}/landing/public/{name}", size)
-            magick(
-                ROOT / ASSETS / "landing/public/favicon-32x32.png",
-                ROOT / ASSETS / "landing/public/favicon-16x16.png",
-                "-strip", ROOT / ASSETS / "landing/public/favicon.ico",
-            )
-            written[f"{ASSETS}/landing/public/favicon.ico"] = "16+32"
-
         for size in (16, 32, 64, 128, 256, 512, 1024):
             emit(tile, f"macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_{size}.png", size)
-
-        if (ROOT / ASSETS / "promo-assets/stores/play/img").is_dir():
-            emit(tile, f"{ASSETS}/promo-assets/stores/play/img/logo.png", 512)
 
     for k in sorted(written):
         print(f"{k}  {written[k]}")
