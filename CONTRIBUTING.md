@@ -17,8 +17,10 @@ public issue - see [SECURITY.md](SECURITY.md).
    A bug fix comes with a test that fails without it.
 4. Every user-facing string goes into `lib/i18n/strings_en.i18n.json`, then
    `dart run slang`.
-5. Commit messages follow Conventional Commits:
-   `type(scope): subject`, one line.
+5. The pull request title follows Conventional Commits
+   (`type(scope): subject`): pull requests are squashed, so the title becomes
+   the commit on `main`. CI (`flutter analyze` and `flutter test`) has to pass
+   before it can merge.
 
 ## License
 
