@@ -8,6 +8,7 @@ import '../../widgets/settings/appearance_settings_section.dart';
 import '../../widgets/settings/connection_settings_section.dart';
 import '../../widgets/settings/data_backup_settings_section.dart';
 import '../../widgets/settings/feedback_settings_section.dart';
+import '../../widgets/settings/open_source_settings_section.dart';
 import '../../widgets/settings/organization_settings_section.dart';
 import '../../widgets/settings/privacy_settings_section.dart';
 import '../../widgets/settings/security_settings_section.dart';
@@ -91,6 +92,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const PrivacySettingsSection(),
                   const SizedBox(height: 20),
                   const FeedbackSettingsSection(),
+                  const SizedBox(height: 20),
+                  const OpenSourceSettingsSection(),
                   const SizedBox(height: 20),
                   const AnalyticsSettingsSection(),
                   const SizedBox(height: 20),

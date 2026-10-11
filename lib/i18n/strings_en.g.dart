@@ -1519,6 +1519,27 @@ class Translations$settings$en {
 	/// en: 'Open bugs and ideas, out in the open on GitHub'
 	String get issueTrackerSubtitle => 'Open bugs and ideas, out in the open on GitHub';
 
+	/// en: 'Open source'
+	String get openSource => 'Open source';
+
+	/// en: 'Star on GitHub'
+	String get starOnGitHub => 'Star on GitHub';
+
+	/// en: 'Termphin is free and open source. A star helps others find it'
+	String get starOnGitHubSubtitle => 'Termphin is free and open source. A star helps others find it';
+
+	/// en: 'Contribute'
+	String get contribute => 'Contribute';
+
+	/// en: 'Fix a bug or build a feature, here is where to start'
+	String get contributeSubtitle => 'Fix a bug or build a feature, here is where to start';
+
+	/// en: 'License'
+	String get sourceLicense => 'License';
+
+	/// en: 'GPL-3.0: read the code, build it, change it'
+	String get sourceLicenseSubtitle => 'GPL-3.0: read the code, build it, change it';
+
 	/// en: 'Manual'
 	String get manual => 'Manual';
 
@@ -4056,6 +4077,13 @@ extension on Translations {
 			'settings.reportBugSubtitle' => 'Something broke? Tell us what happened',
 			'settings.issueTracker' => 'Issue tracker',
 			'settings.issueTrackerSubtitle' => 'Open bugs and ideas, out in the open on GitHub',
+			'settings.openSource' => 'Open source',
+			'settings.starOnGitHub' => 'Star on GitHub',
+			'settings.starOnGitHubSubtitle' => 'Termphin is free and open source. A star helps others find it',
+			'settings.contribute' => 'Contribute',
+			'settings.contributeSubtitle' => 'Fix a bug or build a feature, here is where to start',
+			'settings.sourceLicense' => 'License',
+			'settings.sourceLicenseSubtitle' => 'GPL-3.0: read the code, build it, change it',
 			'settings.manual' => 'Manual',
 			'settings.manualSubtitle' => 'How to use Termphin, from first connection onwards',
 			'settings.feedbackEmailFailed' => 'Could not open your mail app.',
@@ -4100,6 +4128,8 @@ extension on Translations {
 			'settings.toolbarProfileSummary' => ({required Object count, required Object columns, required Object rows, required Object pages}) => '${count} keys · ${columns}x${rows}, ${pages} page(s)',
 			'settings.toolbarGridSize' => 'Grid size',
 			'settings.toolbarReset' => 'Reset layout',
+			_ => null,
+		} ?? switch (path) {
 			'settings.toolbarResetTitle' => 'Reset this layout?',
 			'settings.toolbarResetMessage' => 'Every slot goes back to the default arrangement.',
 			'settings.toolbarResetDone' => 'Layout reset',
@@ -4107,8 +4137,6 @@ extension on Translations {
 			'settings.toolbarEmptySlot' => 'Empty slot',
 			'settings.toolbarPageOf' => ({required Object number, required Object total}) => 'Page ${number} of ${total}',
 			'settings.toolbarKeyHeld' => 'Tap another slot to move it',
-			_ => null,
-		} ?? switch (path) {
 			'settings.editorTabWidth' => 'Tab width',
 			'settings.sftpShowHidden' => 'Show hidden files',
 			'settings.sftpShowHiddenSubtitle' => 'Names that start with a dot, like .ssh and .bashrc.',
@@ -4614,6 +4642,8 @@ extension on Translations {
 			'globalSearch.back' => 'Back',
 			'globalSearch.clear' => 'Clear',
 			'globalSearch.machines' => 'Machines',
+			_ => null,
+		} ?? switch (path) {
 			'globalSearch.sessions' => 'Sessions',
 			'globalSearch.groups' => 'Groups',
 			'globalSearch.snippets' => 'Snippets',
@@ -4621,8 +4651,6 @@ extension on Translations {
 			'globalSearch.recentMachines' => 'Recent machines',
 			'globalSearch.openSessions' => 'Open sessions',
 			'globalSearch.emptyHint' => 'Find machines by name, address or username, and sessions, groups, snippets and keys by name.',
-			_ => null,
-		} ?? switch (path) {
 			'globalSearch.noResults' => ({required Object query}) => 'Nothing matches "${query}"',
 			'globalSearch.inGroup' => ({required Object group}) => 'In ${group}',
 			'globalSearch.leaveGroup' => 'Search everything again',

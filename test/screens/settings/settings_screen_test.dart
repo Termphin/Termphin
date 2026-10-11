@@ -110,6 +110,7 @@ void main() {
           t.settings.connection,
           t.settings.security,
           t.settings.privacy,
+          t.settings.openSource,
           t.settings.analytics,
           t.settings.about,
         ]),
