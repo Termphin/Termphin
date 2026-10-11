@@ -652,6 +652,7 @@ class AppTheme {
       ),
       dividerTheme: DividerThemeData(color: c.surfaceDivider),
       canvasColor: c.backgroundPrimary,
+      splashFactory: NoSplash.splashFactory,
       splashColor: c.primary.withValues(alpha: 0.10),
       highlightColor: c.primary.withValues(alpha: 0.06),
       hoverColor: c.primary.withValues(alpha: 0.05),
@@ -729,7 +730,7 @@ class AppTheme {
         backgroundColor: c.surfaceCard,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(radiusLg),
+          borderRadius: BorderRadius.zero,
           side: BorderSide(color: c.surfaceBorderStrong),
         ),
         titleTextStyle: TextStyle(

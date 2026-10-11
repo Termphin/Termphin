@@ -104,7 +104,7 @@ class _TagMigrationModalState extends State<TagMigrationModal> {
       backgroundColor: colors.surfaceElevated,
       insetPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppTheme.radiusXl),
+        borderRadius: BorderRadius.zero,
         side: BorderSide(color: colors.surfaceBorderStrong),
       ),
       child: ConstrainedBox(

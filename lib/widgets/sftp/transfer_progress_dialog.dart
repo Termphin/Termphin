@@ -118,7 +118,7 @@ class _TransferProgressDialogState extends State<_TransferProgressDialog> {
         backgroundColor: context.colors.surfaceElevated,
         surfaceTintColor: context.colors.surfaceElevated.invisible,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+          borderRadius: BorderRadius.zero,
           side: BorderSide(color: context.colors.surfaceBorder),
         ),
         contentPadding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
