@@ -66,21 +66,3 @@ reason to look at the folders, not to add a flat file beside them.
 | [`analytics.md`](analytics.md) | PostHog, consent, what is sent |
 | [`onboarding.md`](onboarding.md) | First run, review prompt, changelog versus what's new |
 | [`../release.md`](../release.md) | Release builds, what a release ships, signing, export compliance, Android toolchain |
-
-## Sync and payments are deleted outright
-
-Not unwired - deleted. That decision was taken while the app was still
-unreleased and there was nothing to announce a removal to. **It has shipped
-since** - 1.5.0 is on Google Play - so anything user-facing removed from here
-on is a change real people notice, and belongs in `assets/release_notes.yaml`.
-Sync (`SyncService`, `AuthService`, `SupabaseSyncBackend`,
-`lib/services/sync/`, tombstones), the crypto that existed only to serve it
-(`secret_vault.dart`, `mnemonic.dart`, `bip39_wordlist.dart`,
-`SecretCipher.adoptMasterKey`), and RevenueCat (`purchases_flutter`,
-`lib/services/purchases/`, the paywall screen) are all gone, along with
-`supabase_flutter` and `google_sign_in`. `SecretCipher` itself stays - it seals
-profiles, keys and host key pins. `SshProfile`, `SshKey` and `Snippet` no longer
-carry `deletedAt`/`workspaceId`; a delete is a plain remove from storage.
-
-**There is no entitlement anywhere in the app**, and the remote agent has never
-had a gate.
