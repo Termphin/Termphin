@@ -7,6 +7,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../i18n/strings.g.dart';
 import '../../services/settings/toolbar_layout.dart';
 import '../../theme/theme.dart';
+import '../ui/app_sheet.dart';
 import '../ui/toolbar_key_button.dart';
 import 'special_keys_toolbar.dart' show toolbarSchemeFromTheme;
 
@@ -28,11 +29,9 @@ Future<String?> showCustomKeyEditor(
   BuildContext context, {
   ToolbarAction? initial,
 }) {
-  return Navigator.of(context).push<String>(
-    MaterialPageRoute<String>(
-      builder: (_) => _CustomKeyBuilderScreen(initial: initial),
-      fullscreenDialog: true,
-    ),
+  return pushAppForm<String>(
+    context,
+    builder: (_) => _CustomKeyBuilderScreen(initial: initial),
   );
 }
 

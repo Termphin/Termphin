@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:terminal_view/terminal_view.dart';
 import 'package:termphin/i18n/strings.g.dart';
 import 'package:termphin/models/ssh_profile.dart';
 import 'package:termphin/providers/ssh_connection_provider.dart';
@@ -318,6 +320,70 @@ void main() {
     final state = await pump(tester, mode: SessionViewMode.sftp);
     state.focusTerminal();
     await tester.pump();
+  });
+
+  group('the keyboard on a tab that comes on screen', () {
+    bool terminalFocused() =>
+        FocusManager.instance.primaryFocus?.context
+            ?.findAncestorWidgetOfExactType<TerminalView>() !=
+        null;
+
+    /// Runs [body] as a desktop, putting the platform back even when it
+    /// fails - a leftover override fails every test after it.
+    Future<void> asDesktop(Future<void> Function() body) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+      try {
+        await body();
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    }
+
+    testWidgets('a desktop types into it straight away', (tester) async {
+      var focused = false;
+      await asDesktop(() async {
+        await pump(tester);
+        await tester.pump();
+        focused = terminalFocused();
+      });
+
+      expect(focused, isTrue);
+    });
+
+    testWidgets('a desktop types into a tab switched to', (tester) async {
+      var before = true;
+      var after = false;
+      await asDesktop(() async {
+        await pump(tester, isActive: false);
+        before = terminalFocused();
+
+        await pumpTestApp(
+          tester,
+          Scaffold(
+            body: SessionView(
+              key: viewKey,
+              sessionKey: ('session-1', profile),
+              viewMode: SessionViewMode.terminal,
+              isActive: true,
+              onClose: () {},
+            ),
+          ),
+          container: container,
+        );
+        await tester.pump();
+        after = terminalFocused();
+      });
+
+      expect(before, isFalse);
+      expect(after, isTrue);
+    });
+
+    testWidgets('a phone waits for a tap', (tester) async {
+      await pump(tester);
+      await tester.pump();
+
+      expect(terminalFocused(), isFalse);
+    });
   });
 
   testWidgets('an inactive tab still builds and still writes', (tester) async {

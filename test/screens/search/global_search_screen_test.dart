@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -88,6 +89,20 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  testWidgets('on a desktop it is a palette that Esc closes', (tester) async {
+    await open(tester);
+
+    expect(find.byType(Dialog), findsOneWidget);
+    final field = tester.widget<TextField>(
+      find.byKey(const ValueKey('globalSearchField')),
+    );
+    expect(field.focusNode!.hasFocus, isTrue);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.byType(GlobalSearchScreen), findsNothing);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.linux));
+
   testWidgets('the box flies up into a focused field', (tester) async {
     await open(tester);
 
@@ -156,6 +171,25 @@ void main() {
     expect(find.byType(GlobalSearchScreen), findsNothing);
     expect(container.read(terminalOverlayProvider)?.$2.id, 'web');
   });
+
+  testWidgets('arrows move through the results and Enter opens the one '
+      'picked', (tester) async {
+    final container = await open(tester);
+
+    await type(tester, '1');
+    final second =
+        tester.getTopLeft(find.text('web-1')).dy >
+            tester.getTopLeft(find.text('raspberry')).dy
+        ? 'web'
+        : 'pi';
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(GlobalSearchScreen), findsNothing);
+    expect(container.read(terminalOverlayProvider)?.$2.id, second);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.linux));
 
   /// The box between the two routes: a [SearchBox] belonging to neither end
   /// is the one in the air.

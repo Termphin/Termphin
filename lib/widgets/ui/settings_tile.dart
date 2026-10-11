@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../theme/theme.dart';
+import 'section_navigator.dart';
 
 /// What sits at the end of a [SettingsTile].
 enum SettingsTileTrailing {
@@ -19,7 +20,9 @@ enum SettingsTileTrailing {
 /// and a [trailing] hint about where tapping it goes.
 ///
 /// Give [destination] to open a screen, or [onTap] for anything else; with
-/// neither the row is not tappable. Rows that act in place rather than lead
+/// neither the row is not tappable. A [destination] opens through
+/// `pushAppPage` as a window, titled [title], so a desktop keeps the settings
+/// list in view behind it. Rows that act in place rather than lead
 /// somewhere colour their [icon] with [iconColor]; [titleTrailing] sits right
 /// after the title, for a badge or an info button.
 class SettingsTile extends StatelessWidget {
@@ -48,9 +51,11 @@ class SettingsTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final destination = this.destination;
     final tap = destination != null
-        ? () => Navigator.push(
+        ? () => pushAppPage<void>(
             context,
-            MaterialPageRoute<void>(builder: (_) => destination()),
+            window: true,
+            title: title,
+            builder: (_) => destination(),
           )
         : onTap;
     return ListTile(
@@ -78,7 +83,8 @@ class SettingsTile extends StatelessWidget {
 
 /// A switch row in a settings card: optional [icon], [title], optional
 /// [subtitle], and the switch itself. [titleTrailing] sits right after the
-/// title, for a badge or an info button.
+/// title, for a badge or an info button; [below] goes under the subtitle, for
+/// something to show rather than say.
 class SettingsSwitchTile extends StatelessWidget {
   const SettingsSwitchTile({
     super.key,
@@ -88,6 +94,7 @@ class SettingsSwitchTile extends StatelessWidget {
     this.icon,
     this.subtitle,
     this.titleTrailing,
+    this.below,
   });
 
   final String title;
@@ -96,16 +103,24 @@ class SettingsSwitchTile extends StatelessWidget {
   final IconData? icon;
   final String? subtitle;
   final Widget? titleTrailing;
+  final Widget? below;
 
   @override
   Widget build(BuildContext context) {
+    final below = this.below;
+    final text = _subtitle(context, subtitle);
     return SwitchListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 14),
       secondary: icon == null
           ? null
           : Icon(icon, color: context.colors.textSecondary),
       title: _title(title, titleTrailing),
-      subtitle: _subtitle(context, subtitle),
+      subtitle: below == null
+          ? text
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [?text, const SizedBox(height: 8), below],
+            ),
       value: value,
       activeThumbColor: context.colors.primary,
       onChanged: onChanged,

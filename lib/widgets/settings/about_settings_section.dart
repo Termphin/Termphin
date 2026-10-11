@@ -14,6 +14,7 @@ import '../ui/app_card.dart';
 import '../ui/app_notifications.dart';
 import '../ui/clipboard_and_links.dart';
 import '../ui/section_header.dart';
+import '../ui/section_navigator.dart';
 import '../ui/settings_tile.dart';
 
 /// About section: version, release notes, rating the app, licenses and the
@@ -43,9 +44,12 @@ class AboutSettingsSection extends StatelessWidget {
   }
 
   void _showReleaseNotes(BuildContext context) {
-    Navigator.of(
+    pushAppPage<void>(
       context,
-    ).push(MaterialPageRoute<void>(builder: (_) => const ReleaseNotesScreen()));
+      window: true,
+      title: Translations.of(context).settings.releaseNotes,
+      builder: (_) => const ReleaseNotesScreen(),
+    );
   }
 
   /// Straight to the store listing, not Play's in-app dialog - that one is

@@ -6,12 +6,15 @@ import 'package:termphin/providers/profiles_provider.dart';
 import 'package:termphin/providers/ssh_session_manager_provider.dart';
 import 'package:termphin/providers/terminal_overlay_provider.dart';
 import 'package:termphin/screens/main_shell.dart';
+import 'package:termphin/screens/search/global_search_screen.dart';
 import 'package:termphin/screens/terminal/terminal_screen.dart';
+import 'package:termphin/services/app/app_commands.dart';
 import 'package:termphin/services/settings/sidebar_settings.dart';
 import 'package:termphin/services/settings/tab_bar_settings.dart';
 import 'package:termphin/services/ssh/ssh_session_manager.dart';
 import 'package:termphin/theme/theme.dart';
 import 'package:termphin/widgets/profiles/profile_avatar.dart';
+import 'package:termphin/widgets/terminal/add_session_sheet.dart';
 import 'package:termphin/widgets/terminal/floating_action_dock.dart';
 import 'package:termphin/widgets/ui/app_notifications.dart';
 import 'package:termphin/widgets/ui/nav_rail.dart';
@@ -156,6 +159,22 @@ void main() {
       expect(terminalOpacity(tester), 1.0);
     },
   );
+
+  testWidgets('a new session asked for off the terminal opens the same '
+      'machine picker the terminal does', (tester) async {
+    final (container, fakeManager) = _containerWithFakeConnect();
+    addTearDown(fakeManager.dispose);
+    await pumpTestApp(tester, const MainShell(), container: container);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(AppCommands.instance.run(AppCommand.newSession), isTrue);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.byType(AddSessionSheetContent), findsOneWidget);
+    expect(find.byType(GlobalSearchScreen), findsNothing);
+  });
 
   testWidgets('the same session row opens again after backing out of it', (
     tester,
@@ -390,6 +409,30 @@ void main() {
 
       expect(railWidth(), kNavRailWidth);
       expect(inSidebar(find.text('Snippets')), findsOneWidget);
+    });
+
+    testWidgets('a phone on its side gets the same rail as a tablet', (
+      tester,
+    ) async {
+      final (container, fakeManager) = _containerWithFakeConnect();
+      addTearDown(fakeManager.dispose);
+      await pumpTestApp(tester, const MainShell(), container: container);
+      tester.view.physicalSize = const Size(844, 390);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      double railWidth() =>
+          tester.getSize(find.byKey(const ValueKey('sidebarNav'))).width;
+
+      expect(railWidth(), kNavRailWidth);
+      expect(inSidebar(find.text('Snippets')), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Collapse sidebar'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(railWidth(), kNavRailCollapsedWidth);
+      expect(find.byTooltip('Expand sidebar'), findsOneWidget);
     });
 
     testWidgets('a collapsed rail still switches tabs, and is remembered', (

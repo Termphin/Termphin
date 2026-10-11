@@ -8,6 +8,7 @@ import '../../models/port_forwarding_rule.dart';
 import '../../theme/theme.dart';
 import '../ui/app_card.dart';
 import '../ui/app_form_field.dart';
+import '../ui/app_sheet.dart';
 import '../ui/large_title_scaffold.dart';
 import '../ui/section_header.dart';
 import '../ui/two_line_label.dart';
@@ -23,12 +24,9 @@ Future<PortForwardingRule?> showPortForwardingRuleSheet({
   required String title,
   PortForwardingRule? existing,
 }) {
-  return Navigator.of(context).push<PortForwardingRule>(
-    MaterialPageRoute<PortForwardingRule>(
-      builder: (_) =>
-          _PortForwardingRuleScreen(title: title, existing: existing),
-      fullscreenDialog: true,
-    ),
+  return pushAppForm<PortForwardingRule>(
+    context,
+    builder: (_) => _PortForwardingRuleScreen(title: title, existing: existing),
   );
 }
 

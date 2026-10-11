@@ -11,6 +11,7 @@ import '../../widgets/ui/app_dropdown.dart';
 import '../../widgets/ui/app_notifications.dart';
 import '../../widgets/ui/confirm_dialog.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
+import '../../widgets/ui/section_navigator.dart';
 import '../../widgets/ui/text_input_dialog.dart';
 import 'toolbar_settings_screen.dart';
 
@@ -66,10 +67,13 @@ class _ToolbarProfilesScreenState extends State<ToolbarProfilesScreen> {
   /// The editor works on the profile it is handed, so editing one no longer
   /// means switching to it - picking is what the row's tap is for.
   Future<void> _edit(ToolbarProfile profile) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => ToolbarSettingsScreen(profileId: profile.id),
-      ),
+    await pushAppPage<void>(
+      context,
+      window: true,
+      title: profile.name.isEmpty
+          ? Translations.of(context).settings.toolbarProfileDefault
+          : profile.name,
+      builder: (_) => ToolbarSettingsScreen(profileId: profile.id),
     );
   }
 

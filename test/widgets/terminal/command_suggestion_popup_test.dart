@@ -35,6 +35,8 @@ void main() {
     required double cursorTop,
     double cursorLeft = 100,
     List<CommandSuggestion> suggestions = const [_best, _second, _third],
+    bool keyboard = false,
+    int selected = 0,
   }) {
     accepted = null;
     dismissed = 0;
@@ -50,6 +52,8 @@ void main() {
                   suggestions: suggestions,
                   onAccept: (s) => accepted = s,
                   onDismiss: () => dismissed++,
+                  keyboard: keyboard,
+                  selected: selected,
                 ),
               ],
             ),
@@ -63,6 +67,95 @@ void main() {
       find.byKey(ValueKey('commandSuggestion-${s.label}'));
 
   Rect card(WidgetTester tester) => tester.getRect(find.byType(Material).last);
+
+  /// Whether [s]'s row is drawn as the one the keyboard is on.
+  bool picked(WidgetTester tester, CommandSuggestion s) {
+    final box = tester.widget<Container>(
+      find.descendant(of: row(s), matching: find.byType(Container)).first,
+    );
+    return (box.color?.a ?? 0) > 0;
+  }
+
+  testWidgets('worked from the keyboard, it says which keys and marks the '
+      'pick', (tester) async {
+    await pump(tester, cursorTop: 400, keyboard: true, selected: 1);
+
+    final keys = find.byKey(const ValueKey('commandSuggestionKeys'));
+    for (final label in ['Ctrl', '↑↓', '→', 'Esc', 'pick', 'insert', 'close']) {
+      expect(
+        find.descendant(of: keys, matching: find.text(label)),
+        findsWidgets,
+      );
+    }
+    expect(picked(tester, _second), isTrue);
+    expect(picked(tester, _best), isFalse);
+    expect(picked(tester, _third), isFalse);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.linux));
+
+  testWidgets('rows and the X run to the card\'s edge when the keys\' line '
+      'is the wider', (tester) async {
+    const short = CommandSuggestion(
+      label: 'ls',
+      insert: 's',
+      kind: SuggestionKind.word,
+    );
+    await pump(
+      tester,
+      cursorTop: 400,
+      keyboard: true,
+      suggestions: const [short],
+    );
+
+    final cardRect = card(tester);
+    final dismiss = tester.getRect(
+      find.byKey(const ValueKey('commandSuggestionDismiss')),
+    );
+    expect(dismiss.right, moreOrLessEquals(cardRect.right, epsilon: 1.5));
+    expect(
+      tester.getRect(row(short)).right,
+      moreOrLessEquals(dismiss.left - 1, epsilon: 1.5),
+    );
+  }, variant: TargetPlatformVariant.only(TargetPlatform.linux));
+
+  testWidgets('a Mac\'s keys are Cmd, its Ctrl+arrows being the system\'s', (
+    tester,
+  ) async {
+    await pump(tester, cursorTop: 400, keyboard: true);
+
+    final keys = find.byKey(const ValueKey('commandSuggestionKeys'));
+    expect(find.descendant(of: keys, matching: find.text('⌘')), findsWidgets);
+    expect(
+      find.descendant(of: keys, matching: find.text('Ctrl')),
+      findsNothing,
+    );
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
+  testWidgets('room for one row only: the keys\' line gives way, nothing '
+      'overflows', (tester) async {
+    await pump(tester, cursorTop: 66, keyboard: true);
+
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const ValueKey('commandSuggestionKeys')), findsNothing);
+    expect(row(_best), findsOneWidget);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.linux));
+
+  testWidgets('room for a row and the keys\' line: both, nothing overflows', (
+    tester,
+  ) async {
+    await pump(tester, cursorTop: 66 + 34, keyboard: true);
+
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const ValueKey('commandSuggestionKeys')), findsOneWidget);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.linux));
+
+  testWidgets('by touch nothing is marked and no keys are named', (
+    tester,
+  ) async {
+    await pump(tester, cursorTop: 400);
+
+    expect(find.byKey(const ValueKey('commandSuggestionKeys')), findsNothing);
+    expect(picked(tester, _best), isFalse);
+  });
 
   testWidgets('floats above the cursor row, the best one nearest to it', (
     tester,

@@ -16,6 +16,7 @@ import '../providers/profiles_provider.dart';
 import '../providers/ssh_connection_provider.dart';
 import '../providers/ssh_session_manager_provider.dart';
 import '../providers/terminal_overlay_provider.dart';
+import '../services/app/app_commands.dart';
 import '../services/app/identity_anonymizer.dart';
 import '../services/sftp/cancel_token.dart';
 import '../services/ssh/ssh_link.dart';
@@ -33,7 +34,9 @@ import '../widgets/terminal/rename_session_dialog.dart';
 import '../widgets/ui/app_dropdown.dart';
 import '../widgets/ui/app_form_field.dart';
 import '../widgets/ui/app_notifications.dart';
+import '../widgets/ui/app_sheet.dart';
 import '../widgets/ui/confirm_dialog.dart';
+import '../widgets/ui/context_menu.dart';
 import '../widgets/ui/empty_state.dart';
 import '../widgets/ui/group_filter_chips.dart';
 import '../widgets/ui/group_picker_sheet.dart';
@@ -80,8 +83,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   ProfileSort _selectedSort = ProfileSort.recentlyUsed;
   final _sortNotifier = ValueNotifier<ProfileSort>(ProfileSort.recentlyUsed);
 
+  late final VoidCallback _unregisterEscape;
+
+  /// Esc on a desktop drops the selection, as a click on its X does.
+  bool _clearSelectionOnEscape() {
+    if (!mounted || _selectedProfileIds.isEmpty) return false;
+    setState(() => _selectedProfileIds.clear());
+    return true;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _unregisterEscape = AppCommands.instance.registerEscape(
+      _clearSelectionOnEscape,
+    );
+  }
+
   @override
   void dispose() {
+    _unregisterEscape();
     _sortNotifier.dispose();
     super.dispose();
   }
@@ -91,14 +112,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     String? initialGroup,
     SshLink? prefill,
   }) {
-    return Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => ProfileFormDialog(
-          profile: profile,
-          initialGroup: initialGroup,
-          prefill: prefill,
-        ),
-        fullscreenDialog: true,
+    return pushAppForm<void>(
+      context,
+      builder: (_) => ProfileFormDialog(
+        profile: profile,
+        initialGroup: initialGroup,
+        prefill: prefill,
       ),
     );
   }
@@ -558,11 +577,56 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return sortProfiles(result, _selectedSort);
   }
 
+  /// The machine's right-click menu on a desktop: what the card's tap, long
+  /// press and `⋮` menu do, in one place under the pointer.
+  List<ContextMenuEntry?> _profileMenu(SshProfile profile) {
+    final t = Translations.of(context);
+    final selected = _selectedProfileIds.contains(profile.id);
+    return [
+      ContextMenuEntry(
+        label: t.contextMenu.connect,
+        icon: PhosphorIconsRegular.terminalWindow,
+        onSelected: () =>
+            ref.read(terminalOverlayProvider.notifier).openProfile(profile),
+      ),
+      ContextMenuEntry(
+        label: t.contextMenu.edit,
+        icon: PhosphorIconsRegular.pencilSimple,
+        onSelected: () => _showProfileDialog(profile: profile),
+      ),
+      ContextMenuEntry(
+        label: t.session.loadSessions,
+        icon: PhosphorIconsRegular.cloudArrowDown,
+        enabled: !_loadingRemoteSessions.containsKey(profile.id),
+        onSelected: () => unawaited(_loadRemoteSessions(profile)),
+      ),
+      ContextMenuEntry(
+        label: t.contextMenu.select,
+        icon: PhosphorIconsRegular.checkSquare,
+        onSelected: () => setState(() {
+          if (selected) {
+            _selectedProfileIds.remove(profile.id);
+          } else {
+            _selectedProfileIds.add(profile.id);
+          }
+        }),
+      ),
+      null,
+      ContextMenuEntry(
+        label: t.contextMenu.delete,
+        icon: PhosphorIconsRegular.trash,
+        destructive: true,
+        onSelected: () => unawaited(_confirmDeleteProfile(profile)),
+      ),
+    ];
+  }
+
   /// One profile's card plus its attached session rows, kept together so
   /// related work stays grouped under its machine. The session rows ignore
   /// pointer events during multi-select, fading instead of disappearing, so
   /// nothing jumps under the finger while selection steps back from taking
-  /// taps on them.
+  /// taps on them. A Ctrl-click on a desktop is the long press: it picks the
+  /// card rather than opening it.
   Widget _buildProfileItem(SshProfile profile, SshSessionManager manager) {
     final tabs = manager.allTabsForProfile(profile.id);
     final liveTabs = tabs.where((s) => !s.dropped).toList();
@@ -572,36 +636,40 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ProfileCard(
-            profile: profile,
-            selected: _selectedProfileIds.contains(profile.id),
-            selectionMode: selecting,
-            onTap: () {
-              if (_selectedProfileIds.isNotEmpty) {
+          ContextMenuRegion(
+            entries: () => _profileMenu(profile),
+            child: ProfileCard(
+              profile: profile,
+              selected: _selectedProfileIds.contains(profile.id),
+              selectionMode: selecting,
+              onTap: () {
+                if (_selectedProfileIds.isNotEmpty ||
+                    selectionModifierPressed) {
+                  setState(() {
+                    if (_selectedProfileIds.contains(profile.id)) {
+                      _selectedProfileIds.remove(profile.id);
+                    } else {
+                      _selectedProfileIds.add(profile.id);
+                    }
+                  });
+                  return;
+                }
+                ref.read(terminalOverlayProvider.notifier).openProfile(profile);
+              },
+              onLongPress: () {
                 setState(() {
-                  if (_selectedProfileIds.contains(profile.id)) {
-                    _selectedProfileIds.remove(profile.id);
-                  } else {
-                    _selectedProfileIds.add(profile.id);
-                  }
+                  _selectedProfileIds.add(profile.id);
                 });
-                return;
-              }
-              ref.read(terminalOverlayProvider.notifier).openProfile(profile);
-            },
-            onLongPress: () {
-              setState(() {
-                _selectedProfileIds.add(profile.id);
-              });
-            },
-            onEdit: () => _showProfileDialog(profile: profile),
-            onLoadSessions: () => unawaited(_loadRemoteSessions(profile)),
-            onCancelLoadSessions: () => _cancelRemoteSessions(profile),
-            onDelete: () => unawaited(_confirmDeleteProfile(profile)),
-            isLoadingSessions: _loadingRemoteSessions.containsKey(profile.id),
-            sessionsCheckedLabel: _sessionsCheckedLabel(profile.id),
-            isActive: liveTabs.isNotEmpty,
-            attachedBelow: true,
+              },
+              onEdit: () => _showProfileDialog(profile: profile),
+              onLoadSessions: () => unawaited(_loadRemoteSessions(profile)),
+              onCancelLoadSessions: () => _cancelRemoteSessions(profile),
+              onDelete: () => unawaited(_confirmDeleteProfile(profile)),
+              isLoadingSessions: _loadingRemoteSessions.containsKey(profile.id),
+              sessionsCheckedLabel: _sessionsCheckedLabel(profile.id),
+              isActive: liveTabs.isNotEmpty,
+              attachedBelow: true,
+            ),
           ),
           IgnorePointer(
             ignoring: selecting,

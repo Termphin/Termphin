@@ -1,12 +1,15 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
 import '../../screens/settings/known_hosts_screen.dart';
+import '../../services/security/file_fallback_master_key_store.dart';
 import '../../services/security/lock_service.dart';
 import '../../services/settings/lock_settings.dart';
 import '../../theme/theme.dart';
+import '../../utils/platform_info.dart';
 import '../ui/app_card.dart';
 import '../ui/app_notifications.dart';
 import '../ui/confirm_dialog.dart';
@@ -17,6 +20,10 @@ import 'pin_setup_dialog.dart';
 
 /// Security section: the PIN lock, biometric unlock, its timeout and the
 /// known hosts list.
+///
+/// Without a system keyring the saved passwords and keys are only as private
+/// as a file in the user's home folder, so that is said here, where the user
+/// decides how safe their machines are.
 class SecuritySettingsSection extends StatefulWidget {
   const SecuritySettingsSection({super.key});
 
@@ -95,6 +102,24 @@ class _SecuritySettingsSectionState extends State<SecuritySettingsSection> {
       children: [
         SectionHeader(t.settings.security),
         const SizedBox(height: 10),
+        ValueListenableBuilder<bool>(
+          valueListenable: FileFallbackMasterKeyStore.usingFile,
+          builder: (context, usingFile, _) => !usingFile
+              ? const SizedBox.shrink()
+              : Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: AppCard(
+                    key: const ValueKey('noKeyringWarning'),
+                    child: SettingsTile(
+                      icon: PhosphorIconsRegular.warning,
+                      iconColor: context.colors.warning,
+                      title: t.settings.noKeyringTitle,
+                      subtitle: t.settings.noKeyringSubtitle,
+                      trailing: SettingsTileTrailing.none,
+                    ),
+                  ),
+                ),
+        ),
         AppCard(
           child: Column(
             children: [
@@ -106,29 +131,31 @@ class _SecuritySettingsSectionState extends State<SecuritySettingsSection> {
                 value: _lockEnabled,
                 onChanged: _onLockToggle,
               ),
-              Divider(height: 1, color: context.colors.surfaceDivider),
-              SettingsSwitchTile(
-                title: t.settings.biometricUnlock,
-                subtitle: !_lockEnabled
-                    ? t.settings.enablePinFirst
-                    : _biometricAvailable
-                    ? t.settings.biometricSubtitle
-                    : t.settings.biometricUnavailable,
-                value: _biometricEnabled,
-                onChanged: (_lockEnabled && _biometricAvailable)
-                    ? (v) async {
-                        await LockService.instance.setBiometricEnabled(v);
-                        setState(() => _biometricEnabled = v);
-                      }
-                    : !_lockEnabled
-                    ? (_) {
-                        AppNotifications.info(
-                          context,
-                          t.settings.enablePinFirst,
-                        );
-                      }
-                    : null,
-              ),
+              if (platformHas(PlatformFeature.biometrics)) ...[
+                Divider(height: 1, color: context.colors.surfaceDivider),
+                SettingsSwitchTile(
+                  title: t.settings.biometricUnlock,
+                  subtitle: !_lockEnabled
+                      ? t.settings.enablePinFirst
+                      : _biometricAvailable
+                      ? t.settings.biometricSubtitle
+                      : t.settings.biometricUnavailable,
+                  value: _biometricEnabled,
+                  onChanged: (_lockEnabled && _biometricAvailable)
+                      ? (v) async {
+                          await LockService.instance.setBiometricEnabled(v);
+                          setState(() => _biometricEnabled = v);
+                        }
+                      : !_lockEnabled
+                      ? (_) {
+                          AppNotifications.info(
+                            context,
+                            t.settings.enablePinFirst,
+                          );
+                        }
+                      : null,
+                ),
+              ],
               if (_lockEnabled) ...[
                 Divider(height: 1, color: context.colors.surfaceDivider),
                 Padding(

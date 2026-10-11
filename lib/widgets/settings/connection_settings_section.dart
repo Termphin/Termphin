@@ -156,7 +156,7 @@ class _ConnectionSettingsSectionState extends State<ConnectionSettingsSection>
                 subtitle: t.settings.remoteAgentHowItWorksSubtitle,
                 onTap: () => showRemoteAgentInfoSheet(context),
               ),
-              if (isIOSPlatform) ...[
+              if (platformHas(PlatformFeature.backgroundSuspension)) ...[
                 const Divider(height: 1),
                 SettingsTile(
                   icon: PhosphorIconsRegular.moon,
@@ -166,7 +166,7 @@ class _ConnectionSettingsSectionState extends State<ConnectionSettingsSection>
                   trailing: SettingsTileTrailing.none,
                 ),
               ],
-              if (isAndroidPlatform) ...[
+              if (platformHas(PlatformFeature.batteryOptimization)) ...[
                 const Divider(height: 1),
                 PermissionTile(
                   leading: Icon(
@@ -183,21 +183,23 @@ class _ConnectionSettingsSectionState extends State<ConnectionSettingsSection>
                   onTap: _onBatteryOptimizationTap,
                 ),
               ],
-              const Divider(height: 1),
-              PermissionTile(
-                leading: Icon(
-                  _notificationsGranted
-                      ? PhosphorIconsRegular.bell
-                      : PhosphorIconsRegular.bellSlash,
-                  color: _notificationsGranted
-                      ? context.colors.primary
-                      : context.colors.warning,
+              if (platformHas(PlatformFeature.notificationPermission)) ...[
+                const Divider(height: 1),
+                PermissionTile(
+                  leading: Icon(
+                    _notificationsGranted
+                        ? PhosphorIconsRegular.bell
+                        : PhosphorIconsRegular.bellSlash,
+                    color: _notificationsGranted
+                        ? context.colors.primary
+                        : context.colors.warning,
+                  ),
+                  title: t.settings.notificationsPermission,
+                  subtitle: t.settings.notificationsPermissionSubtitle,
+                  granted: _notificationsGranted,
+                  onTap: _onNotificationsTap,
                 ),
-                title: t.settings.notificationsPermission,
-                subtitle: t.settings.notificationsPermissionSubtitle,
-                granted: _notificationsGranted,
-                onTap: _onNotificationsTap,
-              ),
+              ],
               if (_localNetworkEnforced) ...[
                 const Divider(height: 1),
                 PermissionTile(

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
@@ -7,6 +9,7 @@ import '../../models/ssh_key.dart';
 import '../../providers/groups_provider.dart';
 import '../../providers/profiles_provider.dart';
 import '../../providers/ssh_keys_provider.dart';
+import '../../services/app/app_commands.dart';
 import '../../services/storage/group_storage.dart';
 import '../../services/storage/ssh_key_storage.dart';
 import '../../theme/theme.dart';
@@ -16,6 +19,7 @@ import '../../widgets/ui/app_dropdown.dart';
 import '../../widgets/ui/app_notifications.dart';
 import '../../widgets/ui/clipboard_and_links.dart';
 import '../../widgets/ui/confirm_dialog.dart';
+import '../../widgets/ui/context_menu.dart';
 import '../../widgets/ui/empty_state.dart';
 import '../../widgets/ui/group_filter_chips.dart';
 import '../../widgets/ui/group_picker_sheet.dart';
@@ -47,15 +51,28 @@ class _KeyManagerScreenState extends ConsumerState<KeyManagerScreen> {
   bool get _isSelectionMode => _selectedKeyIds.isNotEmpty;
   SshKeyStorage get _storage => ref.read(sshKeyStorageProvider);
 
+  late final VoidCallback _unregisterEscape;
+
+  /// Esc on a desktop drops the selection, as a click on its X does.
+  bool _clearSelectionOnEscape() {
+    if (!mounted || _selectedKeyIds.isEmpty) return false;
+    setState(() => _selectedKeyIds.clear());
+    return true;
+  }
+
   @override
   void initState() {
     super.initState();
+    _unregisterEscape = AppCommands.instance.registerEscape(
+      _clearSelectionOnEscape,
+    );
     _scrollController.addListener(_onScroll);
     _loadKeys();
   }
 
   @override
   void dispose() {
+    _unregisterEscape();
     _scrollController
       ..removeListener(_onScroll)
       ..dispose();
@@ -400,38 +417,80 @@ class _KeyManagerScreenState extends ConsumerState<KeyManagerScreen> {
                                             keysByGroup[group.name]![index];
                                         final selected = _selectedKeyIds
                                             .contains(key.id);
-                                        return _KeyTile(
-                                          sshKey: key,
-                                          selected: selected,
-                                          isSelectionMode: _isSelectionMode,
-                                          onTap: () {
-                                            if (_isSelectionMode) {
-                                              _toggleSelection(key.id);
-                                            }
-                                          },
-                                          onLongPress: () {
-                                            if (!_isSelectionMode) {
-                                              setState(() {
-                                                _selectedKeyIds.add(key.id);
-                                              });
-                                            } else {
-                                              _toggleSelection(key.id);
-                                            }
-                                          },
-                                          onDelete: () => _deleteKey(key),
-                                          onEdit: () async {
-                                            await showKeyFormScreen(
-                                              context,
-                                              existing: key,
-                                            );
-                                            if (mounted) {
-                                              await _loadKeys(
-                                                showLoading: false,
+                                        Future<void> edit() async {
+                                          await showKeyFormScreen(
+                                            context,
+                                            existing: key,
+                                          );
+                                          if (mounted) {
+                                            await _loadKeys(showLoading: false);
+                                          }
+                                        }
+
+                                        return ContextMenuRegion(
+                                          entries: () => [
+                                            ContextMenuEntry(
+                                              label: t.contextMenu.edit,
+                                              icon: PhosphorIconsRegular
+                                                  .pencilSimple,
+                                              onSelected: () =>
+                                                  unawaited(edit()),
+                                            ),
+                                            ContextMenuEntry(
+                                              label: t.keys.copyPublicKey,
+                                              icon: PhosphorIconsRegular.copy,
+                                              onSelected: () =>
+                                                  _copyPublicKey(key),
+                                            ),
+                                            ContextMenuEntry(
+                                              label: t.contextMenu.select,
+                                              icon: PhosphorIconsRegular
+                                                  .checkSquare,
+                                              onSelected: () =>
+                                                  _toggleSelection(key.id),
+                                            ),
+                                            null,
+                                            ContextMenuEntry(
+                                              label: t.contextMenu.delete,
+                                              icon: PhosphorIconsRegular.trash,
+                                              destructive: true,
+                                              onSelected: () => _deleteKey(key),
+                                            ),
+                                          ],
+                                          child: _KeyTile(
+                                            sshKey: key,
+                                            selected: selected,
+                                            isSelectionMode: _isSelectionMode,
+                                            onTap: () {
+                                              if (_isSelectionMode ||
+                                                  selectionModifierPressed) {
+                                                _toggleSelection(key.id);
+                                              }
+                                            },
+                                            onLongPress: () {
+                                              if (!_isSelectionMode) {
+                                                setState(() {
+                                                  _selectedKeyIds.add(key.id);
+                                                });
+                                              } else {
+                                                _toggleSelection(key.id);
+                                              }
+                                            },
+                                            onDelete: () => _deleteKey(key),
+                                            onEdit: () async {
+                                              await showKeyFormScreen(
+                                                context,
+                                                existing: key,
                                               );
-                                            }
-                                          },
-                                          onCopyPublicKey: () =>
-                                              _copyPublicKey(key),
+                                              if (mounted) {
+                                                await _loadKeys(
+                                                  showLoading: false,
+                                                );
+                                              }
+                                            },
+                                            onCopyPublicKey: () =>
+                                                _copyPublicKey(key),
+                                          ),
                                         );
                                       },
                                     ),

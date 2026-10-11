@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../theme/theme.dart';
+import '../../utils/platform_info.dart';
 
 enum AppNotificationKind { error, success, info, warning }
 
@@ -237,16 +238,20 @@ class _NotificationHostState extends State<_NotificationHost> {
     setState(() => _items.remove(data));
   }
 
+  /// A strip across a 1600pt window is a banner nobody reads; a desktop
+  /// stacks the notifications in the corner instead, at a card's width.
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<double>(
       valueListenable: appNotificationAnchor,
       builder: (context, anchor, _) {
         final top = MediaQuery.paddingOf(context).top + anchor;
+        final desktop = isDesktopPlatform;
         return Positioned(
           top: top,
-          left: 0,
-          right: 0,
+          left: desktop ? null : 0,
+          right: desktop ? 8 : 0,
+          width: desktop ? 420 : null,
           child: SafeArea(
             top: false,
             bottom: false,

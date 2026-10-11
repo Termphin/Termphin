@@ -254,6 +254,32 @@ void main() {
     });
   });
 
+  testWidgets('a desktop has no touch controls or phone permissions to set', (
+    tester,
+  ) async {
+    await pump(tester);
+    await scrollTo(tester, find.text(t.settings.commandSuggestions));
+
+    expect(find.text(t.settings.keyToolbar), findsNothing);
+    expect(find.text(t.settings.actionDock), findsNothing);
+    expect(
+      find.text(t.settings.actionBar, skipOffstage: false),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('keyboardShortcutsRow'), skipOffstage: false),
+      findsOneWidget,
+    );
+    expect(find.text(t.settings.tabsAtBottom), findsNothing);
+    expect(
+      find.text(t.settings.terminalTyping.toUpperCase(), skipOffstage: false),
+      findsOneWidget,
+    );
+    expect(find.text(t.settings.notificationsPermission), findsNothing);
+    expect(find.text(t.settings.batteryUnrestricted), findsNothing);
+    expect(find.text(t.settings.biometricUnlock), findsNothing);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.linux));
+
   testWidgets('the groups row opens the groups screen', (tester) async {
     await pump(tester);
     await scrollTo(tester, find.text(t.groups.title));
@@ -464,6 +490,26 @@ void main() {
 
     expect(find.text('Explained here'), findsOneWidget);
     expect(commandSuggestionsSetting.value, isTrue);
+  });
+
+  testWidgets('on a desktop Autocomplete says which keys work it', (
+    tester,
+  ) async {
+    await pump(tester);
+    final keys = find.byKey(const ValueKey('commandSuggestionsKeys'));
+    await scrollTo(tester, keys);
+
+    expect(keys, findsOneWidget);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.linux));
+
+  testWidgets('a phone names no keys beside Autocomplete', (tester) async {
+    await pump(tester);
+    await scrollTo(
+      tester,
+      find.byKey(const ValueKey('commandSuggestionsInfo')),
+    );
+
+    expect(find.byKey(const ValueKey('commandSuggestionsKeys')), findsNothing);
   });
 
   testWidgets('the info beside Fast upload explains it, sitting by its title', (

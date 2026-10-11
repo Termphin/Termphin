@@ -114,6 +114,17 @@ with `BackupOptionTile`, so a section reads the same going out as coming in.
   snippets, groups, known-host pins, terminal settings, app preferences. **A
   section added here has to be added to `_knownSections` and to
   `kBackupVersion`.**
+- **Text is set per form factor** (`form_factor_settings.dart`). A phone and
+  a desktop each keep their own font, size, line height and side padding in
+  the terminal, and font, size and line height in the editor; scheme, cursor
+  and the rest are shared. The flat fields carry a phone's - all a build from
+  before the split ever wrote or reads - and a desktop's sit nested under
+  `terminalSettings.desktop` and `appPreferences.desktopEditor`. Restoring
+  applies this device's own and keeps the other's in
+  `backup_other_form_factor` (device state), which the next export hands back,
+  so a backup taken anywhere carries both. A desktop with nothing of a phone's
+  writes no flat text fields at all, rather than its own sizes where an old
+  phone build would apply them. A tablet counts as a phone.
 - **Groups are not a toggle in the import UI.** They are structure the records
   point at, so they ride along with whatever is exported. Import adds a group
   the device lacks but never repaints one it already has, takes the file's

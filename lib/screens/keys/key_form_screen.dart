@@ -15,6 +15,7 @@ import '../../theme/theme.dart';
 import '../../widgets/ssh/public_key_dialog.dart';
 import '../../widgets/ui/app_form_field.dart';
 import '../../widgets/ui/app_notifications.dart';
+import '../../widgets/ui/app_sheet.dart';
 import '../../widgets/ui/group_picker_field.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
 import '../../widgets/ui/section_header.dart';
@@ -29,14 +30,12 @@ Future<SshKey?> showKeyFormScreen(
   String? initialName,
   SshKey? existing,
 }) {
-  return Navigator.of(context).push(
-    MaterialPageRoute<SshKey>(
-      builder: (_) => KeyFormScreen(
-        initialGroup: initialGroup,
-        initialName: initialName,
-        existing: existing,
-      ),
-      fullscreenDialog: true,
+  return pushAppForm<SshKey>(
+    context,
+    builder: (_) => KeyFormScreen(
+      initialGroup: initialGroup,
+      initialName: initialName,
+      existing: existing,
     ),
   );
 }

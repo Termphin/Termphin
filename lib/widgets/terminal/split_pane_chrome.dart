@@ -117,9 +117,14 @@ class SplitDivider extends StatelessWidget {
   /// Held down, the tab swipe must leave the pointer alone.
   final ValueChanged<bool> onHeld;
 
+  /// A bar the whole length of the split, edged on both sides, so where one
+  /// session ends and the other starts never depends on what either is
+  /// showing; the grip in its middle is the part that says it can be dragged.
+
   @override
   Widget build(BuildContext context) {
     final horizontal = axis == Axis.horizontal;
+    final colors = context.colors;
     return Listener(
       onPointerDown: (_) => onHeld(true),
       onPointerUp: (_) => onHeld(false),
@@ -139,20 +144,28 @@ class SplitDivider extends StatelessWidget {
               : (details) => onDrag(details.delta.dy),
           child: Semantics(
             label: Translations.of(context).terminal.splitDivider,
-            child: SizedBox(
+            child: Container(
               width: horizontal ? kSplitDividerThickness : null,
               height: horizontal ? null : kSplitDividerThickness,
-              child: ColoredBox(
-                color: Theme.of(context).scaffoldBackgroundColor,
-                child: Center(
-                  child: Container(
-                    width: horizontal ? 3 : 32,
-                    height: horizontal ? 32 : 3,
-                    decoration: BoxDecoration(
-                      color: context.colors.textTertiary,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
+              decoration: BoxDecoration(
+                color: colors.surfaceCard,
+                border: horizontal
+                    ? Border.symmetric(
+                        vertical: BorderSide(color: colors.surfaceBorderStrong),
+                      )
+                    : Border.symmetric(
+                        horizontal: BorderSide(
+                          color: colors.surfaceBorderStrong,
+                        ),
+                      ),
+              ),
+              alignment: Alignment.center,
+              child: Container(
+                width: horizontal ? 3 : 32,
+                height: horizontal ? 32 : 3,
+                decoration: BoxDecoration(
+                  color: colors.textTertiary,
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),

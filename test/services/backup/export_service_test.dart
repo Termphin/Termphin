@@ -7,6 +7,7 @@ import 'package:termphin/models/profile_group.dart';
 import 'package:termphin/models/snippet.dart';
 import 'package:termphin/services/backup/backup_crypto.dart';
 import 'package:termphin/services/backup/export_service.dart';
+import 'package:termphin/services/backup/form_factor_settings.dart';
 import 'package:termphin/services/completion/command_completion.dart';
 import 'package:termphin/services/settings/editor_settings.dart';
 import 'package:termphin/services/settings/sidebar_settings.dart';
@@ -842,5 +843,72 @@ void main() {
     expect(preview.groups[1].label, 'NewGroup');
     expect(preview.groups[1].detail, 'ABCDEF');
     expect(preview.groups[1].exists, isFalse);
+  });
+
+  group('text set per form factor', () {
+    const settingsOnly = ExportOptions(
+      includeProfiles: false,
+      includeSshKeys: false,
+      includeSnippets: false,
+    );
+    final phone = ExportService(formFactor: FormFactor.mobile);
+    final desktop = ExportService(formFactor: FormFactor.desktop);
+
+    /// A different device: nothing of the last one's preferences.
+    Future<void> newDevice() async {
+      SharedPreferences.setMockInitialValues({});
+      await terminalSettings.load();
+      await editorSettings.load();
+    }
+
+    Future<void> setText(double terminal, double editor) async {
+      await terminalSettings.fontSize.set(terminal);
+      await editorSettings.fontSize.set(editor);
+    }
+
+    test('a phone\'s backup leaves a desktop\'s text as it was, and the '
+        'desktop\'s own backup carries the phone\'s on', () async {
+      await newDevice();
+      await setText(12, 13);
+      await terminalSettings.cursorStyle.set('bar');
+      final fromPhone = await phone.exportToJson(settingsOnly);
+
+      await newDevice();
+      await setText(15, 16);
+      await desktop.importFromJson(fromPhone, const ImportOptions());
+      expect(terminalSettings.fontSize.value, 15);
+      expect(editorSettings.fontSize.value, 16);
+      expect(terminalSettings.cursorStyle.value, 'bar');
+
+      final fromDesktop = await desktop.exportToJson(settingsOnly);
+      final json = jsonDecode(fromDesktop) as Map<String, dynamic>;
+      final terminal = json['terminalSettings'] as Map<String, dynamic>;
+      expect(terminal['fontSize'], 12);
+      expect((terminal[kDesktopTerminalKey] as Map)['fontSize'], 15);
+
+      await newDevice();
+      await phone.importFromJson(fromDesktop, const ImportOptions());
+      expect(terminalSettings.fontSize.value, 12);
+      expect(editorSettings.fontSize.value, 13);
+
+      await newDevice();
+      await desktop.importFromJson(fromDesktop, const ImportOptions());
+      expect(terminalSettings.fontSize.value, 15);
+      expect(editorSettings.fontSize.value, 16);
+    });
+
+    test('a desktop with nothing of a phone\'s writes no phone text', () async {
+      await newDevice();
+      await setText(15, 16);
+      final json =
+          jsonDecode(await desktop.exportToJson(settingsOnly))
+              as Map<String, dynamic>;
+
+      final terminal = json['terminalSettings'] as Map<String, dynamic>;
+      expect(terminal.containsKey('fontSize'), isFalse);
+      final prefs = json['appPreferences'] as Map<String, dynamic>;
+      expect(prefs.containsKey('editorFontSize'), isFalse);
+      expect((prefs[kDesktopEditorKey] as Map)['editorFontSize'], 16);
+    });
   });
 }

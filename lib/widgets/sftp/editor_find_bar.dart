@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:re_editor/re_editor.dart' as re;
 
@@ -31,6 +32,8 @@ class EditorFindBar extends StatelessWidget implements PreferredSizeWidget {
     return Size.fromHeight(_rowHeight * rows + 8);
   }
 
+  /// Esc closes the bar from either field, before it can reach the editor
+  /// window behind it and close that instead.
   @override
   Widget build(BuildContext context) {
     final value = controller.value;
@@ -48,105 +51,112 @@ class EditorFindBar extends StatelessWidget implements PreferredSizeWidget {
         ? t.editor.noMatches
         : t.editor.matchCount(current: result!.index + 1, total: total);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surfaceCard,
-        border: Border(bottom: BorderSide(color: colors.surfaceDivider)),
-      ),
-      padding: const EdgeInsets.fromLTRB(8, 4, 4, 4),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            height: _rowHeight,
-            child: Row(
-              children: [
-                if (!readOnly)
-                  _BarButton(
-                    tooltip: t.editor.replace,
-                    icon: replacing
-                        ? PhosphorIconsRegular.caretDown
-                        : PhosphorIconsRegular.caretRight,
-                    onPressed: controller.toggleMode,
-                  ),
-                Expanded(
-                  child: _Field(
-                    controller: controller.findInputController,
-                    focusNode: controller.findInputFocusNode,
-                    hint: t.editor.findHint,
-                    onSubmitted: (_) => controller.nextMatch(),
-                    trailing: [
-                      _OptionToggle(
-                        label: 'Aa',
-                        tooltip: t.editor.matchCase,
-                        on: value.option.caseSensitive,
-                        onTap: controller.toggleCaseSensitive,
-                      ),
-                      _OptionToggle(
-                        label: '.*',
-                        tooltip: t.editor.regex,
-                        on: value.option.regex,
-                        onTap: controller.toggleRegex,
-                      ),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  child: Text(
-                    count,
-                    style: colors.uiSmall.copyWith(
-                      color: total == 0 && hasPattern
-                          ? colors.error
-                          : colors.textTertiary,
-                    ),
-                  ),
-                ),
-                _BarButton(
-                  tooltip: t.editor.previousMatch,
-                  icon: PhosphorIconsRegular.arrowUp,
-                  onPressed: total == 0 ? null : controller.previousMatch,
-                ),
-                _BarButton(
-                  tooltip: t.editor.nextMatch,
-                  icon: PhosphorIconsRegular.arrowDown,
-                  onPressed: total == 0 ? null : controller.nextMatch,
-                ),
-                _BarButton(
-                  tooltip: t.editor.closeFind,
-                  icon: PhosphorIconsRegular.x,
-                  onPressed: controller.close,
-                ),
-              ],
-            ),
-          ),
-          if (replacing)
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.escape): controller.close,
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: colors.surfaceCard,
+          border: Border(bottom: BorderSide(color: colors.surfaceDivider)),
+        ),
+        padding: const EdgeInsets.fromLTRB(8, 4, 4, 4),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
             SizedBox(
               height: _rowHeight,
               child: Row(
                 children: [
-                  const SizedBox(width: 40),
+                  if (!readOnly)
+                    _BarButton(
+                      tooltip: t.editor.replace,
+                      icon: replacing
+                          ? PhosphorIconsRegular.caretDown
+                          : PhosphorIconsRegular.caretRight,
+                      onPressed: controller.toggleMode,
+                    ),
                   Expanded(
                     child: _Field(
-                      controller: controller.replaceInputController,
-                      focusNode: controller.replaceInputFocusNode,
-                      hint: t.editor.replaceHint,
-                      onSubmitted: (_) => controller.replaceMatch(),
+                      controller: controller.findInputController,
+                      focusNode: controller.findInputFocusNode,
+                      hint: t.editor.findHint,
+                      onSubmitted: (_) => controller.nextMatch(),
+                      trailing: [
+                        _OptionToggle(
+                          label: 'Aa',
+                          tooltip: t.editor.matchCase,
+                          on: value.option.caseSensitive,
+                          onTap: controller.toggleCaseSensitive,
+                        ),
+                        _OptionToggle(
+                          label: '.*',
+                          tooltip: t.editor.regex,
+                          on: value.option.regex,
+                          onTap: controller.toggleRegex,
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 4),
-                  TextButton(
-                    onPressed: total == 0 ? null : controller.replaceMatch,
-                    child: Text(t.editor.replace),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    child: Text(
+                      count,
+                      style: colors.uiSmall.copyWith(
+                        color: total == 0 && hasPattern
+                            ? colors.error
+                            : colors.textTertiary,
+                      ),
+                    ),
                   ),
-                  TextButton(
-                    onPressed: total == 0 ? null : controller.replaceAllMatches,
-                    child: Text(t.editor.replaceAll),
+                  _BarButton(
+                    tooltip: t.editor.previousMatch,
+                    icon: PhosphorIconsRegular.arrowUp,
+                    onPressed: total == 0 ? null : controller.previousMatch,
+                  ),
+                  _BarButton(
+                    tooltip: t.editor.nextMatch,
+                    icon: PhosphorIconsRegular.arrowDown,
+                    onPressed: total == 0 ? null : controller.nextMatch,
+                  ),
+                  _BarButton(
+                    tooltip: t.editor.closeFind,
+                    icon: PhosphorIconsRegular.x,
+                    onPressed: controller.close,
                   ),
                 ],
               ),
             ),
-        ],
+            if (replacing)
+              SizedBox(
+                height: _rowHeight,
+                child: Row(
+                  children: [
+                    const SizedBox(width: 40),
+                    Expanded(
+                      child: _Field(
+                        controller: controller.replaceInputController,
+                        focusNode: controller.replaceInputFocusNode,
+                        hint: t.editor.replaceHint,
+                        onSubmitted: (_) => controller.replaceMatch(),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    TextButton(
+                      onPressed: total == 0 ? null : controller.replaceMatch,
+                      child: Text(t.editor.replace),
+                    ),
+                    TextButton(
+                      onPressed: total == 0
+                          ? null
+                          : controller.replaceAllMatches,
+                      child: Text(t.editor.replaceAll),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

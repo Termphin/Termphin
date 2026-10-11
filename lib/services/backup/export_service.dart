@@ -14,6 +14,7 @@ import '../storage/ssh_key_storage.dart';
 import 'app_preferences_backup.dart';
 import 'backup_crypto.dart';
 import 'backup_models.dart';
+import 'form_factor_settings.dart';
 
 export 'backup_models.dart';
 
@@ -38,7 +39,9 @@ class ExportService {
     SnippetStorage? snippetStorage,
     KnownHostsStore? knownHosts,
     GroupStorage? groupStorage,
-  }) : _profileStorage = profileStorage ?? ProfileStorage(),
+    FormFactor? formFactor,
+  }) : _formFactor = formFactor ?? currentFormFactor,
+       _profileStorage = profileStorage ?? ProfileStorage(),
        _keyStorage = keyStorage ?? SshKeyStorage(),
        _snippetStorage = snippetStorage ?? SnippetStorage(),
        _knownHosts = knownHosts ?? KnownHostsStore.instance,
@@ -55,6 +58,9 @@ class ExportService {
   final SnippetStorage _snippetStorage;
   final KnownHostsStore _knownHosts;
   final GroupStorage _groupStorage;
+
+  /// Which of a backup's per-device values are this device's own.
+  final FormFactor _formFactor;
 
   /// What this device holds, for a screen that wants to say what an export
   /// will contain before it writes one.
@@ -111,11 +117,15 @@ class ExportService {
     }
 
     if (options.includeTerminalSettings) {
-      data['terminalSettings'] = await exportTerminalSettings();
+      data['terminalSettings'] = await exportTerminalSettings(
+        formFactor: _formFactor,
+      );
     }
 
     if (options.includeAppPreferences) {
-      data['appPreferences'] = await exportAppPreferences();
+      data['appPreferences'] = await exportAppPreferences(
+        formFactor: _formFactor,
+      );
     }
 
     final json = const JsonEncoder.withIndent('  ').convert(data);
@@ -428,6 +438,7 @@ class ExportService {
     if (options.importTerminalSettings && data['terminalSettings'] is Map) {
       await importTerminalSettings(
         Map<String, dynamic>.from(data['terminalSettings'] as Map),
+        formFactor: _formFactor,
       );
       terminalImported = true;
     }
@@ -436,6 +447,7 @@ class ExportService {
     if (options.importAppPreferences && data['appPreferences'] is Map) {
       await importAppPreferences(
         Map<String, dynamic>.from(data['appPreferences'] as Map),
+        formFactor: _formFactor,
       );
       preferencesImported = true;
     }

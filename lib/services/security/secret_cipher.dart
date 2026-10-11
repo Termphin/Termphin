@@ -4,7 +4,9 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import '../../utils/platform_info.dart';
 import 'aead.dart';
+import 'file_fallback_master_key_store.dart';
 
 const _masterKeyEntry = 'termphin_master_key_v1';
 
@@ -63,8 +65,14 @@ class KeystoreMasterKeyStore implements MasterKeyStore {
 /// device.
 class SecretCipher {
   SecretCipher({MasterKeyStore? store, Random? random})
-    : _store = store ?? const KeystoreMasterKeyStore(),
+    : _store = store ?? _platformStore(),
       _random = random;
+
+  /// A Linux session may have no keyring at all; there the key falls back to
+  /// a private file rather than failing to seal anything.
+  static MasterKeyStore _platformStore() => isLinuxPlatform
+      ? FileFallbackMasterKeyStore()
+      : const KeystoreMasterKeyStore();
 
   static final SecretCipher instance = SecretCipher();
 

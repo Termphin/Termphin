@@ -10,6 +10,7 @@ analyzer:
     - macos/**
     - linux/**
     - packages/**
+    - repos/**
     - third_party/**
     - lib/i18n/strings.g.dart
   language:

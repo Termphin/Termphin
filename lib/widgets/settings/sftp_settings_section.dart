@@ -13,6 +13,7 @@ import '../../utils/platform_info.dart';
 import '../ui/app_card.dart';
 import '../ui/app_notifications.dart';
 import '../ui/section_header.dart';
+import '../ui/section_navigator.dart';
 import '../ui/settings_tile.dart';
 
 /// SFTP section: download folder, hidden files, follow-the-terminal and the
@@ -66,6 +67,7 @@ class _SftpSettingsSectionState extends State<SftpSettingsSection> {
   Widget build(BuildContext context) {
     if (!_loaded) return const SizedBox.shrink();
     final t = Translations.of(context);
+    final canPick = platformHas(PlatformFeature.downloadFolderPicker);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -78,17 +80,17 @@ class _SftpSettingsSectionState extends State<SftpSettingsSection> {
                 icon: PhosphorIconsRegular.folderOpen,
                 iconColor: context.colors.primary,
                 title: t.settings.downloadFolder,
-                subtitle: isIOSPlatform
+                subtitle: !canPick
                     ? t.settings.downloadFolderIos
                     : (_downloadFolder?.label.isNotEmpty ?? false
                           ? _downloadFolder!.label
                           : t.settings.downloadFolderDefault),
-                trailing: isIOSPlatform
-                    ? SettingsTileTrailing.none
-                    : SettingsTileTrailing.chevron,
-                onTap: isIOSPlatform ? null : _onPickDownloadFolder,
+                trailing: canPick
+                    ? SettingsTileTrailing.chevron
+                    : SettingsTileTrailing.none,
+                onTap: canPick ? _onPickDownloadFolder : null,
               ),
-              if (!isIOSPlatform && _downloadFolder != null) ...[
+              if (canPick && _downloadFolder != null) ...[
                 const Divider(height: 1),
                 SettingsTile(
                   icon: PhosphorIconsRegular.arrowCounterClockwise,
@@ -125,16 +127,17 @@ class _SftpSettingsSectionState extends State<SftpSettingsSection> {
                 icon: PhosphorIconsRegular.fileText,
                 title: t.settings.textEditor,
                 subtitle: t.settings.textEditorSubtitle(
-                  font: kTerminalFontLabels[editorSettings.fontFamily.value] ??
+                  font:
+                      kTerminalFontLabels[editorSettings.fontFamily.value] ??
                       '',
                   size: editorSettings.fontSize.value.toStringAsFixed(1),
                 ),
                 onTap: () async {
-                  await Navigator.push(
+                  await pushAppPage<void>(
                     context,
-                    MaterialPageRoute<void>(
-                      builder: (_) => const EditorSettingsScreen(),
-                    ),
+                    window: true,
+                    title: t.settings.textEditor,
+                    builder: (_) => const EditorSettingsScreen(),
                   );
                   if (mounted) setState(() {});
                 },

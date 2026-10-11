@@ -1,5 +1,9 @@
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../utils/platform_info.dart';
@@ -11,6 +15,9 @@ const kDownloadFolderLabelPrefsKey = 'download_folder_label';
 /// persisted tree URI. Nothing but the URI is stored - a path would be
 /// meaningless on Android 11+, where the app has no filesystem access to
 /// anything outside its own sandbox.
+///
+/// On a desktop the same field holds a plain directory path: there is no
+/// sandbox to ask, and the label is the path itself.
 class DownloadFolder {
   const DownloadFolder({required this.uri, required this.label});
 
@@ -56,15 +63,23 @@ class DownloadLocation {
 
   /// Opens the system folder picker. Returns null when the user backs out.
   Future<DownloadFolder?> pick() async {
-    if (!isAndroidPlatform) return null;
-    final result = await _channel.invokeMapMethod<String, String>(
-      'pickDownloadFolder',
-    );
-    if (result == null) return null;
-    final folder = DownloadFolder(
-      uri: result['uri']!,
-      label: result['label'] ?? '',
-    );
+    final DownloadFolder folder;
+    if (isDesktopPlatform) {
+      final path = await FilePicker.getDirectoryPath();
+      if (path == null) return null;
+      folder = DownloadFolder(uri: path, label: path);
+    } else if (isAndroidPlatform) {
+      final result = await _channel.invokeMapMethod<String, String>(
+        'pickDownloadFolder',
+      );
+      if (result == null) return null;
+      folder = DownloadFolder(
+        uri: result['uri']!,
+        label: result['label'] ?? '',
+      );
+    } else {
+      return null;
+    }
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(kDownloadFolderUriPrefsKey, folder.uri);
     await prefs.setString(kDownloadFolderLabelPrefsKey, folder.label);
@@ -110,7 +125,20 @@ class DownloadLocation {
     _folder = null;
   }
 
+  /// Where a desktop download lands: the chosen folder, else the user's own
+  /// Downloads folder, else - on a system that reports none - one under the
+  /// app's documents.
+  Future<Directory> desktopTarget() async {
+    final folder = await current();
+    if (folder != null) return Directory(folder.uri);
+    final downloads = await getDownloadsDirectory();
+    if (downloads != null) return downloads;
+    final docs = await getApplicationDocumentsDirectory();
+    return Directory('${docs.path}/Downloads');
+  }
+
   Future<bool> _hasAccess(String uri) async {
+    if (isDesktopPlatform) return Directory(uri).exists();
     if (!isAndroidPlatform) return false;
     try {
       return await _channel.invokeMethod<bool>('hasDownloadFolderAccess', {

@@ -12,6 +12,8 @@ Produces:
   assets/icons/termphin_monochrome.png    512 silhouette, adaptive monochrome
   macos/Runner/Assets.xcassets/...        the AppIcon set
   android/.../drawable-*/ic_stat_termphin.png  the notification small icon
+  assets/icons/tray.png                   64 tile, the tray icon
+  assets/icons/tray_template.png          36 silhouette, the menu bar template
 
 After running this, run `dart run flutter_launcher_icons` to rebuild the
 Android resources from the icon files. It only touches `ic_launcher*`, so the
@@ -178,6 +180,9 @@ def main():
 
         for size in (16, 32, 64, 128, 256, 512, 1024):
             emit(tile, f"macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_{size}.png", size)
+
+        emit(tile, "assets/icons/tray.png", 64)
+        emit_status("assets/icons/tray_template.png", 36)
 
     for k in sorted(written):
         print(f"{k}  {written[k]}")

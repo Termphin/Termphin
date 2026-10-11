@@ -19,6 +19,7 @@ import '../../widgets/ui/app_divider.dart';
 import '../../widgets/ui/confirm_dialog.dart';
 import '../../widgets/ui/group_dot.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
+import '../../widgets/ui/reorder_drag.dart';
 import 'group_form_screen.dart';
 
 /// Screen allowing the user to view, reorder, create, edit, and delete groups.
@@ -254,7 +255,7 @@ class _GroupsScreenState extends ConsumerState<GroupsScreen> {
                             key: ValueKey(group.name),
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              ReorderableDelayedDragStartListener(
+                              ReorderDragListener(
                                 index: index,
                                 child: InkWell(
                                   onTap: () => _editGroup(group),

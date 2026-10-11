@@ -259,4 +259,32 @@ void main() {
       'General',
     ]);
   });
+
+  testWidgets('on a desktop a plain drag moves a group, no hold needed', (
+    tester,
+  ) async {
+    final container = await pumpGroupsScreen(
+      tester,
+      groups: ['General', 'Staging'],
+    );
+
+    final general = find.text('General');
+    final rowHeight = tester.getSize(find.byType(GroupDot).first).height + 60;
+    final gesture = await tester.startGesture(
+      tester.getCenter(general),
+      kind: PointerDeviceKind.mouse,
+    );
+    await tester.pump();
+    for (var moved = 0.0; moved < rowHeight * 1.5; moved += 20) {
+      await gesture.moveBy(const Offset(0, 20));
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(container.read(profileGroupsProvider).map((g) => g.name).toList(), [
+      'Staging',
+      'General',
+    ]);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.linux));
 }

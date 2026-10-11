@@ -13,6 +13,11 @@ final ValueNotifier<TerminalColorScheme?> terminalChromeScheme = ValueNotifier(
   null,
 );
 
+/// Whether a session is on screen - for chrome outside the terminal's own
+/// subtree, the desktop's title bar, to take the session's colours with the
+/// rest of it.
+final ValueNotifier<bool> terminalOnScreen = ValueNotifier(false);
+
 bool _listening = false;
 
 /// Starts tracking the setting, once per process. Safe to call from anywhere

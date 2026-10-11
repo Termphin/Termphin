@@ -4,26 +4,41 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:uuid/uuid.dart';
 
 import '../i18n/strings.g.dart';
 import '../models/active_session.dart';
+import '../models/session_tab.dart';
 import '../models/ssh_profile.dart';
 import '../providers/anonymize_provider.dart';
+import '../providers/profiles_provider.dart';
 import '../providers/ssh_session_manager_provider.dart';
 import '../providers/terminal_overlay_provider.dart';
 import '../services/analytics/analytics_service.dart';
+import '../services/app/app_commands.dart';
 import '../services/app/identity_anonymizer.dart';
+import '../services/app/manual_urls.dart';
+import '../services/platform/desktop_window.dart';
 import '../services/settings/sidebar_settings.dart';
 import '../services/settings/tab_bar_settings.dart';
+import '../services/settings/terminal_settings.dart';
 import '../services/ssh/ssh_session_manager.dart';
 import '../theme/theme.dart';
 import '../utils/platform_info.dart';
 import '../widgets/profiles/profile_avatar.dart';
+import '../widgets/profiles/profile_form_dialog.dart';
+import '../widgets/terminal/add_session_sheet.dart';
+import '../widgets/terminal/session_tab_pill.dart';
 import '../widgets/terminal/terminal_scheme_theme.dart';
 import '../widgets/ui/app_notifications.dart';
+import '../widgets/ui/app_sheet.dart';
+import '../widgets/ui/manual_link.dart';
 import '../widgets/ui/nav_rail.dart';
+import '../widgets/ui/section_navigator.dart';
+import '../widgets/window/shortcuts_dialog.dart';
 import 'home_screen.dart';
 import 'keys/key_manager_screen.dart';
+import 'search/global_search_launcher.dart';
 import 'settings/settings_screen.dart';
 import 'snippets/snippets_screen.dart';
 import 'terminal/terminal_screen.dart';
@@ -87,9 +102,150 @@ class _MainShellState extends ConsumerState<MainShell> {
       ),
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _syncNotificationAnchor();
+      if (!mounted) return;
+      _syncNotificationAnchor();
+      _syncWindowTitle();
     });
     tabBarPositionSetting.addListener(_onTabBarPositionChanged);
+    _registerCommands();
+  }
+
+  final _unregisterCommands = <VoidCallback>[];
+
+  /// What the shell answers of the desktop's shortcuts and menus: going
+  /// places, and - while a session is on screen - the terminal's own, handed
+  /// to the strip.
+  ///
+  /// A new session with no strip on screen opens the same picker the
+  /// terminal opens, so a session is asked for in one place wherever it is
+  /// asked from. The zoom commands work with or without a session on screen,
+  /// since the terminal's text size is one preference wherever it is changed
+  /// from.
+  void _registerCommands() {
+    void on(AppCommand command, bool Function(int? argument) handler) =>
+        _unregisterCommands.add(
+          AppCommands.instance.register(command, handler),
+        );
+
+    TerminalScreenState? liveTerminal() =>
+        _terminalVisible ? _terminalKey.currentState : null;
+
+    bool terminal(void Function(TerminalScreenState state) action) {
+      final state = liveTerminal();
+      if (state == null) return false;
+      action(state);
+      return true;
+    }
+
+    on(AppCommand.globalSearch, (_) {
+      final ctx = _commandContext();
+      if (ctx == null) return false;
+      unawaited(openGlobalSearch(ctx, heroTag: 'globalSearch-shortcut'));
+      return true;
+    });
+    on(AppCommand.newMachine, (_) {
+      final ctx = _commandContext();
+      if (ctx == null) return false;
+      unawaited(
+        pushAppForm<void>(ctx, builder: (_) => const ProfileFormDialog()),
+      );
+      return true;
+    });
+    on(AppCommand.openSettings, (_) {
+      _selectSection(3);
+      return true;
+    });
+    on(AppCommand.toggleSidebar, (_) {
+      unawaited(sidebarCollapsedSetting.set(!sidebarCollapsedSetting.value));
+      return true;
+    });
+    on(AppCommand.showShortcuts, (_) {
+      final ctx = _commandContext();
+      if (ctx == null) return false;
+      unawaited(showShortcutsDialog(ctx));
+      return true;
+    });
+    on(AppCommand.openManual, (_) {
+      final ctx = _commandContext();
+      if (ctx == null) return false;
+      unawaited(openManual(ctx, ManualPage.home));
+      return true;
+    });
+    on(AppCommand.newSession, (_) {
+      final state = liveTerminal();
+      if (state != null) {
+        state.newSession();
+        return true;
+      }
+      final ctx = _commandContext();
+      if (ctx == null) return false;
+      final overlay = ref.read(terminalOverlayProvider.notifier);
+      unawaited(
+        showAppSheet<void>(
+          context: ctx,
+          handle: false,
+          builder: (sheetCtx) => AddSessionSheetContent(
+            profiles: ref.read(profilesProvider),
+            resumableFor: _manager.resumableTabsForProfile,
+            onSelect: (profile) {
+              Navigator.of(sheetCtx).pop();
+              overlay.show(
+                const Uuid().v4(),
+                profile,
+                scope: SiblingScope.none,
+              );
+            },
+            onAttach: (tabId, profile) {
+              Navigator.of(sheetCtx).pop();
+              overlay.show(tabId, profile, scope: SiblingScope.none);
+            },
+          ),
+        ),
+      );
+      return true;
+    });
+    on(AppCommand.closeTab, (_) => terminal((s) => s.closeActiveTab()));
+    on(AppCommand.nextTab, (_) => terminal((s) => s.selectRelativeTab(1)));
+    on(AppCommand.previousTab, (_) => terminal((s) => s.selectRelativeTab(-1)));
+    on(
+      AppCommand.selectTab,
+      (index) => terminal((s) => s.selectTabAt(index ?? 0)),
+    );
+    on(
+      AppCommand.findInTerminal,
+      (_) => terminal((s) => s.findInActiveSession()),
+    );
+    on(
+      AppCommand.uploadFile,
+      (_) => terminal((s) => s.uploadToActiveSession()),
+    );
+    on(AppCommand.zoomIn, (_) => _zoomTerminal(1));
+    on(AppCommand.zoomOut, (_) => _zoomTerminal(-1));
+    on(AppCommand.zoomReset, (_) {
+      unawaited(terminalSettings.fontSize.set(kTerminalDefaultFontSize));
+      return true;
+    });
+  }
+
+  bool _zoomTerminal(double delta) {
+    final size = terminalSettings.fontSize.value + delta;
+    unawaited(
+      terminalSettings.fontSize.set(
+        size.clamp(kTerminalMinFontSize, kTerminalMaxFontSize).toDouble(),
+      ),
+    );
+    return true;
+  }
+
+  /// Where a command opens what it opens: the section on screen, so a page
+  /// lands beside the sidebar, or the app's own context otherwise.
+  BuildContext? _commandContext() {
+    if (!mounted) return null;
+    if (!_terminalVisible) {
+      final section = _sectionKeys[_currentIndex].currentContext;
+      if (section != null) return section;
+    }
+    return context;
   }
 
   void _onTabBarPositionChanged() {
@@ -98,6 +254,9 @@ class _MainShellState extends ConsumerState<MainShell> {
 
   @override
   void dispose() {
+    for (final unregister in _unregisterCommands) {
+      unregister();
+    }
     tabBarPositionSetting.removeListener(_onTabBarPositionChanged);
     super.dispose();
   }
@@ -115,6 +274,21 @@ class _MainShellState extends ConsumerState<MainShell> {
     unawaited(AnalyticsService.instance.screen(_screenNames[_currentIndex]));
   }
 
+  /// The window's own title, which the taskbar and the window switcher show:
+  /// the machine on screen, or just the app.
+  void _syncWindowTitle() {
+    terminalOnScreen.value = _terminalVisible;
+    final session = _terminalVisible ? _terminalSession : null;
+    if (session == null) {
+      unawaited(DesktopWindow.instance.setTitle('Termphin'));
+      return;
+    }
+    final name = ref.read(anonymizeProvider)
+        ? IdentityAnonymizer.name(session.$2.id)
+        : session.$2.name;
+    unawaited(DesktopWindow.instance.setTitle('$name - Termphin'));
+  }
+
   void _hideTerminal() {
     _terminalKey.currentState?.blurAll();
     SystemChannels.textInput.invokeMethod<void>('TextInput.hide');
@@ -122,6 +296,7 @@ class _MainShellState extends ConsumerState<MainShell> {
       _terminalVisible = false;
     });
     _syncNotificationAnchor();
+    _syncWindowTitle();
     _reportCurrentTab();
     ref.read(terminalOverlayProvider.notifier).hide();
   }
@@ -133,6 +308,7 @@ class _MainShellState extends ConsumerState<MainShell> {
       _terminalKey = GlobalKey<TerminalScreenState>();
     });
     _syncNotificationAnchor();
+    _syncWindowTitle();
     _reportCurrentTab();
     ref.read(terminalOverlayProvider.notifier).hide();
   }
@@ -151,23 +327,23 @@ class _MainShellState extends ConsumerState<MainShell> {
         : kToolbarHeight;
   }
 
-  List<_NavItemData> _navItems(Translations t) => [
-    _NavItemData(
+  List<ShellNavItem> _navItems(Translations t) => [
+    ShellNavItem(
       label: t.nav.home,
       icon: PhosphorIconsRegular.terminal,
       selectedIcon: PhosphorIconsFill.terminal,
     ),
-    _NavItemData(
+    ShellNavItem(
       label: t.nav.snippets,
       icon: PhosphorIconsRegular.codeBlock,
       selectedIcon: PhosphorIconsFill.codeBlock,
     ),
-    _NavItemData(
+    ShellNavItem(
       label: t.nav.keys,
       icon: PhosphorIconsRegular.key,
       selectedIcon: PhosphorIconsFill.key,
     ),
-    _NavItemData(
+    ShellNavItem(
       label: t.nav.settings,
       icon: PhosphorIconsRegular.gearSix,
       selectedIcon: PhosphorIconsFill.gearSix,
@@ -206,6 +382,36 @@ class _MainShellState extends ConsumerState<MainShell> {
     );
   }
 
+  /// One navigator per section on a desktop, so a page opened from a list
+  /// or a settings row stays beside the sidebar. Keyed so a click on the
+  /// section already selected can take it back to its root.
+  final _sectionKeys = List.generate(
+    4,
+    (_) => GlobalKey<SectionNavigatorState>(),
+  );
+
+  void _selectSection(int index) {
+    if (index == _currentIndex && !_terminalVisible) {
+      _sectionKeys[index].currentState?.popToRoot();
+    }
+    if (_terminalVisible) _hideTerminal();
+    _selectTab(index);
+  }
+
+  List<Widget> _sectionBodies(Translations t) {
+    if (!isDesktopPlatform) return _screens;
+    final items = _navItems(t);
+    return [
+      for (var i = 0; i < _screens.length; i++)
+        SectionNavigator(
+          key: _sectionKeys[i],
+          label: items[i].label,
+          active: i == _currentIndex && !_terminalVisible,
+          child: _screens[i],
+        ),
+    ];
+  }
+
   /// The rail already covers the left edge, cutout and all, but the screens
   /// beside it would still read the window's own left inset off
   /// `MediaQuery` - `Scaffold` passes left/right padding straight through to
@@ -214,6 +420,7 @@ class _MainShellState extends ConsumerState<MainShell> {
   /// it is nowhere near, so its content would sit further from the rail than
   /// from the right edge.
   Widget _buildDesktopScaffold(Translations t) {
+    final desktop = isDesktopPlatform;
     return Scaffold(
       body: Row(
         children: [
@@ -221,13 +428,13 @@ class _MainShellState extends ConsumerState<MainShell> {
             listenable: _manager,
             builder: (context, _) {
               final manager = _manager;
-              final dockSession = manager.lastSession;
+              final dockSession = desktop ? null : manager.lastSession;
               return ValueListenableBuilder<bool>(
                 valueListenable: sidebarCollapsedSetting,
                 builder: (context, collapsed, _) => _Sidebar(
                   key: const ValueKey('sidebarNav'),
                   currentIndex: _currentIndex,
-                  onSelected: _selectTab,
+                  onSelected: _selectSection,
                   items: _navItems(t),
                   collapsed: collapsed,
                   dockSession: !_terminalVisible ? dockSession : null,
@@ -239,6 +446,10 @@ class _MainShellState extends ConsumerState<MainShell> {
                       : () => ref
                             .read(terminalOverlayProvider.notifier)
                             .show(dockSession.id, dockSession.profile),
+                  sessions: desktop ? manager.restorableTabs : const [],
+                  onSessionTap: (session) => ref
+                      .read(terminalOverlayProvider.notifier)
+                      .show(session.id, session.profile),
                 ),
               );
             },
@@ -249,7 +460,7 @@ class _MainShellState extends ConsumerState<MainShell> {
               removeLeft: true,
               child: _AnimatedNavBody(
                 currentIndex: _currentIndex,
-                children: _screens,
+                children: _sectionBodies(t),
               ),
             ),
           ),
@@ -274,6 +485,7 @@ class _MainShellState extends ConsumerState<MainShell> {
           }
         });
         _syncNotificationAnchor();
+        _syncWindowTitle();
         unawaited(AnalyticsService.instance.screen(AnalyticsScreen.terminal));
         if (hasLiveScreen) {
           _terminalKey.currentState?.openSession(next.$1, next.$2);
@@ -316,6 +528,8 @@ class _MainShellState extends ConsumerState<MainShell> {
                     siblingScope: _siblingScope,
                     onClose: _onTerminalClose,
                     onHide: _hideTerminal,
+                    navItems: isDesktopPlatform ? _navItems(t) : const [],
+                    onNavigate: _selectSection,
                   ),
                 ),
               ),
@@ -509,7 +723,7 @@ class _BottomNavBar extends StatelessWidget {
 
   final int currentIndex;
   final ValueChanged<int> onSelected;
-  final List<_NavItemData> items;
+  final List<ShellNavItem> items;
 
   @override
   Widget build(BuildContext context) {
@@ -559,18 +773,6 @@ class _BottomNavBar extends StatelessWidget {
   }
 }
 
-class _NavItemData {
-  const _NavItemData({
-    required this.label,
-    required this.icon,
-    required this.selectedIcon,
-  });
-
-  final String label;
-  final IconData icon;
-  final IconData selectedIcon;
-}
-
 class _BottomNavItem extends StatelessWidget {
   const _BottomNavItem({
     required this.data,
@@ -578,7 +780,7 @@ class _BottomNavItem extends StatelessWidget {
     required this.onTap,
   });
 
-  final _NavItemData data;
+  final ShellNavItem data;
   final bool selected;
   final VoidCallback onTap;
 
@@ -638,7 +840,13 @@ class _BottomNavItem extends StatelessWidget {
 ///
 /// The hamburger at the top collapses it to [kNavRailCollapsedWidth], where
 /// the labels drop and only the icons remain - a wide window can afford 240pt
-/// of chrome, a phone held sideways cannot.
+/// of chrome, a phone held sideways cannot, so there it stays collapsed and
+/// the hamburger goes.
+///
+/// On a desktop the open sessions are listed under the destinations, the way
+/// the terminal's own rail lists them under the same destinations: the two
+/// are one strip, and the terminal is a place in it rather than a screen
+/// stacked over it. A phone keeps the single dock row at the bottom.
 ///
 /// A landscape cutout is inset the rail sits behind, not room taken out of
 /// it: the rail grows by it and the `SafeArea` below hands its contents the
@@ -658,18 +866,27 @@ class _Sidebar extends StatelessWidget {
     required this.dockSession,
     required this.dockSessionCount,
     required this.onDockTap,
+    this.sessions = const [],
+    this.onSessionTap,
   });
 
   final int currentIndex;
   final ValueChanged<int> onSelected;
-  final List<_NavItemData> items;
+  final List<ShellNavItem> items;
   final bool collapsed;
   final ActiveSessionView? dockSession;
   final int dockSessionCount;
   final VoidCallback? onDockTap;
 
+  /// What the strip would hold: live tabs, and dropped ones it will pick
+  /// back up. One detached on purpose is not a session on screen - it waits
+  /// in the new-session sheet, as on a phone.
+  final List<ActiveSessionView> sessions;
+  final ValueChanged<ActiveSessionView>? onSessionTap;
+
   @override
   Widget build(BuildContext context) {
+    final t = Translations.of(context);
     final safeInset = MediaQuery.paddingOf(context).left;
     final width = navRailWidth(collapsed) + safeInset;
     final itemInset = collapsed ? 8.0 : 12.0;
@@ -707,13 +924,42 @@ class _Sidebar extends StatelessWidget {
                       for (int i = 0; i < items.length; i++)
                         Padding(
                           padding: const EdgeInsets.only(bottom: 4),
-                          child: _SidebarNavItem(
+                          child: SidebarNavItem(
                             data: items[i],
                             selected: currentIndex == i,
                             collapsed: collapsed,
                             onTap: () => onSelected(i),
                           ),
                         ),
+                      if (sessions.isNotEmpty && onSessionTap != null) ...[
+                        Row(
+                          children: [
+                            Expanded(
+                              child: SidebarSectionLabel(
+                                t.nav.sessions,
+                                collapsed: collapsed,
+                              ),
+                            ),
+                            if (!collapsed)
+                              StripActionButton(
+                                tooltip: t.terminal.selectDevice,
+                                icon: PhosphorIconsRegular.plus,
+                                onTap: () => AppCommands.instance.run(
+                                  AppCommand.newSession,
+                                ),
+                              ),
+                          ],
+                        ),
+                        for (final session in sessions)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 3),
+                            child: _SidebarSessionRow(
+                              session: session,
+                              collapsed: collapsed,
+                              onTap: () => onSessionTap!(session),
+                            ),
+                          ),
+                      ],
                     ],
                   ),
                 ),
@@ -733,72 +979,53 @@ class _Sidebar extends StatelessWidget {
   }
 }
 
-/// Collapsed, the icon is all there is to go on, so the label it replaced
-/// stays reachable as a tooltip instead.
-class _SidebarNavItem extends StatelessWidget {
-  const _SidebarNavItem({
-    required this.data,
-    required this.selected,
+/// An open session in the desktop sidebar: the same pill the terminal's strip
+/// draws, so a session looks alike whether or not it is on screen. A click
+/// brings the terminal back on it.
+///
+/// Its status is read off the session rather than its connection provider:
+/// that is keyed by the profile object too, and watching it from here could
+/// stand up a second notifier for a session the strip already owns.
+class _SidebarSessionRow extends ConsumerWidget {
+  const _SidebarSessionRow({
+    required this.session,
     required this.collapsed,
     required this.onTap,
   });
 
-  final _NavItemData data;
-  final bool selected;
+  final ActiveSessionView session;
   final bool collapsed;
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    final foreground = selected
-        ? context.colors.primary
-        : context.colors.textSecondary;
-    final icon = Icon(
-      selected ? data.selectedIcon : data.icon,
-      size: 20,
-      color: foreground,
+  Widget build(BuildContext context, WidgetRef ref) {
+    final anonymize = ref.watch(anonymizeProvider);
+    final profile = session.profile;
+    final name = anonymize ? IdentityAnonymizer.name(profile.id) : profile.name;
+    final sessionName = session.multiplexer.isPersistent
+        ? ref.read(sshSessionManagerProvider).muxNameFor(session.id)
+        : null;
+    final status = session.connecting
+        ? context.colors.warning
+        : session.dropped
+        ? Theme.of(context).dividerColor
+        : context.colors.success;
+    final pill = SessionTabPill(
+      key: ValueKey('sidebarSession-${session.id}'),
+      sessionId: session.id,
+      profile: profile,
+      statusColor: status,
+      sessionName: sessionName,
+      displayName: name,
+      collapsed: collapsed,
+      onTap: onTap,
     );
-
-    final Widget button = Material(
-      color: context.colors.backgroundPrimary.invisible,
-      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-        child: AnimatedContainer(
-          duration: AppTheme.interactiveDuration,
-          curve: AppTheme.interactiveCurve,
-          padding: EdgeInsets.symmetric(
-            horizontal: collapsed ? 0 : 14,
-            vertical: 11,
-          ),
-          decoration: BoxDecoration(
-            color: selected
-                ? context.colors.primaryHighlight
-                : context.colors.primaryHighlight.invisible,
-            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-          ),
-          child: collapsed
-              ? Center(child: icon)
-              : Row(
-                  children: [
-                    icon,
-                    const SizedBox(width: 12),
-                    Text(
-                      data.label,
-                      style: context.colors.uiStyle.copyWith(
-                        fontWeight: selected
-                            ? FontWeight.w600
-                            : FontWeight.w500,
-                        color: foreground,
-                      ),
-                    ),
-                  ],
-                ),
-        ),
-      ),
+    if (!collapsed) return pill;
+    return Tooltip(
+      message: sessionName != null
+          ? '${SessionTab.displayName(sessionName)} - $name'
+          : name,
+      child: pill,
     );
-
-    return collapsed ? Tooltip(message: data.label, child: button) : button;
   }
 }

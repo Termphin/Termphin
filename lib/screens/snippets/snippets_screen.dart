@@ -11,6 +11,7 @@ import '../../models/snippet.dart';
 import '../../providers/groups_provider.dart';
 import '../../providers/snippets_provider.dart';
 import '../../services/analytics/analytics_service.dart';
+import '../../services/app/app_commands.dart';
 import '../../services/storage/group_storage.dart';
 import '../../theme/theme.dart';
 import '../../utils/group_match.dart';
@@ -19,11 +20,13 @@ import '../../widgets/ui/app_dropdown.dart';
 import '../../widgets/ui/app_notifications.dart';
 import '../../widgets/ui/clipboard_and_links.dart';
 import '../../widgets/ui/confirm_dialog.dart';
+import '../../widgets/ui/context_menu.dart';
 import '../../widgets/ui/empty_state.dart';
 import '../../widgets/ui/group_filter_chips.dart';
 import '../../widgets/ui/group_picker_sheet.dart';
 import '../../widgets/ui/group_section_header.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
+import '../../widgets/ui/section_navigator.dart';
 import '../../widgets/ui/selection_action_bar.dart';
 import '../search/global_search_launcher.dart';
 import 'snippet_form_screen.dart';
@@ -48,6 +51,29 @@ class _SnippetsScreenState extends ConsumerState<SnippetsScreen> {
   String _selectedGroup = '';
   final Set<String> _selectedIds = <String>{};
 
+  late final VoidCallback _unregisterEscape;
+
+  /// Esc on a desktop drops the selection, as a click on its X does.
+  bool _clearSelectionOnEscape() {
+    if (!mounted || _selectedIds.isEmpty) return false;
+    setState(() => _selectedIds.clear());
+    return true;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _unregisterEscape = AppCommands.instance.registerEscape(
+      _clearSelectionOnEscape,
+    );
+  }
+
+  @override
+  void dispose() {
+    _unregisterEscape();
+    super.dispose();
+  }
+
   List<Snippet> _filter(List<Snippet> snippets) {
     return snippets
         .where(
@@ -68,8 +94,49 @@ class _SnippetsScreenState extends ConsumerState<SnippetsScreen> {
     });
   }
 
+  /// The snippet's right-click menu on a desktop: running it, then what its
+  /// `⋮` menu holds.
+  List<ContextMenuEntry?> _snippetMenu(Snippet snippet) {
+    final t = Translations.of(context);
+    return [
+      ContextMenuEntry(
+        label: t.snippets.run,
+        icon: PhosphorIconsRegular.play,
+        onSelected: () => _run(context, snippet),
+      ),
+      ContextMenuEntry(
+        label: t.contextMenu.edit,
+        icon: PhosphorIconsRegular.pencilSimple,
+        onSelected: () => _onAction(_SnippetAction.edit, snippet),
+      ),
+      ContextMenuEntry(
+        label: t.snippets.copyCommand,
+        icon: PhosphorIconsRegular.copy,
+        onSelected: () => _onAction(_SnippetAction.copy, snippet),
+      ),
+      ContextMenuEntry(
+        label: t.contextMenu.duplicate,
+        icon: PhosphorIconsRegular.copySimple,
+        onSelected: () => _onAction(_SnippetAction.duplicate, snippet),
+      ),
+      ContextMenuEntry(
+        label: t.contextMenu.select,
+        icon: PhosphorIconsRegular.checkSquare,
+        onSelected: () => _toggleSelection(snippet.id),
+      ),
+      null,
+      ContextMenuEntry(
+        label: t.contextMenu.delete,
+        icon: PhosphorIconsRegular.trash,
+        destructive: true,
+        onSelected: () => _onAction(_SnippetAction.delete, snippet),
+      ),
+    ];
+  }
+
+  /// Ctrl-click on a desktop picks the row, as a long press does.
   void _onSnippetTap(Snippet snippet) {
-    if (_selectedIds.isNotEmpty) {
+    if (_selectedIds.isNotEmpty || selectionModifierPressed) {
       _toggleSelection(snippet.id);
     } else {
       _run(context, snippet);
@@ -91,9 +158,11 @@ class _SnippetsScreenState extends ConsumerState<SnippetsScreen> {
   /// [ConsumerWidget] with no `initState` to hang it off.
   Future<void> _openRuns(BuildContext context) {
     unawaited(AnalyticsService.instance.screen(AnalyticsScreen.snippetRuns));
-    return Navigator.of(
+    return pushAppPage<void>(
       context,
-    ).push(MaterialPageRoute<void>(builder: (_) => const SnippetRunsScreen()));
+      title: Translations.of(context).snippets.runsTitle,
+      builder: (_) => const SnippetRunsScreen(),
+    );
   }
 
   Future<void> _run(BuildContext context, Snippet snippet) async {
@@ -373,14 +442,18 @@ class _SnippetsScreenState extends ConsumerState<SnippetsScreen> {
                             itemBuilder: (context, index) {
                               final snippet =
                                   snippetsByGroup[group.name]![index];
-                              return _SnippetCard(
-                                snippet: snippet,
-                                selected: _selectedIds.contains(snippet.id),
-                                selectionMode: _selectedIds.isNotEmpty,
-                                onTap: () => _onSnippetTap(snippet),
-                                onLongPress: () => _onSnippetLongPress(snippet),
-                                onAction: (action) =>
-                                    _onAction(action, snippet),
+                              return ContextMenuRegion(
+                                entries: () => _snippetMenu(snippet),
+                                child: _SnippetCard(
+                                  snippet: snippet,
+                                  selected: _selectedIds.contains(snippet.id),
+                                  selectionMode: _selectedIds.isNotEmpty,
+                                  onTap: () => _onSnippetTap(snippet),
+                                  onLongPress: () =>
+                                      _onSnippetLongPress(snippet),
+                                  onAction: (action) =>
+                                      _onAction(action, snippet),
+                                ),
                               );
                             },
                           ),

@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
@@ -25,13 +27,16 @@ import '../../services/ssh/ssh_session_manager.dart';
 import '../../services/storage/group_storage.dart';
 import '../../theme/theme.dart';
 import '../../utils/group_match.dart';
+import '../../utils/platform_info.dart';
 import '../../widgets/profiles/profile_avatar.dart';
 import '../../widgets/ui/app_card.dart';
 import '../../widgets/ui/app_divider.dart';
+import '../../widgets/ui/app_sheet.dart';
 import '../../widgets/ui/empty_state.dart';
 import '../../widgets/ui/group_dot.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
 import '../../widgets/ui/section_header.dart';
+import '../../widgets/ui/section_navigator.dart';
 import '../keys/key_form_screen.dart';
 import '../snippets/snippet_run_screen.dart';
 import '../snippets/snippet_runs_screen.dart';
@@ -79,6 +84,16 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
   ProfileGroup? _scope;
   List<SshKey> _keys = const [];
   Animation<double>? _routeAnimation;
+
+  /// Every result in the order drawn, and the one of them Enter opens -
+  /// moved with the arrow keys, back to the top whenever the list changes.
+  List<Object> _items = const [];
+  int _cursor = 0;
+  final _cursorKey = GlobalKey();
+
+  /// A phone's soft keyboard has no arrows, so the cursor is only drawn on a
+  /// desktop or once a hardware keyboard has moved it.
+  bool _arrowed = false;
 
   /// Set when a result takes the user to the terminal. The box then does not
   /// fly back to the list: the list is not what they are looking at.
@@ -139,7 +154,10 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
     if (mounted) setState(() => _keys = keys);
   }
 
-  void _setQuery(String value) => setState(() => _query = value);
+  void _setQuery(String value) => setState(() {
+    _query = value;
+    _cursor = 0;
+  });
 
   void _clear() {
     _controller.clear();
@@ -152,12 +170,16 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
     setState(() {
       _query = '';
       _scope = group;
+      _cursor = 0;
     });
     _focusNode.requestFocus();
   }
 
   void _leaveGroup() {
-    setState(() => _scope = null);
+    setState(() {
+      _scope = null;
+      _cursor = 0;
+    });
     _focusNode.requestFocus();
   }
 
@@ -189,9 +211,11 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
     final batchId = await showSnippetRunScreen(context, snippet);
     if (batchId == null || !mounted) return;
     unawaited(AnalyticsService.instance.screen(AnalyticsScreen.snippetRuns));
-    await Navigator.of(
+    await pushAppPage<void>(
       context,
-    ).push(MaterialPageRoute<void>(builder: (_) => const SnippetRunsScreen()));
+      title: Translations.of(context).snippets.runsTitle,
+      builder: (_) => const SnippetRunsScreen(),
+    );
   }
 
   Future<void> _editKey(SshKey key) async {
@@ -201,8 +225,47 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
     await _loadKeys();
   }
 
-  void _openFirst(GlobalSearchResults results) {
-    switch (results.top) {
+  int get _selected => math.min(_cursor, _items.length - 1);
+
+  void _openSelected() {
+    if (_items.isNotEmpty) _open(_items[_selected]);
+  }
+
+  /// Up and down move the cursor through the results while the field keeps
+  /// the focus, so typing and picking never take turns.
+  KeyEventResult _onFieldKey(FocusNode _, KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+    final step = switch (event.logicalKey) {
+      LogicalKeyboardKey.arrowDown => 1,
+      LogicalKeyboardKey.arrowUp => -1,
+      _ => 0,
+    };
+    if (step == 0) return KeyEventResult.ignored;
+    if (_items.isEmpty) return KeyEventResult.handled;
+    setState(() {
+      _arrowed = true;
+      _cursor = (_selected + step) % _items.length;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final row = _cursorKey.currentContext;
+      if (row == null || !row.mounted) return;
+      unawaited(
+        Scrollable.ensureVisible(
+          row,
+          duration: AppTheme.interactiveDuration,
+          alignmentPolicy: step > 0
+              ? ScrollPositionAlignmentPolicy.keepVisibleAtEnd
+              : ScrollPositionAlignmentPolicy.keepVisibleAtStart,
+        ),
+      );
+    });
+    return KeyEventResult.handled;
+  }
+
+  void _open(Object item) {
+    switch (item) {
       case final SshProfile p:
         _openMachine(p);
       case final ActiveSessionView s:
@@ -216,6 +279,8 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
     }
   }
 
+  /// Shown as a palette on a desktop, the screen has no back arrow: it is
+  /// left with Esc or a click beside it, with nothing to go back from.
   @override
   Widget build(BuildContext context) {
     final t = Translations.of(context);
@@ -247,6 +312,10 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
             if (_picking) {
               results = GlobalSearchResults(machines: results.machines);
             }
+            _items = [
+              for (final section in results.sections)
+                ...results.itemsOf(section),
+            ];
             final browsing = _query.trim().isEmpty && _scope == null;
 
             return ContentGutter(
@@ -256,12 +325,15 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
                     padding: gutter.add(const EdgeInsets.fromLTRB(4, 8, 16, 8)),
                     child: Row(
                       children: [
-                        IconButton(
-                          tooltip: t.globalSearch.back,
-                          icon: const Icon(PhosphorIconsRegular.arrowLeft),
-                          color: colors.textSecondary,
-                          onPressed: () => Navigator.of(context).pop(),
-                        ),
+                        if (!AppModalScope.isDialog(context))
+                          IconButton(
+                            tooltip: t.globalSearch.back,
+                            icon: const Icon(PhosphorIconsRegular.arrowLeft),
+                            color: colors.textSecondary,
+                            onPressed: () => Navigator.of(context).pop(),
+                          )
+                        else
+                          const SizedBox(width: 12),
                         Expanded(child: _field(t, results)),
                       ],
                     ),
@@ -317,33 +389,38 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
           child: Row(
             children: [
               Expanded(
-                child: TextField(
-                  key: const ValueKey('globalSearchField'),
-                  controller: _controller,
-                  focusNode: _focusNode,
-                  onChanged: _setQuery,
-                  onSubmitted: (_) => _openFirst(results),
-                  textInputAction: TextInputAction.search,
-                  autocorrect: false,
-                  enableSuggestions: false,
-                  style: TextStyle(
-                    fontFamily: AppTheme.uiFamily,
-                    fontSize: 15,
-                    color: colors.textPrimary,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: _hint(t),
-                    hintStyle: TextStyle(
+                child: Focus(
+                  canRequestFocus: false,
+                  skipTraversal: true,
+                  onKeyEvent: _onFieldKey,
+                  child: TextField(
+                    key: const ValueKey('globalSearchField'),
+                    controller: _controller,
+                    focusNode: _focusNode,
+                    onChanged: _setQuery,
+                    onSubmitted: (_) => _openSelected(),
+                    textInputAction: TextInputAction.search,
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    style: TextStyle(
                       fontFamily: AppTheme.uiFamily,
-                      fontSize: 14,
-                      color: colors.textSecondary,
+                      fontSize: 15,
+                      color: colors.textPrimary,
                     ),
-                    isDense: true,
-                    filled: false,
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    contentPadding: EdgeInsets.zero,
+                    decoration: InputDecoration(
+                      hintText: _hint(t),
+                      hintStyle: TextStyle(
+                        fontFamily: AppTheme.uiFamily,
+                        fontSize: 14,
+                        color: colors.textSecondary,
+                      ),
+                      isDense: true,
+                      filled: false,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                    ),
                   ),
                 ),
               ),
@@ -378,16 +455,30 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
         .where((term) => term.isNotEmpty)
         .toList();
     final manager = _manager;
+    final current = _items.isEmpty || !(isDesktopPlatform || _arrowed)
+        ? null
+        : _items[_selected];
+    Widget row(Object item, Widget child) {
+      final selected = identical(item, current);
+      return _Cursor(
+        key: selected ? _cursorKey : null,
+        selected: selected,
+        child: child,
+      );
+    }
 
     Widget? section(SearchSection kind) => switch (kind) {
       SearchSection.sessions when results.sessions.isNotEmpty => _Section(
         title: browsing ? t.globalSearch.openSessions : t.globalSearch.sessions,
         children: [
           for (final s in results.sessions)
-            _SessionResult(
-              session: s,
-              terms: terms,
-              onTap: () => _openSession(s),
+            row(
+              s,
+              _SessionResult(
+                session: s,
+                terms: terms,
+                onTap: () => _openSession(s),
+              ),
             ),
         ],
       ),
@@ -397,12 +488,15 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
             : t.globalSearch.machines,
         children: [
           for (final p in results.machines)
-            _MachineResult(
-              profile: p,
-              groupLabel: _groupLabel(t, p.group),
-              live: manager.getSessionsForProfile(p.id).isNotEmpty,
-              terms: terms,
-              onTap: () => _openMachine(p),
+            row(
+              p,
+              _MachineResult(
+                profile: p,
+                groupLabel: _groupLabel(t, p.group),
+                live: manager.getSessionsForProfile(p.id).isNotEmpty,
+                terms: terms,
+                onTap: () => _openMachine(p),
+              ),
             ),
         ],
       ),
@@ -410,11 +504,14 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
         title: t.globalSearch.groups,
         children: [
           for (final g in results.groups)
-            _GroupResult(
-              hit: g,
-              label: _groupLabel(t, g.group.name),
-              terms: terms,
-              onTap: () => _enterGroup(g.group),
+            row(
+              g,
+              _GroupResult(
+                hit: g,
+                label: _groupLabel(t, g.group.name),
+                terms: terms,
+                onTap: () => _enterGroup(g.group),
+              ),
             ),
         ],
       ),
@@ -422,10 +519,13 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
         title: t.globalSearch.snippets,
         children: [
           for (final s in results.snippets)
-            _SnippetResult(
-              snippet: s,
-              terms: terms,
-              onTap: () => _runSnippet(s),
+            row(
+              s,
+              _SnippetResult(
+                snippet: s,
+                terms: terms,
+                onTap: () => _runSnippet(s),
+              ),
             ),
         ],
       ),
@@ -433,11 +533,14 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
         title: t.globalSearch.keys,
         children: [
           for (final k in results.keys)
-            _KeyResult(
-              sshKey: k,
-              groupLabel: _groupLabel(t, k.group),
-              terms: terms,
-              onTap: () => _editKey(k),
+            row(
+              k,
+              _KeyResult(
+                sshKey: k,
+                groupLabel: _groupLabel(t, k.group),
+                terms: terms,
+                onTap: () => _editKey(k),
+              ),
             ),
         ],
       ),
@@ -605,6 +708,19 @@ class _ScopeChip extends StatelessWidget {
   }
 }
 
+/// Marks the result row Enter opens, for [_ResultRow] to draw.
+class _Cursor extends InheritedWidget {
+  const _Cursor({super.key, required this.selected, required super.child});
+
+  final bool selected;
+
+  static bool of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<_Cursor>()?.selected ?? false;
+
+  @override
+  bool updateShouldNotify(_Cursor old) => selected != old.selected;
+}
+
 /// One row of results: something round on the left, a title with the typed
 /// words picked out, a line under it, and an optional trailing hint.
 class _ResultRow extends StatelessWidget {
@@ -633,7 +749,11 @@ class _ResultRow extends StatelessWidget {
         .copyWith(color: colors.textTertiary);
     return InkWell(
       onTap: onTap,
-      child: Padding(
+      child: AnimatedContainer(
+        duration: AppTheme.interactiveDuration,
+        color: _Cursor.of(context)
+            ? colors.primaryHighlight
+            : colors.primaryHighlight.invisible,
         padding: const EdgeInsets.fromLTRB(14, 10, 12, 10),
         child: Row(
           children: [

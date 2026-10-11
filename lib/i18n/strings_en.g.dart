@@ -76,6 +76,9 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 	late final Translations$tagMigration$en tagMigration = Translations$tagMigration$en.internal(_root);
 	late final Translations$selection$en selection = Translations$selection$en.internal(_root);
 	late final Translations$globalSearch$en globalSearch = Translations$globalSearch$en.internal(_root);
+	late final Translations$commands$en commands = Translations$commands$en.internal(_root);
+	late final Translations$window$en window = Translations$window$en.internal(_root);
+	late final Translations$contextMenu$en contextMenu = Translations$contextMenu$en.internal(_root);
 }
 
 // Path: nav
@@ -103,6 +106,9 @@ class Translations$nav$en {
 
 	/// en: 'Expand sidebar'
 	String get expandSidebar => 'Expand sidebar';
+
+	/// en: 'Sessions'
+	String get sessions => 'Sessions';
 }
 
 // Path: common
@@ -698,6 +704,15 @@ class Translations$terminal$en {
 	/// en: 'Hide suggestion'
 	String get suggestionDismiss => 'Hide suggestion';
 
+	/// en: 'pick'
+	String get suggestionPick => 'pick';
+
+	/// en: 'insert'
+	String get suggestionInsert => 'insert';
+
+	/// en: 'close'
+	String get suggestionClose => 'close';
+
 	/// en: 'New session'
 	String get newSession => 'New session';
 
@@ -1011,6 +1026,9 @@ class Translations$sftp$en {
 
 	/// en: 'Could not move {count} items. {error}'
 	String moveFailedCount({required Object count, required Object error}) => 'Could not move ${count} items. ${error}';
+
+	/// en: 'Drop to upload to {folder}'
+	String dropToUpload({required Object folder}) => 'Drop to upload to ${folder}';
 }
 
 // Path: editor
@@ -1707,6 +1725,33 @@ class Translations$settings$en {
 
 	/// en: 'Files open in the shell's current folder (with the Termphin agent).'
 	String get sftpFollowTerminalSubtitle => 'Files open in the shell\'s current folder (with the Termphin agent).';
+
+	/// en: 'Controls'
+	String get terminalTyping => 'Controls';
+
+	/// en: 'No system keyring'
+	String get noKeyringTitle => 'No system keyring';
+
+	/// en: 'Saved passwords and keys are encrypted with a key kept in a file only your user can read. Start a Secret Service keyring, such as GNOME Keyring or KeePassXC, and Termphin moves the key into it on the next launch.'
+	String get noKeyringSubtitle => 'Saved passwords and keys are encrypted with a key kept in a file only your user can read. Start a Secret Service keyring, such as GNOME Keyring or KeePassXC, and Termphin moves the key into it on the next launch.';
+
+	/// en: 'Action bar'
+	String get actionBar => 'Action bar';
+
+	/// en: 'Session actions in a toolbar above the terminal'
+	String get actionBarSwitchSubtitle => 'Session actions in a toolbar above the terminal';
+
+	/// en: 'Actions on the bar'
+	String get actionBarLayout => 'Actions on the bar';
+
+	/// en: 'Keep running in the tray'
+	String get closeToTray => 'Keep running in the tray';
+
+	/// en: 'Closing the window leaves your sessions connected'
+	String get closeToTraySubtitle => 'Closing the window leaves your sessions connected';
+
+	/// en: 'This desktop has no tray to keep Termphin in'
+	String get closeToTrayUnavailable => 'This desktop has no tray to keep Termphin in';
 }
 
 // Path: exportScreen
@@ -3100,6 +3145,48 @@ class Translations$onboarding$en {
 	/// en: 'An SSH client whose sessions survive a dropped connection. Lock the phone, lose signal, come back - your shell is still there.'
 	String get welcomeBody => 'An SSH client whose sessions survive a dropped connection. Lock the phone, lose signal, come back - your shell is still there.';
 
+	/// en: 'An SSH client whose sessions survive a dropped connection. Close the lid, change networks, come back - your shell is still there.'
+	String get welcomeBodyDesktop => 'An SSH client whose sessions survive a dropped connection. Close the lid, change networks, come back - your shell is still there.';
+
+	/// en: 'Welcome'
+	String get stepWelcome => 'Welcome';
+
+	/// en: 'Your server'
+	String get stepServer => 'Your server';
+
+	/// en: 'Privacy'
+	String get stepPrivacy => 'Privacy';
+
+	/// en: 'to continue'
+	String get keyContinue => 'to continue';
+
+	/// en: 'to finish'
+	String get keyFinish => 'to finish';
+
+	/// en: 'Add one now'
+	String get targetLabel => 'Add one now';
+
+	/// en: 'Optional. The machine form opens filled in with it.'
+	String get targetHelper => 'Optional. The machine form opens filled in with it.';
+
+	/// en: 'Found in ~/.ssh/config'
+	String get sshConfigTitle => 'Found in ~/.ssh/config';
+
+	/// en: 'The ticked ones are added with the keys they sign in with.'
+	String get sshConfigSubtitle => 'The ticked ones are added with the keys they sign in with.';
+
+	/// en: 'no key found, add it by hand'
+	String get sshConfigNoKey => 'no key found, add it by hand';
+
+	/// en: 'its key has a passphrase, add it by hand'
+	String get sshConfigEncrypted => 'its key has a passphrase, add it by hand';
+
+	/// en: 'its key file cannot be read'
+	String get sshConfigUnreadable => 'its key file cannot be read';
+
+	/// en: 'already added'
+	String get sshConfigAlready => 'already added';
+
 	/// en: 'Get started'
 	String get getStarted => 'Get started';
 
@@ -3488,6 +3575,235 @@ class Translations$globalSearch$en {
 	String get emptyGroup => 'Empty';
 }
 
+// Path: commands
+class Translations$commands$en {
+	Translations$commands$en.internal(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'Search everything'
+	String get globalSearch => 'Search everything';
+
+	/// en: 'New machine'
+	String get newMachine => 'New machine';
+
+	/// en: 'New session'
+	String get newSession => 'New session';
+
+	/// en: 'Close tab'
+	String get closeTab => 'Close tab';
+
+	/// en: 'Next tab'
+	String get nextTab => 'Next tab';
+
+	/// en: 'Previous tab'
+	String get previousTab => 'Previous tab';
+
+	/// en: 'Go to tab 1–9'
+	String get selectTab => 'Go to tab 1–9';
+
+	/// en: 'Find in terminal'
+	String get findInTerminal => 'Find in terminal';
+
+	/// en: 'Fast upload'
+	String get uploadFile => 'Fast upload';
+
+	/// en: 'Larger text'
+	String get zoomIn => 'Larger text';
+
+	/// en: 'Smaller text'
+	String get zoomOut => 'Smaller text';
+
+	/// en: 'Default text size'
+	String get zoomReset => 'Default text size';
+
+	/// en: 'Settings'
+	String get openSettings => 'Settings';
+
+	/// en: 'Show or hide the sidebar'
+	String get toggleSidebar => 'Show or hide the sidebar';
+
+	/// en: 'Keyboard shortcuts'
+	String get showShortcuts => 'Keyboard shortcuts';
+
+	/// en: 'Manual'
+	String get openManual => 'Manual';
+
+	/// en: 'Keyboard shortcuts'
+	String get shortcutsTitle => 'Keyboard shortcuts';
+
+	/// en: 'General'
+	String get shortcutsGeneral => 'General';
+
+	/// en: 'Terminal'
+	String get shortcutsTerminal => 'Terminal';
+
+	/// en: 'Copy the selection'
+	String get shortcutsCopy => 'Copy the selection';
+
+	/// en: 'Paste'
+	String get shortcutsPaste => 'Paste';
+
+	/// en: 'Select all'
+	String get shortcutsSelectAll => 'Select all';
+
+	/// en: 'Quit Termphin'
+	String get quit => 'Quit Termphin';
+}
+
+// Path: window
+class Translations$window$en {
+	Translations$window$en.internal(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'Minimize'
+	String get minimize => 'Minimize';
+
+	/// en: 'Maximize'
+	String get maximize => 'Maximize';
+
+	/// en: 'Restore'
+	String get restore => 'Restore';
+
+	/// en: 'Close'
+	String get close => 'Close';
+
+	/// en: 'Termphin'
+	String get menuApp => 'Termphin';
+
+	/// en: 'View'
+	String get menuView => 'View';
+
+	/// en: 'Help'
+	String get menuHelp => 'Help';
+
+	/// en: 'What's new'
+	String get releaseNotes => 'What\'s new';
+
+	/// en: 'Report an issue'
+	String get reportIssue => 'Report an issue';
+
+	/// en: 'Quit Termphin'
+	String get quit => 'Quit Termphin';
+
+	/// en: 'Search'
+	String get search => 'Search';
+
+	/// en: 'Show Termphin'
+	String get trayShow => 'Show Termphin';
+
+	/// en: 'No connected sessions'
+	String get trayNoSessions => 'No connected sessions';
+
+	/// en: 'New session'
+	String get trayNewSession => 'New session';
+
+	/// en: '(zero) {Termphin} (one) {Termphin - {n} session connected} (other) {Termphin - {n} sessions connected}'
+	String trayTooltip({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n,
+		zero: 'Termphin',
+		one: 'Termphin - ${n} session connected',
+		other: 'Termphin - ${n} sessions connected',
+	);
+
+	/// en: 'Keep Termphin running?'
+	String get closeAskTitle => 'Keep Termphin running?';
+
+	/// en: 'With the window closed, Termphin can stay in the tray and keep your sessions connected. You can change this in Settings.'
+	String get closeAskBody => 'With the window closed, Termphin can stay in the tray and keep your sessions connected. You can change this in Settings.';
+
+	/// en: 'Keep running'
+	String get closeAskKeep => 'Keep running';
+
+	/// en: 'Quit'
+	String get closeAskQuit => 'Quit';
+
+	/// en: 'Quit Termphin?'
+	String get quitConfirmTitle => 'Quit Termphin?';
+
+	/// en: '(one) {{n} connected session will be closed. A session kept on the server stays there to resume.} (other) {{n} connected sessions will be closed. Sessions kept on the server stay there to resume.}'
+	String quitConfirmBody({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n,
+		one: '${n} connected session will be closed. A session kept on the server stays there to resume.',
+		other: '${n} connected sessions will be closed. Sessions kept on the server stay there to resume.',
+	);
+
+	/// en: 'Quit'
+	String get quitConfirm => 'Quit';
+}
+
+// Path: contextMenu
+class Translations$contextMenu$en {
+	Translations$contextMenu$en.internal(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'Copy'
+	String get copy => 'Copy';
+
+	/// en: 'Paste'
+	String get paste => 'Paste';
+
+	/// en: 'Select all'
+	String get selectAll => 'Select all';
+
+	/// en: 'Find…'
+	String get find => 'Find…';
+
+	/// en: 'Clear selection'
+	String get clearSelection => 'Clear selection';
+
+	/// en: 'Split with…'
+	String get split => 'Split with…';
+
+	/// en: 'New session'
+	String get newSession => 'New session';
+
+	/// en: 'Close tab'
+	String get closeTab => 'Close tab';
+
+	/// en: 'Rename session…'
+	String get rename => 'Rename session…';
+
+	/// en: 'Files'
+	String get files => 'Files';
+
+	/// en: 'Terminal'
+	String get terminal => 'Terminal';
+
+	/// en: 'Connect'
+	String get connect => 'Connect';
+
+	/// en: 'Edit'
+	String get edit => 'Edit';
+
+	/// en: 'Delete'
+	String get delete => 'Delete';
+
+	/// en: 'Select'
+	String get select => 'Select';
+
+	/// en: 'Duplicate'
+	String get duplicate => 'Duplicate';
+
+	/// en: 'Open'
+	String get open => 'Open';
+
+	/// en: 'Download'
+	String get download => 'Download';
+
+	/// en: 'Show in folder'
+	String get showInFolder => 'Show in folder';
+
+	/// en: 'Move to group…'
+	String get moveToGroup => 'Move to group…';
+}
+
 // Path: sftp.errors
 class Translations$sftp$errors$en {
 	Translations$sftp$errors$en.internal(this._root);
@@ -3622,6 +3938,7 @@ extension on Translations {
 			'nav.settings' => 'Settings',
 			'nav.collapseSidebar' => 'Collapse sidebar',
 			'nav.expandSidebar' => 'Expand sidebar',
+			'nav.sessions' => 'Sessions',
 			'common.add' => 'Add',
 			'common.cancel' => 'Cancel',
 			'common.save' => 'Save',
@@ -3800,6 +4117,9 @@ extension on Translations {
 			'keys.deleteAnyway' => 'Delete anyway',
 			'terminal.selectDevice' => 'Select device to connect',
 			'terminal.suggestionDismiss' => 'Hide suggestion',
+			'terminal.suggestionPick' => 'pick',
+			'terminal.suggestionInsert' => 'insert',
+			'terminal.suggestionClose' => 'close',
 			'terminal.newSession' => 'New session',
 			'terminal.switchToTerminal' => 'Terminal',
 			'terminal.switchToSftp' => 'SFTP Browser',
@@ -3914,6 +4234,7 @@ extension on Translations {
 			'sftp.nothingTransferred' => 'Nothing changed - every item was skipped',
 			'sftp.copyFailedCount' => ({required Object count, required Object error}) => 'Could not copy ${count} items. ${error}',
 			'sftp.moveFailedCount' => ({required Object count, required Object error}) => 'Could not move ${count} items. ${error}',
+			'sftp.dropToUpload' => ({required Object folder}) => 'Drop to upload to ${folder}',
 			'editor.unsavedTitle' => 'Unsaved changes',
 			'editor.discardConfirm' => 'Discard changes?',
 			'editor.savedSuccess' => 'File saved successfully',
@@ -4123,13 +4444,13 @@ extension on Translations {
 			'settings.toolbarProfileRenameTitle' => 'Rename layout',
 			'settings.toolbarProfileNameLabel' => 'Layout name',
 			'settings.toolbarProfileDeleteTitle' => 'Delete this layout?',
+			_ => null,
+		} ?? switch (path) {
 			'settings.toolbarProfileDeleteConfirm' => ({required Object name}) => '“${name}” and the keys arranged in it are gone.',
 			'settings.toolbarProfileDeleteLast' => 'This is the only layout left - the toolbar needs one.',
 			'settings.toolbarProfileSummary' => ({required Object count, required Object columns, required Object rows, required Object pages}) => '${count} keys · ${columns}x${rows}, ${pages} page(s)',
 			'settings.toolbarGridSize' => 'Grid size',
 			'settings.toolbarReset' => 'Reset layout',
-			_ => null,
-		} ?? switch (path) {
 			'settings.toolbarResetTitle' => 'Reset this layout?',
 			'settings.toolbarResetMessage' => 'Every slot goes back to the default arrangement.',
 			'settings.toolbarResetDone' => 'Layout reset',
@@ -4142,6 +4463,15 @@ extension on Translations {
 			'settings.sftpShowHiddenSubtitle' => 'Names that start with a dot, like .ssh and .bashrc.',
 			'settings.sftpFollowTerminal' => 'Follow the terminal',
 			'settings.sftpFollowTerminalSubtitle' => 'Files open in the shell\'s current folder (with the Termphin agent).',
+			'settings.terminalTyping' => 'Controls',
+			'settings.noKeyringTitle' => 'No system keyring',
+			'settings.noKeyringSubtitle' => 'Saved passwords and keys are encrypted with a key kept in a file only your user can read. Start a Secret Service keyring, such as GNOME Keyring or KeePassXC, and Termphin moves the key into it on the next launch.',
+			'settings.actionBar' => 'Action bar',
+			'settings.actionBarSwitchSubtitle' => 'Session actions in a toolbar above the terminal',
+			'settings.actionBarLayout' => 'Actions on the bar',
+			'settings.closeToTray' => 'Keep running in the tray',
+			'settings.closeToTraySubtitle' => 'Closing the window leaves your sessions connected',
+			'settings.closeToTrayUnavailable' => 'This desktop has no tray to keep Termphin in',
 			'exportScreen.title' => 'Export & Import',
 			'exportScreen.exportInstructions' => 'Choose what to include in the backup file.',
 			'exportScreen.saveDialogTitle' => 'Save backup',
@@ -4561,6 +4891,20 @@ extension on Translations {
 			'analyticsConsent.allow' => 'Allow',
 			'onboarding.welcomeTitle' => 'Welcome to Termphin',
 			'onboarding.welcomeBody' => 'An SSH client whose sessions survive a dropped connection. Lock the phone, lose signal, come back - your shell is still there.',
+			'onboarding.welcomeBodyDesktop' => 'An SSH client whose sessions survive a dropped connection. Close the lid, change networks, come back - your shell is still there.',
+			'onboarding.stepWelcome' => 'Welcome',
+			'onboarding.stepServer' => 'Your server',
+			'onboarding.stepPrivacy' => 'Privacy',
+			'onboarding.keyContinue' => 'to continue',
+			'onboarding.keyFinish' => 'to finish',
+			'onboarding.targetLabel' => 'Add one now',
+			'onboarding.targetHelper' => 'Optional. The machine form opens filled in with it.',
+			'onboarding.sshConfigTitle' => 'Found in ~/.ssh/config',
+			'onboarding.sshConfigSubtitle' => 'The ticked ones are added with the keys they sign in with.',
+			'onboarding.sshConfigNoKey' => 'no key found, add it by hand',
+			'onboarding.sshConfigEncrypted' => 'its key has a passphrase, add it by hand',
+			'onboarding.sshConfigUnreadable' => 'its key file cannot be read',
+			'onboarding.sshConfigAlready' => 'already added',
 			'onboarding.getStarted' => 'Get started',
 			'onboarding.serverTitle' => 'Do you have a server?',
 			'onboarding.serverBody' => 'Termphin connects to machines you already run, over SSH.',
@@ -4614,6 +4958,8 @@ extension on Translations {
 			'manual.howToFix' => 'How to fix this',
 			'manual.troubleshooting' => 'Troubleshooting guide',
 			'manual.readMore' => 'Read more in the manual',
+			_ => null,
+		} ?? switch (path) {
 			'manual.whatIsThis' => 'What is this?',
 			'tagMigration.title' => 'Convert tags to groups',
 			'tagMigration.explanation' => 'Tags have been replaced by groups. Each machine and snippet now belongs to a single group. Choose which tags to convert into groups.',
@@ -4642,8 +4988,6 @@ extension on Translations {
 			'globalSearch.back' => 'Back',
 			'globalSearch.clear' => 'Clear',
 			'globalSearch.machines' => 'Machines',
-			_ => null,
-		} ?? switch (path) {
 			'globalSearch.sessions' => 'Sessions',
 			'globalSearch.groups' => 'Groups',
 			'globalSearch.snippets' => 'Snippets',
@@ -4658,6 +5002,71 @@ extension on Translations {
 			'globalSearch.snippetCount' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '${n} snippet', other: '${n} snippets', ), 
 			'globalSearch.keyCount' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '${n} key', other: '${n} keys', ), 
 			'globalSearch.emptyGroup' => 'Empty',
+			'commands.globalSearch' => 'Search everything',
+			'commands.newMachine' => 'New machine',
+			'commands.newSession' => 'New session',
+			'commands.closeTab' => 'Close tab',
+			'commands.nextTab' => 'Next tab',
+			'commands.previousTab' => 'Previous tab',
+			'commands.selectTab' => 'Go to tab 1–9',
+			'commands.findInTerminal' => 'Find in terminal',
+			'commands.uploadFile' => 'Fast upload',
+			'commands.zoomIn' => 'Larger text',
+			'commands.zoomOut' => 'Smaller text',
+			'commands.zoomReset' => 'Default text size',
+			'commands.openSettings' => 'Settings',
+			'commands.toggleSidebar' => 'Show or hide the sidebar',
+			'commands.showShortcuts' => 'Keyboard shortcuts',
+			'commands.openManual' => 'Manual',
+			'commands.shortcutsTitle' => 'Keyboard shortcuts',
+			'commands.shortcutsGeneral' => 'General',
+			'commands.shortcutsTerminal' => 'Terminal',
+			'commands.shortcutsCopy' => 'Copy the selection',
+			'commands.shortcutsPaste' => 'Paste',
+			'commands.shortcutsSelectAll' => 'Select all',
+			'commands.quit' => 'Quit Termphin',
+			'window.minimize' => 'Minimize',
+			'window.maximize' => 'Maximize',
+			'window.restore' => 'Restore',
+			'window.close' => 'Close',
+			'window.menuApp' => 'Termphin',
+			'window.menuView' => 'View',
+			'window.menuHelp' => 'Help',
+			'window.releaseNotes' => 'What\'s new',
+			'window.reportIssue' => 'Report an issue',
+			'window.quit' => 'Quit Termphin',
+			'window.search' => 'Search',
+			'window.trayShow' => 'Show Termphin',
+			'window.trayNoSessions' => 'No connected sessions',
+			'window.trayNewSession' => 'New session',
+			'window.trayTooltip' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, zero: 'Termphin', one: 'Termphin - ${n} session connected', other: 'Termphin - ${n} sessions connected', ), 
+			'window.closeAskTitle' => 'Keep Termphin running?',
+			'window.closeAskBody' => 'With the window closed, Termphin can stay in the tray and keep your sessions connected. You can change this in Settings.',
+			'window.closeAskKeep' => 'Keep running',
+			'window.closeAskQuit' => 'Quit',
+			'window.quitConfirmTitle' => 'Quit Termphin?',
+			'window.quitConfirmBody' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '${n} connected session will be closed. A session kept on the server stays there to resume.', other: '${n} connected sessions will be closed. Sessions kept on the server stay there to resume.', ), 
+			'window.quitConfirm' => 'Quit',
+			'contextMenu.copy' => 'Copy',
+			'contextMenu.paste' => 'Paste',
+			'contextMenu.selectAll' => 'Select all',
+			'contextMenu.find' => 'Find…',
+			'contextMenu.clearSelection' => 'Clear selection',
+			'contextMenu.split' => 'Split with…',
+			'contextMenu.newSession' => 'New session',
+			'contextMenu.closeTab' => 'Close tab',
+			'contextMenu.rename' => 'Rename session…',
+			'contextMenu.files' => 'Files',
+			'contextMenu.terminal' => 'Terminal',
+			'contextMenu.connect' => 'Connect',
+			'contextMenu.edit' => 'Edit',
+			'contextMenu.delete' => 'Delete',
+			'contextMenu.select' => 'Select',
+			'contextMenu.duplicate' => 'Duplicate',
+			'contextMenu.open' => 'Open',
+			'contextMenu.download' => 'Download',
+			'contextMenu.showInFolder' => 'Show in folder',
+			'contextMenu.moveToGroup' => 'Move to group…',
 			_ => null,
 		};
 	}

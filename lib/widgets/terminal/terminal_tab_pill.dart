@@ -5,20 +5,10 @@ import '../../models/session_tab.dart';
 import '../../models/ssh_profile.dart';
 import '../../providers/ssh_connection_provider.dart' show ConnectionStatus;
 import '../../theme/theme.dart';
-import '../profiles/profile_avatar.dart';
 import '../ui/app_dropdown.dart';
+import 'session_tab_pill.dart';
 import 'session_view.dart';
 import 'tab_menu_parts.dart';
-
-/// Type size of a tab's name, and the line height it is set at. The strip's
-/// own height is derived from these in `terminalTabBarHeight` rather than
-/// written down separately - two numbers that have to agree but are declared
-/// apart only agree until one of them is edited.
-const kTabNameSize = 13.0;
-const kTabLineHeight = 1.25;
-
-/// Vertical padding inside a tab pill.
-const kTabPillPaddingY = 6.0;
 
 /// One tab's pill: the avatar ringed in its connection status, the name, the
 /// view-mode badge and the overflow menu.
@@ -74,92 +64,46 @@ class TerminalTabPill<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final activeBg = Theme.of(context).colorScheme.surface;
-    final activeBorder = Theme.of(context).dividerColor;
-    final activeText = Theme.of(context).colorScheme.onSurface;
+    final theme = Theme.of(context);
+    final activeText = theme.colorScheme.onSurface;
     final inactiveText = activeText.withValues(alpha: 0.55);
-    final statusBorderColor = switch (status) {
+    final statusColor = switch (status) {
       ConnectionStatus.connected => context.colors.success,
       ConnectionStatus.connecting ||
       ConnectionStatus.reconnecting => context.colors.warning,
       ConnectionStatus.error => context.colors.error,
-      ConnectionStatus.disconnected => activeBorder,
+      ConnectionStatus.disconnected => theme.dividerColor,
     };
-    final avatar = AnimatedContainer(
-      key: ValueKey('sessionStatusAvatar-$sessionId'),
-      duration: AppTheme.interactiveDuration,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: statusBorderColor, width: 1.25),
-      ),
-      padding: const EdgeInsets.all(1),
-      child: ProfileAvatar(
-        iconName: profile.iconName,
-        colorHex: profile.colorHex,
-        size: 20,
-      ),
-    );
 
-    final tab = GestureDetector(
+    final tab = SessionTabPill(
+      sessionId: sessionId,
+      profile: profile,
+      statusColor: statusColor,
+      displayName: displayName,
+      sessionName: this.sessionName,
+      isActive: isActive,
+      collapsed: collapsed,
+      stretch: stretch,
       onTap: onTap,
-      child: AnimatedContainer(
-        key: ValueKey('sessionTabContent-$sessionId'),
-        duration: AppTheme.motionFast,
-        padding: EdgeInsets.only(
-          left: collapsed ? 4 : 14,
-          right: 4,
-          top: kTabPillPaddingY,
-          bottom: kTabPillPaddingY,
-        ),
-        decoration: BoxDecoration(
-          color: isActive
-              ? Color.alphaBlend(
-                  context.colors.primary.withValues(alpha: 0.06),
-                  activeBg,
-                )
-              : activeBg.invisible,
-          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-          border: Border.all(
-            color: isActive ? activeBorder : activeBorder.invisible,
-            width: 1,
+      trailing: [
+        if (status == ConnectionStatus.connected)
+          ViewModeBadge(
+            key: ValueKey('viewModeBadge-$sessionId'),
+            mode: mode,
+            idleColor: isActive
+                ? activeText.withValues(alpha: 0.6)
+                : inactiveText,
           ),
+        AppActionDropdown<T>(
+          key: ValueKey('tabMenu-$sessionId'),
+          iconColor: isActive
+              ? activeText.withValues(alpha: 0.7)
+              : inactiveText,
+          width: 280,
+          items: menuItems,
+          onSelected: onMenuAction,
         ),
-        child: collapsed
-            ? Center(child: avatar)
-            : Row(
-                mainAxisSize: stretch ? MainAxisSize.max : MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  avatar,
-                  const SizedBox(width: 8),
-                  if (stretch)
-                    Expanded(child: _buildName(activeText, inactiveText))
-                  else
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 170),
-                      child: _buildName(activeText, inactiveText),
-                    ),
-                  const SizedBox(width: 6),
-                  if (status == ConnectionStatus.connected)
-                    ViewModeBadge(
-                      key: ValueKey('viewModeBadge-$sessionId'),
-                      mode: mode,
-                      idleColor: isActive
-                          ? activeText.withValues(alpha: 0.6)
-                          : inactiveText,
-                    ),
-                  AppActionDropdown<T>(
-                    key: ValueKey('tabMenu-$sessionId'),
-                    iconColor: isActive
-                        ? activeText.withValues(alpha: 0.7)
-                        : inactiveText,
-                    width: 280,
-                    items: menuItems,
-                    onSelected: onMenuAction,
-                  ),
-                ],
-              ),
-      ),
+      ],
     );
 
     if (!collapsed) return tab;
@@ -170,37 +114,6 @@ class TerminalTabPill<T> extends StatelessWidget {
           : displayName,
       triggerMode: TooltipTriggerMode.manual,
       child: tab,
-    );
-  }
-
-  Widget _buildName(Color activeText, Color inactiveText) {
-    final sessionName = this.sessionName;
-    return Text.rich(
-      TextSpan(
-        children: [
-          if (sessionName != null) ...[
-            TextSpan(text: SessionTab.displayName(sessionName)),
-            TextSpan(
-              text: ' - $displayName',
-              style: TextStyle(
-                fontWeight: FontWeight.w500,
-                color: (isActive ? activeText : inactiveText).withValues(
-                  alpha: 0.6,
-                ),
-              ),
-            ),
-          ] else
-            TextSpan(text: displayName),
-        ],
-      ),
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: TextStyle(
-        fontSize: kTabNameSize,
-        height: kTabLineHeight,
-        fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-        color: isActive ? activeText : inactiveText,
-      ),
     );
   }
 }

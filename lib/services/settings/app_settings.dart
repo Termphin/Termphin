@@ -3,6 +3,7 @@ import '../completion/command_completion.dart';
 import '../ssh/ssh_session_manager.dart';
 import 'action_dock_settings.dart';
 import 'anonymize_setting.dart';
+import 'desktop_settings.dart';
 import 'editor_settings.dart';
 import 'floating_dock_settings.dart';
 import 'lock_settings.dart';
@@ -45,5 +46,6 @@ Future<void> loadAppSettings() async {
     sftpSortDescendingSetting.load(),
     tabBarPositionSetting.load(),
     lockTimeoutSetting.load(),
+    closeToTraySetting.load(),
   ]);
 }

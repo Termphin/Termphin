@@ -238,12 +238,14 @@ bottom of the screen belongs to the nav bar, the session dock and the key
 toolbar. Screens with a non-standard app bar height set
 `appNotificationAnchor`.
 
-`showAppSheet` is the only way to open a bottom sheet. **Do not call
-`showModalBottomSheet` directly** - every sheet used to pass its own `shape`,
+`showAppSheet` is the only way to open a bottom sheet - and on a desktop it
+opens the same content as a dialog instead (`docs/architecture/desktop.md`).
+**Do not call `showModalBottomSheet` directly** - every sheet used to pass its own `shape`,
 silently dropping the theme's styling, and announced the drag gesture three
 different ways. The helper draws the handle and leaves shape and background to
 `bottomSheetTheme`. `handle: false` is for a `DraggableScrollableSheet`, which
-resizes below a bar that has to live inside that child to move with it.
+resizes below a bar that has to live inside that child to move with it; that
+child is an `AppDraggableSheet`, which stops being draggable in a dialog.
 
 **Anonymize:** `anonymizeProvider` + `IdentityAnonymizer` swap machine names,
 hosts and usernames for deterministic placeholders across every screen. Display
@@ -273,7 +275,9 @@ does not scroll.
 ### The wide-layout side rail
 
 Replaces the bottom nav on desktop and in any landscape window
-(`isWideLayout`). There are two - `_Sidebar` in `main_shell.dart` and
+(`isWideLayout`), a phone on its side included: it gets the same rail as a
+tablet, collapsed or not as the user leaves it. On a desktop both rails carry the app's destinations at
+the top and the open sessions under them - see `desktop.md`. There are two - `_Sidebar` in `main_shell.dart` and
 `_buildTabRail` in `terminal_screen.dart` - and they are the same strip down the
 same edge, so they share `kNavRailWidth`/`kNavRailCollapsedWidth` and
 `NavRailToggleButton` rather than each carrying its own copy of 240.

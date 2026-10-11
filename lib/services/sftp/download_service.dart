@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../i18n/strings.g.dart';
 import '../../utils/platform_info.dart';
@@ -101,7 +102,9 @@ class DownloadService {
     });
   }
 
-  /// Opens a previously saved download in whatever app handles it.
+  /// Opens a previously saved download in whatever app handles it. A desktop
+  /// has no share sheet worth the name, so there the file opens in whatever
+  /// the system associates with it, as a double click would.
   static Future<void> openSavedDownload(
     SavedDownload download, {
     Rect? sharePositionOrigin,
@@ -113,6 +116,8 @@ class DownloadService {
         'uri': uri,
         'fileName': download.fileName,
       });
+    } else if (isDesktopPlatform) {
+      if (await File(uri).exists()) await launchUrl(Uri.file(uri));
     } else {
       if (await File(uri).exists()) {
         await SharePlus.instance.share(
@@ -123,6 +128,14 @@ class DownloadService {
         );
       }
     }
+  }
+
+  /// Shows a saved download in the system's file manager: its folder opens,
+  /// which every desktop can do without knowing which file manager it runs.
+  static Future<void> revealSavedDownload(SavedDownload download) async {
+    final uri = download.uri;
+    if (uri == null || !isDesktopPlatform) return;
+    await launchUrl(Uri.directory(File(uri).parent.path));
   }
 
   static Future<SavedDownload> downloadSftpFile({
@@ -480,11 +493,17 @@ class DownloadService {
         });
       }
     } else {
-      final docsDir = await getApplicationDocumentsDirectory();
       final sub = relativePath != null && relativePath.isNotEmpty
           ? '/$relativePath'
           : '';
-      final targetDir = Directory('${docsDir.path}/Downloads$sub');
+      final Directory base;
+      if (isDesktopPlatform) {
+        base = await DownloadLocation.instance.desktopTarget();
+      } else {
+        final docsDir = await getApplicationDocumentsDirectory();
+        base = Directory('${docsDir.path}/Downloads');
+      }
+      final targetDir = Directory('${base.path}$sub');
       if (!await targetDir.exists()) {
         await targetDir.create(recursive: true);
       }

@@ -6,11 +6,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'app.dart';
 import 'screens/share/share_screen.dart';
 import 'services/analytics/analytics_service.dart';
+import 'services/app/app_commands.dart';
+import 'services/platform/desktop_window.dart';
 import 'services/platform/foreground_notification_service.dart';
+import 'services/security/secret_cipher.dart';
 import 'services/settings/app_settings.dart';
 import 'services/ssh/network_monitor.dart';
 import 'services/ssh/ssh_prompts.dart';
 import 'services/ssh/ssh_session_manager.dart';
+import 'utils/platform_info.dart';
 import 'widgets/ssh/host_key_dialog.dart';
 import 'widgets/ssh/keyboard_interactive_dialog.dart';
 
@@ -28,6 +32,12 @@ bool _mainInitialized = false;
 /// so a handover re-probes sessions instead of waiting out the keepalive.
 /// Analytics capture is a no-op until consent is answered, so the
 /// `appOpened` event can be fired right after `init`.
+///
+/// On a desktop the window comes up first: the app's own title bar in place
+/// of the system's, the window where it was last time, and the keyboard
+/// shortcuts. Linux may have no keyring, so it is asked for the master key
+/// now rather than on the first save, which lets Settings say so before the
+/// user trusts it with a password.
 Future<void> main() async {
   if (_mainInitialized) {
     runApp(const SshClientApp());
@@ -38,6 +48,10 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await loadAppSettings();
+
+  await DesktopWindow.instance.init();
+  AppCommands.instance.install();
+  if (isLinuxPlatform) unawaited(SecretCipher.instance.masterKey());
 
   await SshSessionManager.instance.init();
   _bindConnectionPrompts();

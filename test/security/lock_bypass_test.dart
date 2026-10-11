@@ -7,6 +7,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:termphin/app.dart';
 import 'package:termphin/screens/lock_screen.dart';
+import 'package:termphin/services/app/debug_interstitials.dart';
 import 'package:termphin/services/app/onboarding_service.dart';
 import 'package:termphin/services/security/lock_service.dart';
 import 'package:termphin/services/settings/app_settings.dart';
@@ -18,6 +19,9 @@ import '../support/secure_storage_channel.dart';
 /// screen shortcut or anything else the system hands over waits until the PIN
 /// has been entered - acting on it first would open a session, or show a
 /// machine's address, to whoever is holding the phone.
+///
+/// The debug switch that shows onboarding on every launch is turned off, or
+/// it would stand onboarding in front of the PIN this checks.
 const _link = 'ssh://root@canary-host.example:2222';
 
 void main() {
@@ -28,6 +32,8 @@ void main() {
   late List<String> quickActionCalls;
 
   setUp(() async {
+    debugForceOnboardingOverride = false;
+    addTearDown(() => debugForceOnboardingOverride = null);
     SharedPreferences.setMockInitialValues({
       kOnboardingCompletedPrefsKey: true,
       kLockEnabledPrefsKey: true,

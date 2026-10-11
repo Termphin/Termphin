@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' show PointerDeviceKind;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -87,7 +88,14 @@ class SessionSwipeController extends ChangeNotifier {
   /// the screen's `LayoutBuilder`.
   set viewportWidth(double value) => _viewportWidth = value;
 
+  /// Arms on a finger only. A mouse dragged sideways over the terminal is
+  /// selecting text, and taking it for a swipe switched tabs under the
+  /// selection.
   void onPointerDown(PointerDownEvent event) {
+    if (event.kind != PointerDeviceKind.touch &&
+        event.kind != PointerDeviceKind.stylus) {
+      return;
+    }
     if (isBlocked()) return;
     if (tabCount() < 2 || _animation.isAnimating) return;
     if (_pointer != null) {

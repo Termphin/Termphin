@@ -17,6 +17,7 @@ import '../../utils/profile_sort.dart';
 import '../../widgets/profiles/profile_avatar.dart';
 import '../../widgets/profiles/profile_search_field.dart';
 import '../../widgets/ui/app_form_field.dart';
+import '../../widgets/ui/app_sheet.dart';
 import '../../widgets/ui/empty_state.dart';
 import '../../widgets/ui/group_filter_chips.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
@@ -34,10 +35,10 @@ import '../../widgets/ui/section_header.dart';
 /// the app that looked like nothing else in it, and a multi-select over every
 /// machine had to happen inside 70% of the window.
 Future<String?> showSnippetRunScreen(BuildContext context, Snippet snippet) {
-  return Navigator.of(context).push<String>(
-    MaterialPageRoute<String>(
-      builder: (_) => SnippetRunScreen(snippet: snippet),
-    ),
+  return pushAppForm<String>(
+    context,
+    fullscreenDialogOnMobile: false,
+    builder: (_) => SnippetRunScreen(snippet: snippet),
   );
 }
 
@@ -282,7 +283,9 @@ class _SnippetRunScreenState extends ConsumerState<SnippetRunScreen> {
   }
 }
 
-/// Back arrow and title, the same header the tunnel editor draws.
+/// Back arrow and title, the same header the tunnel editor draws. In a
+/// desktop's dialog there is nothing behind to go back to, so the same button
+/// closes the window.
 class _Header extends StatelessWidget {
   const _Header({required this.title, required this.subtitle});
 
@@ -296,9 +299,13 @@ class _Header extends StatelessWidget {
       child: Row(
         children: [
           IconButton(
-            tooltip: Translations.of(context).common.back,
+            tooltip: AppModalScope.isDialog(context)
+                ? Translations.of(context).common.close
+                : Translations.of(context).common.back,
             icon: Icon(
-              PhosphorIconsRegular.arrowLeft,
+              AppModalScope.isDialog(context)
+                  ? PhosphorIconsRegular.x
+                  : PhosphorIconsRegular.arrowLeft,
               size: 20,
               color: context.colors.textSecondary,
             ),

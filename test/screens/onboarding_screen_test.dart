@@ -30,7 +30,7 @@ void main() {
   }) async {
     await pumpTestApp(
       tester,
-      OnboardingScreen(onComplete: onComplete ?? (_) {}),
+      OnboardingScreen(onComplete: (r) => onComplete?.call(r.answer)),
     );
     await tester.pumpAndSettle();
   }

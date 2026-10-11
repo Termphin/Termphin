@@ -1,8 +1,12 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:dartssh2/dartssh2.dart';
+import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
@@ -24,8 +28,10 @@ import '../../utils/text_sniffer.dart';
 import '../terminal/terminal_scheme_theme.dart';
 import '../ui/app_dropdown.dart';
 import '../ui/app_notifications.dart';
+import '../ui/app_sheet.dart';
 import '../ui/clipboard_and_links.dart';
 import '../ui/confirm_dialog.dart';
+import '../ui/context_menu.dart';
 import '../ui/text_input_dialog.dart';
 import 'sftp_file_actions_menu.dart';
 import 'sftp_file_row.dart';
@@ -182,6 +188,7 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
 
   @override
   void dispose() {
+    _keysFocus.dispose();
     sftpShowHiddenSetting.removeListener(_onShowHiddenChanged);
     for (final opener in _fileMenuOpeners.values) {
       opener.dispose();
@@ -400,16 +407,126 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
 
   void _clearSelection() => setState(_selected.clear);
 
-  /// Overwrite prompts have to come before the progress dialog, or a modal
-  /// would be asking a question from behind another modal.
+  /// The row a Shift-click extends a selection from.
+  String? _lastClicked;
+
+  /// Takes the keyboard on a desktop: arrows aside, the browser answers the
+  /// keys a file manager does.
+  final _keysFocus = FocusNode(debugLabel: 'sftpBrowserKeys');
+
+  void _selectRange(String from, String to) {
+    final names = _items
+        .where((i) => i.filename != '..')
+        .map((i) => i.filename)
+        .toList();
+    final a = names.indexOf(from);
+    final b = names.indexOf(to);
+    if (a < 0 || b < 0) return;
+    setState(() {
+      _selected.addAll(names.sublist(math.min(a, b), math.max(a, b) + 1));
+    });
+  }
+
+  /// A right click: the row's own menu, opened where its `⋮` would open it -
+  /// or, over a selection, what can be done to all of it.
+  void _onRowSecondaryTap(SftpName item, Offset globalPosition) {
+    final t = Translations.of(context);
+    if (_selectionMode) {
+      if (!_selected.contains(item.filename)) _toggleSelected(item.filename);
+      unawaited(
+        showAppContextMenu(
+          context,
+          globalPosition: globalPosition,
+          entries: [
+            ContextMenuEntry(
+              label: t.sftp.download,
+              icon: PhosphorIconsRegular.downloadSimple,
+              onSelected: () => unawaited(_downloadSelected()),
+            ),
+            null,
+            ContextMenuEntry(
+              label: t.common.delete,
+              icon: PhosphorIconsRegular.trash,
+              destructive: true,
+              onSelected: () => unawaited(_deleteSelected()),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+    _menuOpenerFor(_joinPath(item.filename)).value = Object();
+  }
+
+  KeyEventResult _onBrowserKey(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    final keyboard = HardwareKeyboard.instance;
+    final primary = isMacOSPlatform
+        ? keyboard.isMetaPressed
+        : keyboard.isControlPressed;
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.escape && _selectionMode) {
+      _clearSelection();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.backspace && !primary) {
+      final up = _items.where((i) => i.filename == '..').firstOrNull;
+      if (up != null) _navigateTo(up);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.f5) {
+      unawaited(_loadDirectory(showSpinner: false));
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.delete && _selectionMode) {
+      unawaited(_deleteSelected());
+      return KeyEventResult.handled;
+    }
+    if (primary && key == LogicalKeyboardKey.keyA) {
+      _selectAll();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.f2 && _selected.length == 1) {
+      final item = _items.where((i) => i.filename == _selected.first);
+      if (item.isNotEmpty) unawaited(_renameItem(item.first));
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
   Future<void> _uploadFile() async {
     final result = await FilePicker.pickFiles();
     if (result.isEmpty) return;
-    final files = result.where((f) => f.path != null).toList();
-    if (files.isEmpty || !mounted) return;
+    await _uploadLocalFiles([
+      for (final file in result)
+        if (file.path case final path?)
+          (name: file.name, path: path, size: await file.length()),
+    ]);
+  }
 
+  /// Files dropped on the browser from the desktop's file manager: uploaded
+  /// into the folder on screen, as the + button's picker would. Folders are
+  /// left out - a dropped tree is a sync, not an upload.
+  Future<void> _uploadDropped(List<String> paths) async {
+    final files = <_LocalFile>[];
+    for (final path in paths) {
+      final file = File(path);
+      if (!await file.exists()) continue;
+      files.add((
+        name: path.split(Platform.pathSeparator).last,
+        path: path,
+        size: await file.length(),
+      ));
+    }
+    await _uploadLocalFiles(files);
+  }
+
+  /// Overwrite prompts have to come before the progress dialog, or a modal
+  /// would be asking a question from behind another modal.
+  Future<void> _uploadLocalFiles(List<_LocalFile> files) async {
+    if (files.isEmpty || !mounted) return;
     final t = Translations.of(context);
-    final planned = <PlatformFile>[];
+    final planned = <_LocalFile>[];
     for (final file in files) {
       final remotePath = _joinPath(file.name);
       if (_sftp != null && await _sftp!.exists(remotePath)) {
@@ -427,7 +544,7 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
 
     var knownTotal = 0;
     for (final file in planned) {
-      knownTotal += await file.length() ?? 0;
+      knownTotal += file.size ?? 0;
     }
     var bytesBefore = 0;
     var uploadedAny = false;
@@ -437,7 +554,7 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
         final file = planned[i];
         var sent = 0;
         await _sftp?.uploadFile(
-          file.path!,
+          file.path,
           _joinPath(file.name),
           cancel: session.cancel,
           onProgress: (uploaded, _) {
@@ -505,9 +622,13 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
       message,
       actionLabel: saved.uri == null
           ? null
+          : platformHas(PlatformFeature.revealInFileManager)
+          ? t.contextMenu.showInFolder
           : (isIOSPlatform ? t.sftp.shareDownload : t.sftp.openDownload),
       onAction: saved.uri == null
           ? null
+          : platformHas(PlatformFeature.revealInFileManager)
+          ? () => DownloadService.revealSavedDownload(saved)
           : () async {
               try {
                 await DownloadService.openSavedDownload(
@@ -980,15 +1101,14 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
   /// sheet - the editor is still part of the session, so it is wrapped back
   /// into the session's colours by hand.
   void _openEditor(SftpName item) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => TerminalSchemeTheme(
-          child: SftpEditorScreen(
-            session: widget.session,
-            fileItem: item,
-            path: _joinPath(item.filename),
-            sftp: _sftp,
-          ),
+    pushAppWindow<void>(
+      context,
+      builder: (_) => TerminalSchemeTheme(
+        child: SftpEditorScreen(
+          session: widget.session,
+          fileItem: item,
+          path: _joinPath(item.filename),
+          sftp: _sftp,
         ),
       ),
     );
@@ -1025,26 +1145,23 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
         )
         .toList();
     var mutated = false;
-    Navigator.of(context)
-        .push(
-          MaterialPageRoute<void>(
-            builder: (_) => TerminalSchemeTheme(
-              child: SftpImagePreviewScreen(
-                sftp: _sftp!,
-                path: _joinPath(item.filename),
-                filename: item.filename,
-                fileSize: item.attr.size,
-                modifyTime: item.attr.modifyTime,
-                directoryPath: _currentPath,
-                siblingImages: siblings,
-                onMutated: () => mutated = true,
-              ),
-            ),
-          ),
-        )
-        .then((_) {
-          if (mutated) _loadDirectory();
-        });
+    pushAppWindow<void>(
+      context,
+      builder: (_) => TerminalSchemeTheme(
+        child: SftpImagePreviewScreen(
+          sftp: _sftp!,
+          path: _joinPath(item.filename),
+          filename: item.filename,
+          fileSize: item.attr.size,
+          modifyTime: item.attr.modifyTime,
+          directoryPath: _currentPath,
+          siblingImages: siblings,
+          onMutated: () => mutated = true,
+        ),
+      ),
+    ).then((_) {
+      if (mutated) _loadDirectory();
+    });
   }
 
   /// What [SftpFileActionsMenu] reports back once a row's action is picked.
@@ -1122,7 +1239,7 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
           Expanded(
             child: Stack(
               children: [
-                _buildList(),
+                _buildDesktopInput(_buildList()),
                 if (_editingPath)
                   Positioned.fill(
                     child: GestureDetector(
@@ -1227,6 +1344,58 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
     _loadDirectory();
   }
 
+  bool _dropHovering = false;
+
+  /// On a desktop the list takes keys and dropped files. A phone gets the
+  /// list as it was: no keys to take, nothing dragged in from outside.
+  Widget _buildDesktopInput(Widget list) {
+    if (!isDesktopPlatform) return list;
+    return Focus(
+      focusNode: _keysFocus,
+      onKeyEvent: _onBrowserKey,
+      child: DropTarget(
+        onDragEntered: (_) => setState(() => _dropHovering = true),
+        onDragExited: (_) => setState(() => _dropHovering = false),
+        onDragDone: (details) {
+          setState(() => _dropHovering = false);
+          unawaited(
+            _uploadDropped([for (final file in details.files) file.path]),
+          );
+        },
+        child: Stack(
+          children: [
+            list,
+            if (_dropHovering)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Container(
+                    key: const ValueKey('sftpDropTarget'),
+                    margin: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: _accent.withValues(alpha: 0.08),
+                      border: Border.all(color: _accent, width: 1.5),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      Translations.of(context).sftp.dropToUpload(
+                        folder: sftpPathToDisplay(_currentPath),
+                      ),
+                      style: TextStyle(
+                        color: _accent,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildList() {
     if (_isLoading) return const Center(child: CircularProgressIndicator());
     if (_error.isNotEmpty) {
@@ -1260,10 +1429,13 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
     );
   }
 
+  /// A desktop also takes a click with modifiers - Shift takes in every row
+  /// from the last one clicked, Ctrl (Cmd) picks one more, as a long press
+  /// does - and a right click opens the row's menu.
   Widget _buildItem(SftpName item) {
     final isUp = item.filename == '..';
     final path = _joinPath(item.filename);
-    return SftpFileRow(
+    final row = SftpFileRow(
       item: item,
       path: path,
       isSelected: _selected.contains(item.filename),
@@ -1274,10 +1446,22 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
       opener: _menuOpenerFor(path),
       copyAvailable: _copyAvailable,
       onTap: () {
-        if (_selectionMode && !isUp) {
+        _keysFocus.requestFocus();
+        if (!isUp && rangeModifierPressed && _lastClicked != null) {
+          _selectRange(_lastClicked!, item.filename);
+          return;
+        }
+        if (!isUp && selectionModifierPressed) {
+          _lastClicked = item.filename;
           _toggleSelected(item.filename);
           return;
         }
+        if (_selectionMode && !isUp) {
+          _lastClicked = item.filename;
+          _toggleSelected(item.filename);
+          return;
+        }
+        _lastClicked = item.filename;
         _navigateTo(item);
       },
       onLongPress: () {
@@ -1286,5 +1470,15 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
       },
       onAction: (action) => _handleFileAction(action, item, path),
     );
+    if (isUp || !isDesktopPlatform) return row;
+    return GestureDetector(
+      onSecondaryTapDown: (details) =>
+          _onRowSecondaryTap(item, details.globalPosition),
+      child: row,
+    );
   }
 }
+
+/// A file on this machine on its way up: from the picker or dropped on the
+/// browser.
+typedef _LocalFile = ({String name, String path, int? size});

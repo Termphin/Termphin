@@ -300,31 +300,28 @@ class _SftpFolderPickerState extends State<SftpFolderPicker> {
       );
     }
 
-    return SafeArea(
-      child: DraggableScrollableSheet(
-        initialChildSize: 0.75,
-        minChildSize: 0.4,
-        maxChildSize: 0.92,
-        expand: false,
-        builder: (context, scrollController) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SheetHandle(topPadding: 8),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 4),
-                child: Text(
-                  widget.title,
-                  style: Theme.of(context).textTheme.titleMedium,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+    return AppDraggableSheet(
+      initialChildSize: 0.75,
+      minChildSize: 0.4,
+      maxChildSize: 0.92,
+      builder: (context, scrollController) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SheetHandle(topPadding: 8),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 4),
+              child: Text(
+                widget.title,
+                style: Theme.of(context).textTheme.titleMedium,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              ...body(scrollController),
-            ],
-          );
-        },
-      ),
+            ),
+            ...body(scrollController),
+          ],
+        );
+      },
     );
   }
 

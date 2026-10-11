@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../../models/ssh_profile.dart';
 import '../../theme/theme.dart';
+import '../ui/reorder_drag.dart';
 import 'split_pane_chrome.dart';
 
 /// Two sessions on one page, each under a bar naming it: stacked in
@@ -240,7 +241,7 @@ class _SplitTabLayoutState extends State<SplitTabLayout> {
     );
     return _buildSwapTarget(
       sessionId,
-      (hovered) => LongPressDraggable<String>(
+      (hovered) => platformDraggable<String>(
         key: ValueKey('splitHeader-$sessionId'),
         data: sessionId,
         axis: axis,

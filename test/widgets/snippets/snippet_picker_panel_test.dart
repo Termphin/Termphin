@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -103,6 +104,53 @@ void main() {
 
     expect(selected?.id, 'deploy');
     expect(find.byType(SnippetPickerPanel), findsNothing);
+  });
+
+  testWidgets('arrows move the Enter row, and Enter runs it', (tester) async {
+    final now = DateTime(2026, 7, 30);
+    SharedPreferences.setMockInitialValues({
+      'snippets': Snippet.encodeList([
+        for (var index = 0; index < 3; index++)
+          Snippet(
+            id: 'snippet-$index',
+            name: 'Command $index',
+            command: 'command-$index',
+            createdAt: now.subtract(Duration(minutes: index)),
+          ),
+      ]),
+    });
+    Snippet? selected;
+
+    await openPicker(tester, onSelect: (snippet, _) => selected = snippet);
+    Finder hintOn(String name) => find.descendant(
+      of: find.ancestor(of: find.text(name), matching: find.byType(Row)).first,
+      matching: find.text(t.commandPalette.enterToRun),
+    );
+    final names = [
+      for (final e in find.textContaining('Command ').evaluate())
+        (e.widget as Text).data!,
+    ];
+    expect(hintOn(names[0]), findsOneWidget);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pumpAndSettle();
+    expect(hintOn(names[2]), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    expect(hintOn(names[0]), findsOneWidget);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    expect(hintOn(names[0]), findsNothing);
+    expect(hintOn(names[2]), findsOneWidget);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pumpAndSettle();
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+
+    expect(selected?.name, names[1]);
   });
 
   testWidgets('argument fields start on the snippet\'s saved defaults', (

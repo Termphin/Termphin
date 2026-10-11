@@ -5,7 +5,8 @@
     "keys": "Keys",
     "settings": "Settings",
     "collapseSidebar": "Collapse sidebar",
-    "expandSidebar": "Expand sidebar"
+    "expandSidebar": "Expand sidebar",
+    "sessions": "Sessions"
   },
   "common": {
     "add": "Add",
@@ -202,6 +203,9 @@
   "terminal": {
     "selectDevice": "Select device to connect",
     "suggestionDismiss": "Hide suggestion",
+    "suggestionPick": "pick",
+    "suggestionInsert": "insert",
+    "suggestionClose": "close",
     "newSession": "New session",
     "switchToTerminal": "Terminal",
     "switchToSftp": "SFTP Browser",
@@ -319,7 +323,8 @@
     "skippedCount": "{count} skipped",
     "nothingTransferred": "Nothing changed - every item was skipped",
     "copyFailedCount": "Could not copy {count} items. {error}",
-    "moveFailedCount": "Could not move {count} items. {error}"
+    "moveFailedCount": "Could not move {count} items. {error}",
+    "dropToUpload": "Drop to upload to {folder}"
   },
   "editor": {
     "unsavedTitle": "Unsaved changes",
@@ -549,7 +554,16 @@
     "sftpShowHidden": "Show hidden files",
     "sftpShowHiddenSubtitle": "Names that start with a dot, like .ssh and .bashrc.",
     "sftpFollowTerminal": "Follow the terminal",
-    "sftpFollowTerminalSubtitle": "Files open in the shell's current folder (with the Termphin agent)."
+    "sftpFollowTerminalSubtitle": "Files open in the shell's current folder (with the Termphin agent).",
+    "terminalTyping": "Controls",
+    "noKeyringTitle": "No system keyring",
+    "noKeyringSubtitle": "Saved passwords and keys are encrypted with a key kept in a file only your user can read. Start a Secret Service keyring, such as GNOME Keyring or KeePassXC, and Termphin moves the key into it on the next launch.",
+    "actionBar": "Action bar",
+    "actionBarSwitchSubtitle": "Session actions in a toolbar above the terminal",
+    "actionBarLayout": "Actions on the bar",
+    "closeToTray": "Keep running in the tray",
+    "closeToTraySubtitle": "Closing the window leaves your sessions connected",
+    "closeToTrayUnavailable": "This desktop has no tray to keep Termphin in"
   },
   "exportScreen": {
     "title": "Export & Import",
@@ -1040,6 +1054,20 @@
   "onboarding": {
     "welcomeTitle": "Welcome to Termphin",
     "welcomeBody": "An SSH client whose sessions survive a dropped connection. Lock the phone, lose signal, come back - your shell is still there.",
+    "welcomeBodyDesktop": "An SSH client whose sessions survive a dropped connection. Close the lid, change networks, come back - your shell is still there.",
+    "stepWelcome": "Welcome",
+    "stepServer": "Your server",
+    "stepPrivacy": "Privacy",
+    "keyContinue": "to continue",
+    "keyFinish": "to finish",
+    "targetLabel": "Add one now",
+    "targetHelper": "Optional. The machine form opens filled in with it.",
+    "sshConfigTitle": "Found in ~/.ssh/config",
+    "sshConfigSubtitle": "The ticked ones are added with the keys they sign in with.",
+    "sshConfigNoKey": "no key found, add it by hand",
+    "sshConfigEncrypted": "its key has a passphrase, add it by hand",
+    "sshConfigUnreadable": "its key file cannot be read",
+    "sshConfigAlready": "already added",
     "getStarted": "Get started",
     "serverTitle": "Do you have a server?",
     "serverBody": "Termphin connects to machines you already run, over SSH.",
@@ -1181,5 +1209,83 @@
       "other": "{n} keys"
     },
     "emptyGroup": "Empty"
+  },
+  "commands": {
+    "globalSearch": "Search everything",
+    "newMachine": "New machine",
+    "newSession": "New session",
+    "closeTab": "Close tab",
+    "nextTab": "Next tab",
+    "previousTab": "Previous tab",
+    "selectTab": "Go to tab 1–9",
+    "findInTerminal": "Find in terminal",
+    "uploadFile": "Fast upload",
+    "zoomIn": "Larger text",
+    "zoomOut": "Smaller text",
+    "zoomReset": "Default text size",
+    "openSettings": "Settings",
+    "toggleSidebar": "Show or hide the sidebar",
+    "showShortcuts": "Keyboard shortcuts",
+    "openManual": "Manual",
+    "shortcutsTitle": "Keyboard shortcuts",
+    "shortcutsGeneral": "General",
+    "shortcutsTerminal": "Terminal",
+    "shortcutsCopy": "Copy the selection",
+    "shortcutsPaste": "Paste",
+    "shortcutsSelectAll": "Select all",
+    "quit": "Quit Termphin"
+  },
+  "window": {
+    "minimize": "Minimize",
+    "maximize": "Maximize",
+    "restore": "Restore",
+    "close": "Close",
+    "menuApp": "Termphin",
+    "menuView": "View",
+    "menuHelp": "Help",
+    "releaseNotes": "What's new",
+    "reportIssue": "Report an issue",
+    "quit": "Quit Termphin",
+    "search": "Search",
+    "trayShow": "Show Termphin",
+    "trayNoSessions": "No connected sessions",
+    "trayNewSession": "New session",
+    "trayTooltip(n: num)": {
+      "zero": "Termphin",
+      "one": "Termphin - {n} session connected",
+      "other": "Termphin - {n} sessions connected"
+    },
+    "closeAskTitle": "Keep Termphin running?",
+    "closeAskBody": "With the window closed, Termphin can stay in the tray and keep your sessions connected. You can change this in Settings.",
+    "closeAskKeep": "Keep running",
+    "closeAskQuit": "Quit",
+    "quitConfirmTitle": "Quit Termphin?",
+    "quitConfirmBody(n: num)": {
+      "one": "{n} connected session will be closed. A session kept on the server stays there to resume.",
+      "other": "{n} connected sessions will be closed. Sessions kept on the server stay there to resume."
+    },
+    "quitConfirm": "Quit"
+  },
+  "contextMenu": {
+    "copy": "Copy",
+    "paste": "Paste",
+    "selectAll": "Select all",
+    "find": "Find…",
+    "clearSelection": "Clear selection",
+    "split": "Split with…",
+    "newSession": "New session",
+    "closeTab": "Close tab",
+    "rename": "Rename session…",
+    "files": "Files",
+    "terminal": "Terminal",
+    "connect": "Connect",
+    "edit": "Edit",
+    "delete": "Delete",
+    "select": "Select",
+    "duplicate": "Duplicate",
+    "open": "Open",
+    "download": "Download",
+    "showInFolder": "Show in folder",
+    "moveToGroup": "Move to group…"
   }
 }

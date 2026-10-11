@@ -8,6 +8,7 @@ import '../../providers/snippets_provider.dart';
 import '../../services/storage/group_storage.dart';
 import '../../theme/theme.dart';
 import '../../widgets/ui/app_form_field.dart';
+import '../../widgets/ui/app_sheet.dart';
 import '../../widgets/ui/group_picker_field.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
 import '../../widgets/ui/section_header.dart';
@@ -18,12 +19,10 @@ Future<void> showSnippetFormScreen(
   Snippet? existing,
   String? initialGroup,
 }) {
-  return Navigator.of(context).push(
-    MaterialPageRoute<void>(
-      builder: (_) =>
-          SnippetFormScreen(existing: existing, initialGroup: initialGroup),
-      fullscreenDialog: true,
-    ),
+  return pushAppForm<void>(
+    context,
+    builder: (_) =>
+        SnippetFormScreen(existing: existing, initialGroup: initialGroup),
   );
 }
 

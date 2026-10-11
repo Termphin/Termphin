@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
-import '../../screens/settings/manual_screen.dart';
+import '../../services/app/manual_urls.dart';
 import '../../theme/theme.dart';
 import '../ui/app_card.dart';
 import '../ui/clipboard_and_links.dart';
+import '../ui/manual_link.dart';
 import '../ui/section_header.dart';
 import '../ui/settings_tile.dart';
 
@@ -66,7 +67,7 @@ class FeedbackSettingsSection extends StatelessWidget {
                 iconColor: context.colors.primary,
                 title: t.settings.manual,
                 subtitle: t.settings.manualSubtitle,
-                destination: () => const ManualScreen(),
+                onTap: () => openManual(context, ManualPage.home),
               ),
             ],
           ),

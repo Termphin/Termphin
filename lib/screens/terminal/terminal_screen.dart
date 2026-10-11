@@ -20,6 +20,7 @@ import '../../providers/snippets_provider.dart';
 import '../../providers/ssh_connection_provider.dart';
 import '../../providers/ssh_session_manager_provider.dart';
 import '../../providers/terminal_overlay_provider.dart' show SiblingScope;
+import '../../services/app/app_commands.dart';
 import '../../services/app/identity_anonymizer.dart';
 import '../../services/settings/action_dock_settings.dart';
 import '../../services/settings/floating_dock_settings.dart';
@@ -40,6 +41,7 @@ import '../../widgets/terminal/add_session_sheet.dart';
 import '../../widgets/terminal/floating_action_dock.dart';
 import '../../widgets/terminal/rename_session_dialog.dart';
 import '../../widgets/terminal/session_quick_sheet.dart';
+import '../../widgets/terminal/session_tab_pill.dart';
 import '../../widgets/terminal/session_view.dart';
 import '../../widgets/terminal/special_keys_toolbar.dart';
 import '../../widgets/terminal/split_pane_chrome.dart'
@@ -54,7 +56,9 @@ import '../../widgets/ui/app_notifications.dart';
 import '../../widgets/ui/app_sheet.dart';
 import '../../widgets/ui/confirm_dialog.dart';
 import '../../widgets/ui/nav_rail.dart';
+import '../../widgets/ui/reorder_drag.dart';
 import '../../widgets/ui/section_header.dart';
+import '../../widgets/ui/section_navigator.dart';
 import '../settings/terminal_appearance_screen.dart';
 import '../settings/toolbar_profiles_screen.dart';
 import 'state/session_swipe.dart';
@@ -82,10 +86,10 @@ const _kTabBarMinHeight = 58.0;
 /// tall as its tallest tab needs.
 double terminalTabBarHeight(BuildContext context) {
   final scaler = MediaQuery.textScalerOf(context);
-  final labels = scaler.scale(kTabNameSize) * kTabLineHeight;
+  final labels = scaler.scale(kSessionTabNameSize) * kSessionTabLineHeight;
   final needed =
       math.max(labels, _kTabAvatarSize) +
-      kTabPillPaddingY * 2 +
+      kSessionTabPillPaddingY * 2 +
       _kTabStripPaddingY * 2;
   return math.max(needed, _kTabBarMinHeight);
 }
@@ -110,6 +114,8 @@ class TerminalScreen extends ConsumerStatefulWidget {
     this.siblingScope = SiblingScope.all,
     this.onClose,
     this.onHide,
+    this.navItems = const [],
+    this.onNavigate,
   });
 
   final String initialSessionId;
@@ -119,6 +125,13 @@ class TerminalScreen extends ConsumerStatefulWidget {
   final SiblingScope siblingScope;
   final VoidCallback? onClose;
   final VoidCallback? onHide;
+
+  /// The app's own destinations, drawn at the top of the rail on a desktop in
+  /// place of the back button: there the rail is the same sidebar the rest
+  /// of the app has, and leaving the terminal is picking somewhere else to
+  /// go, not backing out of it.
+  final List<ShellNavItem> navItems;
+  final ValueChanged<int>? onNavigate;
 
   @override
   ConsumerState<TerminalScreen> createState() => TerminalScreenState();
@@ -202,23 +215,15 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
     _controller.setMode(sessionId, mode);
   }
 
-  /// The one place to reach a snippet or a one-shot tool (upload, paste,
-  /// tunnels, ...) - the floating dock opens it directly, anchored to
-  /// wherever that button currently is. Destructive actions (detach, end
-  /// session) stay off the list.
-  /// Which of these show and in what order is the user's call, from the
-  /// command palette section of Settings - reloaded fresh on every open so
-  /// a change there is never stale by the time this next shows. Copying the
-  /// current path needs the agent's cwd tracking, so it is the only tool
-  /// gated on [Multiplexer.termphin].
-  Future<void> _openActionDock((String, SshProfile) session) async {
-    final t = Translations.of(context);
+  /// What each session action does for [session]: the dock's tiles, the
+  /// desktop's palette and its action bar all run these. Absent are the ones
+  /// that cannot apply right now - tunnels without a connection, rename
+  /// without a persistent session.
+  Map<DockAction, VoidCallback> _dockActionsFor((String, SshProfile) session) {
     final state = ref.read(sshConnectionProvider(session));
     final connected = state.status == ConnectionStatus.connected;
     final persistent = state.multiplexer.isPersistent;
-    final agentBacked = state.multiplexer == Multiplexer.termphin;
-
-    final builders = <DockAction, VoidCallback>{
+    return {
       DockAction.insertSnippet: () => unawaited(
         showSnippetSpotlight(context, onSelect: _handleSnippetSelected),
       ),
@@ -245,6 +250,108 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
       DockAction.viewLog: () =>
           unawaited(showConnectionLogSheet(context, session)),
     };
+  }
+
+  /// Copying the current path needs the agent's cwd tracking, so it is the
+  /// only action gated on [Multiplexer.termphin].
+  bool _dockActionEnabled((String, SshProfile) session, DockAction action) =>
+      action != DockAction.copyPath ||
+      ref.read(sshConnectionProvider(session)).multiplexer ==
+          Multiplexer.termphin;
+
+  /// The session actions as a toolbar over the terminal: a desktop has
+  /// no thumb for a floating button, and a row of labelled actions in reach
+  /// of the pointer is what a desktop app would put there. It spans the
+  /// terminal's width - the tab rail beside it keeps the full height - with
+  /// the actions starting at its left end; should a narrow window not fit
+  /// them, it scrolls rather than stacking a label.
+  Widget _buildDesktopActionBar((String, SshProfile) session) {
+    final t = Translations.of(context);
+    final colors = context.colors;
+    return ListenableBuilder(
+      listenable: Listenable.merge([
+        actionDockSettings.order,
+        actionDockSettings.hidden,
+      ]),
+      builder: (context, _) {
+        final builders = _dockActionsFor(session);
+        final hidden = actionDockSettings.hidden.value;
+        final actions = [
+          for (final action in actionDockSettings.order.value)
+            if (!hidden.contains(action) && builders[action] != null) action,
+        ];
+        return Container(
+          key: const ValueKey('desktopActionBar'),
+          height: 38,
+          alignment: Alignment.centerLeft,
+          decoration: BoxDecoration(
+            color: colors.backgroundPrimary,
+            border: Border(bottom: BorderSide(color: colors.surfaceBorder)),
+          ),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final action in actions)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: TextButton.icon(
+                      key: ValueKey('actionBar-${action.name}'),
+                      onPressed: _dockActionEnabled(session, action)
+                          ? builders[action]
+                          : null,
+                      icon: Icon(dockActionIcon(action), size: 15),
+                      label: Text(
+                        _desktopActionLabel(t, action),
+                        maxLines: 1,
+                        softWrap: false,
+                      ),
+                      style: TextButton.styleFrom(
+                        foregroundColor: colors.textSecondary,
+                        textStyle: colors.uiSmall.copyWith(fontSize: 12.5),
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        minimumSize: const Size(0, 30),
+                        shape: const RoundedRectangleBorder(),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// A bar label: on one line - the phone's tile breaks Fast upload in two -
+  /// and with the action's shortcut after it, where it has one.
+  String _desktopActionLabel(Translations t, DockAction action) {
+    final label = dockActionLabel(t, action).replaceAll('\n', ' ');
+    final command = switch (action) {
+      DockAction.uploadFile => AppCommand.uploadFile,
+      DockAction.search => AppCommand.findInTerminal,
+      DockAction.newSession => AppCommand.newSession,
+      _ => null,
+    };
+    final shortcut = command == null
+        ? null
+        : AppCommands.shortcutLabel(command);
+    return shortcut == null ? label : '$label ($shortcut)';
+  }
+
+  /// The one place to reach a snippet or a one-shot tool (upload, paste,
+  /// tunnels, ...) - the floating dock opens it directly, anchored to
+  /// wherever that button currently is. Destructive actions (detach, end
+  /// session) stay off the list.
+  /// Which of these show and in what order is the user's call, from the
+  /// command palette section of Settings - reloaded fresh on every open so
+  /// a change there is never stale by the time this next shows.
+  Future<void> _openActionDock((String, SshProfile) session) async {
+    final t = Translations.of(context);
+    final builders = _dockActionsFor(session);
 
     await actionDockSettings.load();
     if (!mounted) return;
@@ -255,7 +362,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
           SpotlightTool(
             icon: dockActionIcon(action),
             label: dockActionLabel(t, action),
-            enabled: action != DockAction.copyPath || agentBacked,
+            enabled: _dockActionEnabled(session, action),
             onSelect: builders[action]!,
           ),
     ];
@@ -655,6 +762,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
     unawaited(_manager.setActiveSession(sessionId));
     final index = _sessions.indexWhere((item) => item.$1 == sessionId);
     _attachIfNeeded(_sessions[index]);
+    focusActiveTerminal();
   }
 
   /// A tap on a tab: the switch at once, then the page slides in, unless the
@@ -993,7 +1101,99 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
   Widget _buildTabRail() {
     return ValueListenableBuilder<bool>(
       valueListenable: sidebarCollapsedSetting,
-      builder: (context, collapsed, _) => _buildTabRailBody(collapsed),
+      builder: (context, collapsed, _) {
+        if (_desktopRail) return _buildDesktopRailBody(collapsed);
+        return _buildTabRailBody(collapsed);
+      },
+    );
+  }
+
+  bool get _desktopRail => isDesktopPlatform && widget.navItems.isNotEmpty;
+
+  /// The desktop's sidebar while a session is on screen: the app's
+  /// destinations, then the sessions, laid out like `MainShell`'s own so the
+  /// strip does not move when the terminal comes and goes. Painted in the
+  /// terminal's scheme like the rest of a session's chrome, as on a phone.
+  Widget _buildDesktopRailBody(bool collapsed) {
+    final t = Translations.of(context);
+    final width = navRailWidth(collapsed);
+    final itemInset = collapsed ? 8.0 : 12.0;
+    return Builder(
+      builder: (context) => AnimatedContainer(
+        duration: AppTheme.motionSlow,
+        curve: AppTheme.interactiveCurve,
+        width: width,
+        decoration: BoxDecoration(
+          color: context.colors.backgroundPrimary,
+          border: Border(
+            right: BorderSide(color: context.colors.surfaceBorder),
+          ),
+        ),
+        child: ClipRect(
+          child: OverflowBox(
+            alignment: Alignment.centerLeft,
+            minWidth: width,
+            maxWidth: width,
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+                  child: Align(
+                    alignment: collapsed
+                        ? Alignment.center
+                        : Alignment.centerLeft,
+                    child: NavRailToggleButton(collapsed: collapsed),
+                  ),
+                ),
+                Padding(
+                  padding: EdgeInsets.fromLTRB(itemInset, 4, itemInset, 0),
+                  child: Column(
+                    children: [
+                      for (var i = 0; i < widget.navItems.length; i++)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: SidebarNavItem(
+                            data: widget.navItems[i],
+                            selected: false,
+                            collapsed: collapsed,
+                            onTap: () => widget.onNavigate?.call(i),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: itemInset),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: SidebarSectionLabel(
+                          t.nav.sessions,
+                          collapsed: collapsed,
+                        ),
+                      ),
+                      if (!collapsed) _buildAddTabButton(),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: _buildTabList(
+                    axis: Axis.vertical,
+                    padding: EdgeInsets.fromLTRB(itemInset, 3, itemInset, 12),
+                    stretch: !collapsed,
+                    collapsed: collapsed,
+                  ),
+                ),
+                if (collapsed)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _buildAddTabButton(),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -1125,6 +1325,10 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
 
   /// The strip's tabs, in the top bar or down the rail. One item per entry,
   /// so a split is picked up and moved as one.
+  /// The whole tab is the drag handle rather than the default one, which a
+  /// desktop gets over the tab's trailing edge - where its ⋮ menu is, so the
+  /// menu could not be clicked. A drag past the slop moves the tab, a click
+  /// still clicks, and a phone keeps the long press it always had.
   Widget _buildTabList({
     required Axis axis,
     required EdgeInsets padding,
@@ -1140,6 +1344,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
       proxyDecorator: tabDragProxyDecorator,
       onReorderStart: (_) => HapticFeedback.selectionClick(),
       onReorderItem: _handleReorder,
+      buildDefaultDragHandles: false,
       itemCount: entries.length,
       itemBuilder: (context, i) {
         final gap = i == entries.length - 1 ? 0.0 : 3.0;
@@ -1149,18 +1354,21 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
           padding: axis == Axis.horizontal
               ? EdgeInsets.only(right: gap)
               : EdgeInsets.only(bottom: gap),
-          child: entry.length == 1
-              ? _buildTab(
-                  _sessions.indexWhere((s) => s.$1 == entry.first),
-                  stretch: stretch,
-                  collapsed: collapsed,
-                )
-              : _buildSplitTab(
-                  entry,
-                  axis: axis,
-                  stretch: stretch,
-                  collapsed: collapsed,
-                ),
+          child: ReorderDragListener(
+            index: i,
+            child: entry.length == 1
+                ? _buildTab(
+                    _sessions.indexWhere((s) => s.$1 == entry.first),
+                    stretch: stretch,
+                    collapsed: collapsed,
+                  )
+                : _buildSplitTab(
+                    entry,
+                    axis: axis,
+                    stretch: stretch,
+                    collapsed: collapsed,
+                  ),
+          ),
         );
       },
     );
@@ -1477,19 +1685,26 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
         for (final snippet in ref.read(snippetsProvider))
           snippet.id: snippet.name,
       },
-      onManageToolbars: () =>
-          _pushSettingsScreen(const ToolbarProfilesScreen()),
-      onOpenAppearance: () =>
-          _pushSettingsScreen(const TerminalAppearanceScreen()),
+      onManageToolbars: () => _pushSettingsScreen(
+        t.settings.toolbarProfiles,
+        const ToolbarProfilesScreen(),
+      ),
+      onOpenAppearance: () => _pushSettingsScreen(
+        t.settings.terminalAppearance,
+        const TerminalAppearanceScreen(),
+      ),
     );
   }
 
-  void _pushSettingsScreen(Widget screen) {
+  void _pushSettingsScreen(String title, Widget screen) {
     if (!mounted) return;
     unawaited(
-      Navigator.of(
+      pushAppPage<void>(
         context,
-      ).push(MaterialPageRoute<void>(builder: (_) => screen)),
+        window: true,
+        title: title,
+        builder: (_) => screen,
+      ),
     );
   }
 
@@ -1507,28 +1722,12 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
     required String tooltip,
     required IconData icon,
     required VoidCallback? onTap,
-  }) {
-    final shape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-      side: BorderSide(color: context.colors.surfaceBorder),
-    );
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        key: key,
-        color: context.colors.surfaceOffset,
-        shape: shape,
-        child: InkWell(
-          onTap: onTap,
-          customBorder: shape,
-          child: SizedBox.square(
-            dimension: 36,
-            child: Icon(icon, size: 18, color: context.colors.textSecondary),
-          ),
-        ),
-      ),
-    );
-  }
+  }) => StripActionButton(
+    buttonKey: key,
+    tooltip: tooltip,
+    icon: icon,
+    onTap: onTap,
+  );
 
   /// Runs the snippet a toolbar slot is bound to. One that still needs
   /// argument values goes through the picker, which is where those get typed.
@@ -1628,7 +1827,17 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
             state.status == ConnectionStatus.reconnecting);
   }
 
-  bool _toolbarShown() => _terminalLive() && _toolbarEnabled;
+  /// A desktop has the keys and the pointer the toolbar and the floating
+  /// dock stand in for; the settings stay what they are for the day the same
+  /// backup lands on a phone.
+  bool get _touchControls => platformHas(PlatformFeature.touchControls);
+
+  bool _toolbarShown() => _terminalLive() && _toolbarEnabled && _touchControls;
+
+  /// The dock's actions as a toolbar along the top on a desktop - the same
+  /// switch turns it on and off, and the same editor picks what is on it.
+  bool _actionBarShown() =>
+      _terminalLive() && _floatingDockEnabled && !_touchControls;
 
   @override
   Widget build(BuildContext context) {
@@ -1637,6 +1846,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
     final activeKey = _sessions[_activeIndex];
     final terminalLive = _terminalLive();
     final showToolbar = _toolbarShown();
+    final showActionBar = _actionBarShown();
     final tabsAtBottom =
         _tabBarPosition == TabBarPosition.bottom && !isWideLayout(context);
     final sessionViews = {
@@ -1657,6 +1867,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
 
     final contentStack = Column(
       children: [
+        if (showActionBar) _buildDesktopActionBar(activeKey),
         Expanded(
           child: Stack(
             children: [
@@ -1698,7 +1909,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
                   },
                 ),
               ),
-              if (terminalLive && _floatingDockEnabled)
+              if (terminalLive && _floatingDockEnabled && _touchControls)
                 FloatingActionDock(
                   buttonKey: _dockButtonKey,
                   onTap: () => _openActionDock(activeKey),
@@ -1823,4 +2034,61 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
   /// one that isn't open yet gets added alongside the others.
   void openSession(String sessionId, SshProfile profile) =>
       _attachTab(sessionId, profile);
+
+  /// Picks a machine for a new tab, as the strip's + does. This and the
+  /// methods after it are what the desktop's shortcuts and menus run: each is
+  /// what the strip's own controls already do, under a name `MainShell` can
+  /// call.
+  void newSession() => unawaited(_showAddSessionSheet());
+
+  /// Closes the tab on screen, leaving its session running on the server -
+  /// what the tab's own close does.
+  void closeActiveTab() {
+    if (_sessions.isEmpty) return;
+    unawaited(_closeSession(_sessions[_activeIndex].$1));
+  }
+
+  /// Moves [delta] tabs along the strip, wrapping at either end.
+  void selectRelativeTab(int delta) {
+    if (_sessions.length < 2) return;
+    final next = (_activeIndex + delta) % _sessions.length;
+    _selectSession(_sessions[next].$1, haptic: false);
+    focusActiveTerminal();
+  }
+
+  /// The [index]th tab, counted from one end of the strip as the digit keys
+  /// count; past the last tab is the last tab, as in a browser.
+  void selectTabAt(int index) {
+    if (_sessions.isEmpty) return;
+    final at = math.min(index, _sessions.length - 1);
+    _selectSession(_sessions[at].$1, haptic: false);
+    focusActiveTerminal();
+  }
+
+  /// Opens the search bar over the session on screen.
+  void findInActiveSession() {
+    if (_sessions.isEmpty) return;
+    _sessionKeys[_sessions[_activeIndex].$1]?.currentState?.openSearch();
+  }
+
+  /// Picks a file and uploads it into the session on screen, as the dock's
+  /// Fast upload does.
+  void uploadToActiveSession() {
+    if (_sessions.isEmpty) return;
+    final session = _sessionKeys[_sessions[_activeIndex].$1]?.currentState;
+    if (session != null) unawaited(session.uploadFileToTerminal());
+  }
+
+  /// Puts the keyboard on the session on screen. On a phone that would
+  /// raise the soft keyboard, which only a tap may do; a desktop has nothing
+  /// to raise, and a session that needs a click before it takes keys is a
+  /// session that ate the first one.
+  void focusActiveTerminal() {
+    if (!isDesktopPlatform || _sessions.isEmpty) return;
+    final id = _sessions[_activeIndex].$1;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _sessionKeys[id]?.currentState?.focusTerminal();
+    });
+  }
 }

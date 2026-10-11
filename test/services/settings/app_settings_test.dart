@@ -7,6 +7,7 @@ import 'package:termphin/services/completion/command_completion.dart';
 import 'package:termphin/services/settings/action_dock_settings.dart';
 import 'package:termphin/services/settings/anonymize_setting.dart';
 import 'package:termphin/services/settings/app_settings.dart';
+import 'package:termphin/services/settings/desktop_settings.dart';
 import 'package:termphin/services/settings/editor_settings.dart';
 import 'package:termphin/services/settings/floating_dock_settings.dart';
 import 'package:termphin/services/settings/lock_settings.dart';
@@ -44,6 +45,7 @@ List<Setting<Object?>> get _loaded => [
   sftpSortDescendingSetting,
   tabBarPositionSetting,
   lockTimeoutSetting,
+  closeToTraySetting,
 ];
 
 /// Where a `Setting` is built, found by reading the source rather than by
@@ -252,4 +254,5 @@ final Map<Setting<Object?>, Object?> _alternatives = {
   commandSuggestionsSetting: !commandSuggestionsSetting.fallback,
   tabBarPositionSetting: TabBarPosition.bottom,
   lockTimeoutSetting: LockTimeout.minutes5,
+  closeToTraySetting: !closeToTraySetting.fallback,
 };

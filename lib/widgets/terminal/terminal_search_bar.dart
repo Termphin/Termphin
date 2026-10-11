@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
@@ -8,7 +9,8 @@ import '../../theme/theme.dart';
 /// pane owns the matches, the highlights and the scrolling.
 ///
 /// The field's `onEditingComplete` is a no-op so the keyboard stays up
-/// across repeated enters.
+/// across repeated enters. Esc closes the search and hands the keys back to
+/// the terminal.
 class TerminalSearchBar extends StatelessWidget {
   const TerminalSearchBar({
     super.key,
@@ -48,92 +50,95 @@ class TerminalSearchBar extends StatelessWidget {
         ? t.terminalSearch.noMatches
         : t.terminalSearch.matchCount(current: current + 1, total: total);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surfaceCard,
-        border: Border(bottom: BorderSide(color: colors.surfaceDivider)),
-      ),
-      padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: controller,
-              focusNode: focusNode,
-              onChanged: onChanged,
-              onSubmitted: (_) => onOlder(),
-              onEditingComplete: () {},
-              autocorrect: false,
-              enableSuggestions: false,
-              textInputAction: TextInputAction.search,
-              textAlignVertical: TextAlignVertical.center,
-              style: TextStyle(
-                fontFamily: AppTheme.uiFamily,
-                fontSize: 15,
-                color: colors.textPrimary,
-              ),
-              decoration: InputDecoration(
-                hintText: t.terminalSearch.hint,
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                prefixIcon: Icon(
-                  PhosphorIconsFill.magnifyingGlass,
-                  size: 18,
-                  color: colors.textTertiary,
+    return CallbackShortcuts(
+      bindings: {const SingleActivator(LogicalKeyboardKey.escape): onClose},
+      child: Container(
+        decoration: BoxDecoration(
+          color: colors.surfaceCard,
+          border: Border(bottom: BorderSide(color: colors.surfaceDivider)),
+        ),
+        padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: controller,
+                focusNode: focusNode,
+                onChanged: onChanged,
+                onSubmitted: (_) => onOlder(),
+                onEditingComplete: () {},
+                autocorrect: false,
+                enableSuggestions: false,
+                textInputAction: TextInputAction.search,
+                textAlignVertical: TextAlignVertical.center,
+                style: TextStyle(
+                  fontFamily: AppTheme.uiFamily,
+                  fontSize: 15,
+                  color: colors.textPrimary,
                 ),
-                suffixIcon: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (count.isNotEmpty)
-                      Text(
-                        count,
-                        style: colors.uiSmall.copyWith(
-                          color: total == 0
-                              ? colors.error
+                decoration: InputDecoration(
+                  hintText: t.terminalSearch.hint,
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  prefixIcon: Icon(
+                    PhosphorIconsFill.magnifyingGlass,
+                    size: 18,
+                    color: colors.textTertiary,
+                  ),
+                  suffixIcon: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (count.isNotEmpty)
+                        Text(
+                          count,
+                          style: colors.uiSmall.copyWith(
+                            color: total == 0
+                                ? colors.error
+                                : colors.textTertiary,
+                          ),
+                        ),
+                      IconButton(
+                        tooltip: t.terminalSearch.matchCase,
+                        isSelected: caseSensitive,
+                        visualDensity: VisualDensity.compact,
+                        onPressed: onToggleCase,
+                        icon: Icon(
+                          PhosphorIconsRegular.textAa,
+                          size: 18,
+                          color: caseSensitive
+                              ? colors.primary
                               : colors.textTertiary,
                         ),
+                        style: IconButton.styleFrom(
+                          backgroundColor: caseSensitive
+                              ? colors.primary.withValues(alpha: 0.15)
+                              : null,
+                        ),
                       ),
-                    IconButton(
-                      tooltip: t.terminalSearch.matchCase,
-                      isSelected: caseSensitive,
-                      visualDensity: VisualDensity.compact,
-                      onPressed: onToggleCase,
-                      icon: Icon(
-                        PhosphorIconsRegular.textAa,
-                        size: 18,
-                        color: caseSensitive
-                            ? colors.primary
-                            : colors.textTertiary,
-                      ),
-                      style: IconButton.styleFrom(
-                        backgroundColor: caseSensitive
-                            ? colors.primary.withValues(alpha: 0.15)
-                            : null,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                  ],
+                      const SizedBox(width: 4),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(width: 4),
-          _BarButton(
-            tooltip: t.terminalSearch.older,
-            icon: PhosphorIconsRegular.arrowUp,
-            onPressed: total == 0 ? null : onOlder,
-          ),
-          _BarButton(
-            tooltip: t.terminalSearch.newer,
-            icon: PhosphorIconsRegular.arrowDown,
-            onPressed: total == 0 ? null : onNewer,
-          ),
-          _BarButton(
-            tooltip: t.terminalSearch.close,
-            icon: PhosphorIconsRegular.x,
-            onPressed: onClose,
-          ),
-        ],
+            const SizedBox(width: 4),
+            _BarButton(
+              tooltip: t.terminalSearch.older,
+              icon: PhosphorIconsRegular.arrowUp,
+              onPressed: total == 0 ? null : onOlder,
+            ),
+            _BarButton(
+              tooltip: t.terminalSearch.newer,
+              icon: PhosphorIconsRegular.arrowDown,
+              onPressed: total == 0 ? null : onNewer,
+            ),
+            _BarButton(
+              tooltip: t.terminalSearch.close,
+              icon: PhosphorIconsRegular.x,
+              onPressed: onClose,
+            ),
+          ],
+        ),
       ),
     );
   }

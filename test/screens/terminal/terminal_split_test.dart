@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -156,6 +157,49 @@ void main() {
         tester.getRect(find.byKey(const ValueKey('splitPane-session-1'))).left,
       ),
     );
+  });
+
+  testWidgets('on a desktop a pane is dragged without a hold', (tester) async {
+    await openTwoTabs(tester);
+    tester.view.physicalSize = const Size(1200, 800);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    final other = secondId(tester);
+
+    await splitViaMenu(tester, other);
+
+    final left = tester.getRect(
+      find.byKey(const ValueKey('splitPane-session-1')),
+    );
+    final bar = tester.getCenter(find.byKey(ValueKey('splitHeader-$other')));
+    final gesture = await tester.startGesture(
+      bar,
+      kind: PointerDeviceKind.mouse,
+    );
+    await tester.pump();
+    for (var step = 1; step <= 8; step++) {
+      await gesture.moveTo(Offset.lerp(bar, left.center, step / 8)!);
+      await tester.pump(const Duration(milliseconds: 30));
+    }
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(
+      tester.getRect(find.byKey(ValueKey('splitPane-$other'))).right,
+      lessThanOrEqualTo(
+        tester.getRect(find.byKey(const ValueKey('splitPane-session-1'))).left,
+      ),
+    );
+  }, variant: TargetPlatformVariant.only(TargetPlatform.linux));
+
+  testWidgets('a bar runs the whole length between the panes', (tester) async {
+    await openTwoTabs(tester);
+    await splitViaMenu(tester, secondId(tester));
+
+    final divider = tester.getRect(find.byKey(const ValueKey('splitDivider')));
+    final pane = tester.getRect(
+      find.byKey(const ValueKey('splitPane-session-1')),
+    );
+    expect(divider.width, pane.width);
   });
 
   testWidgets('the tab menu makes a split and takes it apart again', (

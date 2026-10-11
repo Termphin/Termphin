@@ -11,6 +11,7 @@ import '../../widgets/backup/backup_import_options.dart' show formatBackupDate;
 import '../../widgets/ui/app_card.dart';
 import '../../widgets/ui/app_divider.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
+import '../../widgets/ui/section_navigator.dart';
 import 'backup_export_screen.dart';
 import 'backup_import_screen.dart';
 
@@ -51,11 +52,11 @@ class _ExportScreenState extends State<ExportScreen> {
                     icon: PhosphorIconsFill.shareNetwork,
                     title: t.exportScreen.exportSection,
                     subtitle: t.exportScreen.hubExportSubtitle,
-                    onTap: () => Navigator.push(
+                    onTap: () => pushAppPage<void>(
                       context,
-                      MaterialPageRoute<void>(
-                        builder: (_) => const BackupExportScreen(),
-                      ),
+                      window: true,
+                      title: t.exportScreen.exportSection,
+                      builder: (_) => const BackupExportScreen(),
                     ),
                   ),
                   const AppDivider(indent: 50),
@@ -63,11 +64,11 @@ class _ExportScreenState extends State<ExportScreen> {
                     icon: PhosphorIconsFill.folderOpen,
                     title: t.exportScreen.importSection,
                     subtitle: t.exportScreen.hubImportSubtitle,
-                    onTap: () => Navigator.push(
+                    onTap: () => pushAppPage<void>(
                       context,
-                      MaterialPageRoute<void>(
-                        builder: (_) => const BackupImportScreen(),
-                      ),
+                      window: true,
+                      title: t.exportScreen.importSection,
+                      builder: (_) => const BackupImportScreen(),
                     ),
                   ),
                 ],

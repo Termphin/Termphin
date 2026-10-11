@@ -10,6 +10,22 @@ fresh install. Four pages: welcome, "do you have a server?", permissions,
 analytics consent. The permissions page re-reads on resume because the system
 dialogs report nothing back.
 
+- **A desktop gets its own shape** (`_DesktopOnboarding`, same file): one
+  panel in the middle of the window with the steps down its side - welcome,
+  server, privacy; there is nothing to grant, so no permissions step - not a
+  carousel with dots, which reads as a phone stretched over a window. It is
+  worked from the keyboard: Enter goes on, Esc back, 1 and 2 answer the
+  server question. The phone flow is untouched.
+- **On a desktop the server step produces machines.** `~/.ssh/config` is read
+  (`lib/services/ssh/ssh_config_import.dart`, ssh's own first-value-wins
+  rules; `Match` and `Include` are stepped over) and its hosts are offered
+  ticked, each added with the key it names or ssh's default one - one key
+  once, however many hosts share it. A host with no key, a passphrase on its
+  key or an unreadable key file is listed with the reason and cannot be
+  ticked: a password is not in the config, and a passphrase is asked for in
+  the machine form. An address can also be typed there the way it is after
+  `ssh`; the form then opens filled in with it. `OnboardingResult` carries
+  both to `_AppGate`, which opens the form only when nothing was imported.
 - **The server question is the point of it.** In September 2026 about 70% of
   new users never added a machine: most had nothing to connect to, or expected
   a terminal on the phone itself, and the old flow ended on an empty list with

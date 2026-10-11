@@ -19,6 +19,7 @@ import '../../utils/sftp_error_handler.dart';
 import '../../utils/sftp_path.dart';
 import '../../widgets/sftp/transfer_progress_dialog.dart';
 import '../../widgets/ui/app_notifications.dart';
+import '../../widgets/ui/app_sheet.dart';
 import '../../widgets/ui/clipboard_and_links.dart';
 import '../../widgets/ui/confirm_dialog.dart';
 
@@ -44,7 +45,9 @@ class _PageState {
 }
 
 /// Full-screen image gallery with swipe navigation between the image files
-/// that live alongside [initialPath] in the same directory.
+/// that live alongside [initialPath] in the same directory. Opened as a
+/// window on a desktop, where its leading button closes it rather than
+/// backing out.
 class SftpImagePreviewScreen extends StatefulWidget {
   final SftpService sftp;
   final String path;
@@ -369,7 +372,11 @@ class _SftpImagePreviewScreenState extends State<SftpImagePreviewScreen>
         backgroundColor: Colors.black,
         foregroundColor: context.colors.textPrimary,
         leading: IconButton(
-          icon: const Icon(PhosphorIconsRegular.arrowLeft),
+          icon: Icon(
+            AppModalScope.isDialog(context)
+                ? PhosphorIconsRegular.x
+                : PhosphorIconsRegular.arrowLeft,
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         bottom: PreferredSize(

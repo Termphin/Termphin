@@ -1,12 +1,15 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:terminal_view/terminal_view.dart';
 
 import 'package:termphin/i18n/strings.g.dart';
+import 'package:termphin/services/app/app_commands.dart';
 import 'package:termphin/widgets/terminal/terminal_pane.dart';
 
 import '../../support/test_app.dart';
@@ -518,6 +521,158 @@ void main() {
 
       expect(find.byType(TextField), findsNothing);
       expect(highlights(tester), isEmpty);
+    });
+  });
+
+  group('desktop clipboard keys', () {
+    late List<String?> clipboardWrites;
+    late List<String> sent;
+    late StreamController<Uint8List> output;
+
+    setUp(() {
+      clipboardWrites = [];
+      sent = [];
+      output = StreamController<Uint8List>();
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+            if (call.method == 'Clipboard.setData') {
+              clipboardWrites.add(call.arguments['text'] as String?);
+            }
+            if (call.method == 'Clipboard.getData') {
+              return {'text': 'pasted'};
+            }
+            return null;
+          });
+    });
+
+    tearDown(() async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, null);
+      await output.close();
+    });
+
+    Future<void> mount(
+      WidgetTester tester, {
+      FocusOnKeyEventCallback? onKeyEvent,
+    }) async {
+      await pumpTestApp(
+        tester,
+        Scaffold(
+          body: TerminalPane(
+            outputStream: output.stream,
+            onInput: (bytes) => sent.add(utf8.decode(bytes)),
+            onResize: (_, _) {},
+            onKeyEvent: onKeyEvent,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      output.add(Uint8List.fromList(utf8.encode('hello world')));
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> dragAcrossFirstLine(WidgetTester tester) async {
+      final origin = tester.getTopLeft(find.byType(TerminalPane));
+      final gesture = await tester.startGesture(
+        origin + const Offset(24, 8),
+        kind: PointerDeviceKind.mouse,
+      );
+      await gesture.moveTo(origin + const Offset(60, 8));
+      await gesture.moveTo(origin + const Offset(100, 8));
+      await gesture.up();
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> focusTerminal(WidgetTester tester) async {
+      await tester.tapAt(
+        tester.getCenter(find.byType(TerminalPane)),
+        kind: PointerDeviceKind.mouse,
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('an app shortcut never reaches the shell, the bare key '
+        'does', (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+      AppCommands.instance.install();
+      addTearDown(AppCommands.instance.uninstall);
+      await mount(tester);
+      await focusTerminal(tester);
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.pageDown);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.pumpAndSettle();
+      expect(sent, isEmpty);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.pageDown);
+      await tester.pumpAndSettle();
+      expect(sent, ['\x1b[6~']);
+      await tester.pump(const Duration(seconds: 2));
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    testWidgets('a key onKeyEvent handles is kept from the shell', (
+      tester,
+    ) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+      await mount(
+        tester,
+        onKeyEvent: (_, event) => event.logicalKey == LogicalKeyboardKey.escape
+            ? KeyEventResult.handled
+            : KeyEventResult.ignored,
+      );
+      await focusTerminal(tester);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pumpAndSettle();
+
+      expect(sent, ['\t']);
+      await tester.pump(const Duration(seconds: 2));
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    Future<void> pressCtrl(WidgetTester tester, LogicalKeyboardKey key) async {
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(key);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('a selection dragged out first is copied by Ctrl+C', (
+      tester,
+    ) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+      await mount(tester);
+
+      await dragAcrossFirstLine(tester);
+      await pressCtrl(tester, LogicalKeyboardKey.keyC);
+
+      expect(clipboardWrites, hasLength(1));
+      expect(clipboardWrites.single, isNotEmpty);
+      expect(sent, isEmpty);
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    testWidgets('Ctrl+V pastes after a click that cleared a selection', (
+      tester,
+    ) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+      await mount(tester);
+      await dragAcrossFirstLine(tester);
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pumpAndSettle();
+
+      await tester.tapAt(
+        tester.getCenter(find.byType(TerminalPane)),
+        kind: PointerDeviceKind.mouse,
+      );
+      await tester.pumpAndSettle();
+      await pressCtrl(tester, LogicalKeyboardKey.keyV);
+
+      expect(sent, ['pasted']);
+      debugDefaultTargetPlatformOverride = null;
     });
   });
 }

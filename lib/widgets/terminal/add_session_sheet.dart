@@ -21,6 +21,7 @@ import '../../utils/profile_sort.dart';
 import '../profiles/profile_avatar.dart';
 import '../ui/app_dropdown.dart';
 import '../ui/app_notifications.dart';
+import '../ui/app_sheet.dart';
 import '../ui/confirm_dialog.dart';
 import '../ui/group_filter_chips.dart';
 import '../ui/sheet_handle.dart';
@@ -100,79 +101,73 @@ class _AddSessionSheetContentState
     ];
     final filtered = _filterProfiles(widget.profiles, knownGroups);
 
-    return SafeArea(
-      child: DraggableScrollableSheet(
-        initialChildSize: 0.65,
-        minChildSize: 0.4,
-        maxChildSize: 0.9,
-        expand: false,
-        builder: (context, scrollController) {
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SheetHandle(topPadding: 8),
+    return AppDraggableSheet(
+      initialChildSize: 0.65,
+      minChildSize: 0.4,
+      maxChildSize: 0.9,
+      builder: (context, scrollController) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SheetHandle(topPadding: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              child: Text(
+                t.terminal.selectDevice,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: GlobalSearchLauncher(
+                heroTag: 'globalSearch-addSession',
+                hint: t.terminal.searchDevices,
+                pickFrom: widget.profiles,
+                onPick: widget.onSelect,
+              ),
+            ),
+            GroupFilterChips(
+              groups: allGroups,
+              selected: _selectedGroup,
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+              onChanged: (group) => setState(() => _selectedGroup = group),
+            ),
+            if (filtered.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(
+                  vertical: 24,
                   horizontal: 20,
-                  vertical: 14,
                 ),
                 child: Text(
-                  t.terminal.selectDevice,
-                  style: Theme.of(context).textTheme.titleMedium,
+                  t.terminal.noDevices,
+                  style: TextStyle(color: context.colors.textTertiary),
+                ),
+              )
+            else
+              Expanded(
+                child: ListView.separated(
+                  key: const ValueKey('addSessionProfileList'),
+                  controller: scrollController,
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                  itemCount: filtered.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final p = filtered[index];
+                    return _ProfileRow(
+                      key: ValueKey('addSessionProfile:${p.id}'),
+                      profile: p,
+                      anonymize: anonymize,
+                      resumable: widget.resumableFor(p.id),
+                      onSelect: () => widget.onSelect(p),
+                      onAttachTab: (tabId) => widget.onAttach(tabId, p),
+                    );
+                  },
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: GlobalSearchLauncher(
-                  heroTag: 'globalSearch-addSession',
-                  hint: t.terminal.searchDevices,
-                  pickFrom: widget.profiles,
-                  onPick: widget.onSelect,
-                ),
-              ),
-              GroupFilterChips(
-                groups: allGroups,
-                selected: _selectedGroup,
-                padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-                onChanged: (group) => setState(() => _selectedGroup = group),
-              ),
-              if (filtered.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 24,
-                    horizontal: 20,
-                  ),
-                  child: Text(
-                    t.terminal.noDevices,
-                    style: TextStyle(color: context.colors.textTertiary),
-                  ),
-                )
-              else
-                Expanded(
-                  child: ListView.separated(
-                    key: const ValueKey('addSessionProfileList'),
-                    controller: scrollController,
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                    itemCount: filtered.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final p = filtered[index];
-                      return _ProfileRow(
-                        key: ValueKey('addSessionProfile:${p.id}'),
-                        profile: p,
-                        anonymize: anonymize,
-                        resumable: widget.resumableFor(p.id),
-                        onSelect: () => widget.onSelect(p),
-                        onAttachTab: (tabId) => widget.onAttach(tabId, p),
-                      );
-                    },
-                  ),
-                ),
-            ],
-          );
-        },
-      ),
+          ],
+        );
+      },
     );
   }
 }
