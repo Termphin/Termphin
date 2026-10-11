@@ -1,0 +1,10 @@
+# Declared so `flutter test` stops warning about a tag it has never been told
+# about. The live suites gate themselves on TERMPHIN_LIVE_SSH_PORT and skip
+# without it, so they are not excluded here - `--exclude-tags live` is the
+# switch for a run that should not even load them.
+#
+# `security` marks the suite in test/security/: rules that must never break,
+# run with the rest and on their own with `flutter test --tags security`.
+tags:
+  live:
+  security:

@@ -1,0 +1,69 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+/remote/
+/relay/
+/exp/
+
+app.*.symbols
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# Gradle's own output and caches. /build/ above only covers the root one, so
+# the android project's and the standalone ringbuffer-tests project's used to
+# be committed - 216 files of lock files and binary caches, re-written by
+# every build.
+/android/build/
+/android/ringbuffer-tests/build/
+**/.gradle/
+# Kotlin 2.x writes its own session and error logs here, outside .gradle/.
+**/.kotlin/
+
+# Local tool caches
+.kilo/
+.ruff_cache/
+.opencode_tmp/
+
+# Kept ignored so a secret cannot be committed by accident.
+.env
+
+# FVM Version Cache
+.fvm/
+# Local dependency overrides (e.g. patched plugins for an older Xcode)
+/pubspec_overrides.yaml
+

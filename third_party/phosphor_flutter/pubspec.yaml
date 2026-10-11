@@ -1,0 +1,25 @@
+name: phosphor_flutter
+description: Vendored, trimmed fork of phosphor_flutter 2.1.0 with Flutter 3.44 compatibility fixes.
+version: 2.1.0
+publish_to: none
+homepage: https://phosphoricons.com/
+repository: https://github.com/phosphor-icons/phosphor-flutter
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+  flutter: ">=1.17.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+flutter:
+  fonts:
+    - family: PhosphorFill
+      fonts:
+        - asset: lib/fonts/Phosphor-Fill.ttf
+          weight: 400
+    - family: PhosphorRegular
+      fonts:
+        - asset: lib/fonts/Phosphor.ttf
+          weight: 400

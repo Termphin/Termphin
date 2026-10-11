@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>Termphin</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>termphin</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(FLUTTER_BUILD_NAME)</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<key>CFBundleVersion</key>
+	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneClassName</key>
+					<string>UIWindowScene</string>
+					<key>UISceneConfigurationName</key>
+					<string>flutter</string>
+					<key>UISceneDelegateClassName</key>
+					<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
+					<key>UISceneStoryboardFile</key>
+					<string>Main</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Termphin uses Face ID to securely unlock the application and your stored credentials.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_termphin._tcp</string>
+	</array>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Termphin requires access to the local network to discover and connect to SSH servers on your local network.</string>
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+	<!-- No ITSAppUsesNonExemptEncryption here, deliberately, and it is not the
+	     same as answering "false".
+
+	     The app ships its own cipher implementations - pure-Dart AES-256-GCM
+	     and ChaCha20-Poly1305 in secret_cipher.dart/aead.dart, PBKDF2 for
+	     backups - rather than only the platform's, so the "only standard
+	     encryption provided by the operating system" exemption does not cover
+	     it and "false" would be untrue.
+
+	     "true" is also wrong without more: it asserts that approved export
+	     documentation exists and that its ITSEncryptionExportComplianceCode
+	     sits beside it. It did not, so every upload was refused outright -
+	     "Invalid Export Compliance Code ... key value []" - rather than
+	     reaching the questions this key was assumed to defer to.
+
+	     Absent, App Store Connect marks the build "Missing Compliance" and
+	     asks per submission, which is the honest answer until the
+	     documentation is filed and Apple issues a code. Then, and only then,
+	     both keys come back together. -->
+	<!-- Deliberately no UIBackgroundModes. None of the modes the system offers
+	     will hold an SSH socket: each requires the app to actually be doing the
+	     thing it names, and using one to keep a connection alive is grounds for
+	     rejection. Sessions surviving a backgrounded app is the remote agent's
+	     job here, not the platform's. BackgroundTaskChannel.swift takes the
+	     ordinary beginBackgroundTask grant, which needs no declaration. -->
+	<!-- `ssh://user@host:port` links appear in documentation, dashboards and
+	     cloud consoles, and nothing on either platform claims them by default,
+	     so they are dead text. Claiming the scheme only prefills the profile
+	     form; it never dials, because a link is something somebody else can
+	     hand you. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>dev.termphin.termphin.ssh</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>ssh</string>
+			</array>
+		</dict>
+		<!-- termphin://toolbar links from the site's toolbar gallery. Opening
+		     one only asks; nothing is added before its keys are shown. -->
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>dev.termphin.termphin.toolbar</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>termphin</string>
+			</array>
+		</dict>
+	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>https</string>
+		<string>http</string>
+		<string>mailto</string>
+	</array>
+</dict>
+</plist>

@@ -1,0 +1,52 @@
+name: Bug report
+description: Something in the app is broken or behaves unexpectedly
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Never paste a private key, a password or a passphrase. Redact hostnames
+        and usernames you would rather not share.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+      placeholder: |
+        1. Opened a session on ...
+        2. Tapped ...
+        Expected: ...
+        Instead: ...
+    validations:
+      required: true
+
+  - type: input
+    id: app-version
+    attributes:
+      label: Termphin version
+      description: Settings → About, the line under the app name.
+      placeholder: "1.3.1"
+    validations:
+      required: true
+
+  - type: input
+    id: device
+    attributes:
+      label: Device and OS version
+      placeholder: "Pixel 8 / Android 15, MacBook Air / macOS 15, ThinkPad / Fedora 42"
+    validations:
+      required: true
+
+  - type: input
+    id: server
+    attributes:
+      label: What you connected to
+      description: Only if it is relevant - the OS and SSH server, not the address.
+      placeholder: "Debian 12, OpenSSH 9.2"
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Screenshots or a screen recording, if you have one. Attach by dragging into this box.

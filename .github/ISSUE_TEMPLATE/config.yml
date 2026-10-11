@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Manual
+    url: https://termphin.dev/docs/
+    about: How connections, keys, files, tunnels and the remote agent work.
+  - name: Security vulnerability
+    url: https://github.com/Termphin/Termphin/blob/main/SECURITY.md
+    about: Report it privately, not as an issue.
+  - name: Email
+    url: mailto:contact@termphin.dev
+    about: Anything you would rather not write in public.

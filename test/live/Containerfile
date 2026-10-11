@@ -1,0 +1,16 @@
+FROM docker.io/library/debian:bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      openssh-server sudo ca-certificates coreutils procps nano vim-tiny less \
+    && rm -rf /var/lib/apt/lists/*
+RUN mkdir -p /run/sshd \
+    && useradd -m -s /bin/bash tester \
+    && echo 'tester:testpass' | chpasswd \
+    && echo 'root:rootpass' | chpasswd \
+    && sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config \
+    && sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config \
+    && sed -i 's/^#\?Subsystem.*sftp.*/Subsystem sftp \/usr\/lib\/openssh\/sftp-server/' /etc/ssh/sshd_config \
+    && echo 'AllowTcpForwarding yes' >> /etc/ssh/sshd_config \
+    && echo 'PermitTunnel yes' >> /etc/ssh/sshd_config \
+    && echo 'GatewayPorts yes' >> /etc/ssh/sshd_config
+EXPOSE 22
+CMD ["/usr/sbin/sshd","-D","-e"]

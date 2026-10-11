@@ -1,0 +1,83 @@
+# What's-new highlights: the popup shown once after an update.
+#
+# Deliberately NOT the changelog. `release_notes.yaml` is the full record -
+# every version, every fix - and the landing site copies that file verbatim
+# for its public changelog page. This one is hand-written per release, only
+# ever covers new features, and its image paths are app assets that mean
+# nothing to the website.
+#
+# One highlight is one page of the popup. Two or more for the same version
+# group into a carousel the reader pages through. A version with nothing
+# worth announcing is simply left out - then no popup fires at all, which is
+# the right outcome for a bugfix release.
+#
+# Fields per highlight:
+#   id     - stable, unique, never reused. This is what is stored on the
+#            device to decide what has already been shown, so changing an id
+#            shows the page again and reusing one hides a new page forever.
+#            Required.
+#   title  - the feature, named. Required.
+#   body   - one or two sentences of prose, not a changelog fragment.
+#            Required.
+#   image  - optional asset path. Declare its folder in pubspec.yaml.
+#            Omitted means the page renders as text only. A GIF plays, which
+#            is how a feature is shown working rather than described.
+#   aspect - optional "width:height" of the image, e.g. "9:16" for a phone
+#            recording. Omitted means the 16:7 banner shape, cropped to fit.
+#   setting - optional preferences key of a setting the page puts a switch
+#            for, so what is announced can be turned off right there. Only
+#            keys listed in `whatsNewToggles` (whats_new_modal.dart) draw
+#            anything, and a test fails on any other.
+#   announce - optional, true by default. False keeps the page out of the
+#            popup: it only explains a feature from the info button beside
+#            its setting (showFeatureExplainer), for something too old to be
+#            announced as new. Its version then means nothing.
+#
+# Newest version first.
+- version: "1.9.0"
+  highlights:
+    - id: "command-suggestions"
+      title: "Autocomplete"
+      image: "assets/whats_new/command-suggestions.gif"
+      body: "Start typing and Termphin suggests the rest: commands you ran
+        before, files in the folder you are in, and options the server
+        knows. One tap fills it in."
+      setting: "command_suggestions_enabled"
+    - id: "fast-upload"
+      title: "Fast upload"
+      image: "assets/whats_new/fast-upload.gif"
+      aspect: "540:368"
+      body: "Open the action dock, tap Fast upload and pick a file. It goes
+        straight to the server, and its path is ready to use in your next
+        command."
+      announce: false
+
+- version: "1.8.0"
+  highlights:
+    - id: "split-screen"
+      title: "Two sessions in one tab"
+      body: "Open a tab's menu and pick Split screen with to put two sessions
+        on one screen. In portrait they stack, in landscape they sit side by
+        side."
+
+- version: "1.6.0"
+  highlights:
+    - id: "groups-replace-tags"
+      title: "Tags are now groups"
+      image: "assets/whats_new/groups.png"
+      body: "A group does what a tag did and more: it holds machines, keys and
+        snippets together, and carries a colour so you can tell one from
+        another at a glance. On first launch you choose which of your tags
+        become groups."
+
+- version: "1.0.0"
+  highlights:
+    - id: "persistent-sessions"
+      title: "Sessions that survive disconnects"
+      body: "Your shell keeps running on the server when the app closes or
+        the signal drops. Reconnect and pick up exactly where you left off,
+        mid-command and all."
+    - id: "sftp-browser"
+      title: "Files without leaving the app"
+      body: "Browse, edit and transfer over SFTP on the same connection as
+        your terminal. No second tool, no re-authenticating."

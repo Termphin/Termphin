@@ -1,0 +1,132 @@
+name: Build Android
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: 'Git tag for the release'
+        required: true
+        type: string
+    secrets:
+      ANDROID_KEYSTORE_BASE64:
+        description: 'Base64-encoded release keystore'
+        required: true
+      ANDROID_KEYSTORE_PASSWORD:
+        description: 'Keystore password'
+        required: true
+      ANDROID_KEY_PASSWORD:
+        description: 'Key password'
+        required: true
+      ANDROID_KEY_ALIAS:
+        description: 'Key alias'
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+
+      # The asset names and the bundle's own versionName both come from
+      # pubspec.yaml, so a tag that disagrees with it ships a build labelled
+      # as a version nobody released.
+      - name: Check the tag matches pubspec
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          VERSION="$(grep '^version:' pubspec.yaml | awk '{print $2}')"
+          # A platform test tag (v1.12.0-ios.22) also names the build number,
+          # which has to be the one after the + - the store refuses a build
+          # number it has already seen, so a stale one fails here rather than
+          # at the upload.
+          if [[ ! "$TAG" =~ ^v([0-9]+(\.[0-9]+)*)(-(ios|android)\.([0-9]+))?$ ]]; then
+            echo "Tag $TAG is neither vX.Y.Z nor vX.Y.Z-ios.N / vX.Y.Z-android.N" >&2
+            exit 1
+          fi
+          TAG_VERSION="${BASH_REMATCH[1]}"
+          TAG_BUILD="${BASH_REMATCH[5]}"
+          if [ "$TAG_VERSION" != "${VERSION%%+*}" ]; then
+            echo "Tag $TAG does not match pubspec version $VERSION" >&2
+            exit 1
+          fi
+          if [ -n "$TAG_BUILD" ] && [ "$TAG_BUILD" != "${VERSION#*+}" ]; then
+            echo "Tag $TAG names build $TAG_BUILD, pubspec has $VERSION" >&2
+            exit 1
+          fi
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Configure signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          # Keystore lives in $RUNNER_TEMP rather than the checkout to avoid
+          # leaving credentials in the working tree or leaking into build artefacts.
+          python3 - <<'PY'
+          import base64
+          import os
+
+          keystore_path = os.path.join(os.environ['RUNNER_TEMP'], 'release.keystore')
+          with open(keystore_path, 'wb') as f:
+              f.write(base64.b64decode(os.environ['ANDROID_KEYSTORE_BASE64']))
+
+          with open('android/key.properties', 'w') as f:
+              f.write(f"storePassword={os.environ['ANDROID_KEYSTORE_PASSWORD']}\n")
+              f.write(f"keyPassword={os.environ['ANDROID_KEY_PASSWORD']}\n")
+              f.write(f"keyAlias={os.environ['ANDROID_KEY_ALIAS']}\n")
+              f.write(f"storeFile={keystore_path}\n")
+          PY
+
+      - name: Build Android release
+        env:
+          POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
+        run: scripts/build_release.sh android
+
+      - name: Name the release files
+        run: |
+          VERSION="$(grep '^version:' pubspec.yaml | awk '{print $2}')"
+          VERSION="${VERSION%%+*}"
+          mkdir -p release
+          cp build/app/outputs/flutter-apk/app-release.apk "release/termphin-$VERSION.apk"
+          cp build/app/outputs/bundle/release/app-release.aab "release/termphin-$VERSION.aab"
+          (cd release && for f in *; do sha256sum "$f" > "$f.sha256"; done)
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            release/*.apk
+            release/*.aab
+
+      - name: Publish release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: gh release upload "$TAG" release/* --clobber
+
+      - name: Clean up signing credentials
+        if: always()
+        run: |
+          rm -f "$RUNNER_TEMP/release.keystore" android/key.properties

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The master key that decrypts stored credentials lives in the Android
+  Keystore, and Keystore material never travels with a backup or a
+  device-to-device transfer. Restoring the SharedPreferences without it would
+  produce records that cannot be unwrapped, so nothing is allowed out.
+
+  Settings -> Backup is the supported recovery path instead: it seals what it
+  exports under a passphrase the user holds, not under the Keystore.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </device-transfer>
+</data-extraction-rules>

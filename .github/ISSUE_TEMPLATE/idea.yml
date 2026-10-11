@@ -1,0 +1,17 @@
+name: Idea
+description: Something you would like Termphin to do
+labels: ["idea"]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What you would like
+      description: What you are trying to do, and where the app gets in the way today.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: How you work around it now
+      description: If you do. This often says more about the shape of the answer than the request itself.

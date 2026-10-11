@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Quick action shortcut icons are picked by name at runtime: the Dart side
+  builds "qa_<icon>_<colour>" from the profile's avatar and hands that string
+  to the quick_actions plugin, which resolves it with
+  Resources.getIdentifier(). No code or resource ever mentions them literally,
+  so the release build's resource shrinker considers all 84 combinations dead
+  and strips them, leaving every shortcut without an icon. Debug builds do not
+  shrink, which is why this only ever showed up in release.
+-->
+<resources
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/qa_*,@color/qa_bg_white" />

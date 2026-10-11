@@ -1,0 +1,126 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+# A tag ending in -ios.N or -android.N (v1.12.0-ios.22) is a test build for
+# that platform alone, N being the build number after the + in pubspec.yaml:
+# only its build runs, and the release it lands in is a prerelease so it
+# never shows as the latest. A plain vX.Y.Z builds both.
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      platform: ${{ steps.platform.outputs.platform }}
+    steps:
+      - name: Read the platform from the tag
+        id: platform
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          if [[ ! "$TAG" =~ ^v[0-9]+(\.[0-9]+)*(-(ios|android)\.[0-9]+)?$ ]]; then
+            echo "$TAG is neither vX.Y.Z nor vX.Y.Z-ios.N / vX.Y.Z-android.N" >&2
+            exit 1
+          fi
+          echo "platform=${BASH_REMATCH[3]:-all}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install PyYAML
+        run: pip install --quiet pyyaml
+
+      - name: Render release notes
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          python3 - "$TAG" <<'PY' > notes.md
+          import pathlib
+          import re
+          import sys
+
+          import yaml
+
+          # The tag carries the leading v and maybe a platform suffix;
+          # assets/release_notes.yaml carries neither.
+          tag = sys.argv[1]
+          version = tag[1:] if tag.startswith("v") else tag
+          version = re.sub(r"-(ios|android)\.\d+$", "", version)
+
+          # What isReleasedVersion accepts in the app: a dotted number. Without
+          # this, a tag of vUnreleased would publish the working entry.
+          if not re.fullmatch(r"\d+(\.\d+)*", version):
+              sys.exit(f"{tag} is not a released version number.")
+
+          entries = yaml.safe_load(pathlib.Path("assets/release_notes.yaml").read_text())
+          entry = next((e for e in entries if str(e.get("version")) == version), None)
+          if entry is None:
+              sys.exit(
+                  f"assets/release_notes.yaml has no entry for {version}. "
+                  "Give the Unreleased entry its real number before tagging."
+              )
+
+          # The order and labels the app's ReleaseNotesScreen and the landing
+          # site's changelog page both use - a release reads the same in all
+          # three places or it reads as three different releases.
+          categories = ("added", "changed", "deprecated", "removed", "fixed", "security")
+
+          lines = []
+          for key in categories:
+              items = entry.get(key)
+              if not items:
+                  continue
+              lines.append(f"## {key.capitalize()}")
+              lines.append("")
+              lines.extend(f"- {item}" for item in items)
+              lines.append("")
+
+          if not lines:
+              sys.exit(f"The entry for {version} carries no categories.")
+
+          print("\n".join(lines))
+          PY
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          PLATFORM: ${{ steps.platform.outputs.platform }}
+        run: |
+          PRERELEASE=false
+          [ "$PLATFORM" != all ] && PRERELEASE=true
+          # `gh release create` fails on a tag that already has a release,
+          # which is the override the Gitea workflow used to do.
+          gh release create "$TAG" --title "Termphin $TAG" --notes-file notes.md --prerelease="$PRERELEASE" \
+            || gh release edit "$TAG" --title "Termphin $TAG" --notes-file notes.md --prerelease="$PRERELEASE"
+
+  # Both builds upload into the release above, so they cannot start until it
+  # exists. They are independent of each other and run in parallel.
+  # The repository's default token is read-only, and a called workflow cannot
+  # ask for more than the job calling it was granted - so the grant has to be
+  # made here, not only inside the workflow being called.
+  android:
+    needs: release
+    if: needs.release.outputs.platform != 'ios'
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    uses: ./.github/workflows/build-android.yml
+    with:
+      tag: ${{ github.ref_name }}
+    secrets: inherit
+
+  ios:
+    needs: release
+    if: needs.release.outputs.platform != 'android'
+    permissions:
+      contents: write
+    uses: ./.github/workflows/build-ios.yml
+    with:
+      tag: ${{ github.ref_name }}
+    secrets: inherit

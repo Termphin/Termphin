@@ -1,0 +1,9 @@
+[submodule "repos/terminal_view"]
+	path = repos/terminal_view
+	url = https://github.com/Termphin/terminal_view.git
+[submodule "repos/termphin-agent"]
+	path = repos/termphin-agent
+	url = https://github.com/Termphin/termphin-agent.git
+[submodule "repos/tray_kit"]
+	path = repos/tray_kit
+	url = https://github.com/Termphin/tray_kit.git

@@ -1,0 +1,177 @@
+# Single source of truth for "what's new" in the app and the changelog page
+# on termphin.dev (the website copies this file in at build time). Newest
+# entry first.
+#
+# Keep a Changelog categories (https://keepachangelog.com): added, changed,
+# deprecated, removed, fixed, security. Only include the ones that apply to
+# a given version - empty categories are omitted, not listed with nothing
+# under them.
+#
+# This is the app's changelog and nothing else. Work on the landing site never
+# goes in here - not an About page, not page speed, not a 404, however visible
+# it is to somebody looking at the site. The site carries the app's
+# changelog; it is not a subject of it.
+#
+# `version: "Unreleased"` (with the same date) is where work goes as it lands,
+# before anyone has decided what version ships it. Nothing renders it: the app
+# and the landing changelog both drop any entry whose version is not a dotted
+# number. Give it the real number at release time and it appears in both.
+- version: "1.12.0"
+  date: "2026-10-14"
+  added:
+    - "Change the key toolbar layout, color scheme, font and size without leaving the session"
+    - "Add a key toolbar layout from a shared link"
+    - "The PIN lock can ask again when you come back to the app"
+  changed:
+    - "Ending a session closes it right away instead of waiting on the server"
+    - "A home screen shortcut opens the machine's running session instead of a new one"
+  fixed:
+    - "Session history keeps its layout and colors when you reconnect"
+- version: "1.11.0"
+  date: "2026-10-07"
+  added:
+    - "Copy the shell's current path from the action dock"
+    - "Fast upload can ask which folder to upload to"
+    - "Share files from any app straight to a folder on a server"
+    - "A refresh button in the file browser"
+    - "Option per machine to try the last working address before the main one"
+  changed:
+    - "The main address is tried first, before any fallback address"
+  fixed:
+    - "Selecting text in the editor shows Cut, Copy and Paste"
+    - "Ctrl+C stops a running command on Windows servers"
+    - "The file browser keeps working after a lost connection comes back"
+- version: "1.10.0"
+  date: "2026-09-30"
+  added:
+    - "Copy and move files and folders to another folder in the file browser"
+    - "Duplicate a file or folder"
+    - "Option to put the session tabs at the bottom of the screen"
+    - "Search the terminal output from the action dock"
+    - "One search for everything: machines, sessions, groups, snippets and keys"
+    - "Web addresses in the terminal are underlined"
+  changed:
+    - "Autocomplete no longer disappears after a space and suggests what can follow the command"
+    - "Redesigned session tab menu"
+  fixed:
+    - "Returning to a detached session after changing the machine's address connects to the new address"
+    - "Tapping a web address in the terminal shows its preview again, without opening the keyboard"
+- version: "1.9.0"
+  date: "2026-09-28"
+  added:
+    - "Autocomplete for commands, files and options as you type"
+    - "Some settings show how they work with a short animation"
+    - "Onboarding redesign"
+    - "Generate a key and test the connection while adding a machine"
+    - "Find and replace in the text editor"
+    - "New text editor settings"
+    - "New, more secure lock screen"
+    - "PINs can be 4 to 6 digits"
+  changed:
+    - "Custom toolbar keys are labelled Ctrl, Alt and Shift instead of symbols"
+    - "A machine's name is optional - it is called by its address until you name it"
+    - "After three wrong PINs the lock screen waits before the next try, longer each time"
+  fixed:
+    - "The screen no longer goes blank when an import shows more than one message"
+    - "The right PIN unlocks quickly, and the lock screen shows while it is checking"
+    - "A snippet with arguments on the key toolbar asks for them and runs"
+    - "Fixed a few smaller bugs"
+
+- version: "1.8.0"
+  date: "2026-09-23"
+  added:
+    - "Split screen"
+    - "Typing feels instant on slow connections"
+    - "A warning when the connection is slow"
+  changed:
+    - "Faster reconnects, also after switching networks"
+    - "The terminal stays on screen while reconnecting"
+    - "What you type while reconnecting is sent afterwards"
+    - "Reconnecting keeps trying until the server is back"
+  fixed:
+    - "Reattaching a detached session no longer shows a blank terminal"
+    - "Several small bug fixes"
+
+- version: "1.7.0"
+  date: "2026-09-21"
+  added:
+    - "A group header can now load the sessions waiting on every machine in that group, and stop the run if a machine is not answering"
+  fixed:
+    - "Two machines asking something at the same moment no longer stack their dialogs on top of each other"
+    - "Importing a private key that is protected by a passphrase now works - the form asks for the passphrase when the key needs one"
+    - "Saving a group while a menu is still open no longer closes the app"
+    - "Rendering improvements"
+
+- version: "1.6.0"
+  date: "2026-09-18"
+  changed:
+    - "Tags have been replaced by groups, which make organising your machines, SSH keys and snippets easier"
+    - "UI improvements"
+
+- version: "1.5.0"
+  date: "2026-09-16"
+  added:
+    - "Connecting to a machine on the network you're connected to now asks for permission when it needs one, and connects as soon as you allow it"
+    - "Fast upload can paste the uploaded path at the cursor straight away, instead of offering to"
+  changed:
+    - "The machine list marks a session that is still connecting"
+    - "The machine list shows when it is fetching sessions from a server"
+  fixed:
+    - "Text fields no longer lag behind as you type"
+    - "Several keyboard bugs are fixed"
+
+- version: "1.4.0"
+  date: "2026-09-07"
+  added:
+    - "A manual you can read from Settings"
+    - "Settings links to the issue tracker, where bugs and ideas are public"
+  fixed:
+    - "A connection that fails now explains what to check"
+    - "A key with the wrong passphrase says so instead of reporting an SSH error"
+    - "In landscape, lists no longer hide under the navigation buttons"
+    - "In landscape, a list can be scrolled from the empty space beside it"
+
+- version: "1.3.1"
+  date: "2026-09-04"
+  fixed:
+    - "A failed connection now says why instead of closing the terminal"
+
+- version: "1.3.0"
+  date: "2026-09-03"
+  added:
+    - "The key toolbar and the action dock each have their own on/off switch in Settings"
+  fixed:
+    - "The sidebar collapsed to icons in landscape no longer clips them"
+
+- version: "1.2.0"
+  date: "2026-09-03"
+  added:
+    - "Backups can be locked with a passphrase, and import restores entry by entry"
+    - "Search in snippets and in the new-session picker"
+  fixed:
+    - "The terminal no longer shrinks away in landscape"
+    - "A detached session reopens instead of losing its tab"
+    - "Picking several files uploads all of them, not just the first"
+
+- version: "1.1.0"
+  date: "2026-08-27"
+  added:
+    - "Known hosts list in Settings"
+    - "Two-factor and keyboard-interactive logins"
+    - "Jump hosts (ProxyJump)"
+  fixed:
+    - "Quick edits no longer overwrite each other"
+  security:
+    - "Every server is verified on connect; a changed key stops it until you accept"
+
+- version: "1.0.0"
+  date: "2026-08-25"
+  added:
+    - "Sessions that survive disconnects"
+    - "SFTP browser and editor"
+    - "Snippets across machines"
+    - "Port forwarding"
+    - "SSH key manager"
+    - "Customizable terminal"
+    - "PIN and biometric lock"
+    - "Anonymize mode"
