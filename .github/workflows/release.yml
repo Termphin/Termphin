@@ -29,7 +29,7 @@ jobs:
           echo "platform=${BASH_REMATCH[3]:-all}" >> "$GITHUB_OUTPUT"
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install PyYAML
         run: pip install --quiet pyyaml
