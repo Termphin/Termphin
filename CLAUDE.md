@@ -73,6 +73,9 @@ Termphin is a Flutter SSH client (package `termphin`).
 - English everywhere: identifiers, docstrings, strings.
 - Commit messages are one Conventional Commits title line
   (`type(scope): subject`), no body.
+- `main` is protected: every change lands through a pull request, squashed,
+  with CI green - so the PR title is the commit message. Release tags `v*`
+  cannot be moved or deleted.
 - A bug fix comes with a test that fails without it.
 
 ### Copy in the app
