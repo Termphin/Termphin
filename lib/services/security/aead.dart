@@ -24,8 +24,9 @@ Uint8List randomBytes(int length, [Random? random]) {
 /// AES-256-GCM, nonce prepended, base64 behind [sealPrefix].
 ///
 /// [aad] binds the ciphertext to what it belongs to. Without it, anyone able
-/// to write to the sync store could move one record's ciphertext onto another
-/// record: the bytes would be untouched and the tag would still verify.
+/// to write to the stored records could move one record's ciphertext onto
+/// another record: the bytes would be untouched and the tag would still
+/// verify.
 String sealBytes(
   Uint8List key,
   Uint8List plaintext, {
