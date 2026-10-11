@@ -3,9 +3,11 @@
 Termphin holds SSH keys, passwords and host key pins, so a vulnerability here
 is worth reporting privately rather than in an issue.
 
-**Do not open a public issue.** Email <contact@termphin.dev> with what you
-found, how to reproduce it, and what an attacker could do with it. You will get
-an acknowledgement within a few days.
+**Do not open a public issue.** Report it privately through
+[GitHub](https://github.com/Termphin/Termphin/security/advisories/new) or by
+email to <contact@termphin.dev>, with what you found, how to reproduce it, and
+what an attacker could do with it. You will get an acknowledgement within a few
+days.
 
 Supported: the current release. Fixes ship in a normal one.
 
