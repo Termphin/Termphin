@@ -17,7 +17,7 @@
 # and the landing changelog both drop any entry whose version is not a dotted
 # number. Give it the real number at release time and it appears in both.
 - version: "1.12.0"
-  date: "2026-10-14"
+  date: "2026-10-11"
   added:
     - "Change the key toolbar layout, color scheme, font and size without leaving the session"
     - "Add a key toolbar layout from a shared link"
