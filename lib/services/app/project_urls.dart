@@ -7,5 +7,8 @@
 class ProjectUrls {
   const ProjectUrls._();
 
-  static const issues = 'https://github.com/Termphin/Termphin/issues';
+  static const repository = 'https://github.com/Termphin/Termphin';
+  static const issues = '$repository/issues';
+  static const contributing = '$repository/blob/main/CONTRIBUTING.md';
+  static const license = '$repository/blob/main/LICENSE';
 }

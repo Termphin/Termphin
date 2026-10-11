@@ -18,6 +18,8 @@
 # number. Give it the real number at release time and it appears in both.
 - version: "Unreleased"
   date: "2026-10-11"
+  added:
+    - "An Open source section in Settings: star Termphin on GitHub, browse issues, contribute"
   changed:
     - "Picking a jump host uses the same search, groups and machine cards as opening a session"
     - "Anonymize mode also hides hosts in known hosts, the host key prompt and the connection log"

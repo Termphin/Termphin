@@ -3,14 +3,14 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
 import '../../screens/settings/manual_screen.dart';
-import '../../services/app/project_urls.dart';
 import '../../theme/theme.dart';
 import '../ui/app_card.dart';
 import '../ui/clipboard_and_links.dart';
 import '../ui/section_header.dart';
 import '../ui/settings_tile.dart';
 
-/// Feedback section: email, the issue tracker and the manual.
+/// Feedback section: email and the manual. The issue tracker sits in the
+/// open source section.
 class FeedbackSettingsSection extends StatelessWidget {
   const FeedbackSettingsSection({super.key});
 
@@ -59,15 +59,6 @@ class FeedbackSettingsSection extends StatelessWidget {
                 title: t.settings.reportBug,
                 subtitle: t.settings.reportBugSubtitle,
                 onTap: () => _sendFeedback(context, isBug: true),
-              ),
-              const Divider(height: 1),
-              SettingsTile(
-                icon: PhosphorIconsRegular.githubLogo,
-                title: t.settings.issueTracker,
-                subtitle: t.settings.issueTrackerSubtitle,
-                trailing: SettingsTileTrailing.external,
-                onTap: () =>
-                    openExternalUrl(context, Uri.parse(ProjectUrls.issues)),
               ),
               const Divider(height: 1),
               SettingsTile(
