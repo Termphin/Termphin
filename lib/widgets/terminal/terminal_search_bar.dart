@@ -4,11 +4,16 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../i18n/strings.g.dart';
 import '../../theme/theme.dart';
 
-/// The search bar over the top of a terminal pane. Only the controls - the
-/// pane owns the matches, the highlights and the scrolling.
+/// The search bar above a terminal pane. Only the controls - the pane owns
+/// the matches, the highlights and the scrolling.
+///
+/// One tight row, [kTerminalSearchBarHeight] tall: it takes its height out
+/// of the terminal's, so every pixel of it is a line of output not shown.
 ///
 /// The field's `onEditingComplete` is a no-op so the keyboard stays up
 /// across repeated enters.
+const double kTerminalSearchBarHeight = 36;
+
 class TerminalSearchBar extends StatelessWidget {
   const TerminalSearchBar({
     super.key,
@@ -49,11 +54,12 @@ class TerminalSearchBar extends StatelessWidget {
         : t.terminalSearch.matchCount(current: current + 1, total: total);
 
     return Container(
+      height: kTerminalSearchBarHeight,
       decoration: BoxDecoration(
         color: colors.surfaceCard,
         border: Border(bottom: BorderSide(color: colors.surfaceDivider)),
       ),
-      padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+      padding: const EdgeInsets.only(left: 10, right: 2),
       child: Row(
         children: [
           Expanded(
@@ -69,17 +75,32 @@ class TerminalSearchBar extends StatelessWidget {
               textAlignVertical: TextAlignVertical.center,
               style: TextStyle(
                 fontFamily: AppTheme.uiFamily,
-                fontSize: 15,
+                fontSize: 14,
                 color: colors.textPrimary,
               ),
               decoration: InputDecoration(
                 hintText: t.terminalSearch.hint,
                 isDense: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                prefixIcon: Icon(
-                  PhosphorIconsFill.magnifyingGlass,
-                  size: 18,
-                  color: colors.textTertiary,
+                filled: false,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+                prefixIconConstraints: const BoxConstraints(
+                  minWidth: 26,
+                  minHeight: kTerminalSearchBarHeight,
+                ),
+                suffixIconConstraints: const BoxConstraints(
+                  minHeight: kTerminalSearchBarHeight,
+                ),
+                prefixIcon: Align(
+                  widthFactor: 1,
+                  alignment: Alignment.centerLeft,
+                  child: Icon(
+                    PhosphorIconsFill.magnifyingGlass,
+                    size: 16,
+                    color: colors.textTertiary,
+                  ),
                 ),
                 suffixIcon: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -98,9 +119,14 @@ class TerminalSearchBar extends StatelessWidget {
                       isSelected: caseSensitive,
                       visualDensity: VisualDensity.compact,
                       onPressed: onToggleCase,
+                      constraints: const BoxConstraints.tightFor(
+                        width: 28,
+                        height: 28,
+                      ),
+                      padding: EdgeInsets.zero,
                       icon: Icon(
                         PhosphorIconsRegular.textAa,
-                        size: 18,
+                        size: 16,
                         color: caseSensitive
                             ? colors.primary
                             : colors.textTertiary,
@@ -154,7 +180,9 @@ class _BarButton extends StatelessWidget {
   Widget build(BuildContext context) => IconButton(
     tooltip: tooltip,
     visualDensity: VisualDensity.compact,
-    icon: Icon(icon, size: 18),
+    constraints: const BoxConstraints.tightFor(width: 30, height: 30),
+    padding: EdgeInsets.zero,
+    icon: Icon(icon, size: 16),
     color: context.colors.textSecondary,
     onPressed: onPressed,
   );

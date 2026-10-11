@@ -8,6 +8,7 @@ import 'package:terminal_view/terminal_view.dart';
 
 import 'package:termphin/i18n/strings.g.dart';
 import 'package:termphin/widgets/terminal/terminal_pane.dart';
+import 'package:termphin/widgets/terminal/terminal_search_bar.dart';
 
 import '../../support/test_app.dart';
 
@@ -484,6 +485,23 @@ void main() {
 
       expect(find.text('1/2'), findsOneWidget);
       expect(scroll(tester).pixels, 0);
+    });
+
+    testWidgets('the bar stands above the terminal, not over its first rows', (
+      tester,
+    ) async {
+      await mount(tester, 'hello\r\n');
+      final terminalBefore = tester.getRect(find.byType(TerminalView));
+
+      controller.openSearch();
+      await tester.pumpAndSettle();
+
+      final bar = tester.getRect(find.byType(TerminalSearchBar));
+      final terminal = tester.getRect(find.byType(TerminalView));
+      expect(bar.height, kTerminalSearchBarHeight);
+      expect(bar.top, terminalBefore.top);
+      expect(terminal.top, greaterThanOrEqualTo(bar.bottom));
+      expect(terminal.bottom, terminalBefore.bottom);
     });
 
     testWidgets('says so when nothing matches', (tester) async {

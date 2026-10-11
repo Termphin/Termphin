@@ -919,10 +919,38 @@ class _TerminalPaneState extends State<TerminalPane> {
     _ => TerminalCursorType.block,
   };
 
+  /// The search bar stands above the terminal and takes its own height,
+  /// rather than lying over the top rows: what a search most often finds is
+  /// in the lines just printed, and on a short screen those were exactly the
+  /// ones under the bar. The terminal is a few rows shorter while it is open.
+  ///
+  /// The column is there whether or not the bar is, so the terminal keeps
+  /// its place in the tree - and its state - as the bar comes and goes.
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
+    final terminal = LayoutBuilder(
       builder: (context, constraints) => _build(context, constraints.maxHeight),
+    );
+    return Column(
+      children: [
+        if (_searchOpen)
+          TerminalSearchBar(
+            controller: _searchField,
+            focusNode: _searchFocus,
+            total: _searchMatches.length,
+            current: _searchIndex,
+            caseSensitive: _searchCaseSensitive,
+            onChanged: (_) => _runSearch(reveal: true),
+            onToggleCase: () {
+              _searchCaseSensitive = !_searchCaseSensitive;
+              _runSearch(reveal: true);
+            },
+            onOlder: () => _stepSearch(-1),
+            onNewer: () => _stepSearch(1),
+            onClose: _closeSearch,
+          ),
+        Expanded(child: terminal),
+      ],
     );
   }
 
@@ -1041,27 +1069,7 @@ class _TerminalPaneState extends State<TerminalPane> {
               ),
             ),
           ),
-          if (_searchOpen)
-            Positioned(
-              left: 0,
-              top: 0,
-              right: 0,
-              child: TerminalSearchBar(
-                controller: _searchField,
-                focusNode: _searchFocus,
-                total: _searchMatches.length,
-                current: _searchIndex,
-                caseSensitive: _searchCaseSensitive,
-                onChanged: (_) => _runSearch(reveal: true),
-                onToggleCase: () {
-                  _searchCaseSensitive = !_searchCaseSensitive;
-                  _runSearch(reveal: true);
-                },
-                onOlder: () => _stepSearch(-1),
-                onNewer: () => _stepSearch(1),
-                onClose: _closeSearch,
-              ),
-            ),
+
           if (selection != null) ...[
             _buildSelectionHandle(
               isBegin: true,
