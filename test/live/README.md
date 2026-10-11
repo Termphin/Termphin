@@ -62,13 +62,6 @@ TERMPHIN_LIVE_WIN_PORT=22222 TERMPHIN_LIVE_WIN_PASSWORD=... \
 Setting `TERMPHIN_LIVE_WIN_VM_DIR` to the VM directory additionally enables the
 power-cut test, which kills the machine and boots it again.
 
-## Handing this to an agent
-
-`.agents/skills/termphin-live-testing-linux/SKILL.md` and its Windows
-counterpart are the same instructions written for an agent to execute, with
-baselines to compare against and the gotchas that make a run look broken when
-it is not.
-
 ## Containerfile
 
 ```dockerfile

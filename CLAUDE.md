@@ -46,7 +46,6 @@ Termphin is a Flutter SSH client (package `termphin`).
 | `docs/` | Developer documentation and the source of the legal pages (`docs/legal/`). |
 | `branding/` | The logo and the store graphics built from it, covered by `TRADEMARKS.md`. |
 | `repos/` | Sibling repositories as git submodules (`terminal_view`, `termphin-agent`, `tray_kit`), for working on them alongside the app. The app builds without them. |
-| `.agents/` | Instructions for an agent running the `test/live/` suites. |
 
 ## Documentation index
 
