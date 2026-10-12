@@ -28,6 +28,7 @@ import '../../services/sftp/upload_plan.dart';
 import '../../services/ssh/local_network_permission.dart';
 import '../../services/ssh/ssh_service.dart';
 import '../../services/ssh/ssh_session_manager.dart';
+import '../../services/terminal/pty_resize_reporter.dart';
 import '../../services/terminal/terminal_text.dart';
 import '../../theme/theme.dart';
 import '../../utils/connection_error_text.dart';
@@ -277,7 +278,7 @@ class SessionViewState extends ConsumerState<SessionView> {
     _completion.dispose();
     unawaited(_rebootRestoredSub?.cancel());
     _fontSizeSaveDebounce?.cancel();
-    _resizeDebounce?.cancel();
+    _resizeReporter.dispose();
     ctrlMode.dispose();
     altMode.dispose();
     shiftMode.dispose();
@@ -748,32 +749,16 @@ class SessionViewState extends ConsumerState<SessionView> {
     return resolved;
   }
 
-  int? _sentCols;
-  int? _sentRows;
-  Timer? _resizeDebounce;
-
-  /// How long the size has to hold still before the server hears about it.
-  ///
-  /// The pane is resized by the layout now, so it follows the keyboard frame by
-  /// frame - and every frame of that animation is a window-change the remote
-  /// shell acts on, which a full-screen TUI answers with a full repaint. The
-  /// throttle belongs here, at the packet, rather than in the layout: the
-  /// terminal is free to be the right size on every frame, the server is only
-  /// told the size it settled on.
-  static const _resizeSettleDelay = Duration(milliseconds: 120);
-
-  void _onResize(int cols, int rows) {
-    if (cols == _sentCols && rows == _sentRows) return;
-    _sentCols = cols;
-    _sentRows = rows;
-    _resizeDebounce?.cancel();
-    _resizeDebounce = Timer(_resizeSettleDelay, () {
+  late final _resizeReporter = PtyResizeReporter(
+    send: (cols, rows) {
       if (!mounted) return;
       ref
           .read(sshConnectionProvider(widget.sessionKey).notifier)
           .resize(cols, rows);
-    });
-  }
+    },
+  );
+
+  void _onResize(int cols, int rows) => _resizeReporter.report(cols, rows);
 
   void _clearSelection() {
     _nativeController.clearSelection();
