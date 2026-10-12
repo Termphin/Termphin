@@ -26,12 +26,8 @@
     - "Confirmations that delete or end something show that action in red"
     - "The terminal search bar is smaller and no longer covers the output"
     - "Arranging the action dock is easier: drag tiles into place, hide them with one tap and reset to the defaults"
-    - "Autocomplete puts commands you ran in the current folder first and forgives typos and wrong capitals"
-    - "Autocomplete answers faster and notices programs installed on the server since you connected"
+    - "Smarter autocomplete"
   fixed:
-    - "Autocomplete handles file names with spaces and quotes"
-    - "Autocomplete completes option values like --file= and paths starting with ~/"
-    - "Autocomplete no longer offers multi-line commands from history, which ran only their first line"
     - "The file browser no longer shows the previous folder's files after quick navigation"
     - "Closing a tab while the connection drops no longer leaves the tab stuck"
     - "Pasting into a tab that has just closed no longer crashes the app"
