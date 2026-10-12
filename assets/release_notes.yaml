@@ -25,6 +25,7 @@
     - "Anonymize mode also hides hosts in known hosts, the host key prompt and the connection log"
     - "Confirmations that delete or end something show that action in red"
     - "The terminal search bar is smaller and no longer covers the output"
+    - "Arranging the action dock is easier: drag tiles into place, hide them with one tap and reset to the defaults"
   fixed:
     - "The terminal no longer looks broken after coming back to the app until the keyboard is opened"
     - "The file browser no longer shows the previous folder's files after quick navigation"

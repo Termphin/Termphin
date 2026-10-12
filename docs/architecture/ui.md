@@ -181,6 +181,13 @@ is not - there is nothing to type into. The SharedPreferences keys still read
 survives in `snippet_picker_panel.dart`, which really is a search-and-run
 palette.
 
+The editor draws the panel tile for tile over a tray of the hidden ones.
+Dragging inserts (`placeDockAction`), never swaps, and a tray tile can be
+dragged straight to its place; hiding and showing go through the corner badge
+only, so a stray tap on the panel changes nothing. Every edit stores the order
+visible-first (`hideDockAction`), so no hidden action sits unseen between two
+visible ones. A mouse drags at once, a finger long-presses first.
+
 ### Special-keys toolbar and its editor
 
 Action table, grid shape and persistence in `lib/services/settings/toolbar_layout.dart`;

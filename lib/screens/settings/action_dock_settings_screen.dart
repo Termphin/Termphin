@@ -1,17 +1,25 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
 import '../../services/analytics/analytics_service.dart';
 import '../../services/settings/action_dock_settings.dart';
 import '../../theme/theme.dart';
+import '../../utils/platform_info.dart';
 import '../../widgets/ui/action_dock_tile.dart';
+import '../../widgets/ui/app_notifications.dart';
+import '../../widgets/ui/confirm_dialog.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
 
-/// What the action dock lists, drawn as the panel itself, tile for tile.
-/// Drag one tile onto another to reorder, tap it to move it in or out of the
-/// tray below.
+/// What the action dock lists, drawn as the panel itself, tile for tile, over
+/// a tray of the hidden ones.
+///
+/// Dragging a tile inserts it where it is let go - a bar on the tile under it
+/// shows which side - rather than swapping the two, and a tile from the tray
+/// can be dragged straight to its place. Hiding and showing go through the
+/// badge in each tile's corner, so a stray tap on the panel changes nothing.
 ///
 /// The switch that shows the dock at all is in Settings, next to the key
 /// toolbar's own: this screen is only reachable while the dock is on, so a
@@ -26,9 +34,12 @@ class ActionDockSettingsScreen extends StatefulWidget {
 }
 
 class _ActionDockSettingsScreenState extends State<ActionDockSettingsScreen> {
-  List<DockAction> _order = DockAction.values;
-  Set<DockAction> _hidden = kDefaultHiddenDockActions;
+  DockLayout _layout = kDefaultDockLayout;
   bool _loading = true;
+
+  /// The tile being dragged, which decides the side of the insertion bar and
+  /// whether the slot past the last tile is drawn.
+  DockAction? _dragging;
 
   @override
   void initState() {
@@ -43,52 +54,89 @@ class _ActionDockSettingsScreenState extends State<ActionDockSettingsScreen> {
     await actionDockSettings.load();
     if (!mounted) return;
     setState(() {
-      _order = actionDockSettings.order.value;
-      _hidden = actionDockSettings.hidden.value;
+      _layout = (
+        order: actionDockSettings.order.value,
+        hidden: actionDockSettings.hidden.value,
+      );
       _loading = false;
     });
   }
 
   List<DockAction> get _visible => [
-    for (final a in _order)
-      if (!_hidden.contains(a)) a,
+    for (final a in _layout.order)
+      if (!_layout.hidden.contains(a)) a,
   ];
 
   List<DockAction> get _hiddenInOrder => [
-    for (final a in _order)
-      if (_hidden.contains(a)) a,
+    for (final a in _layout.order)
+      if (_layout.hidden.contains(a)) a,
   ];
 
-  /// Swaps two actions inside the full order, so the hidden ones sitting
-  /// between them keep their own places.
-  Future<void> _swap(DockAction a, DockAction b) async {
-    if (a == b) return;
-    final next = List<DockAction>.from(_order);
-    final ia = next.indexOf(a);
-    final ib = next.indexOf(b);
-    if (ia < 0 || ib < 0) return;
-    next[ia] = b;
-    next[ib] = a;
-    setState(() => _order = next);
-    await actionDockSettings.order.set(next);
+  /// The last write still in flight. Each one waits for the one before it, so
+  /// two quick edits reach storage in the order they were made.
+  Future<void> _pendingWrite = Future.value();
+
+  /// Stores [next] and shows it, if the screen is still there - an undo from
+  /// the toast can arrive after the user has left.
+  Future<void> _apply(DockLayout next) {
+    if (mounted) setState(() => _layout = next);
+    return _pendingWrite = _pendingWrite.then(
+      (_) => Future.wait([
+        actionDockSettings.order.set(next.order),
+        actionDockSettings.hidden.set(next.hidden),
+      ]),
+    );
   }
 
-  Future<void> _setHidden(DockAction action, bool hidden) async {
-    final next = Set<DockAction>.from(_hidden);
-    if (hidden) {
-      next.add(action);
-    } else {
-      next.remove(action);
-    }
-    setState(() => _hidden = next);
-    await actionDockSettings.hidden.set(next);
+  void _place(DockAction action, int index) =>
+      unawaited(_apply(placeDockAction(_layout, action, index)));
+
+  void _hide(DockAction action) =>
+      unawaited(_apply(hideDockAction(_layout, action)));
+
+  void _show(DockAction action) => _place(action, _visible.length);
+
+  /// True when [dragged] lands after the tile at [index] rather than before
+  /// it - which happens only when it is moving forward along the panel.
+  bool _landsAfter(DockAction dragged, int index) {
+    final from = _visible.indexOf(dragged);
+    return from >= 0 && from < index;
   }
+
+  Future<void> _reset() async {
+    final t = Translations.of(context);
+    final confirmed = await showConfirmDialog(
+      context,
+      title: t.settings.actionDockResetTitle,
+      message: t.settings.actionDockResetMessage,
+      confirmLabel: t.common.reset,
+    );
+    if (!confirmed || !mounted) return;
+    final previous = _layout;
+    await _apply(kDefaultDockLayout);
+    if (!mounted) return;
+    AppNotifications.success(
+      context,
+      t.settings.actionDockResetDone,
+      actionLabel: t.common.undo,
+      onAction: () => unawaited(_apply(previous)),
+    );
+  }
+
+  void _setDragging(DockAction? action) => setState(() => _dragging = action);
 
   @override
   Widget build(BuildContext context) {
     final t = Translations.of(context);
     return LargeTitleScaffold(
       title: t.settings.actionDock,
+      actions: [
+        IconButton(
+          tooltip: t.settings.actionDockReset,
+          onPressed: _loading ? null : () => unawaited(_reset()),
+          icon: const Icon(PhosphorIconsRegular.arrowCounterClockwise),
+        ),
+      ],
       bodyBuilder: (context, scrollController, gutter) => _loading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
@@ -121,22 +169,34 @@ class _ActionDockSettingsScreenState extends State<ActionDockSettingsScreen> {
 
   Widget _buildPanel(Translations t) {
     final visible = _visible;
+    final dragging = _dragging;
     return SizedBox(
       width: kPalettePanelWidth,
       child: ActionDockPanel(
-        child: visible.isEmpty
+        child: visible.isEmpty && dragging == null
             ? _EmptyNote(t.settings.actionDockAllHidden)
             : Wrap(
                 spacing: kPaletteTileSpacing,
                 runSpacing: kPaletteTileSpacing,
                 children: [
-                  for (final action in visible)
-                    _DraggableTile(
+                  for (final (index, action) in visible.indexed)
+                    _PanelTile(
+                      key: ValueKey(action),
                       action: action,
                       label: dockActionLabel(t, action),
-                      onAcceptAction: (dragged) => _swap(dragged, action),
-                      onTap: () => unawaited(_setHidden(action, true)),
+                      hideLabel: t.settings.actionDockHide(
+                        name: dockActionLabel(t, action).replaceAll('\n', ' '),
+                      ),
+                      landsAfter: (dragged) => _landsAfter(dragged, index),
+                      onAccept: (dragged) => _place(dragged, index),
+                      onHide: () => _hide(action),
+                      onDragStarted: () => _setDragging(action),
+                      onDragEnd: () => _setDragging(null),
                     ),
+                  if (dragging != null &&
+                      (_layout.hidden.contains(dragging) ||
+                          visible.last != dragging))
+                    _EndSlot(onAccept: _show),
                 ],
               ),
       ),
@@ -150,8 +210,8 @@ class _ActionDockSettingsScreenState extends State<ActionDockSettingsScreen> {
     return SizedBox(
       width: kPalettePanelWidth,
       child: DragTarget<DockAction>(
-        onWillAcceptWithDetails: (d) => !_hidden.contains(d.data),
-        onAcceptWithDetails: (d) => unawaited(_setHidden(d.data, true)),
+        onWillAcceptWithDetails: (d) => !_layout.hidden.contains(d.data),
+        onAcceptWithDetails: (d) => _hide(d.data),
         builder: (context, candidates, _) => AnimatedContainer(
           duration: AppTheme.interactiveDuration,
           decoration: BoxDecoration(
@@ -160,7 +220,9 @@ class _ActionDockSettingsScreenState extends State<ActionDockSettingsScreen> {
                 : context.colors.primary.invisible,
             borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             border: Border.all(
-              color: context.colors.surfaceBorder.withValues(alpha: 0.6),
+              color: candidates.isNotEmpty
+                  ? context.colors.primary.withValues(alpha: 0.5)
+                  : context.colors.surfaceBorder.withValues(alpha: 0.6),
             ),
           ),
           padding: const EdgeInsets.all(kPalettePanelPadding),
@@ -171,11 +233,19 @@ class _ActionDockSettingsScreenState extends State<ActionDockSettingsScreen> {
                   runSpacing: kPaletteTileSpacing,
                   children: [
                     for (final action in hidden)
-                      ActionDockTile(
-                        icon: dockActionIcon(action),
+                      _TrayTile(
+                        key: ValueKey(action),
+                        action: action,
                         label: dockActionLabel(t, action),
-                        dimmed: true,
-                        onTap: () => unawaited(_setHidden(action, false)),
+                        showLabel: t.settings.actionDockShow(
+                          name: dockActionLabel(
+                            t,
+                            action,
+                          ).replaceAll('\n', ' '),
+                        ),
+                        onShow: () => _show(action),
+                        onDragStarted: () => _setDragging(action),
+                        onDragEnd: () => _setDragging(null),
                       ),
                   ],
                 ),
@@ -185,42 +255,269 @@ class _ActionDockSettingsScreenState extends State<ActionDockSettingsScreen> {
   }
 }
 
-/// A tile on the panel: draggable onto another to swap the two, and itself a
-/// drop target for whichever one is being dragged.
-class _DraggableTile extends StatelessWidget {
-  const _DraggableTile({
+/// A plain drag under a mouse, where a press-and-move is unambiguous; a
+/// long-press drag under a finger, where the same move scrolls the page.
+class _EditorDraggable extends StatelessWidget {
+  const _EditorDraggable({
+    required this.action,
+    required this.feedback,
+    required this.childWhenDragging,
+    required this.child,
+    required this.onDragStarted,
+    required this.onDragEnd,
+  });
+
+  final DockAction action;
+  final Widget feedback;
+  final Widget childWhenDragging;
+  final Widget child;
+  final VoidCallback onDragStarted;
+  final VoidCallback onDragEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    final wrappedFeedback = Material(
+      color: context.colors.primary.invisible,
+      child: feedback,
+    );
+    if (isDesktopPlatform) {
+      return Draggable<DockAction>(
+        data: action,
+        feedback: wrappedFeedback,
+        childWhenDragging: childWhenDragging,
+        onDragStarted: onDragStarted,
+        onDragEnd: (_) => onDragEnd(),
+        child: child,
+      );
+    }
+    return LongPressDraggable<DockAction>(
+      data: action,
+      feedback: wrappedFeedback,
+      childWhenDragging: childWhenDragging,
+      onDragStarted: onDragStarted,
+      onDragEnd: (_) => onDragEnd(),
+      child: child,
+    );
+  }
+}
+
+/// A tile on the panel: draggable to a new place, a drop target that inserts
+/// whatever is let go on it, and a badge that hides it.
+class _PanelTile extends StatelessWidget {
+  const _PanelTile({
+    super.key,
     required this.action,
     required this.label,
-    required this.onAcceptAction,
-    required this.onTap,
+    required this.hideLabel,
+    required this.landsAfter,
+    required this.onAccept,
+    required this.onHide,
+    required this.onDragStarted,
+    required this.onDragEnd,
   });
 
   final DockAction action;
   final String label;
-  final ValueChanged<DockAction> onAcceptAction;
-  final VoidCallback onTap;
+  final String hideLabel;
+  final bool Function(DockAction dragged) landsAfter;
+  final ValueChanged<DockAction> onAccept;
+  final VoidCallback onHide;
+  final VoidCallback onDragStarted;
+  final VoidCallback onDragEnd;
 
   @override
   Widget build(BuildContext context) {
     final icon = dockActionIcon(action);
     return DragTarget<DockAction>(
       onWillAcceptWithDetails: (d) => d.data != action,
-      onAcceptWithDetails: (d) => onAcceptAction(d.data),
-      builder: (context, candidates, _) => LongPressDraggable<DockAction>(
-        data: action,
-        feedback: Material(
-          color: context.colors.primary.invisible,
-          child: ActionDockTile(icon: icon, label: label, highlighted: true),
+      onAcceptWithDetails: (d) => onAccept(d.data),
+      builder: (context, candidates, _) {
+        final dragged = candidates.whereType<DockAction>().firstOrNull;
+        return _EditorDraggable(
+          action: action,
+          feedback: ActionDockTile(icon: icon, label: label, highlighted: true),
+          childWhenDragging: Opacity(
+            opacity: 0.35,
+            child: ActionDockTile(icon: icon, label: label),
+          ),
+          onDragStarted: onDragStarted,
+          onDragEnd: onDragEnd,
+          child: Stack(
+            children: [
+              ActionDockTile(
+                icon: icon,
+                label: label,
+                highlighted: dragged != null,
+              ),
+              if (dragged != null) _InsertBar(after: landsAfter(dragged)),
+              Positioned(
+                top: 0,
+                right: 0,
+                child: _Badge(
+                  icon: PhosphorIconsRegular.minus,
+                  color: context.colors.textTertiary,
+                  semanticLabel: hideLabel,
+                  onTap: onHide,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// A hidden tile: tap anywhere or its badge to put it back at the end of the
+/// panel, or drag it to the place it should take.
+class _TrayTile extends StatelessWidget {
+  const _TrayTile({
+    super.key,
+    required this.action,
+    required this.label,
+    required this.showLabel,
+    required this.onShow,
+    required this.onDragStarted,
+    required this.onDragEnd,
+  });
+
+  final DockAction action;
+  final String label;
+  final String showLabel;
+  final VoidCallback onShow;
+  final VoidCallback onDragStarted;
+  final VoidCallback onDragEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    final icon = dockActionIcon(action);
+    return _EditorDraggable(
+      action: action,
+      feedback: ActionDockTile(icon: icon, label: label, highlighted: true),
+      childWhenDragging: Opacity(
+        opacity: 0.35,
+        child: ActionDockTile(icon: icon, label: label, dimmed: true),
+      ),
+      onDragStarted: onDragStarted,
+      onDragEnd: onDragEnd,
+      child: Stack(
+        children: [
+          ActionDockTile(icon: icon, label: label, dimmed: true, onTap: onShow),
+          Positioned(
+            top: 0,
+            right: 0,
+            child: _Badge(
+              icon: PhosphorIconsRegular.plus,
+              color: context.colors.primary,
+              semanticLabel: showLabel,
+              onTap: onShow,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Where a tile dragged past the last one lands: an outlined empty slot,
+/// drawn only during a drag that could end there.
+class _EndSlot extends StatelessWidget {
+  const _EndSlot({required this.onAccept});
+
+  final ValueChanged<DockAction> onAccept;
+
+  @override
+  Widget build(BuildContext context) {
+    return DragTarget<DockAction>(
+      onAcceptWithDetails: (d) => onAccept(d.data),
+      builder: (context, candidates, _) => AnimatedContainer(
+        key: const ValueKey('actionDockEndSlot'),
+        duration: AppTheme.interactiveDuration,
+        width: kPaletteTileWidth,
+        height: kPaletteTileHeight,
+        decoration: BoxDecoration(
+          color: candidates.isNotEmpty
+              ? context.colors.primary.withValues(alpha: 0.12)
+              : context.colors.primary.invisible,
+          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+          border: Border.all(
+            color: context.colors.primary.withValues(
+              alpha: candidates.isNotEmpty ? 0.6 : 0.3,
+            ),
+          ),
         ),
-        childWhenDragging: Opacity(
-          opacity: 0.35,
-          child: ActionDockTile(icon: icon, label: label),
+      ),
+    );
+  }
+}
+
+/// The edge of a tile a drop would land against.
+class _InsertBar extends StatelessWidget {
+  const _InsertBar({required this.after});
+
+  final bool after;
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: 10,
+      bottom: 10,
+      left: after ? null : 0,
+      right: after ? 0 : null,
+      child: Container(
+        width: 3,
+        decoration: BoxDecoration(
+          color: context.colors.primary,
+          borderRadius: BorderRadius.circular(2),
         ),
-        child: ActionDockTile(
-          icon: icon,
-          label: label,
-          highlighted: candidates.isNotEmpty,
+      ),
+    );
+  }
+}
+
+/// The small round button in a tile's corner. Its hit area is larger than
+/// the dot so it is easy to hit with a thumb, and stays inside the tile so
+/// the tile's own hit test reaches it. The tooltip shows on hover only: a
+/// long press on a tile belongs to the drag.
+class _Badge extends StatelessWidget {
+  const _Badge({
+    required this.icon,
+    required this.color,
+    required this.semanticLabel,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String semanticLabel;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: semanticLabel,
+      triggerMode: TooltipTriggerMode.manual,
+      excludeFromSemantics: true,
+      child: Semantics(
+        button: true,
+        label: semanticLabel,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onTap: onTap,
+          child: SizedBox(
+            width: 30,
+            height: 30,
+            child: Align(
+              alignment: Alignment.topRight,
+              child: Container(
+                margin: const EdgeInsets.all(4),
+                width: 18,
+                height: 18,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                child: Icon(icon, size: 11, color: context.colors.onPrimary),
+              ),
+            ),
+          ),
         ),
       ),
     );
