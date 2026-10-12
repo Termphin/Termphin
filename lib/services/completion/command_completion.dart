@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import '../settings/setting.dart';
 import 'remote_completion.dart';
+import 'shell_words.dart';
 
 final Setting<bool> commandSuggestionsSetting = Setting.boolean(
   'command_suggestions_enabled',
@@ -55,22 +56,38 @@ class CommandSuggestion {
 
 const _kLineMatches = 3;
 
-/// [line] split before its last word.
-({String before, String word}) splitLastWord(String line) {
-  final at = line.lastIndexOf(RegExp(r'\s')) + 1;
-  return (before: line.substring(0, at), word: line.substring(at));
-}
+/// Most rewrites offered for a word nothing starts with.
+const _kTypoMatches = 3;
 
-/// How names and paths compare on a host: Windows ignores case and takes
-/// either slash.
+/// How a word is matched against a candidate. Each looser one is tried only
+/// when the one before it found nothing, and rewrites the word rather than
+/// finishing it.
+enum _Match { exact, caseless, typo }
+
+/// How words, names and paths read on a host: Windows ignores case, takes
+/// either slash and is not unquoted here; bash completes a word after its
+/// last `=` or `:` on its own.
 class _Rules {
-  const _Rules(this.windows);
+  _Rules(CompletionEngine engine)
+    : windows = engine == CompletionEngine.powershell,
+      breaks = engine == CompletionEngine.bash ? '=:' : '';
 
   final bool windows;
+
+  final String breaks;
+
+  LastWord lastWord(String line) =>
+      readLastWord(line, posix: !windows, breaks: breaks);
 
   bool starts(String text, String prefix) => windows
       ? text.toLowerCase().startsWith(prefix.toLowerCase())
       : text.startsWith(prefix);
+
+  bool matches(String candidate, String typed, _Match match) => switch (match) {
+    _Match.exact => starts(candidate, typed),
+    _Match.caseless => candidate.toLowerCase().startsWith(typed.toLowerCase()),
+    _Match.typo => isNearPrefix(typed.toLowerCase(), candidate.toLowerCase()),
+  };
 
   bool same(String a, String b) =>
       windows ? a.toLowerCase() == b.toLowerCase() : a == b;
@@ -84,29 +101,47 @@ class _Rules {
 
   bool isRelative(String path) =>
       path.startsWith('./') || (windows && path.startsWith('.\\'));
+
+  String escape(String text, {String? quote}) =>
+      windows ? text : shellEscape(text, quote: quote);
 }
 
 /// The line the host's completion is asked about: everything up to the word
-/// being typed, plus the directory part of that word. Candidates for it are
-/// fetched once and narrowed locally as the rest of the word is typed.
+/// being typed, plus the part of that word up to its last slash or break.
+/// Candidates for it are fetched once and narrowed locally as the rest of
+/// the word is typed.
 ///
 /// An option keeps its dash, or the host answers with files instead. The
 /// first word is asked about as an argument to `ls`: command names are
 /// already known locally, and what the host adds there is the files.
-String completionQuery(String line, {bool windows = false}) {
-  final (:before, :word) = splitLastWord(line);
-  final dir = word.substring(0, _Rules(windows).lastSeparator(word) + 1);
-  final option = word.startsWith('--') ? '--' : '-';
-  final query = before + (dir.isEmpty && word.startsWith('-') ? option : dir);
-  return before.trim().isEmpty ? 'ls ${query.trimLeft()}' : query;
+String completionQuery(
+  String line, {
+  CompletionEngine engine = CompletionEngine.bash,
+}) {
+  final rules = _Rules(engine);
+  final word = rules.lastWord(line);
+  final tail = word.rawTail;
+  final dir =
+      word.raw.substring(0, word.rawBreak) +
+      tail.substring(0, rules.lastSeparator(tail) + 1);
+  final option = tail.startsWith('--') ? '--' : '-';
+  final query =
+      word.before + (dir.isEmpty && tail.startsWith('-') ? option : dir);
+  return word.before.trim().isEmpty ? 'ls ${query.trimLeft()}' : query;
 }
 
 /// Unique commands, most recent first - what zsh-autosuggestions and fish
 /// do. Only one suggestion is shown, and the last thing run is the guess a
 /// user can predict; a frequency score kept old habits on top.
-List<String> rankHistory(List<String> history) {
+///
+/// What was run [here], in the directory the shell is in, goes before the
+/// rest, as fish and atuin rank it: the same command line tends to be run
+/// in the same place again.
+List<String> rankHistory(List<String> history, {List<String> here = const []}) {
   final seen = <String>{};
   return [
+    for (final command in here.reversed)
+      if (seen.add(command)) command,
     for (final command in history.reversed)
       if (seen.add(command)) command,
   ];
@@ -124,6 +159,11 @@ List<String> rankHistory(List<String> history) {
 /// finished), then the rest of PATH - a program never run is a weaker guess
 /// than a file the shell is standing next to. A directory is gone into and
 /// `--opt=` takes its value, so neither is followed by a space.
+///
+/// Words are matched as the program gets them, unquoted, and what is typed
+/// is quoted again the way the word already is. When nothing starts with the
+/// word, it is matched regardless of case, then one typo away - a phone
+/// keyboard capitalises and mistypes - and rewritten when taken.
 List<CommandSuggestion> suggest(
   String line,
   HostCompletionData data, {
@@ -131,7 +171,7 @@ List<CommandSuggestion> suggest(
   List<String>? words,
   int limit = 12,
 }) {
-  final rules = _Rules(data.engine == CompletionEngine.powershell);
+  final rules = _Rules(data.engine);
   final result = <CommandSuggestion>[];
   final seen = <String>{};
   void add(String label, String insert, SuggestionKind kind, {int erase = 0}) {
@@ -141,76 +181,127 @@ List<CommandSuggestion> suggest(
     );
   }
 
-  void addPaths(String word) {
-    if (words == null) return;
-    for (final candidate in words) {
-      if (rules.same(candidate, word) || !rules.starts(candidate, word)) {
-        continue;
-      }
+  if (line.trim().isEmpty) return result;
+  final last = rules.lastWord(line);
+  final word = last.plainTail;
+  final looser = [
+    _Match.exact,
+    if (!rules.windows && last.quote == null) _Match.caseless,
+    if (last.quote == null) _Match.typo,
+  ];
+
+  /// What finishes [candidate] after the word as typed: the rest of it, or
+  /// all of it in place of the word when [match] is a loose one.
+  void addWord(
+    String candidate,
+    _Match match, {
+    String prefix = '',
+    bool open = false,
+    bool rewrite = false,
+  }) {
+    final close = open ? '' : '${last.quote ?? ''} ';
+    if (match == _Match.exact && !rewrite) {
       final rest = candidate.substring(word.length);
-      final open = rules.isDirectory(candidate) || candidate.endsWith('=');
-      add(candidate, open ? rest : '$rest ', SuggestionKind.word);
-      if (result.length >= limit) break;
+      add(
+        candidate,
+        '${rules.escape(rest, quote: last.quote)}$close',
+        SuggestionKind.word,
+      );
+    } else {
+      add(
+        '$prefix$candidate',
+        '$prefix${rules.escape(candidate)}${open ? '' : ' '}',
+        SuggestionKind.word,
+        erase: rewrite ? last.raw.length : last.rawTail.length,
+      );
     }
   }
 
-  final (:before, :word) = splitLastWord(line);
-  if (line.trim().isEmpty) return result;
+  void addPaths() {
+    if (words == null) return;
+    for (final match in looser) {
+      final before = result.length;
+      for (final candidate in words) {
+        if (rules.same(candidate, word) ||
+            !rules.matches(candidate, word, match)) {
+          continue;
+        }
+        final open = rules.isDirectory(candidate) || candidate.endsWith('=');
+        addWord(candidate, match, open: open);
+        if (result.length >= limit) return;
+        if (match == _Match.typo && result.length >= before + _kTypoMatches) {
+          return;
+        }
+      }
+      if (result.length > before) return;
+    }
+  }
 
   for (final command in ranked) {
     if (result.length >= _kLineMatches) break;
-    if (command.length > line.length && rules.starts(command, line)) {
+    if (command.length > line.length &&
+        !command.contains('\n') &&
+        rules.starts(command, line)) {
       add(command, command.substring(line.length), SuggestionKind.history);
     }
   }
 
-  if (before.trim().isNotEmpty) {
-    addPaths(word);
-    return result.take(limit).toList();
-  }
-  if (rules.lastSeparator(word) >= 0) {
-    addPaths(word);
+  if (last.before.trim().isNotEmpty || rules.lastSeparator(word) >= 0) {
+    addPaths();
     return result.take(limit).toList();
   }
 
   final used = <String>{};
   for (final command in ranked) {
-    final name = splitFirstWord(command);
-    if (rules.starts(name, word)) used.add(name);
+    used.add(splitFirstWord(command));
   }
-  for (final name in used) {
-    if (!rules.same(name, word)) {
-      add(name, '${name.substring(word.length)} ', SuggestionKind.word);
+  for (final match in looser) {
+    final before = result.length;
+    final typo = match == _Match.typo;
+    final names = <String>{
+      for (final name in used)
+        if (!rules.same(name, word) && rules.matches(name, word, match)) name,
+    };
+    final cap = typo ? before + _kTypoMatches : limit;
+    for (final name in names) {
+      if (result.length >= cap) break;
+      addWord(name, match);
     }
-  }
 
-  for (final candidate in words ?? const <String>[]) {
-    if (!rules.starts(candidate, word) || rules.isRelative(candidate)) continue;
-    final path = './$candidate';
-    add(
-      path,
-      rules.isDirectory(candidate) ? path : '$path ',
-      SuggestionKind.word,
-      erase: word.length,
-    );
-  }
+    if (!typo) {
+      for (final candidate in words ?? const <String>[]) {
+        if (!rules.matches(candidate, word, match) ||
+            rules.isRelative(candidate)) {
+          continue;
+        }
+        addWord(
+          candidate,
+          match,
+          prefix: './',
+          open: rules.isDirectory(candidate),
+          rewrite: true,
+        );
+      }
+    }
 
-  final fromPath =
-      data.commands
-          .where(
-            (c) =>
-                rules.starts(c, word) &&
-                !rules.same(c, word) &&
-                !used.contains(c),
-          )
-          .toList()
-        ..sort((a, b) {
-          final byLength = a.length.compareTo(b.length);
-          return byLength != 0 ? byLength : a.compareTo(b);
-        });
-  for (final name in fromPath) {
-    if (result.length >= limit) break;
-    add(name, '${name.substring(word.length)} ', SuggestionKind.word);
+    final fromPath =
+        data.commands
+            .where(
+              (c) =>
+                  !rules.same(c, word) &&
+                  !names.contains(c) &&
+                  rules.matches(c, word, match),
+            )
+            .toList()
+          ..sort((a, b) {
+            final byLength = a.length.compareTo(b.length);
+            return byLength != 0 ? byLength : a.compareTo(b);
+          });
+    for (final name in fromPath) {
+      if (result.length >= cap) break;
+      addWord(name, match);
+    }
+    if (result.length > before) break;
   }
   return result.take(limit).toList();
 }
@@ -226,15 +317,16 @@ bool isKnownWord(
   List<String> ranked = const [],
   List<String>? words,
 }) {
-  final rules = _Rules(data.engine == CompletionEngine.powershell);
-  final (:before, :word) = splitLastWord(line);
-  if (word.isEmpty) return false;
-  if (word.startsWith('-')) return true;
+  final rules = _Rules(data.engine);
+  final last = rules.lastWord(line);
+  final word = last.plainTail;
+  if (last.plain.isEmpty) return false;
+  if (last.plain.startsWith('-')) return true;
   bool matches(String w) =>
       rules.same(w, word) ||
       (rules.isDirectory(w) && rules.same(w.substring(0, w.length - 1), word));
   if (words != null && words.any(matches)) return true;
-  if (before.trim().isNotEmpty) return false;
+  if (last.before.trim().isNotEmpty) return false;
   return data.commands.any((c) => rules.same(c, word)) ||
       ranked.any((c) => rules.same(splitFirstWord(c), word));
 }
@@ -245,35 +337,78 @@ String splitFirstWord(String command) {
   return space < 0 ? trimmed : trimmed.substring(0, space);
 }
 
-/// Per host, for the life of the process: what the probe found plus what was
-/// typed since. A failed probe is cached as empty rather than retried on every
+/// Per host: what the probe found plus what was typed since, read again
+/// once it is [freshFor] old so a program installed since shows up. A failed
+/// probe is cached as empty for [retryAfter] rather than retried on every
 /// keystroke.
 class HostCompletionCache {
-  static final _hosts = <String, Future<HostCompletionData>>{};
+  static final _hosts = <String, _CacheEntry>{};
 
+  static const freshFor = Duration(hours: 1);
+
+  static const retryAfter = Duration(minutes: 1);
+
+  @visibleForTesting
+  static DateTime Function() now = DateTime.now;
+
+  /// The host's data. The same future while it is fresh, a new one once it
+  /// is not; the new one keeps what the old one remembered.
   static Future<HostCompletionData> load(
     String hostKey,
     Future<Uint8List> Function(String command) run, {
     bool windows = false,
-  }) => _hosts.putIfAbsent(hostKey, () async {
-    try {
-      final output = await run(
-        windows ? powerShellProbeCommand() : probeCommand(),
-      ).timeout(const Duration(seconds: 15));
-      return parseProbe(output);
-    } catch (_) {
-      return HostCompletionData.empty;
-    }
-  });
+  }) {
+    final entry = _hosts[hostKey];
+    if (entry != null && !entry.isStale(now())) return entry.data;
+    final previous = entry?.data;
+    final next = _CacheEntry();
+    next.data = () async {
+      HostCompletionData data;
+      try {
+        final output = await run(
+          windows ? powerShellProbeCommand() : probeCommand(),
+        ).timeout(const Duration(seconds: 15));
+        data = parseProbe(output);
+      } catch (_) {
+        data = HostCompletionData.empty;
+        next.failed = true;
+      }
+      if (previous != null) data.carryOver(await previous);
+      next.loadedAt = now();
+      return data;
+    }();
+    _hosts[hostKey] = next;
+    return next.data;
+  }
 
   @visibleForTesting
   static void clear() => _hosts.clear();
 }
 
+class _CacheEntry {
+  late final Future<HostCompletionData> data;
+
+  /// Null while the probe is running: a running one is never stale.
+  DateTime? loadedAt;
+
+  var failed = false;
+
+  bool isStale(DateTime now) {
+    final at = loadedAt;
+    if (at == null) return false;
+    return now.difference(at) >=
+        (failed
+            ? HostCompletionCache.retryAfter
+            : HostCompletionCache.freshFor);
+  }
+}
+
 /// Suggestions for one session's command line, kept in [suggestions].
 ///
 /// Fed the line on every change; history and command names answer at once,
-/// the host's own completion after a pause and one round trip.
+/// the host's own completion after a pause and one round trip - no pause
+/// once a word is ended or a directory entered, when what to ask is already
+/// certain.
 class CommandCompletion {
   CommandCompletion({
     required this.hostKey,
@@ -297,17 +432,24 @@ class CommandCompletion {
 
   static const _fetchDelay = Duration(milliseconds: 200);
 
+  /// Host answers kept for one line, so going back over a word asks nothing
+  /// again.
+  static const _kAnswersKept = 16;
+
   Future<HostCompletionData>? _loading;
   HostCompletionData? _data;
   List<String> _ranked = const [];
-  int _rankedFor = -1;
+  Object? _rankedFor;
 
   String? _line;
-  String? _wordsQuery;
-  List<String>? _words;
+  final _answers = <String, List<String>>{};
   String? _pendingQuery;
   Timer? _fetchTimer;
   var _disposed = false;
+
+  /// The directory the host last said it completed in, which is where a
+  /// command submitted now runs.
+  String? _directory;
 
   /// The last line published that did not end in a space, and whether its
   /// last word was known not to be a command, file or option the host knows.
@@ -320,14 +462,11 @@ class CommandCompletion {
   /// Feeds a new line to publish suggestions for.
   ///
   /// A new line may be in another directory, so a blank or missing one drops
-  /// whatever directory listing was fetched for the last one.
+  /// whatever was fetched for the last one.
   void update(String? line) {
     if (line == _line) return;
     _line = line;
-    if (line == null || line.trim().isEmpty) {
-      _wordsQuery = null;
-      _words = null;
-    }
+    if (line == null || line.trim().isEmpty) _answers.clear();
     if (line == null) {
       _fetchTimer?.cancel();
       suggestions.value = const [];
@@ -336,22 +475,40 @@ class CommandCompletion {
     _ensureLoaded();
     _publish();
     _fetchTimer?.cancel();
-    _fetchTimer = Timer(_fetchDelay, _fetchWords);
+    _fetchTimer = Timer(
+      _endsWord(line) ? Duration.zero : _fetchDelay,
+      _fetchWords,
+    );
   }
 
   void remember(String command) {
+    final directory = windows() ? location() : _directory;
     _ensureLoaded().then((data) {
-      data.remember(command);
-      _rankedFor = -1;
+      data.remember(command, directory: directory);
+      _rankedFor = null;
     });
   }
 
-  Future<HostCompletionData> _ensureLoaded() => _loading ??=
-      HostCompletionCache.load(hostKey, run, windows: windows()).then((data) {
-        _data = data;
-        if (!_disposed) _publish();
-        return data;
-      });
+  /// The cache's data for the host, asked again on every call so data read
+  /// again once stale replaces what this session holds.
+  Future<HostCompletionData> _ensureLoaded() {
+    final loading = HostCompletionCache.load(hostKey, run, windows: windows());
+    if (identical(loading, _loading)) return loading;
+    _loading = loading;
+    loading.then((data) {
+      if (!identical(loading, _loading)) return;
+      _data = data;
+      _rankedFor = null;
+      if (!_disposed) _publish();
+    });
+    return loading;
+  }
+
+  bool _endsWord(String line) =>
+      line.endsWith(' ') ||
+      line.endsWith('/') ||
+      line.endsWith('=') ||
+      (windows() && line.endsWith('\\'));
 
   /// Recomputes and republishes [suggestions] for the current line.
   ///
@@ -362,11 +519,13 @@ class CommandCompletion {
     final line = _line;
     if (line == null || _disposed) return;
     final data = _data ?? HostCompletionData.empty;
-    if (_rankedFor != data.history.length) {
-      _ranked = rankHistory(data.history);
-      _rankedFor = data.history.length;
+    final directory = windows() ? location() : _directory;
+    final rankedFor = (data, data.history.length, directory);
+    if (rankedFor != _rankedFor) {
+      _ranked = rankHistory(data.history, here: data.ranIn(directory));
+      _rankedFor = rankedFor;
     }
-    final words = _wordsQuery == _query(line, data) ? _words : null;
+    final words = _answers[_query(line, data)];
     final next = suggest(
       line,
       data,
@@ -399,7 +558,7 @@ class CommandCompletion {
     if (data.engine == CompletionEngine.none) return;
     if (_afterUnknownWord(line)) return;
     final query = _query(line, data);
-    if (query == _wordsQuery || query == _pendingQuery) return;
+    if (_answers.containsKey(query) || query == _pendingQuery) return;
     _pendingQuery = query;
     try {
       final output = await run(
@@ -413,8 +572,12 @@ class CommandCompletion {
               ),
       ).timeout(const Duration(seconds: 6));
       if (_disposed || _pendingQuery != query) return;
-      _wordsQuery = query;
-      _words = parseCandidates(output);
+      _directory = completionDirectory(output) ?? _directory;
+      _answers.remove(query);
+      _answers[query] = parseCandidates(output);
+      while (_answers.length > _kAnswersKept) {
+        _answers.remove(_answers.keys.first);
+      }
       _publish();
     } catch (_) {
     } finally {
@@ -422,10 +585,8 @@ class CommandCompletion {
     }
   }
 
-  static String _query(String line, HostCompletionData data) => completionQuery(
-    line,
-    windows: data.engine == CompletionEngine.powershell,
-  );
+  static String _query(String line, HostCompletionData data) =>
+      completionQuery(line, engine: data.engine);
 
   void dispose() {
     _disposed = true;
