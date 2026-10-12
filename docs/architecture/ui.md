@@ -150,9 +150,13 @@ come back:
   first entered.
 - **The debounce moved to the packet.** The pane follows the keyboard frame by
   frame, and every intermediate height would otherwise be a window-change the
-  remote shell acts on. `SessionViewState._onResize` holds the last size for
-  120ms and sends once. Throttling the layout to protect the pty was the wrong
-  layer.
+  remote shell acts on. `PtyResizeReporter` holds the last size for 120ms and
+  sends once. Throttling the layout to protect the pty was the wrong layer.
+  Settling back on the size the server already has (the layout passing
+  through another one, as it can on the way back from the background) sends a
+  one-row nudge first: the local buffer was resized twice, the pty never, so
+  without it no SIGWINCH comes and the program never repaints over what the
+  resizes left - until the keyboard changes the size for real.
 
 ### Tab strip position
 
