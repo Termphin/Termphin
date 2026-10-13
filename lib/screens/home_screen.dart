@@ -810,13 +810,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               ),
                             ),
                           ],
-                          SliverToBoxAdapter(
-                            child: SizedBox(
-                              height: _selectedProfileIds.isEmpty
-                                  ? 32
-                                  : SelectionActionBar.reservedHeight,
-                            ),
-                          ),
+                          const SliverToBoxAdapter(child: SizedBox(height: 32)),
                         ],
                       ],
                     ),

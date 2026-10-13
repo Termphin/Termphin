@@ -3465,6 +3465,9 @@ class Translations$selection$en {
 
 	/// en: 'Still in use'
 	String get inUseTitle => 'Still in use';
+
+	/// en: 'More'
+	String get more => 'More';
 }
 
 // Path: globalSearch
@@ -3627,6 +3630,18 @@ class Translations$sftp$queue$en {
 
 	/// en: '{count} items'
 	String items({required Object count}) => '${count} items';
+
+	/// en: 'Uploading'
+	String get uploading => 'Uploading';
+
+	/// en: 'Downloading'
+	String get downloading => 'Downloading';
+
+	/// en: 'Copying'
+	String get copyingTitle => 'Copying';
+
+	/// en: 'Moving'
+	String get movingTitle => 'Moving';
 }
 
 // Path: connection.quality
@@ -4024,6 +4039,10 @@ extension on Translations {
 			'sftp.queue.failedCount' => ({required Object count}) => '${count} failed - tap to see why',
 			'sftp.queue.clearFinished' => 'Clear',
 			'sftp.queue.items' => ({required Object count}) => '${count} items',
+			'sftp.queue.uploading' => 'Uploading',
+			'sftp.queue.downloading' => 'Downloading',
+			'sftp.queue.copyingTitle' => 'Copying',
+			'sftp.queue.movingTitle' => 'Moving',
 			'editor.unsavedTitle' => 'Unsaved changes',
 			'editor.discardConfirm' => 'Discard changes?',
 			'editor.savedSuccess' => 'File saved successfully',
@@ -4217,12 +4236,12 @@ extension on Translations {
 			'settings.rateAppFailedIos' => 'Could not open the App Store.',
 			'settings.downloadFolderIos' => 'Files app (On My iPhone / Termphin)',
 			'settings.licenses' => 'Open source licenses',
+			_ => null,
+		} ?? switch (path) {
 			'settings.licensesSubtitle' => 'The packages Termphin is built on, and their terms',
 			'settings.privacyPolicy' => 'Privacy policy',
 			'settings.privacyPolicySubtitle' => 'What is collected, and what never leaves this device',
 			'settings.terms' => 'Terms of service',
-			_ => null,
-		} ?? switch (path) {
 			'settings.termsSubtitle' => 'The terms you agree to by using Termphin',
 			'settings.legalLinkFailed' => 'Could not open your browser.',
 			'settings.knownHosts' => 'Known hosts',
@@ -4731,12 +4750,12 @@ extension on Translations {
 			'manual.howToFix' => 'How to fix this',
 			'manual.troubleshooting' => 'Troubleshooting guide',
 			'manual.readMore' => 'Read more in the manual',
+			_ => null,
+		} ?? switch (path) {
 			'manual.whatIsThis' => 'What is this?',
 			'tagMigration.title' => 'Convert tags to groups',
 			'tagMigration.explanation' => 'Tags have been replaced by groups. Each machine and snippet now belongs to a single group. Choose which tags to convert into groups.',
 			'tagMigration.multipleTagsNotice' => 'Records with several tags will join the first of their tags kept in this list.',
-			_ => null,
-		} ?? switch (path) {
 			'tagMigration.usageCount' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '${n} record', other: '${n} records', ), 
 			'tagMigration.createGroups' => 'Create groups',
 			'tagMigration.startFresh' => 'Start fresh',
@@ -4757,6 +4776,7 @@ extension on Translations {
 			'selection.machinesInUseBody' => ({required num n, required Object count}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '1 machine connects through one you are deleting and will stop connecting:', other: '${count} machines connect through one you are deleting and will stop connecting:', ), 
 			'selection.keysInUseBody' => ({required num n, required Object count}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '1 machine uses a key you are deleting and will stop connecting:', other: '${count} machines use a key you are deleting and will stop connecting:', ), 
 			'selection.inUseTitle' => 'Still in use',
+			'selection.more' => 'More',
 			'globalSearch.hint' => 'Search everything',
 			'globalSearch.back' => 'Back',
 			'globalSearch.clear' => 'Clear',
