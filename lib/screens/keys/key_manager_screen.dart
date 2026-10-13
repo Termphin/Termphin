@@ -437,13 +437,7 @@ class _KeyManagerScreenState extends ConsumerState<KeyManagerScreen> {
                                     ),
                                   ),
                                 ],
-                                SliverToBoxAdapter(
-                                  child: SizedBox(
-                                    height: _isSelectionMode
-                                        ? SelectionActionBar.reservedHeight
-                                        : 32,
-                                  ),
-                                ),
+                                const SliverToBoxAdapter(child: SizedBox(height: 32)),
                               ],
                             ],
                           ),

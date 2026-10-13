@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
 import '../../theme/theme.dart';
+import 'context_bar.dart';
 
 /// How a selectable card paints, so machines, keys and snippets agree on what
 /// "selected" looks like.
@@ -96,13 +96,13 @@ class SelectionCheck extends StatelessWidget {
   }
 }
 
-/// Lays a [SelectionActionBar] over a list, sliding it in while [bar] is
-/// non-null and out again once the selection is cleared.
+/// Puts a [SelectionActionBar] under a list, sliding it up from the bottom
+/// edge while [bar] is non-null and back down once the selection is cleared.
 ///
-/// Floating, not pinned under the list: a strip stacked on the bottom nav
-/// read as a second, foreign nav bar. The list keeps its last row reachable
-/// by reserving [SelectionActionBar.reservedHeight] at its end while
-/// selecting.
+/// Docked rather than floating: it pushes the list up instead of covering
+/// it, so nothing needs to be reserved at the list's end, and it is the same
+/// strip the file browser and the transfer bar use. At the bottom, within
+/// reach of the thumb that made the selection.
 class SelectionActionHost extends StatelessWidget {
   const SelectionActionHost({super.key, required this.child, this.bar});
 
@@ -111,26 +111,27 @@ class SelectionActionHost extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
+    final instant = MediaQuery.disableAnimationsOf(context);
+    return Column(
       children: [
-        Positioned.fill(child: child),
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          child: AnimatedSwitcher(
-            duration: AppTheme.motionSlow,
-            switchInCurve: AppTheme.interactiveCurve,
-            switchOutCurve: Curves.easeInCubic,
-            transitionBuilder: (child, animation) => SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0, 0.4),
-                end: Offset.zero,
-              ).animate(animation),
-              child: FadeTransition(opacity: animation, child: child),
+        Expanded(child: child),
+        AnimatedSwitcher(
+          duration: instant ? Duration.zero : AppTheme.motionSlow,
+          switchInCurve: AppTheme.interactiveCurve,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, animation) => ClipRect(
+            child: SizeTransition(
+              sizeFactor: animation,
+              alignment: Alignment.topCenter,
+              child: child,
             ),
-            child: bar ?? const SizedBox.shrink(),
           ),
+          child: bar == null
+              ? const SizedBox(width: double.infinity)
+              : KeyedSubtree(
+                  key: const ValueKey('bar'),
+                  child: SafeArea(top: false, child: bar!),
+                ),
         ),
       ],
     );
@@ -141,12 +142,8 @@ class SelectionActionHost extends StatelessWidget {
 ///
 /// Machines, keys and snippets all carry a group and all delete the same way,
 /// so the three screens share this rather than each growing its own bar and
-/// drifting on which action sits where. The actions are drawn the way the
-/// bottom nav draws its tabs - icon over a short label - so the bar belongs
-/// to the same family instead of being a stock contextual toolbar.
-///
-/// Wraps its content in a transparent `Material`: the actions' ink needs a
-/// `Material` above the bar's own fill to show.
+/// drifting on which action sits where. It is a [ContextBar], the same strip
+/// the file browser selects with.
 class SelectionActionBar extends StatelessWidget {
   const SelectionActionBar({
     super.key,
@@ -156,9 +153,6 @@ class SelectionActionBar extends StatelessWidget {
     required this.onClear,
     this.onSelectAll,
   });
-
-  /// What a list leaves free at its end so the bar never covers its last row.
-  static const double reservedHeight = 96;
 
   final int count;
   final VoidCallback onMove;
@@ -174,141 +168,29 @@ class SelectionActionBar extends StatelessWidget {
     final t = Translations.of(context);
     final colors = context.colors;
     final empty = count == 0;
-
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(8, 6, 6, 6),
-          decoration: BoxDecoration(
-            color: colors.surfaceElevated,
-            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-            border: Border.all(color: colors.surfaceBorderStrong),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(
-                  alpha: colors.isDark ? 0.3 : 0.08,
-                ),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Material(
-            type: MaterialType.transparency,
-            child: Row(
-              children: [
-                IconButton(
-                  tooltip: t.selection.clear,
-                  onPressed: onClear,
-                  style: IconButton.styleFrom(
-                    backgroundColor: colors.surfaceOffset,
-                    foregroundColor: colors.textSecondary,
-                    fixedSize: const Size.square(40),
-                    minimumSize: const Size.square(40),
-                  ),
-                  icon: const Icon(PhosphorIconsRegular.x, size: 16),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration: AppTheme.motionFast,
-                    layoutBuilder: (current, previous) => Stack(
-                      alignment: Alignment.centerLeft,
-                      children: [...previous, ?current],
-                    ),
-                    child: Text(
-                      t.selection.countSelected(n: count, count: count),
-                      key: ValueKey(count),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: colors.itemTitle,
-                    ),
-                  ),
-                ),
-                _BarAction(
-                  icon: PhosphorIconsRegular.checks,
-                  label: t.selection.all,
-                  tooltip: t.selection.selectAll,
-                  onPressed: onSelectAll,
-                ),
-                _BarAction(
-                  icon: PhosphorIconsRegular.folderSimple,
-                  label: t.selection.move,
-                  tooltip: t.selection.moveToGroup,
-                  onPressed: empty ? null : onMove,
-                ),
-                _BarAction(
-                  icon: PhosphorIconsRegular.trash,
-                  label: t.common.delete,
-                  tooltip: t.common.delete,
-                  color: colors.error,
-                  onPressed: empty ? null : onDelete,
-                ),
-              ],
-            ),
-          ),
+    return ContextBar(
+      selection: true,
+      atBottom: true,
+      leading: ContextBarClose(tooltip: t.selection.clear, onPressed: onClear),
+      title: t.selection.countSelected(n: count, count: count),
+      actions: [
+        ContextBarAction(
+          icon: PhosphorIconsRegular.checks,
+          label: t.selection.selectAll,
+          onPressed: onSelectAll,
         ),
-      ),
-    );
-  }
-}
-
-class _BarAction extends StatelessWidget {
-  const _BarAction({
-    required this.icon,
-    required this.label,
-    required this.tooltip,
-    required this.onPressed,
-    this.color,
-  });
-
-  final IconData icon;
-  final String label;
-  final String tooltip;
-  final VoidCallback? onPressed;
-  final Color? color;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    final enabled = onPressed != null;
-    final tint = (color ?? colors.textPrimary).withValues(
-      alpha: enabled ? 1 : 0.35,
-    );
-    return Tooltip(
-      message: tooltip,
-      child: Semantics(
-        button: true,
-        enabled: enabled,
-        child: InkWell(
-          onTap: enabled
-              ? () {
-                  HapticFeedback.selectionClick();
-                  onPressed!();
-                }
-              : null,
-          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-          child: SizedBox(
-            width: 60,
-            height: 52,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, size: 22, color: tint),
-                const SizedBox(height: 3),
-                Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: colors.uiSmall.copyWith(fontSize: 11, color: tint),
-                ),
-              ],
-            ),
-          ),
+        ContextBarAction(
+          icon: PhosphorIconsRegular.folderSimple,
+          label: t.selection.moveToGroup,
+          onPressed: empty ? null : onMove,
         ),
-      ),
+        ContextBarAction(
+          icon: PhosphorIconsRegular.trash,
+          label: t.common.delete,
+          color: colors.error,
+          onPressed: empty ? null : onDelete,
+        ),
+      ],
     );
   }
 }

@@ -1233,9 +1233,9 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
           ),
         ),
       ],
-      child: Padding(
-        padding: const EdgeInsets.all(4),
-        child: Icon(PhosphorIconsRegular.plus, color: _accent, size: 18),
+      child: SizedBox.square(
+        dimension: 40,
+        child: Icon(PhosphorIconsRegular.plus, color: _accent, size: 22),
       ),
     );
   }
