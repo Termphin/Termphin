@@ -30,7 +30,7 @@ file is found by asking what it is about, not what kind of class it holds.
 | `services/ssh/` | `SshService`, `SshSessionManager`, keepalive and quality, network monitor, local network permission, remote agent client, connection prompts |
 | `services/terminal/` | What a session does with bytes: OSC markers, predictive echo, reconnect input buffer, remote mux commands, agent probe cache, terminal modes and text |
 | `services/completion/` | Command-line reading and completion |
-| `services/sftp/` | SFTP service, remote copy and move, downloads, upload plan, cancel token |
+| `services/sftp/` | SFTP service, remote copy and move, downloads, upload plan, transfer queue, cancel token |
 | `services/storage/` | Every store over SharedPreferences, plus the `WriteQueue` they serialise on |
 | `services/security/` | `SecretCipher`, the AEAD ciphers, the PIN/biometric lock |
 | `services/backup/` | Export and import, the backup envelope's crypto |
@@ -42,7 +42,7 @@ file is found by asking what it is about, not what kind of class it holds.
 | `services/analytics/` | PostHog wrapper and its closed enums |
 | `widgets/terminal/` | The session pane, key toolbar, action dock, tunnels, add-tab sheet |
 | `widgets/ssh/` | Connecting view, connection log, quality pill, host key and keyboard-interactive dialogs |
-| `widgets/sftp/` | File browser, folder picker, transfer dialogs, editor pieces |
+| `widgets/sftp/` | File browser, folder picker, transfer bar and dialogs, editor pieces |
 | `widgets/settings/` | One widget per Settings section, each loading its own state, plus the PIN setup dialog |
 | `widgets/profiles/`, `widgets/snippets/`, `widgets/backup/`, `widgets/onboarding/` | Pieces that belong to one feature |
 | `widgets/ui/` | The shared kit: cards, sheets, notifications, form fields, nav rail, list headers, settings tiles, confirm and text-input dialogs, clipboard and link helpers |

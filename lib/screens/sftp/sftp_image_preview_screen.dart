@@ -13,11 +13,11 @@ import '../../services/analytics/analytics_service.dart';
 import '../../services/sftp/cancel_token.dart';
 import '../../services/sftp/download_service.dart';
 import '../../services/sftp/sftp_service.dart';
+import '../../services/sftp/transfer_queue.dart';
 import '../../theme/theme.dart';
 import '../../utils/format_size.dart';
 import '../../utils/sftp_error_handler.dart';
 import '../../utils/sftp_path.dart';
-import '../../widgets/sftp/transfer_progress_dialog.dart';
 import '../../widgets/ui/app_notifications.dart';
 import '../../widgets/ui/clipboard_and_links.dart';
 import '../../widgets/ui/confirm_dialog.dart';
@@ -63,6 +63,10 @@ class SftpImagePreviewScreen extends StatefulWidget {
   /// while the handler popped anyway.
   final VoidCallback? onMutated;
 
+  /// The session's transfer queue, which a download joins like any other.
+  /// Without one the download runs on its own.
+  final TransferQueue? transferQueue;
+
   const SftpImagePreviewScreen({
     super.key,
     required this.sftp,
@@ -73,6 +77,7 @@ class SftpImagePreviewScreen extends StatefulWidget {
     this.directoryPath,
     this.siblingImages,
     this.onMutated,
+    this.transferQueue,
   });
 
   @override
@@ -265,21 +270,32 @@ class _SftpImagePreviewScreenState extends State<SftpImagePreviewScreen>
     _ensureLoaded(index + 1);
   }
 
+  /// This screen covers the session's transfer bar, so the button itself
+  /// spins while the download waits and runs.
+  bool _downloading = false;
+
   Future<void> _download() async {
     final entry = _entries[_index];
-    final session = TransferSession(
-      kind: TransferKind.download,
-      initialLabel: entry.filename,
-    )..show(context);
+    Future<SavedDownload> run(TransferJob? job) =>
+        DownloadService.downloadSftpFile(
+          sftp: widget.sftp,
+          remotePath: entry.path,
+          fileName: entry.filename,
+          cancel: job?.cancel,
+          onProgress: job?.report,
+        );
+    setState(() => _downloading = true);
     try {
-      await DownloadService.downloadSftpFile(
-        sftp: widget.sftp,
-        remotePath: entry.path,
-        fileName: entry.filename,
-        cancel: session.cancel,
-        onProgress: session.update,
-      );
-      session.close();
+      final queue = widget.transferQueue;
+      if (queue != null) {
+        await queue.add(
+          kind: TransferJobKind.download,
+          label: entry.filename,
+          run: run,
+        );
+      } else {
+        await run(null);
+      }
       if (mounted) {
         AppNotifications.success(
           context,
@@ -287,13 +303,14 @@ class _SftpImagePreviewScreenState extends State<SftpImagePreviewScreen>
         );
       }
     } catch (e) {
-      session.close();
       if (!mounted) return;
-      if (session.isCancelled || e is TransferCancelled) {
+      if (e is TransferCancelled) {
         AppNotifications.info(context, t.sftp.downloadCancelled);
       } else {
         AppNotifications.error(context, resolveSftpError(e, t));
       }
+    } finally {
+      if (mounted) setState(() => _downloading = false);
     }
   }
 
@@ -426,9 +443,15 @@ class _SftpImagePreviewScreenState extends State<SftpImagePreviewScreen>
                   ),
           ),
           IconButton(
-            icon: const Icon(PhosphorIconsFill.downloadSimple),
+            icon: _downloading
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(PhosphorIconsFill.downloadSimple),
             tooltip: t.sftp.download,
-            onPressed: entry != null && _stateFor(_index).file != null
+            onPressed:
+                !_downloading && entry != null && _stateFor(_index).file != null
                 ? _download
                 : null,
           ),

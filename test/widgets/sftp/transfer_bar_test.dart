@@ -1,0 +1,195 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:termphin/services/sftp/download_service.dart';
+import 'package:termphin/services/sftp/transfer_queue.dart';
+import 'package:termphin/widgets/sftp/transfer_bar.dart';
+
+import '../../support/test_app.dart';
+
+void main() {
+  late TransferQueue queue;
+  late ValueNotifier<bool> expanded;
+
+  setUp(() {
+    queue = TransferQueue();
+    expanded = ValueNotifier(false);
+  });
+
+  Future<void> pump(WidgetTester tester) => pumpTestApp(
+    tester,
+    Scaffold(
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: TransferBar(queue: queue, expanded: expanded),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  /// Takes the bar down before the queue, then lets the queue cancel what is
+  /// left and drop its linger timer.
+  Future<void> finish(WidgetTester tester) async {
+    await tester.pumpWidget(const SizedBox());
+    queue.dispose();
+    expanded.dispose();
+  }
+
+  Future<T> add<T>(Completer<T> gate, {String label = 'backup.tar'}) =>
+      queue.add(
+        kind: TransferJobKind.upload,
+        label: label,
+        run: (job) => job.cancel.race(gate.future),
+      );
+
+  testWidgets('shows nothing while there is nothing to transfer', (
+    tester,
+  ) async {
+    await pump(tester);
+    expect(find.byType(InkWell), findsNothing);
+    await finish(tester);
+  });
+
+  testWidgets('names the running job and how far it got', (tester) async {
+    await pump(tester);
+    final gate = Completer<void>();
+    add(gate).ignore();
+    await tester.pumpAndSettle();
+    queue.running!.report(
+      const TransferProgress(
+        label: 'backup.tar',
+        bytes: 512,
+        totalBytes: 2048,
+        fraction: 0.25,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('512 B'), findsOneWidget);
+    final fill = tester.widget<FractionallySizedBox>(
+      find.byType(FractionallySizedBox),
+    );
+    expect(fill.widthFactor, closeTo(0.25, 1e-9));
+    await finish(tester);
+  });
+
+  testWidgets('counts the jobs of the run on the strip', (tester) async {
+    await pump(tester);
+    add(Completer<void>()).ignore();
+    add(Completer<void>(), label: 'photo.jpg').ignore();
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('1 of 2'), findsOneWidget);
+    await finish(tester);
+  });
+
+  testWidgets('a tap opens the list, and a tap outside it folds it away', (
+    tester,
+  ) async {
+    await pump(tester);
+    add(Completer<void>()).ignore();
+    add(Completer<void>(), label: 'photo.jpg').ignore();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(InkWell));
+    await tester.pumpAndSettle();
+    expect(expanded.value, isTrue);
+    expect(find.text('backup.tar'), findsOneWidget);
+    expect(find.text('photo.jpg'), findsOneWidget);
+    expect(find.text('Waiting'), findsOneWidget);
+
+    await tester.tapAt(const Offset(10, 700));
+    await tester.pumpAndSettle();
+    expect(expanded.value, isFalse);
+    expect(find.text('photo.jpg'), findsNothing);
+    await finish(tester);
+  });
+
+  testWidgets('a waiting job can be taken off the list', (tester) async {
+    await pump(tester);
+    add(Completer<void>()).ignore();
+    final waiting = add(Completer<void>(), label: 'photo.jpg');
+    waiting.ignore();
+    await tester.pumpAndSettle();
+    expanded.value = true;
+    await tester.pumpAndSettle();
+
+    final row = find.ancestor(
+      of: find.text('photo.jpg'),
+      matching: find.byType(Row),
+    );
+    await tester.tap(
+      find.descendant(
+        of: row.first,
+        matching: find.byIcon(PhosphorIconsRegular.x),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(queue.jobs, hasLength(1));
+    expect(find.text('photo.jpg'), findsNothing);
+    await finish(tester);
+  });
+
+  testWidgets('a failed run stays, says so, and clears on request', (
+    tester,
+  ) async {
+    await pump(tester);
+    final gate = Completer<void>();
+    add(gate).ignore();
+    await tester.pumpAndSettle();
+    gate.completeError(Exception('sftp.errors.diskFull'));
+    await tester.pumpAndSettle();
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('1 failed'), findsOneWidget);
+    await tester.tap(find.byType(InkWell).first);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('space', findRichText: true), findsWidgets);
+
+    await tester.tap(find.text('Clear'));
+    await tester.pumpAndSettle();
+    expect(queue.jobs, isEmpty);
+    expect(expanded.value, isFalse);
+    expect(find.byType(InkWell), findsNothing);
+    await finish(tester);
+  });
+
+  testWidgets('a job that went well leaves the bar at once', (tester) async {
+    await pump(tester);
+    final gate = Completer<void>();
+    add(gate).ignore();
+    await tester.pumpAndSettle();
+    gate.complete();
+    await tester.pumpAndSettle();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(InkWell), findsNothing);
+    await finish(tester);
+  });
+
+  testWidgets('slides in and back out rather than popping', (tester) async {
+    await pump(tester);
+    final gate = Completer<void>();
+    add(gate).ignore();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+    final midway = tester.getSize(find.byType(SizeTransition).first).height;
+    expect(midway, greaterThan(0));
+    expect(midway, lessThan(TransferBar.height));
+
+    gate.complete();
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(find.byType(InkWell), findsOneWidget, reason: 'still leaving');
+
+    await tester.pumpAndSettle();
+    expect(find.byType(InkWell), findsNothing);
+    await finish(tester);
+  });
+}
