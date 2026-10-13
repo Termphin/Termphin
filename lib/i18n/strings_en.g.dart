@@ -42,6 +42,7 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 
 	// Translations
 	late final Translations$nav$en nav = Translations$nav$en.internal(_root);
+	late final Translations$errorReports$en errorReports = Translations$errorReports$en.internal(_root);
 	late final Translations$common$en common = Translations$common$en.internal(_root);
 	late final Translations$lock$en lock = Translations$lock$en.internal(_root);
 	late final Translations$profiles$en profiles = Translations$profiles$en.internal(_root);
@@ -103,6 +104,45 @@ class Translations$nav$en {
 
 	/// en: 'Expand sidebar'
 	String get expandSidebar => 'Expand sidebar';
+}
+
+// Path: errorReports
+class Translations$errorReports$en {
+	Translations$errorReports$en.internal(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'No errors recorded'
+	String get empty => 'No errors recorded';
+
+	/// en: 'When Termphin runs into an error, it shows up here so you can send it to us.'
+	String get emptySubtitle => 'When Termphin runs into an error, it shows up here so you can send it to us.';
+
+	/// en: 'Kept on this device only. Nothing is sent until you send it.'
+	String get privacy => 'Kept on this device only. Nothing is sent until you send it.';
+
+	/// en: 'Send by email'
+	String get sendEmail => 'Send by email';
+
+	/// en: 'Share'
+	String get share => 'Share';
+
+	/// en: 'Clear'
+	String get clear => 'Clear';
+
+	/// en: 'Clear error reports?'
+	String get clearTitle => 'Clear error reports?';
+
+	/// en: 'Every recorded error is removed from this device.'
+	String get clearMessage => 'Every recorded error is removed from this device.';
+
+	/// en: '{count} times'
+	String repeated({required Object count}) => '${count} times';
+
+	/// en: 'Termphin error report'
+	String get emailSubject => 'Termphin error report';
 }
 
 // Path: common
@@ -1563,6 +1603,12 @@ class Translations$settings$en {
 
 	/// en: 'How to use Termphin, from first connection onwards'
 	String get manualSubtitle => 'How to use Termphin, from first connection onwards';
+
+	/// en: 'Error reports'
+	String get errorReports => 'Error reports';
+
+	/// en: 'Errors Termphin ran into, to send with a bug report'
+	String get errorReportsSubtitle => 'Errors Termphin ran into, to send with a bug report';
 
 	/// en: 'Could not open your mail app.'
 	String get feedbackEmailFailed => 'Could not open your mail app.';
@@ -3640,6 +3686,16 @@ extension on Translations {
 			'nav.settings' => 'Settings',
 			'nav.collapseSidebar' => 'Collapse sidebar',
 			'nav.expandSidebar' => 'Expand sidebar',
+			'errorReports.empty' => 'No errors recorded',
+			'errorReports.emptySubtitle' => 'When Termphin runs into an error, it shows up here so you can send it to us.',
+			'errorReports.privacy' => 'Kept on this device only. Nothing is sent until you send it.',
+			'errorReports.sendEmail' => 'Send by email',
+			'errorReports.share' => 'Share',
+			'errorReports.clear' => 'Clear',
+			'errorReports.clearTitle' => 'Clear error reports?',
+			'errorReports.clearMessage' => 'Every recorded error is removed from this device.',
+			'errorReports.repeated' => ({required Object count}) => '${count} times',
+			'errorReports.emailSubject' => 'Termphin error report',
 			'common.add' => 'Add',
 			'common.cancel' => 'Cancel',
 			'common.save' => 'Save',
@@ -4110,6 +4166,8 @@ extension on Translations {
 			'settings.sourceLicenseSubtitle' => 'GPL-3.0: read the code, build it, change it',
 			'settings.manual' => 'Manual',
 			'settings.manualSubtitle' => 'How to use Termphin, from first connection onwards',
+			'settings.errorReports' => 'Error reports',
+			'settings.errorReportsSubtitle' => 'Errors Termphin ran into, to send with a bug report',
 			'settings.feedbackEmailFailed' => 'Could not open your mail app.',
 			'settings.about' => 'About',
 			'settings.aboutTagline' => 'SSH client',
@@ -4134,6 +4192,8 @@ extension on Translations {
 			'settings.knownHostsEmpty' => 'No host keys pinned',
 			'settings.knownHostsEmptyBody' => 'A server\'s key is pinned here the first time you accept it while connecting.',
 			'settings.knownHostsAddedAt' => ({required Object date}) => 'Pinned ${date}',
+			_ => null,
+		} ?? switch (path) {
 			'settings.knownHostsForget' => 'Forget',
 			'settings.knownHostsForgetTitle' => 'Forget this host key?',
 			'settings.knownHostsForgetBody' => ({required Object host}) => 'The next connection to ${host} will ask you to accept its key again.',
@@ -4146,8 +4206,6 @@ extension on Translations {
 			'settings.toolbarProfileNewName' => ({required Object number}) => 'Layout ${number}',
 			'settings.toolbarProfileRenameTitle' => 'Rename layout',
 			'settings.toolbarProfileNameLabel' => 'Layout name',
-			_ => null,
-		} ?? switch (path) {
 			'settings.toolbarProfileDeleteTitle' => 'Delete this layout?',
 			'settings.toolbarProfileDeleteConfirm' => ({required Object name}) => '“${name}” and the keys arranged in it are gone.',
 			'settings.toolbarProfileDeleteLast' => 'This is the only layout left - the toolbar needs one.',
@@ -4648,6 +4706,8 @@ extension on Translations {
 			'tagMigration.skipDialogTitle' => 'Discard tags?',
 			'tagMigration.skipDialogMessage' => 'Your tags will be discarded and cannot be restored. All machines and snippets will be moved to General.',
 			'tagMigration.skipDialogConfirm' => 'Discard tags',
+			_ => null,
+		} ?? switch (path) {
 			'selection.countSelected' => ({required num n, required Object count}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '${count} selected', other: '${count} selected', ), 
 			'selection.moveToGroup' => 'Move to group',
 			'selection.clear' => 'Clear selection',
@@ -4660,8 +4720,6 @@ extension on Translations {
 			'selection.moved' => ({required num n, required Object count, required Object group}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: 'Moved ${count} to ${group}', other: 'Moved ${count} to ${group}', ), 
 			'selection.deleted' => ({required num n, required Object count}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: 'Deleted ${count} item', other: 'Deleted ${count} items', ), 
 			'selection.machinesInUseBody' => ({required num n, required Object count}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '1 machine connects through one you are deleting and will stop connecting:', other: '${count} machines connect through one you are deleting and will stop connecting:', ), 
-			_ => null,
-		} ?? switch (path) {
 			'selection.keysInUseBody' => ({required num n, required Object count}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '1 machine uses a key you are deleting and will stop connecting:', other: '${count} machines use a key you are deleting and will stop connecting:', ), 
 			'selection.inUseTitle' => 'Still in use',
 			'globalSearch.hint' => 'Search everything',

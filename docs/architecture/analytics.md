@@ -12,6 +12,13 @@ nothing. Autocapture is off across the board.
 on. `$ip` is stripped in a `beforeSend` hook, though the setting that matters is
 the project's own "Discard client IP data" toggle in the dashboard.
 
+Independently of PostHog, `ErrorReports` (`lib/services/app/error_reports.dart`)
+hooks the same two handlers from `main`, before PostHog starts; PostHog chains
+to whatever handler it finds, so both see every error. It keeps the last
+reports in shared preferences, so a crash is still there after the restart,
+works with analytics off, and sends nothing by itself: Settings → Feedback →
+Error reports lets the user mail or share them.
+
 - **Events and property names are closed enums** (`AnalyticsEvent`,
   `AnalyticsProperty`): what is sent has to be readable off one list, both to
   keep the privacy policy's table honest and to stop a hostname reaching

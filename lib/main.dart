@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'app.dart';
 import 'screens/share/share_screen.dart';
 import 'services/analytics/analytics_service.dart';
+import 'services/app/error_reports.dart';
 import 'services/platform/foreground_notification_service.dart';
 import 'services/settings/app_settings.dart';
 import 'services/ssh/network_monitor.dart';
@@ -36,8 +37,10 @@ Future<void> main() async {
   _mainInitialized = true;
 
   WidgetsFlutterBinding.ensureInitialized();
+  ErrorReports.instance.install();
 
   await loadAppSettings();
+  await ErrorReports.instance.load();
 
   await SshSessionManager.instance.init();
   _bindConnectionPrompts();
