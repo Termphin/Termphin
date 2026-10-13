@@ -105,3 +105,30 @@ String uploadPasteText(Iterable<String> displayPaths, RemoteShellType shell) {
   final quote = shell == RemoteShellType.powershell ? windowsQuote : shellQuote;
   return displayPaths.map(quote).join(' ');
 }
+
+/// What a finished terminal upload does with its paths.
+enum UploadPasteAction {
+  /// Types them in.
+  paste,
+
+  /// Offers them in a menu at the cursor.
+  offer,
+
+  /// Keeps them for the next time the terminal is on screen.
+  hold,
+}
+
+/// Typing the paths in unasked is only safe when nothing moved under the
+/// user: the terminal is the one on screen, the upload started the moment it
+/// was asked for, and nothing was typed meanwhile. An upload that waited in
+/// the queue can end long after, mid-way through another command.
+UploadPasteAction uploadPasteAction({
+  required bool terminalShown,
+  required bool autoPaste,
+  required bool waited,
+  required bool typedMeanwhile,
+}) {
+  if (!terminalShown) return UploadPasteAction.hold;
+  if (autoPaste && !waited && !typedMeanwhile) return UploadPasteAction.paste;
+  return UploadPasteAction.offer;
+}

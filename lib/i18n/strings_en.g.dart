@@ -828,12 +828,6 @@ class Translations$sftp$en {
 	/// en: 'Rename failed: {error}'
 	String renameFailed({required Object error}) => 'Rename failed: ${error}';
 
-	/// en: 'Downloading'
-	String get downloadingTitle => 'Downloading';
-
-	/// en: 'Uploading'
-	String get uploadingTitle => 'Uploading';
-
 	/// en: '{done} of {total}'
 	String transferBytes({required Object done, required Object total}) => '${done} of ${total}';
 
@@ -1022,12 +1016,6 @@ class Translations$sftp$en {
 	/// en: 'Keep both'
 	String get conflictKeepBoth => 'Keep both';
 
-	/// en: 'Copying on the server…'
-	String get copying => 'Copying on the server…';
-
-	/// en: 'Moving…'
-	String get moving => 'Moving…';
-
 	/// en: 'Copied {name}'
 	String copiedName({required Object name}) => 'Copied ${name}';
 
@@ -1051,6 +1039,8 @@ class Translations$sftp$en {
 
 	/// en: 'Could not move {count} items. {error}'
 	String moveFailedCount({required Object count, required Object error}) => 'Could not move ${count} items. ${error}';
+
+	late final Translations$sftp$queue$en queue = Translations$sftp$queue$en.internal(_root);
 }
 
 // Path: editor
@@ -2990,9 +2980,6 @@ class Translations$actionDock$en {
 	/// en: 'Uploaded {count} files to {path}'
 	String uploadedMany({required Object count, required Object path}) => 'Uploaded ${count} files to ${path}';
 
-	/// en: '{index} of {count}'
-	String uploadingFile({required Object index, required Object count}) => '${index} of ${count}';
-
 	/// en: 'Paste path'
 	String get pasteUploadedPath => 'Paste path';
 
@@ -3600,6 +3587,48 @@ class Translations$sftp$errors$en {
 	String get noShell => 'This server only allows file transfers, so it cannot copy files itself.';
 }
 
+// Path: sftp.queue
+class Translations$sftp$queue$en {
+	Translations$sftp$queue$en.internal(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'Show transfers'
+	String get show => 'Show transfers';
+
+	/// en: 'Hide transfers'
+	String get hide => 'Hide transfers';
+
+	/// en: 'Waiting'
+	String get waiting => 'Waiting';
+
+	/// en: 'Cancelling…'
+	String get cancelling => 'Cancelling…';
+
+	/// en: 'Cancelled'
+	String get cancelled => 'Cancelled';
+
+	/// en: 'Copying on the server'
+	String get copying => 'Copying on the server';
+
+	/// en: 'Moving on the server'
+	String get moving => 'Moving on the server';
+
+	/// en: '{position} of {count}'
+	String position({required Object position, required Object count}) => '${position} of ${count}';
+
+	/// en: '{count} failed - tap to see why'
+	String failedCount({required Object count}) => '${count} failed - tap to see why';
+
+	/// en: 'Clear'
+	String get clearFinished => 'Clear';
+
+	/// en: '{count} items'
+	String items({required Object count}) => '${count} items';
+}
+
 // Path: connection.quality
 class Translations$connection$quality$en {
 	Translations$connection$quality$en.internal(this._root);
@@ -3901,8 +3930,6 @@ extension on Translations {
 			'sftp.downloadComplete' => ({required Object filename}) => '${filename} saved',
 			'sftp.deleteFailed' => ({required Object error}) => 'Delete failed: ${error}',
 			'sftp.renameFailed' => ({required Object error}) => 'Rename failed: ${error}',
-			'sftp.downloadingTitle' => 'Downloading',
-			'sftp.uploadingTitle' => 'Uploading',
 			'sftp.transferBytes' => ({required Object done, required Object total}) => '${done} of ${total}',
 			'sftp.transferRate' => ({required Object rate}) => '${rate}/s',
 			'sftp.transferItemCount' => ({required Object current, required Object total}) => '${current} of ${total}',
@@ -3978,8 +4005,6 @@ extension on Translations {
 			'sftp.conflictSkip' => 'Skip',
 			'sftp.conflictReplace' => 'Replace',
 			'sftp.conflictKeepBoth' => 'Keep both',
-			'sftp.copying' => 'Copying on the server…',
-			'sftp.moving' => 'Moving…',
 			'sftp.copiedName' => ({required Object name}) => 'Copied ${name}',
 			'sftp.movedName' => ({required Object name}) => 'Moved ${name}',
 			'sftp.copiedCount' => ({required Object count}) => 'Copied ${count} items',
@@ -3988,6 +4013,17 @@ extension on Translations {
 			'sftp.nothingTransferred' => 'Nothing changed - every item was skipped',
 			'sftp.copyFailedCount' => ({required Object count, required Object error}) => 'Could not copy ${count} items. ${error}',
 			'sftp.moveFailedCount' => ({required Object count, required Object error}) => 'Could not move ${count} items. ${error}',
+			'sftp.queue.show' => 'Show transfers',
+			'sftp.queue.hide' => 'Hide transfers',
+			'sftp.queue.waiting' => 'Waiting',
+			'sftp.queue.cancelling' => 'Cancelling…',
+			'sftp.queue.cancelled' => 'Cancelled',
+			'sftp.queue.copying' => 'Copying on the server',
+			'sftp.queue.moving' => 'Moving on the server',
+			'sftp.queue.position' => ({required Object position, required Object count}) => '${position} of ${count}',
+			'sftp.queue.failedCount' => ({required Object count}) => '${count} failed - tap to see why',
+			'sftp.queue.clearFinished' => 'Clear',
+			'sftp.queue.items' => ({required Object count}) => '${count} items',
 			'editor.unsavedTitle' => 'Unsaved changes',
 			'editor.discardConfirm' => 'Discard changes?',
 			'editor.savedSuccess' => 'File saved successfully',
@@ -4185,6 +4221,8 @@ extension on Translations {
 			'settings.privacyPolicy' => 'Privacy policy',
 			'settings.privacyPolicySubtitle' => 'What is collected, and what never leaves this device',
 			'settings.terms' => 'Terms of service',
+			_ => null,
+		} ?? switch (path) {
 			'settings.termsSubtitle' => 'The terms you agree to by using Termphin',
 			'settings.legalLinkFailed' => 'Could not open your browser.',
 			'settings.knownHosts' => 'Known hosts',
@@ -4192,8 +4230,6 @@ extension on Translations {
 			'settings.knownHostsEmpty' => 'No host keys pinned',
 			'settings.knownHostsEmptyBody' => 'A server\'s key is pinned here the first time you accept it while connecting.',
 			'settings.knownHostsAddedAt' => ({required Object date}) => 'Pinned ${date}',
-			_ => null,
-		} ?? switch (path) {
 			'settings.knownHostsForget' => 'Forget',
 			'settings.knownHostsForgetTitle' => 'Forget this host key?',
 			'settings.knownHostsForgetBody' => ({required Object host}) => 'The next connection to ${host} will ask you to accept its key again.',
@@ -4603,7 +4639,6 @@ extension on Translations {
 			'actionDock.copyPathUnknown' => 'Couldn\'t find the current directory.',
 			'actionDock.uploaded' => ({required Object path}) => 'Uploaded to ${path}',
 			'actionDock.uploadedMany' => ({required Object count, required Object path}) => 'Uploaded ${count} files to ${path}',
-			'actionDock.uploadingFile' => ({required Object index, required Object count}) => '${index} of ${count}',
 			'actionDock.pasteUploadedPath' => 'Paste path',
 			'actionDock.paste' => 'Paste',
 			'actionDock.search' => 'Search',
@@ -4700,14 +4735,14 @@ extension on Translations {
 			'tagMigration.title' => 'Convert tags to groups',
 			'tagMigration.explanation' => 'Tags have been replaced by groups. Each machine and snippet now belongs to a single group. Choose which tags to convert into groups.',
 			'tagMigration.multipleTagsNotice' => 'Records with several tags will join the first of their tags kept in this list.',
+			_ => null,
+		} ?? switch (path) {
 			'tagMigration.usageCount' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '${n} record', other: '${n} records', ), 
 			'tagMigration.createGroups' => 'Create groups',
 			'tagMigration.startFresh' => 'Start fresh',
 			'tagMigration.skipDialogTitle' => 'Discard tags?',
 			'tagMigration.skipDialogMessage' => 'Your tags will be discarded and cannot be restored. All machines and snippets will be moved to General.',
 			'tagMigration.skipDialogConfirm' => 'Discard tags',
-			_ => null,
-		} ?? switch (path) {
 			'selection.countSelected' => ({required num n, required Object count}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '${count} selected', other: '${count} selected', ), 
 			'selection.moveToGroup' => 'Move to group',
 			'selection.clear' => 'Clear selection',

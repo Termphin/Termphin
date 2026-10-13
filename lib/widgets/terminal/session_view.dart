@@ -17,13 +17,16 @@ import '../../models/session_tab.dart';
 import '../../models/ssh_profile.dart';
 import '../../providers/ssh_connection_provider.dart';
 import '../../providers/ssh_session_manager_provider.dart';
+import '../../providers/transfer_queue_provider.dart';
 import '../../services/completion/command_completion.dart';
 import '../../services/settings/sftp_settings.dart';
 import '../../services/settings/terminal_settings.dart';
 import '../../services/settings/upload_settings.dart';
 import '../../services/sftp/cancel_token.dart';
+import '../../services/sftp/download_service.dart';
 import '../../services/sftp/sftp_remote_ops.dart';
 import '../../services/sftp/sftp_service.dart';
+import '../../services/sftp/transfer_queue.dart';
 import '../../services/sftp/upload_plan.dart';
 import '../../services/ssh/local_network_permission.dart';
 import '../../services/ssh/ssh_service.dart';
@@ -37,7 +40,7 @@ import '../../utils/sftp_path.dart';
 import '../sftp/confirm_overwrite.dart';
 import '../sftp/sftp_browser_view.dart';
 import '../sftp/sftp_folder_picker.dart';
-import '../sftp/upload_progress_bar.dart';
+import '../sftp/transfer_bar.dart';
 import '../ssh/connecting_view.dart';
 import '../ssh/connection_log_sheet.dart';
 import '../ssh/connection_quality_pill.dart';
@@ -243,6 +246,11 @@ class SessionViewState extends ConsumerState<SessionView> {
       _dismissCursorMenu();
     }
     if (widget.isActive != oldWidget.isActive) _onScreenChanged();
+    if (_terminalShown &&
+        (!oldWidget.isActive ||
+            oldWidget.viewMode != SessionViewMode.terminal)) {
+      _offerPendingPaste();
+    }
     super.didUpdateWidget(oldWidget);
   }
 
@@ -282,8 +290,7 @@ class SessionViewState extends ConsumerState<SessionView> {
     ctrlMode.dispose();
     altMode.dispose();
     shiftMode.dispose();
-    _uploadCancel?.cancel();
-    _uploadProgress.dispose();
+    _transfersExpanded.dispose();
     super.dispose();
   }
 
@@ -382,6 +389,7 @@ class SessionViewState extends ConsumerState<SessionView> {
   /// encoding. Some keyboards/IMEs emit LF for Enter, which is normalized to
   /// CR for interactive SSH shells.
   void _onInput(List<int> rawBytes) {
+    _inputSerial++;
     if (_cursorMenuContent != null) _dismissCursorMenu();
     if (isTypedInput(rawBytes)) _dismissLink();
     if (_suggestionsPaused) setState(() => _suggestionsPaused = false);
@@ -435,8 +443,30 @@ class SessionViewState extends ConsumerState<SessionView> {
     notifier.write(data);
   }
 
-  final ValueNotifier<UploadProgress?> _uploadProgress = ValueNotifier(null);
-  CancelToken? _uploadCancel;
+  TransferQueue get _transfers =>
+      ref.read(transferQueueProvider(widget.sessionKey.$1));
+
+  final ValueNotifier<bool> _transfersExpanded = ValueNotifier(false);
+
+  /// Folds the transfer list away; true when it was open, so back stops
+  /// there.
+  bool collapseTransfers() {
+    if (!_transfersExpanded.value) return false;
+    _transfersExpanded.value = false;
+    return true;
+  }
+
+  /// Bumped by every keystroke, so a finished upload can tell whether the
+  /// command line was touched while it ran.
+  var _inputSerial = 0;
+
+  /// Paths of an upload that finished while this terminal was out of sight,
+  /// offered at the cursor the next time it is shown. A later upload
+  /// replaces them.
+  String? _pendingPaste;
+
+  bool get _terminalShown =>
+      widget.isActive && widget.viewMode == SessionViewMode.terminal;
 
   /// Picks local files and uploads them to the shell's scratch directory, its
   /// current directory or a folder the user picks, depending on
@@ -498,13 +528,11 @@ class SessionViewState extends ConsumerState<SessionView> {
     );
 
     final queue = <(LocalUpload, String)>[];
-    final client = await session.sftpClient;
-    final sftp = SftpService(client);
-    final done = <String>[];
+    final checker = SftpService(await session.sftpClient);
     try {
       for (var i = 0; i < picked.length; i++) {
         if (destination != UploadDestination.tmp &&
-            await sftp.exists(planned[i])) {
+            await checker.exists(planned[i])) {
           if (!mounted) return;
           if (await confirmUploadOverwrite(context, picked[i].name) != true) {
             continue;
@@ -512,60 +540,68 @@ class SessionViewState extends ConsumerState<SessionView> {
         }
         queue.add((picked[i], planned[i]));
       }
-      if (queue.isEmpty || !mounted) return;
-
-      final sizes = [for (final (file, _) in queue) await file.length()];
-      final total = sizes.contains(null)
-          ? null
-          : sizes.fold<int>(0, (sum, size) => sum + size!);
-
-      final cancel = CancelToken();
-      _uploadCancel = cancel;
-      _uploadProgress.value = UploadProgress(bytes: 0, total: total);
-      var bytesBefore = 0;
-      try {
-        for (var i = 0; i < queue.length; i++) {
-          cancel.throwIfCancelled();
-          final (file, remotePath) = queue[i];
-          _uploadProgress.value = UploadProgress(
-            bytes: bytesBefore,
-            total: total,
-            index: i + 1,
-            count: queue.length,
-          );
-          var fileSent = 0;
-          await sftp.uploadStream(
-            file.open(),
-            remotePath,
-            totalSize: sizes[i],
-            cancel: cancel,
-            onProgress: (sent, _) {
-              fileSent = sent;
-              _uploadProgress.value = UploadProgress(
-                bytes: bytesBefore + sent,
-                total: total,
-                index: i + 1,
-                count: queue.length,
-              );
-            },
-          );
-          bytesBefore += sizes[i] ?? fileSent;
-          done.add(remotePath);
-        }
-      } catch (e) {
-        if (!mounted) return;
-        if (cancel.isCancelled || e is TransferCancelled) {
-          AppNotifications.info(context, t.sftp.uploadCancelled);
-        } else {
-          AppNotifications.error(context, resolveSftpError(e, t));
-        }
-        return;
-      } finally {
-        _uploadCancel = null;
-        _uploadProgress.value = null;
-      }
     } finally {
-      await sftp.close();
+      await checker.close();
+    }
+    if (queue.isEmpty || !mounted) return;
+
+    final sizes = [for (final (file, _) in queue) await file.length()];
+    final total = sizes.contains(null)
+        ? null
+        : sizes.fold<int>(0, (sum, size) => sum + size!);
+    final typedBefore = _inputSerial;
+    final done = <String>[];
+    var waited = false;
+    try {
+      await _transfers.add<void>(
+        kind: TransferJobKind.upload,
+        label: queue.first.$1.name,
+        run: (job) async {
+          waited = job.waited;
+          final sftp = SftpService.resolving(() => session.sftpClient);
+          try {
+            var bytesBefore = 0;
+            for (var i = 0; i < queue.length; i++) {
+              job.cancel.throwIfCancelled();
+              final (file, remotePath) = queue[i];
+              TransferProgress progressAt(int bytes) => TransferProgress(
+                label: file.name,
+                itemIndex: i + 1,
+                itemCount: queue.length,
+                bytes: bytes,
+                totalBytes: total,
+                fraction: total == null || total <= 0
+                    ? null
+                    : (bytes / total).clamp(0.0, 1.0),
+              );
+              job.report(progressAt(bytesBefore));
+              var fileSent = 0;
+              await sftp.uploadStream(
+                file.open(),
+                remotePath,
+                totalSize: sizes[i],
+                cancel: job.cancel,
+                onProgress: (sent, _) {
+                  fileSent = sent;
+                  job.report(progressAt(bytesBefore + sent));
+                },
+              );
+              bytesBefore += sizes[i] ?? fileSent;
+              done.add(remotePath);
+            }
+          } finally {
+            await sftp.close();
+          }
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+      if (e is TransferCancelled) {
+        AppNotifications.info(context, t.sftp.uploadCancelled);
+      } else {
+        AppNotifications.error(context, resolveSftpError(e, t));
+      }
+      return;
     }
     if (!mounted || done.isEmpty) return;
 
@@ -577,10 +613,24 @@ class SessionViewState extends ConsumerState<SessionView> {
       done.map(sftpPathToDisplay),
       session.remoteShellType,
     );
-    if (uploadAutoPasteSetting.value) {
-      _paste(paste);
-      return;
+    switch (uploadPasteAction(
+      terminalShown: _terminalShown,
+      autoPaste: uploadAutoPasteSetting.value,
+      waited: waited,
+      typedMeanwhile: _inputSerial != typedBefore,
+    )) {
+      case UploadPasteAction.paste:
+        _paste(paste);
+      case UploadPasteAction.offer:
+        _offerPaste(paste);
+      case UploadPasteAction.hold:
+        _pendingPaste = paste;
     }
+  }
+
+  /// The paths at the cursor, for the user to take or leave.
+  void _offerPaste(String paste) {
+    _pendingPaste = null;
     _showCursorMenu(
       (dismiss) => _PasteUploadPathMenu(
         onPaste: () {
@@ -590,6 +640,17 @@ class SessionViewState extends ConsumerState<SessionView> {
         onDismiss: dismiss,
       ),
     );
+  }
+
+  /// Waits a frame: the terminal has only just come on stage, and the cursor
+  /// has no position to anchor to until it has been laid out.
+  void _offerPendingPaste() {
+    if (_pendingPaste == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final paste = _pendingPaste;
+      if (!mounted || paste == null || !_terminalShown) return;
+      _offerPaste(paste);
+    });
   }
 
   /// Folders picked for uploads this run, per machine, offered first.
@@ -883,6 +944,7 @@ class SessionViewState extends ConsumerState<SessionView> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(transferQueueProvider(widget.sessionKey.$1));
     final state = ref.watch(sshConnectionProvider(widget.sessionKey));
 
     _terminalReady = _readyAttachId == state.attachId;
@@ -1180,20 +1242,31 @@ class SessionViewState extends ConsumerState<SessionView> {
                           ).scaffoldBackgroundColor,
                         ),
                       ),
-                    UploadProgressBar(
-                      progress: _uploadProgress,
-                      onCancel: () => _uploadCancel?.cancel(),
-                    ),
                   ],
                 ),
               ),
               if (_sftpInitialized)
                 Offstage(
                   offstage: widget.viewMode != SessionViewMode.sftp,
-                  child: SftpBrowserView(
-                    key: widget.sftpKey,
-                    session: session,
-                    terminalDirectory: () => _terminalDirectoryForSftp(session),
+                  child: ListenableBuilder(
+                    listenable: _transfers,
+                    builder: (context, child) => AnimatedPadding(
+                      duration: MediaQuery.disableAnimationsOf(context)
+                          ? Duration.zero
+                          : AppTheme.motionSlow,
+                      curve: AppTheme.interactiveCurve,
+                      padding: EdgeInsets.only(
+                        top: _transfers.jobs.isEmpty ? 0 : TransferBar.height,
+                      ),
+                      child: child,
+                    ),
+                    child: SftpBrowserView(
+                      key: widget.sftpKey,
+                      session: session,
+                      transferQueue: _transfers,
+                      terminalDirectory: () =>
+                          _terminalDirectoryForSftp(session),
+                    ),
                   ),
                 ),
             ],
@@ -1206,6 +1279,9 @@ class SessionViewState extends ConsumerState<SessionView> {
       fit: StackFit.expand,
       children: [
         body,
+        Positioned.fill(
+          child: TransferBar(queue: _transfers, expanded: _transfersExpanded),
+        ),
         if (!_terminalReady && !replacing)
           ColoredBox(
             color: Theme.of(context).scaffoldBackgroundColor,
