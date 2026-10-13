@@ -7,6 +7,18 @@
     "collapseSidebar": "Collapse sidebar",
     "expandSidebar": "Expand sidebar"
   },
+  "errorReports": {
+    "empty": "No errors recorded",
+    "emptySubtitle": "When Termphin runs into an error, it shows up here so you can send it to us.",
+    "privacy": "Kept on this device only. Nothing is sent until you send it.",
+    "sendEmail": "Send by email",
+    "share": "Share",
+    "clear": "Clear",
+    "clearTitle": "Clear error reports?",
+    "clearMessage": "Every recorded error is removed from this device.",
+    "repeated": "{count} times",
+    "emailSubject": "Termphin error report"
+  },
   "common": {
     "add": "Add",
     "cancel": "Cancel",
@@ -502,6 +514,8 @@
     "sourceLicenseSubtitle": "GPL-3.0: read the code, build it, change it",
     "manual": "Manual",
     "manualSubtitle": "How to use Termphin, from first connection onwards",
+    "errorReports": "Error reports",
+    "errorReportsSubtitle": "Errors Termphin ran into, to send with a bug report",
     "feedbackEmailFailed": "Could not open your mail app.",
     "about": "About",
     "aboutTagline": "SSH client",

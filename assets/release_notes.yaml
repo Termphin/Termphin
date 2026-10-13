@@ -20,6 +20,7 @@
   date: "2026-10-11"
   added:
     - "An Open source section in Settings: star Termphin on GitHub, browse issues, contribute"
+    - "Error reports in Settings: see the errors Termphin ran into and send them with a bug report"
   changed:
     - "Picking a jump host uses the same search, groups and machine cards as opening a session"
     - "Anonymize mode also hides hosts in known hosts, the host key prompt and the connection log"
