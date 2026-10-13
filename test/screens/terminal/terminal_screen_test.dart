@@ -175,6 +175,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
     }
 
+    await tester.pump(const Duration(milliseconds: 300));
     final tabViewport = tester.getRect(
       find.byKey(const ValueKey('sessionTabScroll')),
     );
@@ -247,6 +248,7 @@ void main() {
     for (var i = 0; i < 4; i++) {
       await tester.pump();
     }
+    await tester.pump(const Duration(milliseconds: 300));
 
     final appBar = tester.widget<AppBar>(find.byType(AppBar));
     expect(appBar.toolbarHeight, greaterThanOrEqualTo(58));
@@ -748,6 +750,7 @@ void main() {
     for (var i = 0; i < 6; i++) {
       await tester.pump();
     }
+    await tester.pump(const Duration(milliseconds: 300));
 
     double railWidth() =>
         tester.getSize(find.byKey(const ValueKey('sessionTabScroll'))).width;
