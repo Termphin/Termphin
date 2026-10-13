@@ -121,4 +121,42 @@ void main() {
       );
     });
   });
+
+  group('uploadPasteAction', () {
+    UploadPasteAction action({
+      bool terminalShown = true,
+      bool autoPaste = true,
+      bool waited = false,
+      bool typedMeanwhile = false,
+    }) => uploadPasteAction(
+      terminalShown: terminalShown,
+      autoPaste: autoPaste,
+      waited: waited,
+      typedMeanwhile: typedMeanwhile,
+    );
+
+    test('types the paths in when nothing moved under the user', () {
+      expect(action(), UploadPasteAction.paste);
+    });
+
+    test('offers them when auto-paste is off', () {
+      expect(action(autoPaste: false), UploadPasteAction.offer);
+    });
+
+    test('offers them when the upload waited in the queue', () {
+      expect(action(waited: true), UploadPasteAction.offer);
+    });
+
+    test('offers them when something was typed meanwhile', () {
+      expect(action(typedMeanwhile: true), UploadPasteAction.offer);
+    });
+
+    test('holds them for a terminal that is out of sight', () {
+      expect(action(terminalShown: false), UploadPasteAction.hold);
+      expect(
+        action(terminalShown: false, autoPaste: false),
+        UploadPasteAction.hold,
+      );
+    });
+  });
 }

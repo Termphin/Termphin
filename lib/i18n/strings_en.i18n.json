@@ -243,8 +243,6 @@
     "downloadComplete": "{filename} saved",
     "deleteFailed": "Delete failed: {error}",
     "renameFailed": "Rename failed: {error}",
-    "downloadingTitle": "Downloading",
-    "uploadingTitle": "Uploading",
     "transferBytes": "{done} of {total}",
     "transferRate": "{rate}/s",
     "transferItemCount": "{current} of {total}",
@@ -322,8 +320,6 @@
     "conflictSkip": "Skip",
     "conflictReplace": "Replace",
     "conflictKeepBoth": "Keep both",
-    "copying": "Copying on the server…",
-    "moving": "Moving…",
     "copiedName": "Copied {name}",
     "movedName": "Moved {name}",
     "copiedCount": "Copied {count} items",
@@ -331,7 +327,20 @@
     "skippedCount": "{count} skipped",
     "nothingTransferred": "Nothing changed - every item was skipped",
     "copyFailedCount": "Could not copy {count} items. {error}",
-    "moveFailedCount": "Could not move {count} items. {error}"
+    "moveFailedCount": "Could not move {count} items. {error}",
+    "queue": {
+      "show": "Show transfers",
+      "hide": "Hide transfers",
+      "waiting": "Waiting",
+      "cancelling": "Cancelling…",
+      "cancelled": "Cancelled",
+      "copying": "Copying on the server",
+      "moving": "Moving on the server",
+      "position": "{position} of {count}",
+      "failedCount": "{count} failed - tap to see why",
+      "clearFinished": "Clear",
+      "items": "{count} items"
+    }
   },
   "editor": {
     "unsavedTitle": "Unsaved changes",
@@ -1008,7 +1017,6 @@
     "copyPathUnknown": "Couldn't find the current directory.",
     "uploaded": "Uploaded to {path}",
     "uploadedMany": "Uploaded {count} files to {path}",
-    "uploadingFile": "{index} of {count}",
     "pasteUploadedPath": "Paste path",
     "paste": "Paste",
     "search": "Search"

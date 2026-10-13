@@ -6,10 +6,32 @@ Every SFTP download and upload runs through one path. `CancelToken` stops one:
 `isCancelled` for loops, `whenCancelled` so a stalled read aborts mid-chunk, and
 `TransferCancelled` whose `toString` is the `sftp.errors.cancelled` key so
 `resolveSftpError` needs no special case. `SftpService` reports bytes, not
-fractions - the dialog needs sizes and a rate. `DownloadService` turns that into
-`TransferProgress`. The dialog closes by removing its own route, never
-`Navigator.pop`, so a finished transfer cannot take some other sheet down with
-it.
+fractions - the bar needs sizes and a rate. `DownloadService` turns that into
+`TransferProgress`.
+
+**Transfers wait in the session's `TransferQueue`** (`transferQueueProvider`,
+keyed by session id) and run one at a time: uploads and downloads from the
+browser, the image preview and the terminal, copies and moves too. Nothing
+blocks the screen. Every question - overwrite, conflicts, the destination - is
+asked before a job is queued, so a waiting job never needs the user, and paths
+are settled then too, since the browser may have moved on when it runs. A copy
+or move lists its destination and plans names only when it starts, so two
+queued into one folder do not pick the same name. A running copy or move
+cannot be cancelled; a waiting one can. The queue lives as long as the session
+view watches it: closing the tab cancels what is left.
+
+`TransferBar` shows it, drawn like the fast upload strip it replaced and
+pinned under the tab strip over both the terminal (laid over, so the terminal
+is never resized) and the browser (pushed down, so the path bar stays
+visible). Tapping it drops the full list over the content; back folds it away
+first. A job that ends well or is cancelled leaves the list at once - its
+notification already says so - while a failed one stays, the bar red, until
+cleared.
+
+A terminal upload that ends while its terminal is out of sight keeps its paths
+and offers them at the cursor when the terminal is back. It types them in
+unasked (`uploadAutoPasteSetting`) only if it never waited in the queue and
+nothing was typed meanwhile - `uploadPasteAction` decides.
 
 Folders are always walked and copied file by file - no server-side `zip`/`tar`
 packing.

@@ -6,7 +6,6 @@ import 'package:termphin/screens/settings/fast_upload_settings_screen.dart';
 import 'package:termphin/services/analytics/analytics_config.dart';
 import 'package:termphin/services/settings/app_settings.dart';
 import 'package:termphin/services/settings/upload_settings.dart';
-import 'package:termphin/widgets/sftp/upload_progress_bar.dart';
 import 'package:termphin/widgets/ui/large_title_scaffold.dart';
 
 import '../../support/test_app.dart';
@@ -153,113 +152,6 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tester.getSize(find.byKey(const Key('body'))).width, 600);
-    });
-  });
-
-  group('UploadProgressBar', () {
-    testWidgets('shows nothing while there is no upload', (tester) async {
-      final progress = ValueNotifier<UploadProgress?>(null);
-      addTearDown(progress.dispose);
-
-      await pumpTestApp(
-        tester,
-        Scaffold(
-          body: Stack(
-            children: [UploadProgressBar(progress: progress, onCancel: () {})],
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.byType(SizedBox), findsWidgets);
-      expect(find.textContaining('B'), findsNothing);
-    });
-
-    testWidgets('reports bytes against the total once one is known', (
-      tester,
-    ) async {
-      final progress = ValueNotifier<UploadProgress?>(
-        const UploadProgress(bytes: 512, total: 2048),
-      );
-      addTearDown(progress.dispose);
-
-      await pumpTestApp(
-        tester,
-        Scaffold(
-          body: Stack(
-            children: [UploadProgressBar(progress: progress, onCancel: () {})],
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.textContaining('512'), findsOneWidget);
-    });
-
-    testWidgets('fills in proportion to what is done', (tester) async {
-      final progress = ValueNotifier<UploadProgress?>(
-        const UploadProgress(bytes: 512, total: 2048),
-      );
-      addTearDown(progress.dispose);
-
-      await pumpTestApp(
-        tester,
-        Scaffold(
-          body: Stack(
-            children: [UploadProgressBar(progress: progress, onCancel: () {})],
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      final bar = tester.widget<FractionallySizedBox>(
-        find.byType(FractionallySizedBox),
-      );
-      expect(bar.widthFactor, closeTo(0.25, 1e-9));
-    });
-
-    testWidgets('with no total there is nothing to fill', (tester) async {
-      final progress = ValueNotifier<UploadProgress?>(
-        const UploadProgress(bytes: 512),
-      );
-      addTearDown(progress.dispose);
-
-      await pumpTestApp(
-        tester,
-        Scaffold(
-          body: Stack(
-            children: [UploadProgressBar(progress: progress, onCancel: () {})],
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      final bar = tester.widget<FractionallySizedBox>(
-        find.byType(FractionallySizedBox),
-      );
-      expect(bar.widthFactor, 0.0);
-    });
-
-    testWidgets('goes away again when the upload finishes', (tester) async {
-      final progress = ValueNotifier<UploadProgress?>(
-        const UploadProgress(bytes: 512, total: 2048),
-      );
-      addTearDown(progress.dispose);
-
-      await pumpTestApp(
-        tester,
-        Scaffold(
-          body: Stack(
-            children: [UploadProgressBar(progress: progress, onCancel: () {})],
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.byType(FractionallySizedBox), findsOneWidget);
-
-      progress.value = null;
-      await tester.pumpAndSettle();
-      expect(find.byType(FractionallySizedBox), findsNothing);
     });
   });
 

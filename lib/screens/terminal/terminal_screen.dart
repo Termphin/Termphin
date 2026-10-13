@@ -1793,6 +1793,9 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
     if (dismissActionDockMenu()) return true;
     if (_sessions.isEmpty) return false;
     final activeKey = _sessions[_activeIndex].$1;
+    if (_sessionKeys[activeKey]?.currentState?.collapseTransfers() ?? false) {
+      return true;
+    }
     final mode = _modeFor(activeKey);
     if (mode == SessionViewMode.sftp) {
       final sftpState = _sftpKeys[activeKey]?.currentState;

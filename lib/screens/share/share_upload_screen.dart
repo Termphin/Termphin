@@ -23,7 +23,7 @@ import '../../utils/sftp_error_handler.dart';
 import '../../utils/sftp_path.dart';
 import '../../widgets/sftp/confirm_overwrite.dart';
 import '../../widgets/sftp/sftp_folder_picker.dart';
-import '../../widgets/sftp/upload_progress_bar.dart' show UploadProgress;
+import '../../widgets/sftp/upload_progress.dart';
 import '../../widgets/ssh/host_key_dialog.dart';
 import '../../widgets/ssh/keyboard_interactive_dialog.dart';
 import '../../widgets/ui/app_notifications.dart';
