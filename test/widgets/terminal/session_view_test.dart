@@ -230,6 +230,7 @@ void main() {
       for (var i = 0; i < 6; i++) {
         await tester.pump(const Duration(milliseconds: 20));
       }
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.byType(TerminalPane), findsNothing);
       expect(find.byType(ReconnectingIndicator), findsNothing);

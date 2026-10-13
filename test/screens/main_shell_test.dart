@@ -114,10 +114,10 @@ void main() {
   double terminalOpacity(WidgetTester tester) {
     final finder = find.ancestor(
       of: find.byType(TerminalScreen),
-      matching: find.byType(AnimatedOpacity),
+      matching: find.byType(FadeTransition),
     );
     if (finder.evaluate().isEmpty) return 0;
-    return tester.widget<AnimatedOpacity>(finder.first).opacity;
+    return tester.widget<FadeTransition>(finder.first).opacity.value;
   }
 
   testWidgets(

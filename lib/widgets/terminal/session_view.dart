@@ -949,6 +949,31 @@ class SessionViewState extends ConsumerState<SessionView> {
 
     _terminalReady = _readyAttachId == state.attachId;
 
+    return _PhaseSwitcher(
+      phase: _phaseOf(state),
+      child: _buildPhase(context, state),
+    );
+  }
+
+  /// Which screen [state] puts up, so the switch between them can be
+  /// animated: a reconnect over a held frame is still the terminal.
+  _Phase _phaseOf(SshConnectionState state) {
+    switch (state.status) {
+      case ConnectionStatus.connecting || ConnectionStatus.reconnecting:
+        final held = _heldFrame;
+        final holding =
+            state.status == ConnectionStatus.reconnecting &&
+            held != null &&
+            held.attachId == state.attachId;
+        return holding ? _Phase.terminal : _Phase.connecting;
+      case ConnectionStatus.error:
+        return _Phase.error;
+      default:
+        return _Phase.terminal;
+    }
+  }
+
+  Widget _buildPhase(BuildContext context, SshConnectionState state) {
     if (state.status == ConnectionStatus.connecting ||
         state.status == ConnectionStatus.reconnecting) {
       final held = _heldFrame;
@@ -1282,16 +1307,22 @@ class SessionViewState extends ConsumerState<SessionView> {
         Positioned.fill(
           child: TransferBar(queue: _transfers, expanded: _transfersExpanded),
         ),
-        if (!_terminalReady && !replacing)
-          ColoredBox(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            child: ConnectingView(
-              profile: widget.sessionKey.$2,
-              onCancel: widget.onClose,
-              connectionLog: state.connectionLog,
-              restoringHistory: true,
-            ),
-          ),
+        _PhaseSwitcher(
+          phase: !_terminalReady && !replacing
+              ? _Phase.connecting
+              : _Phase.terminal,
+          child: !_terminalReady && !replacing
+              ? ColoredBox(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  child: ConnectingView(
+                    profile: widget.sessionKey.$2,
+                    onCancel: widget.onClose,
+                    connectionLog: state.connectionLog,
+                    restoringHistory: true,
+                  ),
+                )
+              : const SizedBox.shrink(),
+        ),
       ],
     );
   }
@@ -1401,6 +1432,43 @@ class SessionViewState extends ConsumerState<SessionView> {
           ),
         ),
       ),
+    );
+  }
+}
+
+enum _Phase { connecting, error, terminal }
+
+/// Cross-fades from one connection phase to the next instead of cutting:
+/// the connecting screen gives way to the terminal, which settles in from a
+/// touch smaller. Only a change of [phase] animates; a rebuild within one
+/// is passed straight through.
+class _PhaseSwitcher extends StatelessWidget {
+  const _PhaseSwitcher({required this.phase, required this.child});
+
+  final _Phase phase;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : const Duration(milliseconds: 280),
+      reverseDuration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : AppTheme.motionSlow,
+      switchInCurve: AppTheme.interactiveCurve,
+      switchOutCurve: Curves.easeInCubic,
+      layoutBuilder: (current, previous) =>
+          Stack(fit: StackFit.expand, children: [...previous, ?current]),
+      transitionBuilder: (child, animation) => FadeTransition(
+        opacity: animation,
+        child: ScaleTransition(
+          scale: Tween(begin: 0.98, end: 1.0).animate(animation),
+          child: child,
+        ),
+      ),
+      child: KeyedSubtree(key: ValueKey(phase), child: child),
     );
   }
 }
