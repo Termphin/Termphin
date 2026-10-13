@@ -44,7 +44,8 @@ class MainShell extends ConsumerStatefulWidget {
 /// With nothing left to intercept, back belongs to Android: a blanket
 /// `canPop: false` reports "framework handles back" for the whole app and
 /// costs the system its predictive back-to-home animation.
-class _MainShellState extends ConsumerState<MainShell> {
+class _MainShellState extends ConsumerState<MainShell>
+    with SingleTickerProviderStateMixin {
   late final SshSessionManager _manager = ref.read(sshSessionManagerProvider);
 
   int _currentIndex = 0;
@@ -73,6 +74,44 @@ class _MainShellState extends ConsumerState<MainShell> {
   GlobalKey<TerminalScreenState> _terminalKey =
       GlobalKey<TerminalScreenState>();
 
+  /// Brings the terminal up over the tabs and takes it back down: it rises a
+  /// little as it fades in while the screen behind it sinks back, and leaves
+  /// the same way, quicker. A closed strip is only dropped once it has gone,
+  /// so closing animates too.
+  late final AnimationController _terminalMotion;
+  late final Animation<double> _terminalCurve = CurvedAnimation(
+    parent: _terminalMotion,
+    curve: AppTheme.interactiveCurve,
+    reverseCurve: Curves.easeInCubic,
+  );
+  late final Animation<double> _terminalFade = CurvedAnimation(
+    parent: _terminalMotion,
+    curve: const Interval(0, 0.6, curve: Curves.easeOut),
+    reverseCurve: const Interval(0.2, 1, curve: Curves.easeIn),
+  );
+  late final Animation<Offset> _terminalSlide = Tween(
+    begin: const Offset(0, 0.04),
+    end: Offset.zero,
+  ).animate(_terminalCurve);
+  late final Animation<double> _backgroundScale = Tween(
+    begin: 1.0,
+    end: 0.96,
+  ).animate(_terminalCurve);
+
+  /// Bumped whenever the terminal is asked back, so a close still waiting
+  /// for its exit to finish knows not to drop the strip after all.
+  var _closeGeneration = 0;
+
+  void _animateTerminal({required bool visible}) {
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _terminalMotion.value = visible ? 1 : 0;
+    } else if (visible) {
+      unawaited(_terminalMotion.forward());
+    } else {
+      unawaited(_terminalMotion.reverse());
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -81,6 +120,12 @@ class _MainShellState extends ConsumerState<MainShell> {
       _terminalSession = (restored.id, restored.profile);
       _terminalVisible = true;
     }
+    _terminalMotion = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 320),
+      reverseDuration: const Duration(milliseconds: 220),
+      value: _terminalVisible ? 1 : 0,
+    );
     unawaited(
       AnalyticsService.instance.screen(
         _terminalVisible ? AnalyticsScreen.terminal : _screenNames.first,
@@ -99,6 +144,7 @@ class _MainShellState extends ConsumerState<MainShell> {
   @override
   void dispose() {
     tabBarPositionSetting.removeListener(_onTabBarPositionChanged);
+    _terminalMotion.dispose();
     super.dispose();
   }
 
@@ -121,17 +167,31 @@ class _MainShellState extends ConsumerState<MainShell> {
     setState(() {
       _terminalVisible = false;
     });
+    _animateTerminal(visible: false);
     _syncNotificationAnchor();
     _reportCurrentTab();
     ref.read(terminalOverlayProvider.notifier).hide();
   }
 
   void _onTerminalClose() {
-    setState(() {
-      _terminalVisible = false;
-      _terminalSession = null;
-      _terminalKey = GlobalKey<TerminalScreenState>();
-    });
+    setState(() => _terminalVisible = false);
+    _animateTerminal(visible: false);
+    final generation = ++_closeGeneration;
+    void drop() {
+      if (!mounted || generation != _closeGeneration || _terminalVisible) {
+        return;
+      }
+      setState(() {
+        _terminalSession = null;
+        _terminalKey = GlobalKey<TerminalScreenState>();
+      });
+    }
+
+    if (_terminalMotion.isDismissed) {
+      drop();
+    } else {
+      _terminalMotion.reverse().whenCompleteOrCancel(drop);
+    }
     _syncNotificationAnchor();
     _reportCurrentTab();
     ref.read(terminalOverlayProvider.notifier).hide();
@@ -265,6 +325,7 @@ class _MainShellState extends ConsumerState<MainShell> {
     ref.listen(terminalOverlayProvider, (prev, next) {
       if (next != null) {
         final hasLiveScreen = _terminalKey.currentState != null;
+        _closeGeneration++;
         setState(() {
           _terminalSession = (next.$1, next.$2);
           _siblingScope = next.$3;
@@ -273,6 +334,7 @@ class _MainShellState extends ConsumerState<MainShell> {
             _terminalKey = GlobalKey<TerminalScreenState>();
           }
         });
+        _animateTerminal(visible: true);
         _syncNotificationAnchor();
         unawaited(AnalyticsService.instance.screen(AnalyticsScreen.terminal));
         if (hasLiveScreen) {
@@ -298,24 +360,28 @@ class _MainShellState extends ConsumerState<MainShell> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          isWideLayout(context)
-              ? _buildDesktopScaffold(t)
-              : _buildMobileScaffold(t),
+          ScaleTransition(
+            scale: _backgroundScale,
+            child: isWideLayout(context)
+                ? _buildDesktopScaffold(t)
+                : _buildMobileScaffold(t),
+          ),
           if (_terminalSession != null)
             IgnorePointer(
               ignoring: !_terminalVisible,
-              child: AnimatedOpacity(
-                opacity: _terminalVisible ? 1.0 : 0.0,
-                duration: AppTheme.motionSlow,
-                curve: Curves.easeOutCubic,
-                child: TerminalSchemeTheme(
-                  child: TerminalScreen(
-                    key: _terminalKey,
-                    initialSessionId: _terminalSession!.$1,
-                    initialProfile: _terminalSession!.$2,
-                    siblingScope: _siblingScope,
-                    onClose: _onTerminalClose,
-                    onHide: _hideTerminal,
+              child: FadeTransition(
+                opacity: _terminalFade,
+                child: SlideTransition(
+                  position: _terminalSlide,
+                  child: TerminalSchemeTheme(
+                    child: TerminalScreen(
+                      key: _terminalKey,
+                      initialSessionId: _terminalSession!.$1,
+                      initialProfile: _terminalSession!.$2,
+                      siblingScope: _siblingScope,
+                      onClose: _onTerminalClose,
+                      onHide: _hideTerminal,
+                    ),
                   ),
                 ),
               ),
