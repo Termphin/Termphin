@@ -22,6 +22,7 @@
     - "An Open source section in Settings: star Termphin on GitHub, browse issues, contribute"
     - "Error reports in Settings: see the errors Termphin ran into and send them with a bug report"
   changed:
+    - "File transfers no longer block the screen: they queue in a bar at the top that you can expand"
     - "Picking a jump host uses the same search, groups and machine cards as opening a session"
     - "Anonymize mode also hides hosts in known hosts, the host key prompt and the connection log"
     - "The terminal search bar is smaller and no longer covers the output"
