@@ -315,9 +315,9 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
     super.dispose();
   }
 
-  /// The swipe is blocked while a selection handle in the terminal, or the
-  /// handle between split panes, is being dragged - both own the pointer
-  /// and must not have it taken away mid-drag.
+  /// The swipe is blocked while a selection in the terminal, or the handle
+  /// between split panes, is being dragged - both own the pointer and must
+  /// not have it taken away mid-drag.
   ///
   /// Which tabs come along as restored siblings is
   /// `SshSessionManager.restorableSession` - shared so the session dock
@@ -344,7 +344,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
           tabCount: () => _entries.length,
           activeIndex: () => _activeEntryIndex,
           onCommit: _onSwipeCommitted,
-          isBlocked: () => terminalSelectionHandleHeld.value || _dividerHeld,
+          isBlocked: () => terminalSelectionDragActive.value || _dividerHeld,
         )..addListener(() {
           if (mounted) setState(() {});
         });

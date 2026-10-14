@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -62,6 +63,44 @@ void main() {
 
     expect(sizes, hasLength(initialResizeCount + 1));
   });
+
+  testWidgets(
+    'a long press that selects holds off the tab swipe until it lifts',
+    (tester) async {
+      final output = StreamController<Uint8List>();
+      addTearDown(output.close);
+      addTearDown(() => terminalSelectionDragActive.value = false);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SizedBox(
+            width: 400,
+            height: 600,
+            child: TerminalPane(
+              outputStream: output.stream,
+              onInput: (_) {},
+              onResize: (_, _) {},
+            ),
+          ),
+        ),
+      );
+      output.add(utf8.encode('hello world'));
+      await tester.pump();
+
+      final origin = tester.getTopLeft(find.byType(TerminalPane));
+      final gesture = await tester.startGesture(origin + const Offset(12, 8));
+      await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+      expect(terminalSelectionDragActive.value, isTrue);
+
+      await gesture.moveBy(const Offset(120, 0));
+      await tester.pump();
+      expect(terminalSelectionDragActive.value, isTrue);
+
+      await gesture.up();
+      await tester.pump();
+      expect(terminalSelectionDragActive.value, isFalse);
+    },
+  );
 
   group('OSC 52', () {
     late List<String?> clipboardWrites;
