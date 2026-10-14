@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
 import '../../services/app/project_urls.dart';
-import '../../theme/theme.dart';
 import '../ui/app_card.dart';
 import '../ui/clipboard_and_links.dart';
 import '../ui/section_header.dart';
@@ -30,8 +28,6 @@ class OpenSourceSettingsSection extends StatelessWidget {
           child: Column(
             children: [
               SettingsTile(
-                icon: PhosphorIconsRegular.star,
-                iconColor: context.colors.warning,
                 title: t.settings.starOnGitHub,
                 subtitle: t.settings.starOnGitHubSubtitle,
                 trailing: SettingsTileTrailing.external,
@@ -39,7 +35,6 @@ class OpenSourceSettingsSection extends StatelessWidget {
               ),
               const Divider(height: 1),
               SettingsTile(
-                icon: PhosphorIconsRegular.githubLogo,
                 title: t.settings.issueTracker,
                 subtitle: t.settings.issueTrackerSubtitle,
                 trailing: SettingsTileTrailing.external,
@@ -47,8 +42,6 @@ class OpenSourceSettingsSection extends StatelessWidget {
               ),
               const Divider(height: 1),
               SettingsTile(
-                icon: PhosphorIconsRegular.gitPullRequest,
-                iconColor: context.colors.primary,
                 title: t.settings.contribute,
                 subtitle: t.settings.contributeSubtitle,
                 trailing: SettingsTileTrailing.external,
@@ -56,7 +49,6 @@ class OpenSourceSettingsSection extends StatelessWidget {
               ),
               const Divider(height: 1),
               SettingsTile(
-                icon: PhosphorIconsRegular.certificate,
                 title: t.settings.sourceLicense,
                 subtitle: t.settings.sourceLicenseSubtitle,
                 trailing: SettingsTileTrailing.external,

@@ -249,6 +249,13 @@ bottom of the screen belongs to the nav bar, the session dock and the key
 toolbar. Screens with a non-standard app bar height set
 `appNotificationAnchor`.
 
+**Context bars:** selecting rows (machines, keys, snippets, files) and the
+transfer bar all use `ContextBar` - a flat docked strip, never a floating card,
+tinted while selecting. Actions that do not fit move into "More" from the end,
+so a split pane gets the same bar. The file browser and the transfer bar dock
+it at the top; machines, keys and snippets dock it at the bottom, within reach
+of the thumb, through `SelectionActionHost`, which pushes the list up.
+
 `showAppSheet` is the only way to open a bottom sheet. **Do not call
 `showModalBottomSheet` directly** - every sheet used to pass its own `shape`,
 silently dropping the theme's styling, and announced the drag gesture three

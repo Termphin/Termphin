@@ -7,6 +7,7 @@ import '../../services/sftp/transfer_queue.dart';
 import '../../theme/theme.dart';
 import '../../utils/format_size.dart';
 import '../../utils/sftp_error_handler.dart';
+import '../ui/context_bar.dart';
 import 'transfer_rate.dart';
 
 /// The session's transfers, pinned under the tab strip over both the terminal
@@ -22,7 +23,7 @@ import 'transfer_rate.dart';
 class TransferBar extends StatefulWidget {
   const TransferBar({super.key, required this.queue, required this.expanded});
 
-  static const height = 36.0;
+  static const height = ContextBar.height;
 
   final TransferQueue queue;
 
@@ -247,9 +248,9 @@ String _statusLine(Translations t, TransferJob job, double? rate) {
   ].join(' · ');
 }
 
-/// The collapsed bar, drawn as fast upload always drew it: a thin strip that
-/// fills, its text centred, a caret where the cancel button was. Once only
-/// failures are left it fills with the error colour and says how many.
+/// The collapsed bar: a [ContextBar] with a ring for the whole run, what is
+/// moving and how fast. Once only failures are left it turns to the error
+/// colour and says how many.
 class _Strip extends StatelessWidget {
   const _Strip({
     required this.queue,
@@ -268,96 +269,60 @@ class _Strip extends StatelessWidget {
     final t = Translations.of(context);
     final colors = context.colors;
     final running = queue.running;
+    final caret = SizedBox.square(
+      dimension: 44,
+      child: Icon(
+        expanded
+            ? PhosphorIconsRegular.caretUp
+            : PhosphorIconsRegular.caretDown,
+        size: 18,
+        color: colors.textSecondary,
+      ),
+    );
+    final semantics = expanded ? t.sftp.queue.hide : t.sftp.queue.show;
 
-    final String label;
-    final double fraction;
-    final Color fill;
-    if (running != null) {
-      label = [
-        if (queue.runSize > 1)
-          t.sftp.queue.position(
-            position: queue.runPosition,
-            count: queue.runSize,
-          ),
-        _statusLine(t, running, rate),
-      ].join(' · ');
-      fraction = queue.overallFraction ?? 0.0;
-      fill = colors.primary;
-    } else {
-      label = t.sftp.queue.failedCount(
-        count: queue.jobs
-            .where((job) => job.state == TransferJobState.failed)
-            .length,
+    if (running == null) {
+      return ContextBar(
+        leading: Icon(
+          PhosphorIconsFill.warningCircle,
+          size: 24,
+          color: colors.error,
+        ),
+        title: t.sftp.queue.failedCount(
+          count: queue.jobs
+              .where((job) => job.state == TransferJobState.failed)
+              .length,
+        ),
+        trailing: caret,
+        progress: 1,
+        progressColor: colors.error,
+        onTap: onTap,
+        semanticLabel: semantics,
       );
-      fraction = 1.0;
-      fill = colors.error;
     }
 
-    return Semantics(
-      button: true,
-      label: expanded ? t.sftp.queue.hide : t.sftp.queue.show,
-      child: Material(
-        color: colors.surfaceOffset,
-        child: InkWell(
-          onTap: onTap,
-          child: SizedBox(
-            height: TransferBar.height,
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: TweenAnimationBuilder<double>(
-                    tween: Tween(end: fraction),
-                    duration: MediaQuery.disableAnimationsOf(context)
-                        ? Duration.zero
-                        : AppTheme.motionSlow,
-                    curve: Curves.easeOut,
-                    builder: (context, value, _) => FractionallySizedBox(
-                      alignment: Alignment.centerLeft,
-                      widthFactor: value,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: fill.withValues(alpha: 0.35),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                Row(
-                  children: [
-                    const SizedBox(width: TransferBar.height),
-                    Expanded(
-                      child: Center(
-                        child: Text(
-                          label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: colors.textPrimary,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            fontFeatures: const [FontFeature.tabularFigures()],
-                          ),
-                        ),
-                      ),
-                    ),
-                    SizedBox(
-                      width: TransferBar.height,
-                      height: TransferBar.height,
-                      child: Icon(
-                        expanded
-                            ? PhosphorIconsRegular.caretUp
-                            : PhosphorIconsRegular.caretDown,
-                        size: 16,
-                        color: colors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+    final verb = switch (running.kind) {
+      TransferJobKind.upload => t.sftp.queue.uploading,
+      TransferJobKind.download => t.sftp.queue.downloading,
+      TransferJobKind.copy => t.sftp.queue.copyingTitle,
+      TransferJobKind.move => t.sftp.queue.movingTitle,
+    };
+    final fraction = queue.overallFraction;
+    final serverSide =
+        running.kind == TransferJobKind.copy ||
+        running.kind == TransferJobKind.move;
+    return ContextBar(
+      leading: ContextBarProgressRing(value: fraction, color: colors.primary),
+      title: queue.runSize > 1
+          ? '$verb ${t.sftp.queue.position(position: queue.runPosition, count: queue.runSize)}'
+          : verb,
+      subtitle: serverSide && !running.isCancelling
+          ? running.progress.label
+          : _statusLine(t, running, rate),
+      trailing: caret,
+      progress: fraction ?? 0,
+      onTap: onTap,
+      semanticLabel: semantics,
     );
   }
 }

@@ -150,8 +150,6 @@ class _ConnectionSettingsSectionState extends State<ConnectionSettingsSection>
               ),
               const Divider(height: 1),
               SettingsTile(
-                icon: PhosphorIconsRegular.shieldCheck,
-                iconColor: context.colors.primary,
                 title: t.settings.remoteAgentHowItWorks,
                 subtitle: t.settings.remoteAgentHowItWorksSubtitle,
                 onTap: () => showRemoteAgentInfoSheet(context),
@@ -159,8 +157,6 @@ class _ConnectionSettingsSectionState extends State<ConnectionSettingsSection>
               if (isIOSPlatform) ...[
                 const Divider(height: 1),
                 SettingsTile(
-                  icon: PhosphorIconsRegular.moon,
-                  iconColor: context.colors.textTertiary,
                   title: t.settings.backgroundSuspended,
                   subtitle: t.settings.backgroundSuspendedSubtitle,
                   trailing: SettingsTileTrailing.none,
