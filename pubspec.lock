@@ -1259,9 +1259,10 @@ packages:
   terminal_view:
     dependency: "direct main"
     description:
-      path: "repos/terminal_view"
-      relative: true
-    source: path
+      name: terminal_view
+      sha256: "5f8cf2e999b9b98224430b7ef2a32d378062073fa4e566f1f52d89ac9d9ac9cf"
+      url: "https://pub.dev"
+    source: hosted
     version: "0.5.0"
   test_api:
     dependency: transitive
