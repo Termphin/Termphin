@@ -47,15 +47,16 @@ double terminalBottomPadding({
   return math.min(wanted, ceiling);
 }
 
-/// True from the moment a finger lands on a selection handle until it lifts.
+/// True while a finger drags a selection: from the moment it lands on a
+/// selection handle, or a long press starts selecting, until it lifts.
 ///
 /// The session swipe in `TerminalScreen` reads raw pointers through a
 /// [Listener], which never enters the gesture arena, so it cannot lose to the
-/// handle's drag recogniser the way a competing gesture would - both run. That
+/// selection's recogniser the way a competing gesture would - both run. That
 /// is how stretching a selection sideways ends up paging between tabs. The
-/// handle claims the pointer here instead, and the swipe checks the flag
-/// before it arms.
-final ValueNotifier<bool> terminalSelectionHandleHeld = ValueNotifier(false);
+/// selection claims the pointer here instead, and the swipe checks the flag
+/// on every move.
+final ValueNotifier<bool> terminalSelectionDragActive = ValueNotifier(false);
 
 class TerminalPaneController {
   _TerminalPaneState? _state;
@@ -789,7 +790,7 @@ class _TerminalPaneState extends State<TerminalPane> {
     _autoScrollTimer = null;
     _dragLocal = null;
     _dragAnchorCell = null;
-    terminalSelectionHandleHeld.value = false;
+    terminalSelectionDragActive.value = false;
   }
 
   /// While a handle is held near the top or bottom edge, keep scrolling the
@@ -977,6 +978,8 @@ class _TerminalPaneState extends State<TerminalPane> {
       key: _terminalViewKey,
       controller: _terminalController,
       scrollController: _scrollController,
+      onSelectionDragChanged: (active) =>
+          terminalSelectionDragActive.value = active,
       focusNode: _focusNode,
       theme: _terminalTheme,
       textStyle: TerminalStyle(
@@ -1107,9 +1110,9 @@ class _TerminalPaneState extends State<TerminalPane> {
       left: anchor.dx - (isBegin ? touchSize : 0),
       top: anchor.dy,
       child: Listener(
-        onPointerDown: (_) => terminalSelectionHandleHeld.value = true,
-        onPointerUp: (_) => terminalSelectionHandleHeld.value = false,
-        onPointerCancel: (_) => terminalSelectionHandleHeld.value = false,
+        onPointerDown: (_) => terminalSelectionDragActive.value = true,
+        onPointerUp: (_) => terminalSelectionDragActive.value = false,
+        onPointerCancel: (_) => terminalSelectionDragActive.value = false,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onPanStart: (_) => _onHandleDragStart(isBegin),

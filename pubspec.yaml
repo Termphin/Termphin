@@ -150,4 +150,6 @@ flutter_launcher_icons:
   min_sdk_android: 21
 
 dependency_overrides:
+  terminal_view:
+    path: repos/terminal_view
   isolate_manager: ^6.3.2
