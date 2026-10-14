@@ -39,6 +39,14 @@ void main() {
     expanded.dispose();
   }
 
+  /// One frame to start whatever was set off, then long enough for it to
+  /// finish. Not `pumpAndSettle`: a ring with no known progress spins for as
+  /// long as it is shown.
+  Future<void> settle(WidgetTester tester) async {
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+  }
+
   Future<T> add<T>(Completer<T> gate, {String label = 'backup.tar'}) =>
       queue.add(
         kind: TransferJobKind.upload,
@@ -58,7 +66,7 @@ void main() {
     await pump(tester);
     final gate = Completer<void>();
     add(gate).ignore();
-    await tester.pumpAndSettle();
+    await settle(tester);
     queue.running!.report(
       const TransferProgress(
         label: 'backup.tar',
@@ -67,7 +75,7 @@ void main() {
         fraction: 0.25,
       ),
     );
-    await tester.pumpAndSettle();
+    await settle(tester);
 
     expect(find.textContaining('512 B'), findsOneWidget);
     final fill = tester.widget<FractionallySizedBox>(
@@ -81,7 +89,7 @@ void main() {
     await pump(tester);
     add(Completer<void>()).ignore();
     add(Completer<void>(), label: 'photo.jpg').ignore();
-    await tester.pumpAndSettle();
+    await settle(tester);
 
     expect(find.textContaining('1 of 2'), findsOneWidget);
     await finish(tester);
@@ -93,17 +101,17 @@ void main() {
     await pump(tester);
     add(Completer<void>()).ignore();
     add(Completer<void>(), label: 'photo.jpg').ignore();
-    await tester.pumpAndSettle();
+    await settle(tester);
 
     await tester.tap(find.byType(InkWell));
-    await tester.pumpAndSettle();
+    await settle(tester);
     expect(expanded.value, isTrue);
     expect(find.text('backup.tar'), findsOneWidget);
     expect(find.text('photo.jpg'), findsOneWidget);
     expect(find.text('Waiting'), findsOneWidget);
 
     await tester.tapAt(const Offset(10, 700));
-    await tester.pumpAndSettle();
+    await settle(tester);
     expect(expanded.value, isFalse);
     expect(find.text('photo.jpg'), findsNothing);
     await finish(tester);
@@ -114,9 +122,9 @@ void main() {
     add(Completer<void>()).ignore();
     final waiting = add(Completer<void>(), label: 'photo.jpg');
     waiting.ignore();
-    await tester.pumpAndSettle();
+    await settle(tester);
     expanded.value = true;
-    await tester.pumpAndSettle();
+    await settle(tester);
 
     final row = find.ancestor(
       of: find.text('photo.jpg'),
@@ -128,7 +136,7 @@ void main() {
         matching: find.byIcon(PhosphorIconsRegular.x),
       ),
     );
-    await tester.pumpAndSettle();
+    await settle(tester);
 
     expect(queue.jobs, hasLength(1));
     expect(find.text('photo.jpg'), findsNothing);
@@ -141,18 +149,18 @@ void main() {
     await pump(tester);
     final gate = Completer<void>();
     add(gate).ignore();
-    await tester.pumpAndSettle();
+    await settle(tester);
     gate.completeError(Exception('sftp.errors.diskFull'));
-    await tester.pumpAndSettle();
-    await tester.pumpAndSettle();
+    await settle(tester);
+    await settle(tester);
 
     expect(find.textContaining('1 failed'), findsOneWidget);
     await tester.tap(find.byType(InkWell).first);
-    await tester.pumpAndSettle();
+    await settle(tester);
     expect(find.textContaining('space', findRichText: true), findsWidgets);
 
     await tester.tap(find.text('Clear'));
-    await tester.pumpAndSettle();
+    await settle(tester);
     expect(queue.jobs, isEmpty);
     expect(expanded.value, isFalse);
     expect(find.byType(InkWell), findsNothing);
@@ -163,10 +171,10 @@ void main() {
     await pump(tester);
     final gate = Completer<void>();
     add(gate).ignore();
-    await tester.pumpAndSettle();
+    await settle(tester);
     gate.complete();
-    await tester.pumpAndSettle();
-    await tester.pumpAndSettle();
+    await settle(tester);
+    await settle(tester);
 
     expect(find.byType(InkWell), findsNothing);
     await finish(tester);
@@ -188,7 +196,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
     expect(find.byType(InkWell), findsOneWidget, reason: 'still leaving');
 
-    await tester.pumpAndSettle();
+    await settle(tester);
     expect(find.byType(InkWell), findsNothing);
     await finish(tester);
   });

@@ -339,7 +339,11 @@
       "position": "{position} of {count}",
       "failedCount": "{count} failed - tap to see why",
       "clearFinished": "Clear",
-      "items": "{count} items"
+      "items": "{count} items",
+      "uploading": "Uploading",
+      "downloading": "Downloading",
+      "copyingTitle": "Copying",
+      "movingTitle": "Moving"
     }
   },
   "editor": {
@@ -1179,7 +1183,8 @@
       "one": "1 machine uses a key you are deleting and will stop connecting:",
       "other": "{count} machines use a key you are deleting and will stop connecting:"
     },
-    "inUseTitle": "Still in use"
+    "inUseTitle": "Still in use",
+    "more": "More"
   },
   "globalSearch": {
     "hint": "Search everything",

@@ -3,12 +3,11 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
 import '../../theme/theme.dart';
-import '../ui/app_dropdown.dart';
-
-enum _SelectionAction { selectAll, download }
+import '../ui/context_bar.dart';
 
 /// Replaces [SftpPathBar] once at least one row is selected: a count, and the
-/// actions that work on the whole selection.
+/// actions that work on the whole selection, on the same [ContextBar] the
+/// other lists select with.
 class SftpSelectionBar extends StatelessWidget {
   const SftpSelectionBar({
     super.key,
@@ -33,89 +32,47 @@ class SftpSelectionBar extends StatelessWidget {
   final VoidCallback onSelectAll;
   final VoidCallback onDownload;
 
-  /// Select all and download sit in the overflow menu rather than on the bar
-  /// itself, so it still fits a split pane's width.
+  /// Select all always sits in the menu; download joins it when the bar is
+  /// too narrow, as in a split pane.
   @override
   Widget build(BuildContext context) {
     final t = Translations.of(context);
     final colors = context.colors;
-    return Container(
-      color: colors.surfaceCard,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      child: Row(
-        children: [
-          IconButton(
-            icon: Icon(
-              PhosphorIconsRegular.x,
-              color: colors.textPrimary,
-              size: 20,
-            ),
-            onPressed: onClear,
-          ),
-          Expanded(
-            child: Text(
-              t.sftp.selectedCount(count: count),
-              style: TextStyle(
-                color: colors.textPrimary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          IconButton(
-            icon: const Icon(PhosphorIconsFill.folders, size: 20),
-            color: colors.textSecondary,
-            tooltip: copyAvailable ? t.sftp.copyTo : t.sftp.errors.noShell,
-            onPressed: copyAvailable ? onCopy : null,
-          ),
-          IconButton(
-            icon: Icon(
-              PhosphorIconsFill.arrowSquareRight,
-              color: colors.textSecondary,
-              size: 20,
-            ),
-            tooltip: t.sftp.moveTo,
-            onPressed: onMove,
-          ),
-          IconButton(
-            icon: Icon(PhosphorIconsFill.trash, color: colors.error, size: 20),
-            tooltip: t.common.delete,
-            onPressed: onDelete,
-          ),
-          AppActionDropdown<_SelectionAction>(
-            iconSize: 20,
-            iconColor: colors.textSecondary,
-            buttonSize: 40,
-            width: 220,
-            tooltip: t.sftp.moreActions,
-            onSelected: (action) {
-              switch (action) {
-                case _SelectionAction.selectAll:
-                  onSelectAll();
-                case _SelectionAction.download:
-                  onDownload();
-              }
-            },
-            items: [
-              DropdownItem(
-                value: _SelectionAction.selectAll,
-                intrinsicHeight: true,
-                child: AppDropdownItem(
-                  icon: PhosphorIconsRegular.checkSquare,
-                  label: t.sftp.selectAll,
-                ),
-              ),
-              DropdownItem(
-                value: _SelectionAction.download,
-                intrinsicHeight: true,
-                child: AppDropdownItem(
-                  icon: PhosphorIconsFill.downloadSimple,
-                  label: t.sftp.download,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+    return ContextBar(
+      selection: true,
+      leading: ContextBarClose(tooltip: t.selection.clear, onPressed: onClear),
+      title: t.sftp.selectedCount(count: count),
+      actions: [
+        ContextBarAction(
+          icon: PhosphorIconsFill.folders,
+          label: t.sftp.copyTo,
+          tooltip: copyAvailable ? null : t.sftp.errors.noShell,
+          onPressed: copyAvailable ? onCopy : null,
+        ),
+        ContextBarAction(
+          icon: PhosphorIconsFill.arrowSquareRight,
+          label: t.sftp.moveTo,
+          onPressed: onMove,
+        ),
+        ContextBarAction(
+          icon: PhosphorIconsFill.trash,
+          label: t.common.delete,
+          color: colors.error,
+          onPressed: onDelete,
+        ),
+        ContextBarAction(
+          icon: PhosphorIconsFill.downloadSimple,
+          label: t.sftp.download,
+          onPressed: onDownload,
+        ),
+      ],
+      menu: [
+        ContextBarAction(
+          icon: PhosphorIconsRegular.checkSquare,
+          label: t.sftp.selectAll,
+          onPressed: onSelectAll,
+        ),
+      ],
     );
   }
 }

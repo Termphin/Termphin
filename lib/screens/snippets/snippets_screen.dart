@@ -387,12 +387,6 @@ class _SnippetsScreenState extends ConsumerState<SnippetsScreen> {
                         ),
                       ],
                     ],
-                    if (_selectedIds.isNotEmpty)
-                      const SliverToBoxAdapter(
-                        child: SizedBox(
-                          height: SelectionActionBar.reservedHeight,
-                        ),
-                      ),
                   ],
                 ),
               ),
