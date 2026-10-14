@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
 import '../../screens/groups/groups_screen.dart';
@@ -21,7 +20,6 @@ class OrganizationSettingsSection extends StatelessWidget {
         const SizedBox(height: 10),
         AppCard(
           child: SettingsTile(
-            icon: PhosphorIconsFill.folder,
             title: t.groups.title,
             subtitle: t.settings.groupsSubtitle,
             destination: () => const GroupsScreen(),

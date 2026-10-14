@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
 import '../../screens/settings/error_reports_screen.dart';
 import '../../screens/settings/manual_screen.dart';
-import '../../theme/theme.dart';
 import '../ui/app_card.dart';
 import '../ui/clipboard_and_links.dart';
 import '../ui/section_header.dart';
@@ -47,32 +45,24 @@ class FeedbackSettingsSection extends StatelessWidget {
           child: Column(
             children: [
               SettingsTile(
-                icon: PhosphorIconsRegular.chatCircleText,
-                iconColor: context.colors.primary,
                 title: t.settings.sendFeedback,
                 subtitle: t.settings.sendFeedbackSubtitle,
                 onTap: () => _sendFeedback(context, isBug: false),
               ),
               const Divider(height: 1),
               SettingsTile(
-                icon: PhosphorIconsRegular.bug,
-                iconColor: context.colors.warning,
                 title: t.settings.reportBug,
                 subtitle: t.settings.reportBugSubtitle,
                 onTap: () => _sendFeedback(context, isBug: true),
               ),
               const Divider(height: 1),
               SettingsTile(
-                icon: PhosphorIconsRegular.warningCircle,
-                iconColor: context.colors.warning,
                 title: t.settings.errorReports,
                 subtitle: t.settings.errorReportsSubtitle,
                 destination: () => const ErrorReportsScreen(),
               ),
               const Divider(height: 1),
               SettingsTile(
-                icon: PhosphorIconsRegular.bookOpen,
-                iconColor: context.colors.primary,
                 title: t.settings.manual,
                 subtitle: t.settings.manualSubtitle,
                 destination: () => const ManualScreen(),
