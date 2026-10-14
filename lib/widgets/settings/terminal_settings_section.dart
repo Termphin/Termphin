@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
 import '../../screens/settings/fast_upload_settings_screen.dart';
@@ -26,7 +25,6 @@ class TerminalSettingsSection extends StatelessWidget {
           child: Column(
             children: [
               SettingsTile(
-                icon: PhosphorIconsFill.terminalWindow,
                 title: t.settings.terminalAppearance,
                 subtitle: t.settings.terminalNavSubtitle,
                 destination: () => const TerminalAppearanceScreen(),
@@ -35,7 +33,6 @@ class TerminalSettingsSection extends StatelessWidget {
               ValueListenableBuilder<UploadDestination>(
                 valueListenable: uploadDestinationSetting,
                 builder: (context, uploadDestination, _) => SettingsTile(
-                  icon: PhosphorIconsFill.uploadSimple,
                   title: t.settings.fastUpload,
                   titleTrailing: const FeatureInfoButton(
                     key: ValueKey('fastUploadInfo'),

@@ -1198,8 +1198,8 @@ class Translations$settings$en {
 	/// en: 'Predictive echo'
 	String get predictiveEcho => 'Predictive echo';
 
-	/// en: 'Show what you type before the server answers. Only kicks in on a slow connection'
-	String get predictiveEchoSubtitle => 'Show what you type before the server answers. Only kicks in on a slow connection';
+	/// en: 'Show typing instantly on slow connections'
+	String get predictiveEchoSubtitle => 'Show typing instantly on slow connections';
 
 	/// en: 'Fast upload'
 	String get fastUpload => 'Fast upload';
@@ -1213,8 +1213,8 @@ class Translations$settings$en {
 	/// en: 'Asks where to put each upload'
 	String get fastUploadNavSubtitleAsk => 'Asks where to put each upload';
 
-	/// en: 'Pick a file from your device and it uploads over the active SSH session, into the folder you pick, the server's temporary directory or the shell's current directory depending on the setting below.'
-	String get fastUploadSubtitle => 'Pick a file from your device and it uploads over the active SSH session, into the folder you pick, the server\'s temporary directory or the shell\'s current directory depending on the setting below.';
+	/// en: 'Upload a file into the open session'
+	String get fastUploadSubtitle => 'Upload a file into the open session';
 
 	/// en: 'New'
 	String get newBadge => 'New';
@@ -1231,20 +1231,20 @@ class Translations$settings$en {
 	/// en: 'Ask every time'
 	String get uploadDestinationAsk => 'Ask every time';
 
-	/// en: 'Needs a Termphin agent session to know where the shell is. Without one you pick the folder instead.'
-	String get uploadDestinationCurrentDirHint => 'Needs a Termphin agent session to know where the shell is. Without one you pick the folder instead.';
+	/// en: 'Where the shell is, with the agent'
+	String get uploadDestinationCurrentDirHint => 'Where the shell is, with the agent';
 
-	/// en: 'Opens a folder picker for each upload, starting where the shell is when a Termphin agent session knows it.'
-	String get uploadDestinationAskHint => 'Opens a folder picker for each upload, starting where the shell is when a Termphin agent session knows it.';
+	/// en: 'Pick a folder for every upload'
+	String get uploadDestinationAskHint => 'Pick a folder for every upload';
 
-	/// en: 'Each file gets a timestamped name, so nothing there is ever overwritten.'
-	String get uploadDestinationTmpHint => 'Each file gets a timestamped name, so nothing there is ever overwritten.';
+	/// en: 'Timestamped names, nothing overwritten'
+	String get uploadDestinationTmpHint => 'Timestamped names, nothing overwritten';
 
 	/// en: 'Paste the path straight away'
 	String get uploadAutoPaste => 'Paste the path straight away';
 
-	/// en: 'Writes the uploaded path at the cursor as soon as the transfer finishes, instead of offering to.'
-	String get uploadAutoPasteSubtitle => 'Writes the uploaded path at the cursor as soon as the transfer finishes, instead of offering to.';
+	/// en: 'Type the path at the cursor when done'
+	String get uploadAutoPasteSubtitle => 'Type the path at the cursor when done';
 
 	/// en: 'Connection'
 	String get connection => 'Connection';
@@ -1252,8 +1252,8 @@ class Translations$settings$en {
 	/// en: 'Termphin agent'
 	String get remoteAgentToggle => 'Termphin agent';
 
-	/// en: 'Keeps sessions alive across disconnects. Off means plain SSH, no persistence.'
-	String get remoteAgentToggleSubtitle => 'Keeps sessions alive across disconnects. Off means plain SSH, no persistence.';
+	/// en: 'Keeps sessions alive across disconnects'
+	String get remoteAgentToggleSubtitle => 'Keeps sessions alive across disconnects';
 
 	/// en: 'How the Termphin agent works'
 	String get remoteAgentHowItWorks => 'How the Termphin agent works';
@@ -1264,8 +1264,8 @@ class Translations$settings$en {
 	/// en: 'Sessions in the background'
 	String get backgroundSuspended => 'Sessions in the background';
 
-	/// en: 'The system suspends Termphin shortly after you leave it, which drops a plain SSH connection. The Termphin agent keeps the shell running on the server, so you pick up where you left off.'
-	String get backgroundSuspendedSubtitle => 'The system suspends Termphin shortly after you leave it, which drops a plain SSH connection. The Termphin agent keeps the shell running on the server, so you pick up where you left off.';
+	/// en: 'The agent keeps your shell running'
+	String get backgroundSuspendedSubtitle => 'The agent keeps your shell running';
 
 	/// en: 'Termphin agent'
 	String get agentSheetTitle => 'Termphin agent';
@@ -1363,8 +1363,8 @@ class Translations$settings$en {
 	/// en: 'Share usage analytics'
 	String get analyticsToggle => 'Share usage analytics';
 
-	/// en: 'Anonymous usage data and crash reports, off until you allow it.'
-	String get analyticsToggleSubtitle => 'Anonymous usage data and crash reports, off until you allow it.';
+	/// en: 'Anonymous usage and crash reports'
+	String get analyticsToggleSubtitle => 'Anonymous usage and crash reports';
 
 	/// en: 'On-screen controls'
 	String get terminalControls => 'On-screen controls';
@@ -1372,8 +1372,8 @@ class Translations$settings$en {
 	/// en: 'Key toolbar'
 	String get keyToolbar => 'Key toolbar';
 
-	/// en: 'Extra keys above the keyboard - Esc, Tab, Ctrl, arrows'
-	String get keyToolbarSubtitle => 'Extra keys above the keyboard - Esc, Tab, Ctrl, arrows';
+	/// en: 'Esc, Tab, Ctrl, arrows above the keyboard'
+	String get keyToolbarSubtitle => 'Esc, Tab, Ctrl, arrows above the keyboard';
 
 	/// en: 'Toolbar layout'
 	String get toolbarLayout => 'Toolbar layout';
@@ -1402,8 +1402,8 @@ class Translations$settings$en {
 	/// en: 'Dock actions'
 	String get actionDockLayout => 'Dock actions';
 
-	/// en: 'A draggable button on the terminal that opens these actions. Drag a tile to move it, tap − to hide it and + to bring it back.'
-	String get actionDockSubtitle => 'A draggable button on the terminal that opens these actions. Drag a tile to move it, tap − to hide it and + to bring it back.';
+	/// en: 'Drag to move, − to hide, + to restore'
+	String get actionDockSubtitle => 'Drag to move, − to hide, + to restore';
 
 	/// en: 'Dock'
 	String get actionDockPreview => 'Dock';
@@ -1486,8 +1486,8 @@ class Translations$settings$en {
 	/// en: 'Anonymize'
 	String get anonymize => 'Anonymize';
 
-	/// en: 'Replaces machine names, hosts and usernames with placeholders everywhere in the app - for screen sharing, screenshots or working in public. Nothing changes on disk.'
-	String get anonymizeSubtitle => 'Replaces machine names, hosts and usernames with placeholders everywhere in the app - for screen sharing, screenshots or working in public. Nothing changes on disk.';
+	/// en: 'Hide hosts and usernames for screenshots'
+	String get anonymizeSubtitle => 'Hide hosts and usernames for screenshots';
 
 	/// en: 'Download folder'
 	String get downloadFolder => 'Download folder';
@@ -1516,8 +1516,8 @@ class Translations$settings$en {
 	/// en: 'Style'
 	String get editorStyle => 'Style';
 
-	/// en: 'Tab width is the spaces Tab and indenting insert, from the next file you open. Pinch in the editor to change the size as you read.'
-	String get editorPinchHint => 'Tab width is the spaces Tab and indenting insert, from the next file you open. Pinch in the editor to change the size as you read.';
+	/// en: 'Pinch in the editor to resize text'
+	String get editorPinchHint => 'Pinch in the editor to resize text';
 
 	/// en: 'Line numbers'
 	String get editorLineNumbers => 'Line numbers';
@@ -1531,20 +1531,20 @@ class Translations$settings$en {
 	/// en: 'Unrestricted battery use'
 	String get batteryUnrestricted => 'Unrestricted battery use';
 
-	/// en: 'Lets the system keep Termphin running in the background so sessions stay connected. Opens the system setting.'
-	String get batteryUnrestrictedSubtitle => 'Lets the system keep Termphin running in the background so sessions stay connected. Opens the system setting.';
+	/// en: 'Keeps sessions connected in the background'
+	String get batteryUnrestrictedSubtitle => 'Keeps sessions connected in the background';
 
 	/// en: 'Notifications'
 	String get notificationsPermission => 'Notifications';
 
-	/// en: 'Needed for the background-session and download notifications. Opens the system setting.'
-	String get notificationsPermissionSubtitle => 'Needed for the background-session and download notifications. Opens the system setting.';
+	/// en: 'For background sessions and downloads'
+	String get notificationsPermissionSubtitle => 'For background sessions and downloads';
 
 	/// en: 'Local network access'
 	String get localNetworkPermission => 'Local network access';
 
-	/// en: 'Needed to reach machines on the network you're connected to. Without it those connections time out.'
-	String get localNetworkPermissionSubtitle => 'Needed to reach machines on the network you\'re connected to. Without it those connections time out.';
+	/// en: 'Needed to reach machines on your network'
+	String get localNetworkPermissionSubtitle => 'Needed to reach machines on your network';
 
 	/// en: 'Feedback'
 	String get feedback => 'Feedback';
@@ -1573,8 +1573,8 @@ class Translations$settings$en {
 	/// en: 'Star on GitHub'
 	String get starOnGitHub => 'Star on GitHub';
 
-	/// en: 'Termphin is free and open source. A star helps others find it'
-	String get starOnGitHubSubtitle => 'Termphin is free and open source. A star helps others find it';
+	/// en: 'Helps others find Termphin'
+	String get starOnGitHubSubtitle => 'Helps others find Termphin';
 
 	/// en: 'Contribute'
 	String get contribute => 'Contribute';
@@ -1687,8 +1687,8 @@ class Translations$settings$en {
 	/// en: 'Toolbar layouts'
 	String get toolbarProfiles => 'Toolbar layouts';
 
-	/// en: 'Keep more than one arrangement of keys and switch between them.'
-	String get toolbarProfilesSubtitle => 'Keep more than one arrangement of keys and switch between them.';
+	/// en: 'Switch between key layouts'
+	String get toolbarProfilesSubtitle => 'Switch between key layouts';
 
 	/// en: 'Default'
 	String get toolbarProfileDefault => 'Default';
@@ -1759,8 +1759,8 @@ class Translations$settings$en {
 	/// en: 'Follow the terminal'
 	String get sftpFollowTerminal => 'Follow the terminal';
 
-	/// en: 'Files open in the shell's current folder (with the Termphin agent).'
-	String get sftpFollowTerminalSubtitle => 'Files open in the shell\'s current folder (with the Termphin agent).';
+	/// en: 'Open in the shell's current folder'
+	String get sftpFollowTerminalSubtitle => 'Open in the shell\'s current folder';
 }
 
 // Path: exportScreen
@@ -4089,29 +4089,29 @@ extension on Translations {
 			'settings.cursorBar' => 'Bar',
 			'settings.cursorBlink' => 'Blink',
 			'settings.predictiveEcho' => 'Predictive echo',
-			'settings.predictiveEchoSubtitle' => 'Show what you type before the server answers. Only kicks in on a slow connection',
+			'settings.predictiveEchoSubtitle' => 'Show typing instantly on slow connections',
 			'settings.fastUpload' => 'Fast upload',
 			'settings.fastUploadNavSubtitleTmp' => 'Uploads land in the server\'s temporary directory',
 			'settings.fastUploadNavSubtitleCurrentDir' => 'Uploads land in the shell\'s current directory',
 			'settings.fastUploadNavSubtitleAsk' => 'Asks where to put each upload',
-			'settings.fastUploadSubtitle' => 'Pick a file from your device and it uploads over the active SSH session, into the folder you pick, the server\'s temporary directory or the shell\'s current directory depending on the setting below.',
+			'settings.fastUploadSubtitle' => 'Upload a file into the open session',
 			'settings.newBadge' => 'New',
 			'settings.uploadDestination' => 'Upload destination',
 			'settings.uploadDestinationTmp' => 'Temporary directory (scratch folder)',
 			'settings.uploadDestinationCurrentDir' => 'Shell\'s current directory',
 			'settings.uploadDestinationAsk' => 'Ask every time',
-			'settings.uploadDestinationCurrentDirHint' => 'Needs a Termphin agent session to know where the shell is. Without one you pick the folder instead.',
-			'settings.uploadDestinationAskHint' => 'Opens a folder picker for each upload, starting where the shell is when a Termphin agent session knows it.',
-			'settings.uploadDestinationTmpHint' => 'Each file gets a timestamped name, so nothing there is ever overwritten.',
+			'settings.uploadDestinationCurrentDirHint' => 'Where the shell is, with the agent',
+			'settings.uploadDestinationAskHint' => 'Pick a folder for every upload',
+			'settings.uploadDestinationTmpHint' => 'Timestamped names, nothing overwritten',
 			'settings.uploadAutoPaste' => 'Paste the path straight away',
-			'settings.uploadAutoPasteSubtitle' => 'Writes the uploaded path at the cursor as soon as the transfer finishes, instead of offering to.',
+			'settings.uploadAutoPasteSubtitle' => 'Type the path at the cursor when done',
 			'settings.connection' => 'Connection',
 			'settings.remoteAgentToggle' => 'Termphin agent',
-			'settings.remoteAgentToggleSubtitle' => 'Keeps sessions alive across disconnects. Off means plain SSH, no persistence.',
+			'settings.remoteAgentToggleSubtitle' => 'Keeps sessions alive across disconnects',
 			'settings.remoteAgentHowItWorks' => 'How the Termphin agent works',
 			'settings.remoteAgentHowItWorksSubtitle' => 'What it runs on your server, and why it is safe',
 			'settings.backgroundSuspended' => 'Sessions in the background',
-			'settings.backgroundSuspendedSubtitle' => 'The system suspends Termphin shortly after you leave it, which drops a plain SSH connection. The Termphin agent keeps the shell running on the server, so you pick up where you left off.',
+			'settings.backgroundSuspendedSubtitle' => 'The agent keeps your shell running',
 			'settings.agentSheetTitle' => 'Termphin agent',
 			'settings.agentSheetIntro' => 'A small helper Termphin uploads to your server over SSH. It keeps your shell running there, so closing the app or losing signal doesn\'t end what you were doing.',
 			'settings.agentSheetPointPlatforms' => 'Runs on Linux and macOS (x86_64 and arm64) and on Windows (x86_64).',
@@ -4144,10 +4144,10 @@ extension on Translations {
 			'settings.organization' => 'Organization',
 			'settings.analytics' => 'Analytics',
 			'settings.analyticsToggle' => 'Share usage analytics',
-			'settings.analyticsToggleSubtitle' => 'Anonymous usage data and crash reports, off until you allow it.',
+			'settings.analyticsToggleSubtitle' => 'Anonymous usage and crash reports',
 			'settings.terminalControls' => 'On-screen controls',
 			'settings.keyToolbar' => 'Key toolbar',
-			'settings.keyToolbarSubtitle' => 'Extra keys above the keyboard - Esc, Tab, Ctrl, arrows',
+			'settings.keyToolbarSubtitle' => 'Esc, Tab, Ctrl, arrows above the keyboard',
 			'settings.toolbarLayout' => 'Toolbar layout',
 			'settings.actionDock' => 'Action dock',
 			'settings.actionDockSwitchSubtitle' => 'Floating button over the terminal with quick actions',
@@ -4157,7 +4157,7 @@ extension on Translations {
 			'settings.commandSuggestionsSubtitle' => 'Suggests commands and paths as you type',
 			'settings.howItWorks' => 'How it works',
 			'settings.actionDockLayout' => 'Dock actions',
-			'settings.actionDockSubtitle' => 'A draggable button on the terminal that opens these actions. Drag a tile to move it, tap − to hide it and + to bring it back.',
+			'settings.actionDockSubtitle' => 'Drag to move, − to hide, + to restore',
 			'settings.actionDockPreview' => 'Dock',
 			'settings.actionDockHiddenLabel' => 'Hidden',
 			'settings.actionDockAllHidden' => 'Every tile is hidden. Tap + below or drag one here.',
@@ -4185,7 +4185,7 @@ extension on Translations {
 			'settings.toolbarResizeMessage' => ({required Object count}) => '${count} keys do not fit the new grid and will be taken off the toolbar.',
 			'settings.toolbarResizeConfirm' => 'Shrink anyway',
 			'settings.anonymize' => 'Anonymize',
-			'settings.anonymizeSubtitle' => 'Replaces machine names, hosts and usernames with placeholders everywhere in the app - for screen sharing, screenshots or working in public. Nothing changes on disk.',
+			'settings.anonymizeSubtitle' => 'Hide hosts and usernames for screenshots',
 			'settings.downloadFolder' => 'Download folder',
 			'settings.downloadFolderDefault' => 'System Downloads folder',
 			'settings.downloadFolderReset' => 'Use system Downloads',
@@ -4195,16 +4195,16 @@ extension on Translations {
 			'settings.textEditor' => 'Text editor',
 			'settings.textEditorSubtitle' => ({required Object font, required Object size}) => '${font}, ${size} pt',
 			'settings.editorStyle' => 'Style',
-			'settings.editorPinchHint' => 'Tab width is the spaces Tab and indenting insert, from the next file you open. Pinch in the editor to change the size as you read.',
+			'settings.editorPinchHint' => 'Pinch in the editor to resize text',
 			'settings.editorLineNumbers' => 'Line numbers',
 			'settings.editorWordWrap' => 'Wrap long lines',
 			'settings.editorWordWrapSubtitle' => 'Off, a long line scrolls sideways instead.',
 			'settings.batteryUnrestricted' => 'Unrestricted battery use',
-			'settings.batteryUnrestrictedSubtitle' => 'Lets the system keep Termphin running in the background so sessions stay connected. Opens the system setting.',
+			'settings.batteryUnrestrictedSubtitle' => 'Keeps sessions connected in the background',
 			'settings.notificationsPermission' => 'Notifications',
-			'settings.notificationsPermissionSubtitle' => 'Needed for the background-session and download notifications. Opens the system setting.',
+			'settings.notificationsPermissionSubtitle' => 'For background sessions and downloads',
 			'settings.localNetworkPermission' => 'Local network access',
-			'settings.localNetworkPermissionSubtitle' => 'Needed to reach machines on the network you\'re connected to. Without it those connections time out.',
+			'settings.localNetworkPermissionSubtitle' => 'Needed to reach machines on your network',
 			'settings.feedback' => 'Feedback',
 			'settings.sendFeedback' => 'Send feedback',
 			'settings.sendFeedbackSubtitle' => 'Ideas, requests, anything you\'d like to see',
@@ -4214,7 +4214,7 @@ extension on Translations {
 			'settings.issueTrackerSubtitle' => 'Open bugs and ideas, out in the open on GitHub',
 			'settings.openSource' => 'Open source',
 			'settings.starOnGitHub' => 'Star on GitHub',
-			'settings.starOnGitHubSubtitle' => 'Termphin is free and open source. A star helps others find it',
+			'settings.starOnGitHubSubtitle' => 'Helps others find Termphin',
 			'settings.contribute' => 'Contribute',
 			'settings.contributeSubtitle' => 'Fix a bug or build a feature, here is where to start',
 			'settings.sourceLicense' => 'License',
@@ -4254,7 +4254,7 @@ extension on Translations {
 			'settings.knownHostsForgetBody' => ({required Object host}) => 'The next connection to ${host} will ask you to accept its key again.',
 			'settings.knownHostsForgotten' => 'Host key forgotten.',
 			'settings.toolbarProfiles' => 'Toolbar layouts',
-			'settings.toolbarProfilesSubtitle' => 'Keep more than one arrangement of keys and switch between them.',
+			'settings.toolbarProfilesSubtitle' => 'Switch between key layouts',
 			'settings.toolbarProfileDefault' => 'Default',
 			'settings.toolbarProfileActive' => 'In use',
 			'settings.toolbarProfileNew' => 'New layout',
@@ -4278,7 +4278,7 @@ extension on Translations {
 			'settings.sftpShowHidden' => 'Show hidden files',
 			'settings.sftpShowHiddenSubtitle' => 'Names that start with a dot, like .ssh and .bashrc.',
 			'settings.sftpFollowTerminal' => 'Follow the terminal',
-			'settings.sftpFollowTerminalSubtitle' => 'Files open in the shell\'s current folder (with the Termphin agent).',
+			'settings.sftpFollowTerminalSubtitle' => 'Open in the shell\'s current folder',
 			'exportScreen.title' => 'Export & Import',
 			'exportScreen.exportInstructions' => 'Choose what to include in the backup file.',
 			'exportScreen.saveDialogTitle' => 'Save backup',

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
 import '../../screens/backup/export_screen.dart';
@@ -21,7 +20,6 @@ class DataBackupSettingsSection extends StatelessWidget {
         const SizedBox(height: 10),
         AppCard(
           child: SettingsTile(
-            icon: PhosphorIconsFill.arrowsLeftRight,
             title: t.exportScreen.title,
             subtitle: t.settings.exportImportSubtitle,
             destination: () => const ExportScreen(),

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
 import '../../screens/settings/action_dock_settings_screen.dart';
@@ -46,7 +45,6 @@ class TerminalControlsSettingsSection extends StatelessWidget {
                   children: [
                     SettingsSwitchTile(
                       key: const ValueKey('toolbarEnabledSwitch'),
-                      icon: PhosphorIconsFill.keyboard,
                       title: t.settings.keyToolbar,
                       subtitle: t.settings.keyToolbarSubtitle,
                       value: enabled,
@@ -55,7 +53,6 @@ class TerminalControlsSettingsSection extends StatelessWidget {
                     if (enabled) ...[
                       const Divider(height: 1),
                       SettingsTile(
-                        icon: PhosphorIconsFill.slidersHorizontal,
                         title: t.settings.toolbarLayout,
                         destination: () => const ToolbarProfilesScreen(),
                       ),
@@ -70,7 +67,6 @@ class TerminalControlsSettingsSection extends StatelessWidget {
                   children: [
                     SettingsSwitchTile(
                       key: const ValueKey('actionDockEnabledSwitch'),
-                      icon: PhosphorIconsFill.squaresFour,
                       title: t.settings.actionDock,
                       subtitle: t.settings.actionDockSwitchSubtitle,
                       value: enabled,
@@ -80,7 +76,6 @@ class TerminalControlsSettingsSection extends StatelessWidget {
                     if (enabled) ...[
                       const Divider(height: 1),
                       SettingsTile(
-                        icon: PhosphorIconsFill.dotsNine,
                         title: t.settings.actionDockLayout,
                         destination: () => const ActionDockSettingsScreen(),
                       ),
@@ -93,7 +88,6 @@ class TerminalControlsSettingsSection extends StatelessWidget {
                 valueListenable: tabBarPositionSetting,
                 builder: (context, position, _) => SettingsSwitchTile(
                   key: const ValueKey('tabsAtBottomSwitch'),
-                  icon: PhosphorIconsFill.tabs,
                   title: t.settings.tabsAtBottom,
                   titleTrailing: NewBadge(
                     appVersion: appVersion,
@@ -111,7 +105,6 @@ class TerminalControlsSettingsSection extends StatelessWidget {
                 valueListenable: commandSuggestionsSetting,
                 builder: (context, enabled, _) => SettingsSwitchTile(
                   key: const ValueKey('commandSuggestionsSwitch'),
-                  icon: PhosphorIconsFill.lightning,
                   title: t.settings.commandSuggestions,
                   titleTrailing: const FeatureInfoButton(
                     key: ValueKey('commandSuggestionsInfo'),

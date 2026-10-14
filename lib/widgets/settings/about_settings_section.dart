@@ -83,7 +83,6 @@ class AboutSettingsSection extends StatelessWidget {
           child: Column(
             children: [
               SettingsTile(
-                icon: PhosphorIconsFill.terminalWindow,
                 title: 'Termphin',
                 subtitle: version == null
                     ? t.settings.aboutTagline
@@ -92,7 +91,6 @@ class AboutSettingsSection extends StatelessWidget {
               ),
               const Divider(height: 1),
               SettingsTile(
-                icon: PhosphorIconsFill.sparkle,
                 title: t.settings.releaseNotes,
                 subtitle: t.settings.releaseNotesSubtitle,
                 onTap: () => _showReleaseNotes(context),
@@ -100,7 +98,6 @@ class AboutSettingsSection extends StatelessWidget {
               if (ReviewPromptService.instance.canOpenStoreListing) ...[
                 const Divider(height: 1),
                 SettingsTile(
-                  icon: PhosphorIconsFill.star,
                   title: t.settings.rateApp,
                   subtitle: isIOSPlatform
                       ? t.settings.rateAppSubtitleIos
@@ -111,14 +108,12 @@ class AboutSettingsSection extends StatelessWidget {
               ],
               const Divider(height: 1),
               SettingsTile(
-                icon: PhosphorIconsFill.scales,
                 title: t.settings.licenses,
                 subtitle: t.settings.licensesSubtitle,
                 onTap: () => _showLicenses(context),
               ),
               const Divider(height: 1),
               SettingsTile(
-                icon: PhosphorIconsFill.shieldCheck,
                 title: t.settings.privacyPolicy,
                 subtitle: t.settings.privacyPolicySubtitle,
                 trailing: SettingsTileTrailing.external,
@@ -129,7 +124,6 @@ class AboutSettingsSection extends StatelessWidget {
               ),
               const Divider(height: 1),
               SettingsTile(
-                icon: PhosphorIconsFill.fileText,
                 title: t.settings.terms,
                 subtitle: t.settings.termsSubtitle,
                 trailing: SettingsTileTrailing.external,
