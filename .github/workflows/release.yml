@@ -142,9 +142,9 @@ jobs:
           PRERELEASE=false
           [ "$PLATFORM" != all ] && PRERELEASE=true
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release edit "$TAG" --title "Termphin $TAG" --notes-file notes.md --prerelease="$PRERELEASE" --draft
+            gh release edit "$TAG" --title "$TAG" --notes-file notes.md --prerelease="$PRERELEASE" --draft
           else
-            gh release create "$TAG" --title "Termphin $TAG" --notes-file notes.md --prerelease="$PRERELEASE" --draft --verify-tag
+            gh release create "$TAG" --title "$TAG" --notes-file notes.md --prerelease="$PRERELEASE" --draft --verify-tag
           fi
 
   android:
