@@ -131,9 +131,24 @@ void main() {
     await tester.pumpAndSettle();
     expect(terminalSettings.fontFamily.value, 'JetBrainsMonoNerdFontMono');
 
+    await tester.ensureVisible(find.text(t.toolbar.allTerminalSettings));
+    await tester.pumpAndSettle();
     await tester.tap(find.text(t.toolbar.allTerminalSettings));
     await tester.pumpAndSettle();
     expect(exits, ['appearance']);
+  });
+
+  testWidgets('switching tabs keeps the sheet the same height', (
+    tester,
+  ) async {
+    await open(tester);
+    final surface = find.byKey(const ValueKey('sessionQuickSurface'));
+    final toolbarHeight = tester.getSize(surface).height;
+
+    await tester.tap(find.byKey(const ValueKey('sessionQuickTab-appearance')));
+    await tester.pumpAndSettle();
+
+    expect(tester.getSize(surface).height, toolbarHeight);
   });
 
   testWidgets('with the toolbar off only the appearance is offered', (

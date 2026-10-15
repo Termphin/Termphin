@@ -121,6 +121,11 @@ class _SessionQuickSheetState extends State<SessionQuickSheet> {
       ? SessionQuickTab.toolbar
       : SessionQuickTab.appearance;
 
+  /// One height for both tabs, so switching between them does not make the
+  /// sheet jump; whatever does not fit scrolls inside it.
+  static double _bodyHeight(BuildContext context) =>
+      MediaQuery.sizeOf(context).height * 0.3;
+
   @override
   Widget build(BuildContext context) {
     final t = Translations.of(context);
@@ -160,16 +165,19 @@ class _SessionQuickSheetState extends State<SessionQuickSheet> {
             ),
           ),
         Flexible(
-          child: switch (_tab) {
-            SessionQuickTab.toolbar => _ToolbarTab(
-              snippetLabels: widget.snippetLabels,
-              onPicked: widget.onPicked,
-              onManage: widget.onManageToolbars,
-            ),
-            SessionQuickTab.appearance => _AppearanceTab(
-              onOpenAll: widget.onOpenAppearance,
-            ),
-          },
+          child: SizedBox(
+            height: widget.showToolbarTab ? _bodyHeight(context) : null,
+            child: switch (_tab) {
+              SessionQuickTab.toolbar => _ToolbarTab(
+                snippetLabels: widget.snippetLabels,
+                onPicked: widget.onPicked,
+                onManage: widget.onManageToolbars,
+              ),
+              SessionQuickTab.appearance => _AppearanceTab(
+                onOpenAll: widget.onOpenAppearance,
+              ),
+            },
+          ),
         ),
       ],
     );
