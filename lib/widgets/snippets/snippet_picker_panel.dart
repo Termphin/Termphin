@@ -16,7 +16,6 @@ import '../../utils/group_match.dart';
 import '../terminal/terminal_scheme_theme.dart';
 import '../ui/group_filter_chips.dart';
 import 'snippet_args_dialog.dart';
-import 'snippet_avatar.dart';
 
 /// Floating spotlight-style snippet picker: search and group filter. One that
 /// needs arguments asks for them in [showSnippetArgsDialog]. Choosing a
@@ -305,8 +304,6 @@ class _SnippetPickerPanelState extends ConsumerState<SnippetPickerPanel> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               child: Row(
                 children: [
-                  const SnippetAvatar(size: 32),
-                  const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

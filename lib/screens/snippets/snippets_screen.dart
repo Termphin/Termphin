@@ -14,7 +14,6 @@ import '../../services/analytics/analytics_service.dart';
 import '../../services/storage/group_storage.dart';
 import '../../theme/theme.dart';
 import '../../utils/group_match.dart';
-import '../../widgets/snippets/snippet_avatar.dart';
 import '../../widgets/ui/app_dropdown.dart';
 import '../../widgets/ui/app_notifications.dart';
 import '../../widgets/ui/clipboard_and_links.dart';
@@ -475,12 +474,10 @@ class _SnippetCard extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SelectionCheck(
-                  selected: selected,
-                  size: 42,
-                  child: const SnippetAvatar(),
-                ),
-                const SizedBox(width: 14),
+                if (selectionMode) ...[
+                  SelectionCheck(selected: selected, size: 22),
+                  const SizedBox(width: 12),
+                ],
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
