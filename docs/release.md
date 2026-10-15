@@ -60,8 +60,9 @@ shows `1.12.0 (22)`.
 
 `ITSAppUsesNonExemptEncryption` is **absent** from `ios/Runner/Info.plist`, and
 that is a third state, not a quiet "false". The app ships its own ciphers
-(pure-Dart AES-256-GCM and ChaCha20-Poly1305 in `secret_cipher.dart`/`aead.dart`,
-plus PBKDF2 for backups) rather than relying solely on the platform's, so it
+(pure-Dart AES-256-GCM in `secret_cipher.dart`/`aead.dart`, PBKDF2 for backups,
+and the SSH transport ciphers in `dartssh2`) rather than relying solely on the
+platform's, so it
 falls outside the "only standard encryption provided by the operating system"
 exemption and false would be untrue.
 
