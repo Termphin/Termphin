@@ -82,10 +82,10 @@
 	     same as answering "false".
 
 	     The app ships its own cipher implementations - pure-Dart AES-256-GCM
-	     and ChaCha20-Poly1305 in secret_cipher.dart/aead.dart, PBKDF2 for
-	     backups - rather than only the platform's, so the "only standard
-	     encryption provided by the operating system" exemption does not cover
-	     it and "false" would be untrue.
+	     in secret_cipher.dart/aead.dart, PBKDF2 for backups, the SSH
+	     transport ciphers in dartssh2 - rather than only the platform's, so
+	     the "only standard encryption provided by the operating system"
+	     exemption does not cover it and "false" would be untrue.
 
 	     "true" is also wrong without more: it asserts that approved export
 	     documentation exists and that its ITSEncryptionExportComplianceCode
