@@ -16,9 +16,8 @@ import 'live_env.dart';
 /// A dropped session picking its output up where it stopped, through the
 /// real manager, sshd and agent.
 ///
-/// Needs TERMPHIN_LIVE_SSH_PORT and TERMPHIN_LIVE_CONTAINER, and an agent of
-/// 0.12.0 or later installed for `tester` with a matching `agent.meta` - the
-/// bundled one predates `--resume`, and the manager leaves a newer one alone.
+/// Needs TERMPHIN_LIVE_SSH_PORT and TERMPHIN_LIVE_CONTAINER. Resuming needs
+/// agent 0.12.0 or later, which the bundled one is.
 final _portEnv = Platform.environment['TERMPHIN_LIVE_SSH_PORT'];
 final _container = Platform.environment['TERMPHIN_LIVE_CONTAINER'] ?? '';
 final _live = _portEnv != null && _container.isNotEmpty;

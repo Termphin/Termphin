@@ -51,8 +51,9 @@ fingerprint is public, but a writable plaintext file would let an attacker
 replace the pin and turn the check into a rubber stamp.
 
 - **Fails closed.** No prompt to raise means no way to establish trust, so the
-  connection does not happen - which is what makes it safe for background paths
-  (`_withTemporaryClient`) to pass no prompt.
+  connection does not happen. Short-lived connections (`_withTemporaryClient`,
+  for a session list or a rename) carry the same prompts as a tab, since the
+  first contact with a host can just as easily happen there.
 - `showHostKeyPrompt` (`host_key_dialog.dart`) reaches the root `navigatorKey`
   and is installed onto `SshSessionManager` from `main.dart`, not imported by it
   - the manager stays platform-neutral.

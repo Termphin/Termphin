@@ -43,9 +43,10 @@ Termphin?" in front of it, because filtering who gets asked by how they feel is
 against store policy and the API returns nothing to branch on. Gates, all
 device-local: five successful connections, three days since the first, and
 either never asked or 120 days plus a new version since the last. A request that
-throws burns no cooldown. It fires from `_AppShellState._checkWhatsNewThenReview`
-and only when the what's-new modal had nothing to show - the home screen gets
-one interruption, not two, and never over a live terminal. Settings → About has
+throws burns no cooldown. It fires last in `_AppShellState._runStartupInterstitials`
+and only when neither the what's-new modal nor the group migration prompt had
+anything to show - the home screen gets one interruption, not two, and never
+over a live terminal. Settings → About has
 a "Rate Termphin" row straight to the listing instead, since the in-app dialog
 is quota'd. Neither path is testable on a debug build.
 
@@ -70,7 +71,10 @@ what produced a wall of bullet points nobody read.
   the read. Give it its real number at release time and it appears everywhere.
   Both yaml files take the marker, and there is only ever one such entry.
 - `assets/whats_new.yaml` is the popup: hand-written, only ever new features.
-  Each highlight is `id` + `title` + `body` (prose) + optional `image`. **A
+  Each highlight is `id` + `title` + `body` (prose), plus optional `image`,
+  `aspect` (the image's ratio), `setting` (an inline toggle) and `announce`
+  (default true; false keeps it out of the popup and reachable only from the
+  setting's info button). **A
   version with no `highlights` block means no popup at all**, and most versions
   are meant to have none - a release is not owed an announcement. **Do not add a
   block, or flag a missing one as a gap, without being asked.**
