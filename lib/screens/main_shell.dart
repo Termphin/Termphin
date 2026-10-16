@@ -23,6 +23,7 @@ import '../widgets/shell/nav_rail.dart';
 import '../widgets/terminal/terminal_scheme_theme.dart';
 import '../widgets/ui/app_badge.dart';
 import '../widgets/ui/app_notifications.dart';
+import '../widgets/ui/fade_over_color.dart';
 import 'home_screen.dart';
 import 'keys/key_manager_screen.dart';
 import 'settings/settings_screen.dart';
@@ -75,29 +76,52 @@ class _MainShellState extends ConsumerState<MainShell>
   GlobalKey<TerminalScreenState> _terminalKey =
       GlobalKey<TerminalScreenState>();
 
-  /// Brings the terminal up over the tabs and takes it back down: it rises a
-  /// little as it fades in while the screen behind it sinks back, and leaves
-  /// the same way, quicker. A closed strip is only dropped once it has gone,
-  /// so closing animates too.
+  /// Brings the terminal up over the tabs and takes it back down, along
+  /// Material's shared Z axis: the tabs drift away and fade out, then the
+  /// terminal comes forward and fades in; hiding plays it back, quicker. The
+  /// two never fade at the same time, so nothing is ever half of each - which
+  /// is what lets [FadeOverColorTransition] do the fading with a plain
+  /// colour instead of an offscreen layer per frame. A
+  /// closed strip is only dropped once it has gone, so closing animates too.
   late final AnimationController _terminalMotion;
   late final Animation<double> _terminalCurve = CurvedAnimation(
     parent: _terminalMotion,
-    curve: AppTheme.interactiveCurve,
-    reverseCurve: Curves.easeInCubic,
+    curve: Easing.emphasizedDecelerate,
+    reverseCurve: Easing.emphasizedAccelerate,
   );
+
+  /// The terminal fades in over the last part of the way in, after the tabs
+  /// are gone, and out over the first part of the way back.
   late final Animation<double> _terminalFade = CurvedAnimation(
     parent: _terminalMotion,
-    curve: const Interval(0, 0.6, curve: Curves.easeOut),
-    reverseCurve: const Interval(0.2, 1, curve: Curves.easeIn),
+    curve: const Interval(_handover, 1, curve: Curves.easeOut),
+    reverseCurve: const Interval(1 - _handover, 1, curve: Curves.easeIn),
   );
-  late final Animation<Offset> _terminalSlide = Tween(
-    begin: const Offset(0, 0.04),
-    end: Offset.zero,
+
+  /// The tabs fade out over the first part of the way in and back in over
+  /// the last part of the way back - the mirror of [_terminalFade].
+  late final Animation<double> _backgroundFade = ReverseAnimation(
+    CurvedAnimation(
+      parent: _terminalMotion,
+      curve: const Interval(0, _handover, curve: Curves.easeIn),
+      reverseCurve: const Interval(0, 1 - _handover, curve: Curves.easeOut),
+    ),
+  );
+  late final Animation<double> _terminalScale = Tween(
+    begin: _zDepth,
+    end: 1.0,
   ).animate(_terminalCurve);
   late final Animation<double> _backgroundScale = Tween(
     begin: 1.0,
-    end: 0.96,
+    end: 2 - _zDepth,
   ).animate(_terminalCurve);
+
+  /// Where along the motion one screen hands over to the other.
+  static const double _handover = 0.3;
+
+  /// How far back the terminal starts, as a scale; the tabs move forward by
+  /// the same step, so both read as one camera moving along the axis.
+  static const double _zDepth = 0.92;
 
   /// Bumped whenever the terminal is asked back, so a close still waiting
   /// for its exit to finish knows not to drop the strip after all.
@@ -111,6 +135,17 @@ class _MainShellState extends ConsumerState<MainShell>
     } else {
       unawaited(_terminalMotion.reverse());
     }
+  }
+
+  /// Starts the terminal's entrance one frame late. The frame a terminal is
+  /// requested in is the one that builds it - a new screen, a new tab, its
+  /// connection set up - and an entrance started in it would spend its
+  /// first frames waiting on that. Built first, still invisible, the motion
+  /// then has every frame to itself.
+  void _animateTerminalAfterBuild() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _terminalVisible) _animateTerminal(visible: true);
+    });
   }
 
   @override
@@ -335,12 +370,12 @@ class _MainShellState extends ConsumerState<MainShell>
             _terminalKey = GlobalKey<TerminalScreenState>();
           }
         });
-        _animateTerminal(visible: true);
-        _syncNotificationAnchor();
-        unawaited(AnalyticsService.instance.screen(AnalyticsScreen.terminal));
         if (hasLiveScreen) {
           _terminalKey.currentState?.openSession(next.$1, next.$2);
         }
+        _animateTerminalAfterBuild();
+        _syncNotificationAnchor();
+        unawaited(AnalyticsService.instance.screen(AnalyticsScreen.terminal));
       }
     });
 
@@ -361,27 +396,37 @@ class _MainShellState extends ConsumerState<MainShell>
       child: Stack(
         fit: StackFit.expand,
         children: [
-          ScaleTransition(
-            scale: _backgroundScale,
-            child: isWideLayout(context)
-                ? _buildDesktopScaffold(t)
-                : _buildMobileScaffold(t),
+          ColoredBox(color: context.colors.backgroundPrimary),
+          FadeOverColorTransition(
+            opacity: _backgroundFade,
+            color: context.colors.backgroundPrimary,
+            child: ScaleTransition(
+              scale: _backgroundScale,
+              child: RepaintBoundary(
+                child: isWideLayout(context)
+                    ? _buildDesktopScaffold(t)
+                    : _buildMobileScaffold(t),
+              ),
+            ),
           ),
           if (_terminalSession != null)
             IgnorePointer(
               ignoring: !_terminalVisible,
-              child: FadeTransition(
+              child: FadeOverColorTransition(
                 opacity: _terminalFade,
-                child: SlideTransition(
-                  position: _terminalSlide,
-                  child: TerminalSchemeTheme(
-                    child: TerminalScreen(
-                      key: _terminalKey,
-                      initialSessionId: _terminalSession!.$1,
-                      initialProfile: _terminalSession!.$2,
-                      siblingScope: _siblingScope,
-                      onClose: _onTerminalClose,
-                      onHide: _hideTerminal,
+                color: context.colors.backgroundPrimary,
+                child: ScaleTransition(
+                  scale: _terminalScale,
+                  child: RepaintBoundary(
+                    child: TerminalSchemeTheme(
+                      child: TerminalScreen(
+                        key: _terminalKey,
+                        initialSessionId: _terminalSession!.$1,
+                        initialProfile: _terminalSession!.$2,
+                        siblingScope: _siblingScope,
+                        onClose: _onTerminalClose,
+                        onHide: _hideTerminal,
+                      ),
                     ),
                   ),
                 ),

@@ -172,21 +172,6 @@ class SessionSwipeController extends ChangeNotifier {
     _animateTo(0);
   }
 
-  /// A tab picked by tapping it, already made active: its page slides in from
-  /// the side the tab lies on and pushes [from] out the other way, as a swipe
-  /// would have. The switch itself happened first, so the strip highlights the
-  /// tab at once and nothing waits on the animation.
-  ///
-  /// A second tap mid-slide starts over from the page it left; the first
-  /// slide's end is dropped with it.
-  void slideIn({required int from, required int to}) {
-    if (from == to || _viewportWidth <= 0 || _pointer != null) return;
-    _targetIndex = from;
-    offset.value = to > from ? _viewportWidth : -_viewportWidth;
-    notifyListeners();
-    _animateTo(0);
-  }
-
   void _animateTo(double target, {int? commitIndex}) {
     _commitIndex = commitIndex;
     _tween = Tween<double>(

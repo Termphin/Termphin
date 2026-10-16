@@ -15,6 +15,7 @@ import 'package:termphin/widgets/profiles/profile_avatar.dart';
 import 'package:termphin/widgets/shell/nav_rail.dart';
 import 'package:termphin/widgets/terminal/floating_action_dock.dart';
 import 'package:termphin/widgets/ui/app_notifications.dart';
+import 'package:termphin/widgets/ui/fade_over_color.dart';
 
 import '../support/fakes.dart';
 import '../support/fixtures.dart';
@@ -63,6 +64,7 @@ void main() {
 
       await tester.tap(find.byTooltip('Re-attach'));
       await tester.pump();
+      await tester.pump();
       await tester.pump(const Duration(milliseconds: 250));
 
       final overlay = container.read(terminalOverlayProvider);
@@ -98,6 +100,7 @@ void main() {
 
       await tester.tap(find.byTooltip('Re-attach'));
       await tester.pump();
+      await tester.pump();
       await tester.pump(const Duration(milliseconds: 250));
 
       final overlay = container.read(terminalOverlayProvider);
@@ -114,10 +117,10 @@ void main() {
   double terminalOpacity(WidgetTester tester) {
     final finder = find.ancestor(
       of: find.byType(TerminalScreen),
-      matching: find.byType(FadeTransition),
+      matching: find.byType(FadeOverColor),
     );
     if (finder.evaluate().isEmpty) return 0;
-    return tester.widget<FadeTransition>(finder.first).opacity.value;
+    return tester.widget<FadeOverColor>(finder.first).opacity;
   }
 
   testWidgets(
@@ -149,6 +152,7 @@ void main() {
       expect(terminalOpacity(tester), 0);
 
       await tester.tap(find.text('devbox'));
+      await tester.pump();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
@@ -183,6 +187,7 @@ void main() {
 
     await tester.tap(find.text('devbox'));
     await tester.pump();
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     expect(terminalOpacity(tester), 1.0);
 
@@ -192,6 +197,7 @@ void main() {
     expect(terminalOpacity(tester), 0);
 
     await tester.tap(find.text('devbox'));
+    await tester.pump();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     expect(terminalOpacity(tester), 1.0);
@@ -222,6 +228,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
     await tester.tap(find.text('devbox'));
+    await tester.pump();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
@@ -259,6 +266,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
     await tester.tap(find.text('devbox'));
+    await tester.pump();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     expect(terminalOpacity(tester), 1.0);
@@ -348,6 +356,7 @@ void main() {
 
       await tester.tap(find.byTooltip('Collapse sidebar'));
       await tester.pump();
+      await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
       expect(
@@ -377,6 +386,7 @@ void main() {
 
       await tester.tap(find.byTooltip('Collapse sidebar'));
       await tester.pump();
+      await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
       expect(railWidth(), kNavRailCollapsedWidth);
@@ -385,6 +395,7 @@ void main() {
       expect(find.byTooltip('Expand sidebar'), findsOneWidget);
 
       await tester.tap(find.byTooltip('Expand sidebar'));
+      await tester.pump();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
@@ -404,6 +415,7 @@ void main() {
 
       await tester.tap(find.byTooltip('Collapse sidebar'));
       await tester.pump();
+      await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
       expect(sidebarCollapsedSetting.value, isTrue);
@@ -411,6 +423,7 @@ void main() {
       expect(sidebarCollapsedSetting.value, isTrue);
 
       await tester.tap(inSidebar(find.byTooltip('Keys')));
+      await tester.pump();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
@@ -437,6 +450,7 @@ void main() {
       );
 
       await tester.tap(find.byTooltip('Collapse sidebar'));
+      await tester.pump();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 

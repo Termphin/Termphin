@@ -19,6 +19,7 @@ import 'package:termphin/widgets/shell/nav_rail.dart';
 import 'package:termphin/widgets/terminal/floating_action_dock.dart';
 import 'package:termphin/widgets/terminal/special_keys_toolbar.dart';
 import 'package:termphin/widgets/terminal/terminal_pane.dart';
+import 'package:termphin/widgets/ui/fade_over_color.dart';
 
 import '../../support/fakes.dart';
 import '../../support/fixtures.dart';
@@ -781,6 +782,89 @@ void main() {
     );
     final add = tester.getRect(find.byKey(const ValueKey('tabBarAddButton')));
     expect(add.top, greaterThanOrEqualTo(quick.bottom - 0.5));
+  });
+
+  testWidgets('a tapped tab crosses the old page along the X axis', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final profile = profileFixture();
+    final second = profileFixture(
+      id: 'profile-2',
+      name: 'Machine 2',
+      host: 'machine-2.example.com',
+    );
+    final backend = FakeSshBackend();
+    final manager = SshSessionManager.test(
+      remoteAgentService: FakeRemoteAgentService(backend),
+      serviceFactory: backend.createService,
+    );
+    final container = ProviderContainer.test(
+      overrides: [
+        sshSessionManagerProvider.overrideWithValue(manager),
+        profileStorageProvider.overrideWithValue(
+          FakeProfileStorage([profile, second]),
+        ),
+      ],
+    );
+    addTearDown(manager.dispose);
+    container.read(profilesProvider);
+    await container.read(profilesProvider.notifier).loadProfiles();
+
+    await pumpTestApp(
+      tester,
+      TerminalScreen(initialSessionId: 'session-1', initialProfile: profile),
+      container: container,
+    );
+    await backend.connectCalled.future;
+    for (var i = 0; i < 6; i++) {
+      await tester.pump();
+    }
+    await tester.tap(find.byKey(const ValueKey('tabBarAddButton')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('Machine 2'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    double opacityOf(int index) => tester
+        .widget<FadeOverColor>(
+          find
+              .descendant(
+                of: find.byKey(ValueKey('sessionSwipePage-$index')),
+                matching: find.byType(FadeOverColor),
+              )
+              .first,
+        )
+        .opacity;
+    double shiftOf(int index) => tester
+        .widget<Transform>(
+          find
+              .descendant(
+                of: find.byKey(ValueKey('sessionSwipePage-$index')),
+                matching: find.byType(Transform),
+              )
+              .first,
+        )
+        .transform
+        .getTranslation()
+        .x;
+
+    await tester.tap(find.byKey(const ValueKey('sessionTabItem-session-1')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 40));
+    expect(opacityOf(1), lessThan(1));
+    expect(shiftOf(1), greaterThan(0));
+
+    await tester.pump(const Duration(milliseconds: 120));
+    expect(opacityOf(0), lessThan(1));
+    expect(shiftOf(0), lessThan(0));
+    expect(shiftOf(0), greaterThan(-31));
+
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(opacityOf(0), 1);
+    expect(shiftOf(0), 0);
   });
 
   testWidgets('a swiped tab stays off the landscape rail', (tester) async {
