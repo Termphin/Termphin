@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../i18n/strings.g.dart';
 import '../../services/app/project_urls.dart';
+import '../../theme/theme.dart';
 import '../ui/app_card.dart';
 import '../ui/clipboard_and_links.dart';
 import '../ui/section_header.dart';
@@ -23,7 +24,7 @@ class OpenSourceSettingsSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SectionHeader(t.settings.openSource),
-        const SizedBox(height: 10),
+        const SizedBox(height: AppTheme.space10),
         AppCard(
           child: Column(
             children: [

@@ -44,11 +44,11 @@ void main() {
     final lineNumbersSwitch = find.descendant(
       of: find.ancestor(
         of: find.text(t.settings.editorLineNumbers),
-        matching: find.byType(Row),
+        matching: find.byType(SwitchListTile),
       ),
       matching: find.byType(Switch),
     );
-    await tester.tap(lineNumbersSwitch.first);
+    await tester.tap(lineNumbersSwitch);
     await tester.pumpAndSettle();
 
     expect(editorSettings.lineNumbers.value, isFalse);

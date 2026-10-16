@@ -236,7 +236,9 @@ void main() {
     final opened = <SshProfile>[];
     final previousHook = QuickActionsService.instance.onOpenProfile;
     QuickActionsService.instance.onOpenProfile = opened.add;
-    addTearDown(() => QuickActionsService.instance.onOpenProfile = previousHook);
+    addTearDown(
+      () => QuickActionsService.instance.onOpenProfile = previousHook,
+    );
 
     final profile = profileFixture(id: 'hooked-1', name: 'Hooked');
     QuickActionsService.instance.update([profile]);

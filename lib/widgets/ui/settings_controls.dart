@@ -10,23 +10,24 @@ import 'app_dropdown.dart';
 ///
 /// A labelled, full-width dropdown - the shape the style settings are built
 /// from, rather than the same forty lines of `DropdownButton2` three times.
-class SettingsDropdownField extends StatelessWidget {
+class SettingsDropdownField<T> extends StatelessWidget {
   const SettingsDropdownField({
     super.key,
     required this.label,
     required this.value,
     required this.labels,
     required this.onChanged,
-    this.itemsInOwnFont = false,
+    this.itemFontFamily,
   });
 
   final String label;
-  final String value;
-  final Map<String, String> labels;
-  final ValueChanged<String> onChanged;
+  final T value;
+  final Map<T, String> labels;
+  final ValueChanged<T> onChanged;
 
-  /// Renders each option in the font it names, for the font picker itself.
-  final bool itemsInOwnFont;
+  /// The font each option is drawn in, for the font picker itself; null
+  /// keeps the interface face.
+  final String? Function(T value)? itemFontFamily;
 
   @override
   Widget build(BuildContext context) {
@@ -34,64 +35,13 @@ class SettingsDropdownField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: Theme.of(context).textTheme.bodyMedium),
-        const SizedBox(height: 8),
-        DropdownButton2<String>(
-          valueListenable: ValueNotifier(value),
-          isExpanded: true,
-          underline: const SizedBox.shrink(),
-          selectedItemBuilder: (context) => labels.values
-              .map(
-                (v) => Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    v,
-                    style: TextStyle(
-                      color: context.colors.textSecondary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              )
-              .toList(),
-          onChanged: (v) {
-            if (v != null) onChanged(v);
-          },
-          buttonStyleData: ButtonStyleData(
-            height: 48,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            decoration: BoxDecoration(
-              color: context.colors.fieldFill,
-              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-              border: Border.all(color: context.colors.surfaceBorder),
-            ),
-            elevation: 0,
-          ),
-          iconStyleData: IconStyleData(
-            icon: Icon(
-              PhosphorIconsFill.caretDown,
-              size: 16,
-              color: context.colors.textTertiary,
-            ),
-            iconSize: 16,
-          ),
-          dropdownStyleData: appDropdownStyle(context, maxHeight: 300),
-          menuItemStyleData: appDropdownItemStyle(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-          ),
-          items: labels.entries
-              .map(
-                (e) => DropdownItem<String>(
-                  value: e.key,
-                  intrinsicHeight: true,
-                  child: AppDropdownItem(
-                    label: e.value,
-                    fontFamily: itemsInOwnFont ? e.key : null,
-                    selected: e.key == value,
-                  ),
-                ),
-              )
-              .toList(),
+        const SizedBox(height: AppTheme.space8),
+        _SettingsDropdown<T>(
+          value: value,
+          labels: labels,
+          onChanged: onChanged,
+          itemFontFamily: itemFontFamily,
+          compact: false,
         ),
       ],
     );
@@ -99,7 +49,7 @@ class SettingsDropdownField extends StatelessWidget {
 }
 
 /// The same picker as [SettingsDropdownField], laid out as a row for short lists.
-class SettingsDropdownRow extends StatelessWidget {
+class SettingsDropdownRow<T> extends StatelessWidget {
   const SettingsDropdownRow({
     super.key,
     required this.label,
@@ -109,9 +59,9 @@ class SettingsDropdownRow extends StatelessWidget {
   });
 
   final String label;
-  final String value;
-  final Map<String, String> labels;
-  final ValueChanged<String> onChanged;
+  final T value;
+  final Map<T, String> labels;
+  final ValueChanged<T> onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -119,109 +69,96 @@ class SettingsDropdownRow extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label, style: Theme.of(context).textTheme.bodyMedium),
-        DropdownButton2<String>(
-          valueListenable: ValueNotifier(value),
-          underline: const SizedBox.shrink(),
-          selectedItemBuilder: (context) => labels.values
-              .map(
-                (v) => Text(
-                  v,
-                  style: TextStyle(
-                    color: context.colors.textSecondary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              )
-              .toList(),
-          onChanged: (v) {
-            if (v != null) onChanged(v);
-          },
-          buttonStyleData: ButtonStyleData(
-            height: 40,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: context.colors.fieldFill,
-              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-              border: Border.all(color: context.colors.surfaceBorder),
-            ),
-            elevation: 0,
-          ),
-          iconStyleData: IconStyleData(
-            icon: Icon(
-              PhosphorIconsFill.caretDown,
-              size: 14,
-              color: context.colors.textTertiary,
-            ),
-            iconSize: 14,
-          ),
-          dropdownStyleData: appDropdownStyle(context),
-          menuItemStyleData: appDropdownItemStyle(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-          ),
-          items: labels.entries
-              .map(
-                (e) => DropdownItem<String>(
-                  value: e.key,
-                  intrinsicHeight: true,
-                  child: AppDropdownItem(
-                    label: e.value,
-                    selected: e.key == value,
-                  ),
-                ),
-              )
-              .toList(),
+        _SettingsDropdown<T>(
+          value: value,
+          labels: labels,
+          onChanged: onChanged,
+          compact: true,
         ),
       ],
     );
   }
 }
 
-class SettingsSwitchRow extends StatelessWidget {
-  const SettingsSwitchRow({
-    super.key,
-    required this.label,
+/// The button both settings dropdowns share; [compact] is the row variant,
+/// sized to its content instead of the full width.
+class _SettingsDropdown<T> extends StatelessWidget {
+  const _SettingsDropdown({
     required this.value,
+    required this.labels,
     required this.onChanged,
-    this.subtitle,
+    required this.compact,
+    this.itemFontFamily,
   });
 
-  final String label;
-  final String? subtitle;
-  final bool value;
-  final ValueChanged<bool> onChanged;
+  final T value;
+  final Map<T, String> labels;
+  final ValueChanged<T> onChanged;
+  final bool compact;
+  final String? Function(T value)? itemFontFamily;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: Theme.of(context).textTheme.bodyMedium),
-                if (subtitle != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text(
-                      subtitle!,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: context.colors.textTertiary,
-                      ),
-                    ),
+    final caret = compact ? AppTheme.icon14 : AppTheme.icon16;
+    final selectedStyle = TextStyle(
+      color: context.colors.textSecondary,
+      fontSize: AppTheme.font14,
+      fontWeight: FontWeight.w500,
+    );
+    return DropdownButton2<T>(
+      valueListenable: ValueNotifier(value),
+      isExpanded: !compact,
+      underline: const SizedBox.shrink(),
+      selectedItemBuilder: (context) => labels.values
+          .map(
+            (v) => compact
+                ? Text(v, style: selectedStyle)
+                : Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(v, style: selectedStyle),
                   ),
-              ],
-            ),
-          ),
-          Switch(
-            value: value,
-            activeThumbColor: context.colors.primary,
-            onChanged: onChanged,
-          ),
-        ],
+          )
+          .toList(),
+      onChanged: (v) {
+        if (v != null) onChanged(v);
+      },
+      buttonStyleData: ButtonStyleData(
+        height: compact ? 40 : 48,
+        padding: EdgeInsets.symmetric(
+          horizontal: AppTheme.space12,
+          vertical: compact ? AppTheme.space8 : AppTheme.space12,
+        ),
+        decoration: context.colors.fieldDecoration,
+        elevation: 0,
       ),
+      iconStyleData: IconStyleData(
+        icon: Icon(
+          PhosphorIconsFill.caretDown,
+          size: caret,
+          color: context.colors.textTertiary,
+        ),
+        iconSize: caret,
+      ),
+      dropdownStyleData: appDropdownStyle(
+        context,
+        maxHeight: compact ? null : 300,
+      ),
+      menuItemStyleData: appDropdownItemStyle(
+        padding: const EdgeInsets.symmetric(horizontal: AppTheme.space10),
+      ),
+      items: labels.entries
+          .map(
+            (e) => DropdownItem<T>(
+              value: e.key,
+              intrinsicHeight: true,
+              child: AppDropdownItem(
+                label: e.value,
+                fontFamily: itemFontFamily?.call(e.key),
+                selected: e.key == value,
+              ),
+            ),
+          )
+          .toList(),
     );
   }
 }

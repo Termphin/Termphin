@@ -7,8 +7,10 @@ import '../../services/settings/editor_settings.dart';
 import '../../services/settings/sftp_settings.dart';
 import '../../services/settings/terminal_settings.dart';
 import '../../services/sftp/download_location.dart';
+import '../../theme/theme.dart';
 import '../../utils/platform_info.dart';
 import '../ui/app_card.dart';
+import '../ui/app_divider.dart';
 import '../ui/app_notifications.dart';
 import '../ui/section_header.dart';
 import '../ui/settings_tile.dart';
@@ -68,71 +70,68 @@ class _SftpSettingsSectionState extends State<SftpSettingsSection> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SectionHeader(t.settings.sftp),
-        const SizedBox(height: 10),
-        AppCard(
-          child: Column(
-            children: [
+        const SizedBox(height: AppTheme.space10),
+        AppCard.fields(
+          children: [
+            SettingsTile(
+              title: t.settings.downloadFolder,
+              subtitle: isIOSPlatform
+                  ? t.settings.downloadFolderIos
+                  : (_downloadFolder?.label.isNotEmpty ?? false
+                        ? _downloadFolder!.label
+                        : t.settings.downloadFolderDefault),
+              trailing: isIOSPlatform
+                  ? SettingsTileTrailing.none
+                  : SettingsTileTrailing.chevron,
+              onTap: isIOSPlatform ? null : _onPickDownloadFolder,
+            ),
+            if (!isIOSPlatform && _downloadFolder != null) ...[
+              const AppDivider(),
               SettingsTile(
-                title: t.settings.downloadFolder,
-                subtitle: isIOSPlatform
-                    ? t.settings.downloadFolderIos
-                    : (_downloadFolder?.label.isNotEmpty ?? false
-                          ? _downloadFolder!.label
-                          : t.settings.downloadFolderDefault),
-                trailing: isIOSPlatform
-                    ? SettingsTileTrailing.none
-                    : SettingsTileTrailing.chevron,
-                onTap: isIOSPlatform ? null : _onPickDownloadFolder,
-              ),
-              if (!isIOSPlatform && _downloadFolder != null) ...[
-                const Divider(height: 1),
-                SettingsTile(
-                  title: t.settings.downloadFolderReset,
-                  trailing: SettingsTileTrailing.none,
-                  onTap: _onResetDownloadFolder,
-                ),
-              ],
-              const Divider(height: 1),
-              ValueListenableBuilder<bool>(
-                valueListenable: sftpShowHiddenSetting,
-                builder: (context, showHidden, _) => SettingsSwitchTile(
-                  title: t.settings.sftpShowHidden,
-                  subtitle: t.settings.sftpShowHiddenSubtitle,
-                  value: showHidden,
-                  onChanged: sftpShowHiddenSetting.set,
-                ),
-              ),
-              const Divider(height: 1),
-              ValueListenableBuilder<bool>(
-                valueListenable: sftpFollowTerminalSetting,
-                builder: (context, follow, _) => SettingsSwitchTile(
-                  title: t.settings.sftpFollowTerminal,
-                  subtitle: t.settings.sftpFollowTerminalSubtitle,
-                  value: follow,
-                  onChanged: sftpFollowTerminalSetting.set,
-                ),
-              ),
-              const Divider(height: 1),
-              SettingsTile(
-                title: t.settings.textEditor,
-                subtitle: t.settings.textEditorSubtitle(
-                  font:
-                      kTerminalFontLabels[editorSettings.fontFamily.value] ??
-                      '',
-                  size: editorSettings.fontSize.value.toStringAsFixed(1),
-                ),
-                onTap: () async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute<void>(
-                      builder: (_) => const EditorSettingsScreen(),
-                    ),
-                  );
-                  if (mounted) setState(() {});
-                },
+                title: t.settings.downloadFolderReset,
+                trailing: SettingsTileTrailing.none,
+                onTap: _onResetDownloadFolder,
               ),
             ],
-          ),
+            const AppDivider(),
+            ValueListenableBuilder<bool>(
+              valueListenable: sftpShowHiddenSetting,
+              builder: (context, showHidden, _) => SettingsSwitchTile(
+                title: t.settings.sftpShowHidden,
+                subtitle: t.settings.sftpShowHiddenSubtitle,
+                value: showHidden,
+                onChanged: sftpShowHiddenSetting.set,
+              ),
+            ),
+            const AppDivider(),
+            ValueListenableBuilder<bool>(
+              valueListenable: sftpFollowTerminalSetting,
+              builder: (context, follow, _) => SettingsSwitchTile(
+                title: t.settings.sftpFollowTerminal,
+                subtitle: t.settings.sftpFollowTerminalSubtitle,
+                value: follow,
+                onChanged: sftpFollowTerminalSetting.set,
+              ),
+            ),
+            const AppDivider(),
+            SettingsTile(
+              title: t.settings.textEditor,
+              subtitle: t.settings.textEditorSubtitle(
+                font:
+                    kTerminalFontLabels[editorSettings.fontFamily.value] ?? '',
+                size: editorSettings.fontSize.value.toStringAsFixed(1),
+              ),
+              onTap: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) => const EditorSettingsScreen(),
+                  ),
+                );
+                if (mounted) setState(() {});
+              },
+            ),
+          ],
         ),
       ],
     );

@@ -7,8 +7,8 @@ import '../../models/snippet.dart';
 import '../../providers/snippets_provider.dart';
 import '../../services/storage/group_storage.dart';
 import '../../theme/theme.dart';
+import '../../widgets/groups/group_picker_field.dart';
 import '../../widgets/ui/app_form_field.dart';
-import '../../widgets/ui/group_picker_field.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
 import '../../widgets/ui/section_header.dart';
 
@@ -144,11 +144,11 @@ class _SnippetFormScreenState extends ConsumerState<SnippetFormScreen> {
         ),
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 12),
+            padding: const EdgeInsets.only(right: AppTheme.space12),
             child: _isSaving
                 ? const SizedBox(
-                    width: 20,
-                    height: 20,
+                    width: AppTheme.icon20,
+                    height: AppTheme.icon20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : ListenableBuilder(
@@ -162,7 +162,7 @@ class _SnippetFormScreenState extends ConsumerState<SnippetFormScreen> {
                               ? context.colors.primary
                               : context.colors.textTertiary,
                           fontWeight: FontWeight.w700,
-                          fontSize: 15,
+                          fontSize: AppTheme.font15,
                         ),
                       ),
                     ),
@@ -175,24 +175,24 @@ class _SnippetFormScreenState extends ConsumerState<SnippetFormScreen> {
         child: ContentGutter(
           builder: (context, gutter) => ListView(
             padding: EdgeInsets.fromLTRB(
-              20,
-              isEditing ? 8 : 16,
-              20,
-              40,
+              AppTheme.space20,
+              isEditing ? AppTheme.space8 : AppTheme.space16,
+              AppTheme.space20,
+              AppTheme.space40,
             ).add(gutter),
             children: [
               SectionHeader(t.groups.groupTitle),
-              const SizedBox(height: 10),
+              const SizedBox(height: AppTheme.space10),
               GroupPickerField(
                 group: _group,
                 onChanged: (group) => setState(() => _group = group),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: AppTheme.space20),
               SectionHeader(
                 t.snippets.commandSection,
                 hint: t.snippets.placeholderHint,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: AppTheme.space10),
               AppFormField(
                 key: const ValueKey('snippetNameField'),
                 controller: _nameCtrl,
@@ -201,7 +201,7 @@ class _SnippetFormScreenState extends ConsumerState<SnippetFormScreen> {
                 action: TextInputAction.next,
                 autofocus: !isEditing,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: AppTheme.space10),
               AppFormField(
                 key: const ValueKey('snippetCommandField'),
                 controller: _commandCtrl,
@@ -221,12 +221,12 @@ class _SnippetFormScreenState extends ConsumerState<SnippetFormScreen> {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const SizedBox(height: 24),
+                      const SizedBox(height: AppTheme.space24),
                       SectionHeader(
                         t.snippets.argumentsTitle,
                         hint: t.snippets.argumentsHint,
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: AppTheme.space10),
                       for (final name in placeholders) ...[
                         AppFormField(
                           key: ValueKey('snippetDefaultField:$name'),
@@ -236,7 +236,7 @@ class _SnippetFormScreenState extends ConsumerState<SnippetFormScreen> {
                           monospace: true,
                           action: TextInputAction.next,
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: AppTheme.space10),
                       ],
                     ],
                   );

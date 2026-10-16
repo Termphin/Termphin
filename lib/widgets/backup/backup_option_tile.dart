@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../theme/theme.dart';
+import '../ui/settings_tile.dart';
 
 /// One switchable section of a backup, on the export screen and in the import
 /// sheet alike - the two halves of the same job, so they are drawn by the same
@@ -36,41 +37,20 @@ class BackupOptionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveColor = enabled
-        ? context.colors.textPrimary
-        : context.colors.textTertiary;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        SwitchListTile(
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 2,
-          ),
-          secondary: Icon(
-            icon,
-            size: 22,
-            color: sensitive && value ? context.colors.warning : effectiveColor,
-          ),
-          title: Text(
-            title,
-            style: TextStyle(
-              color: effectiveColor,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          subtitle: Text(
-            subtitle,
-            style: TextStyle(
-              color: enabled
-                  ? context.colors.textTertiary
-                  : context.colors.textTertiary.withAlpha(120),
-              fontSize: 12,
-            ),
-          ),
+        SettingsSwitchTile(
+          icon: icon,
+          iconColor: sensitive && value
+              ? context.colors.warning
+              : enabled
+              ? null
+              : context.colors.textTertiary,
+          title: title,
+          subtitle: subtitle,
+          dense: true,
           value: value,
-          activeThumbColor: context.colors.primary,
           onChanged: enabled ? onChanged : null,
         ),
         ?trailing,
@@ -87,7 +67,10 @@ class BackupWarningBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppTheme.space14,
+        vertical: AppTheme.space10,
+      ),
       decoration: BoxDecoration(
         color: context.colors.warning.withAlpha(28),
         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
@@ -98,15 +81,15 @@ class BackupWarningBanner extends StatelessWidget {
         children: [
           Icon(
             PhosphorIconsFill.warning,
-            size: 18,
+            size: AppTheme.icon18,
             color: context.colors.warning,
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: AppTheme.space10),
           Expanded(
             child: Text(
               message,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: AppTheme.font12,
                 color: context.colors.warning,
                 height: 1.4,
               ),

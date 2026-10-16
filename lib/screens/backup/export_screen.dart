@@ -11,6 +11,7 @@ import '../../widgets/backup/backup_import_options.dart' show formatBackupDate;
 import '../../widgets/ui/app_card.dart';
 import '../../widgets/ui/app_divider.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
+import '../../widgets/ui/settings_tile.dart';
 import 'backup_export_screen.dart';
 import 'backup_import_screen.dart';
 
@@ -43,36 +44,33 @@ class _ExportScreenState extends State<ExportScreen> {
         top: false,
         child: ContentGutter(
           builder: (context, gutter) => ListView(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32).add(gutter),
+            padding: const EdgeInsets.fromLTRB(
+              AppTheme.space20,
+              AppTheme.space16,
+              AppTheme.space20,
+              AppTheme.space32,
+            ).add(gutter),
             children: [
               AppCard.fields(
                 children: [
-                  _BackupRow(
+                  SettingsTile(
                     icon: PhosphorIconsFill.shareNetwork,
+                    iconColor: context.colors.textPrimary,
                     title: t.exportScreen.exportSection,
                     subtitle: t.exportScreen.hubExportSubtitle,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute<void>(
-                        builder: (_) => const BackupExportScreen(),
-                      ),
-                    ),
+                    destination: () => const BackupExportScreen(),
                   ),
-                  const AppDivider(indent: 50),
-                  _BackupRow(
+                  const AppDivider(indent: AppTheme.space48),
+                  SettingsTile(
                     icon: PhosphorIconsFill.folderOpen,
+                    iconColor: context.colors.textPrimary,
                     title: t.exportScreen.importSection,
                     subtitle: t.exportScreen.hubImportSubtitle,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute<void>(
-                        builder: (_) => const BackupImportScreen(),
-                      ),
-                    ),
+                    destination: () => const BackupImportScreen(),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppTheme.space12),
               ValueListenableBuilder<String>(
                 valueListenable: lastBackupAtSetting,
                 builder: (context, stored, _) {
@@ -81,10 +79,7 @@ class _ExportScreenState extends State<ExportScreen> {
                     at == null
                         ? t.exportScreen.lastBackupNever
                         : t.exportScreen.lastBackup(date: formatBackupDate(at)),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: context.colors.textTertiary,
-                    ),
+                    style: Theme.of(context).textTheme.bodySmall,
                   );
                 },
               ),
@@ -92,46 +87,6 @@ class _ExportScreenState extends State<ExportScreen> {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _BackupRow extends StatelessWidget {
-  const _BackupRow({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-      leading: Icon(icon, size: 22, color: context.colors.textPrimary),
-      title: Text(
-        title,
-        style: TextStyle(
-          fontSize: 15,
-          fontWeight: FontWeight.w600,
-          color: context.colors.textPrimary,
-        ),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: TextStyle(fontSize: 12, color: context.colors.textTertiary),
-      ),
-      trailing: Icon(
-        PhosphorIconsFill.caretRight,
-        size: 18,
-        color: context.colors.textTertiary,
-      ),
-      onTap: onTap,
     );
   }
 }

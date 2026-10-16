@@ -57,8 +57,14 @@ void main() {
       find.byType(ActionDockTile),
       findsNWidgets(DockAction.values.length),
     );
-    expect(find.text(t.settings.actionDockPreview), findsOneWidget);
-    expect(find.text(t.settings.actionDockHiddenLabel), findsOneWidget);
+    expect(
+      find.text(t.settings.actionDockPreview.toUpperCase()),
+      findsOneWidget,
+    );
+    expect(
+      find.text(t.settings.actionDockHiddenLabel.toUpperCase()),
+      findsOneWidget,
+    );
   });
 
   group('placeDockAction', () {

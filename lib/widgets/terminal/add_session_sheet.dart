@@ -18,12 +18,14 @@ import '../../services/storage/group_storage.dart';
 import '../../theme/theme.dart';
 import '../../utils/group_match.dart';
 import '../../utils/profile_sort.dart';
+import '../groups/group_filter_chips.dart';
 import '../profiles/profile_avatar.dart';
+import '../ui/app_card.dart';
 import '../ui/app_dropdown.dart';
 import '../ui/app_notifications.dart';
 import '../ui/confirm_dialog.dart';
-import '../ui/group_filter_chips.dart';
 import '../ui/sheet_handle.dart';
+import 'new_session_row.dart';
 import 'rename_session_dialog.dart';
 
 /// Where a tab comes from: a machine to open a fresh shell on, or one of the
@@ -111,11 +113,11 @@ class _AddSessionSheetContentState
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SheetHandle(topPadding: 8),
+              const SheetHandle(topPadding: AppTheme.space8),
               Padding(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 14,
+                  horizontal: AppTheme.space20,
+                  vertical: AppTheme.space14,
                 ),
                 child: Text(
                   t.terminal.selectDevice,
@@ -123,7 +125,9 @@ class _AddSessionSheetContentState
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppTheme.space16,
+                ),
                 child: GlobalSearchLauncher(
                   heroTag: 'globalSearch-addSession',
                   hint: t.terminal.searchDevices,
@@ -134,14 +138,19 @@ class _AddSessionSheetContentState
               GroupFilterChips(
                 groups: allGroups,
                 selected: _selectedGroup,
-                padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                padding: const EdgeInsets.fromLTRB(
+                  AppTheme.space16,
+                  AppTheme.space10,
+                  AppTheme.space16,
+                  0,
+                ),
                 onChanged: (group) => setState(() => _selectedGroup = group),
               ),
               if (filtered.isEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(
-                    vertical: 24,
-                    horizontal: 20,
+                    vertical: AppTheme.space24,
+                    horizontal: AppTheme.space20,
                   ),
                   child: Text(
                     t.terminal.noDevices,
@@ -153,9 +162,15 @@ class _AddSessionSheetContentState
                   child: ListView.separated(
                     key: const ValueKey('addSessionProfileList'),
                     controller: scrollController,
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                    padding: const EdgeInsets.fromLTRB(
+                      AppTheme.space16,
+                      AppTheme.space12,
+                      AppTheme.space16,
+                      AppTheme.space16,
+                    ),
                     itemCount: filtered.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 12),
+                    separatorBuilder: (_, _) =>
+                        const SizedBox(height: AppTheme.space12),
                     itemBuilder: (context, index) {
                       final p = filtered[index];
                       return _ProfileRow(
@@ -369,7 +384,7 @@ class _ProfileRowState extends ConsumerState<_ProfileRow> {
       );
     }
 
-    belowBuilders.add((isLast) => _NewSessionRow(onTap: widget.onSelect));
+    belowBuilders.add((isLast) => NewSessionRow(onTap: widget.onSelect));
 
     final belowWidgets = [
       for (var i = 0; i < belowBuilders.length; i++)
@@ -392,86 +407,64 @@ class _ProfileRowState extends ConsumerState<_ProfileRow> {
   Widget _buildMainRow(BuildContext context, bool hasBelow) {
     final t = Translations.of(context);
     final profile = widget.profile;
-    final radius = hasBelow
-        ? const BorderRadius.vertical(top: Radius.circular(AppTheme.radiusMd))
-        : BorderRadius.circular(AppTheme.radiusMd);
-    return Material(
-      color: context.colors.surfaceElevated.invisible,
-      borderRadius: radius,
-      child: Ink(
-        decoration: BoxDecoration(
-          color: context.colors.surfaceElevated,
-          borderRadius: radius,
-          border: Border(
-            top: BorderSide(color: context.colors.surfaceBorder),
-            left: BorderSide(color: context.colors.surfaceBorder),
-            right: BorderSide(color: context.colors.surfaceBorder),
-            bottom: hasBelow
-                ? BorderSide.none
-                : BorderSide(color: context.colors.surfaceBorder),
+    return AppCard.segment(
+      first: true,
+      last: !hasBelow,
+      onTap: widget.onSelect,
+      padding: const EdgeInsets.all(AppTheme.space14),
+      child: Row(
+        children: [
+          ProfileAvatar(
+            iconName: profile.iconName,
+            colorHex: profile.colorHex,
+            size: 42,
           ),
-        ),
-        child: InkWell(
-          borderRadius: radius,
-          onTap: widget.onSelect,
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(
+          const SizedBox(width: AppTheme.space14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ProfileAvatar(
-                  iconName: profile.iconName,
-                  colorHex: profile.colorHex,
-                  size: 42,
+                Text(
+                  widget.anonymize
+                      ? IdentityAnonymizer.name(profile.id)
+                      : profile.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.colors.itemTitle,
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.anonymize
-                            ? IdentityAnonymizer.name(profile.id)
-                            : profile.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.colors.itemTitle,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        widget.anonymize
-                            ? '${IdentityAnonymizer.username(profile.id)}@${IdentityAnonymizer.host(profile.id)}:${profile.port}'
-                            : '${profile.username}@${profile.host}:${profile.port}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.colors.uiStyle,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                SizedBox(
-                  width: 40,
-                  height: 40,
-                  child: IconButton(
-                    key: ValueKey('addSessionMore:${profile.id}'),
-                    tooltip: t.common.refresh,
-                    iconSize: 20,
-                    padding: EdgeInsets.zero,
-                    color: context.colors.textTertiary,
-                    icon: _loading
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(PhosphorIconsRegular.arrowClockwise),
-                    onPressed: _loading ? null : _loadRemote,
-                  ),
+                const SizedBox(height: AppTheme.space4),
+                Text(
+                  widget.anonymize
+                      ? '${IdentityAnonymizer.username(profile.id)}@${IdentityAnonymizer.host(profile.id)}:${profile.port}'
+                      : '${profile.username}@${profile.host}:${profile.port}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.colors.uiStyle,
                 ),
               ],
             ),
           ),
-        ),
+          const SizedBox(width: AppTheme.space8),
+          SizedBox(
+            width: AppTheme.icon40,
+            height: AppTheme.icon40,
+            child: IconButton(
+              key: ValueKey('addSessionMore:${profile.id}'),
+              tooltip: t.common.refresh,
+              iconSize: AppTheme.icon20,
+              padding: EdgeInsets.zero,
+              color: context.colors.textTertiary,
+              icon: _loading
+                  ? const SizedBox(
+                      width: AppTheme.icon16,
+                      height: AppTheme.icon16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(PhosphorIconsRegular.arrowClockwise),
+              onPressed: _loading ? null : _loadRemote,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -493,83 +486,18 @@ class _StatusRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final radius = isLast
-        ? const BorderRadius.vertical(
-            bottom: Radius.circular(AppTheme.radiusMd),
-          )
-        : BorderRadius.zero;
-    return Container(
-      decoration: BoxDecoration(
-        color: context.colors.surfaceElevated,
-        borderRadius: radius,
-        border: Border(
-          top: BorderSide(color: context.colors.surfaceBorder),
-          left: BorderSide(color: context.colors.surfaceBorder),
-          right: BorderSide(color: context.colors.surfaceBorder),
-          bottom: isLast
-              ? BorderSide(color: context.colors.surfaceBorder)
-              : BorderSide.none,
-        ),
+    return AppCard.segment(
+      first: false,
+      last: isLast,
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.space16 + AppTheme.icon8 + AppTheme.space12,
+        AppTheme.space8,
+        AppTheme.space16,
+        AppTheme.space12,
       ),
-      padding: const EdgeInsets.fromLTRB(37, 8, 16, 12),
-      child: Text(text, style: TextStyle(fontSize: 12, color: color)),
-    );
-  }
-}
-
-/// Always the last thing stitched under a machine - same tile as the home
-/// screen's own `_NewSessionRow`, so starting a fresh session looks
-/// identical whichever list it's started from.
-class _NewSessionRow extends StatelessWidget {
-  const _NewSessionRow({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = Translations.of(context);
-    const radius = BorderRadius.vertical(
-      bottom: Radius.circular(AppTheme.radiusMd),
-    );
-    return Material(
-      color: context.colors.surfaceElevated.invisible,
-      borderRadius: radius,
-      child: Ink(
-        decoration: BoxDecoration(
-          color: context.colors.surfaceElevated,
-          borderRadius: radius,
-          border: Border(
-            top: BorderSide(color: context.colors.surfaceBorder),
-            left: BorderSide(color: context.colors.surfaceBorder),
-            right: BorderSide(color: context.colors.surfaceBorder),
-            bottom: BorderSide(color: context.colors.surfaceBorder),
-          ),
-        ),
-        child: InkWell(
-          borderRadius: radius,
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 11, 16, 11),
-            child: Row(
-              children: [
-                Icon(
-                  PhosphorIconsRegular.plus,
-                  size: 16,
-                  color: context.colors.primary,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  t.terminal.newSession,
-                  style: context.colors.uiStyle.copyWith(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: context.colors.primary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+      child: Text(
+        text,
+        style: TextStyle(fontSize: AppTheme.font12, color: color),
       ),
     );
   }
@@ -599,83 +527,64 @@ class _RemoteSessionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Translations.of(context);
-    final radius = isLast
-        ? const BorderRadius.vertical(
-            bottom: Radius.circular(AppTheme.radiusMd),
-          )
-        : BorderRadius.zero;
-    return Material(
-      color: context.colors.surfaceElevated.invisible,
-      borderRadius: radius,
-      child: Ink(
-        decoration: BoxDecoration(
-          color: context.colors.surfaceElevated,
-          borderRadius: radius,
-          border: Border(
-            top: BorderSide(color: context.colors.surfaceBorder),
-            left: BorderSide(color: context.colors.surfaceBorder),
-            right: BorderSide(color: context.colors.surfaceBorder),
-            bottom: isLast
-                ? BorderSide(color: context.colors.surfaceBorder)
-                : BorderSide.none,
+    return AppCard.segment(
+      first: false,
+      last: isLast,
+      onTap: onTap,
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.space16,
+        AppTheme.space10,
+        AppTheme.space8,
+        AppTheme.space10,
+      ),
+      child: Row(
+        children: [
+          Icon(
+            PhosphorIconsRegular.circle,
+            size: AppTheme.icon8,
+            color: context.colors.warning,
           ),
-        ),
-        child: InkWell(
-          borderRadius: radius,
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 11, 8, 11),
-            child: Row(
-              children: [
-                Icon(
-                  PhosphorIconsRegular.circle,
-                  size: 9,
-                  color: context.colors.warning,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    SessionTab.displayName(session.name),
-                    overflow: TextOverflow.ellipsis,
-                    style: context.colors.uiStyle.copyWith(fontSize: 13),
-                  ),
-                ),
-                AppActionDropdown<_RemoteSessionAction>(
-                  iconSize: 16,
-                  width: 220,
-                  items: [
-                    DropdownItem(
-                      value: _RemoteSessionAction.attach,
-                      intrinsicHeight: true,
-                      child: AppDropdownItem(
-                        icon: PhosphorIconsRegular.arrowUUpLeft,
-                        label: t.session.attach,
-                      ),
-                    ),
-                    DropdownItem(
-                      value: _RemoteSessionAction.rename,
-                      intrinsicHeight: true,
-                      child: AppDropdownItem(
-                        icon: PhosphorIconsRegular.pencilSimple,
-                        label: t.session.rename,
-                      ),
-                    ),
-                    DropdownItem(
-                      value: _RemoteSessionAction.kill,
-                      intrinsicHeight: true,
-                      child: AppDropdownItem(
-                        icon: PhosphorIconsRegular.trash,
-                        label: t.session.kill,
-                        color: context.colors.error,
-                      ),
-                    ),
-                  ],
-                  onSelected: onSelected,
-                ),
-              ],
+          const SizedBox(width: AppTheme.space12),
+          Expanded(
+            child: Text(
+              SessionTab.displayName(session.name),
+              overflow: TextOverflow.ellipsis,
+              style: context.colors.uiStyle.copyWith(fontSize: AppTheme.font13),
             ),
           ),
-        ),
+          AppActionDropdown<_RemoteSessionAction>(
+            iconSize: AppTheme.icon16,
+            width: 220,
+            items: [
+              DropdownItem(
+                value: _RemoteSessionAction.attach,
+                intrinsicHeight: true,
+                child: AppDropdownItem(
+                  icon: PhosphorIconsRegular.arrowUUpLeft,
+                  label: t.session.attach,
+                ),
+              ),
+              DropdownItem(
+                value: _RemoteSessionAction.rename,
+                intrinsicHeight: true,
+                child: AppDropdownItem(
+                  icon: PhosphorIconsRegular.pencilSimple,
+                  label: t.session.rename,
+                ),
+              ),
+              DropdownItem(
+                value: _RemoteSessionAction.kill,
+                intrinsicHeight: true,
+                child: AppDropdownItem(
+                  icon: PhosphorIconsRegular.trash,
+                  label: t.session.kill,
+                  color: context.colors.error,
+                ),
+              ),
+            ],
+            onSelected: onSelected,
+          ),
+        ],
       ),
     );
   }
@@ -697,66 +606,47 @@ class _ResumableSessionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Translations.of(context);
-    final radius = isLast
-        ? const BorderRadius.vertical(
-            bottom: Radius.circular(AppTheme.radiusMd),
-          )
-        : BorderRadius.zero;
-    return Material(
-      color: context.colors.surfaceElevated.invisible,
-      borderRadius: radius,
-      child: Ink(
-        decoration: BoxDecoration(
-          color: context.colors.surfaceElevated,
-          borderRadius: radius,
-          border: Border(
-            top: BorderSide(color: context.colors.surfaceBorder),
-            left: BorderSide(color: context.colors.surfaceBorder),
-            right: BorderSide(color: context.colors.surfaceBorder),
-            bottom: isLast
-                ? BorderSide(color: context.colors.surfaceBorder)
-                : BorderSide.none,
+    return AppCard.segment(
+      first: false,
+      last: isLast,
+      onTap: onTap,
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.space16,
+        AppTheme.space10,
+        AppTheme.space8,
+        AppTheme.space10,
+      ),
+      child: Row(
+        children: [
+          Icon(
+            PhosphorIconsRegular.circle,
+            size: AppTheme.icon8,
+            color: context.colors.warning,
           ),
-        ),
-        child: InkWell(
-          borderRadius: radius,
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 11, 8, 11),
-            child: Row(
-              children: [
-                Icon(
-                  PhosphorIconsRegular.circle,
-                  size: 9,
-                  color: context.colors.warning,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    SessionTab.displayName(tab.muxName),
-                    overflow: TextOverflow.ellipsis,
-                    style: context.colors.uiStyle.copyWith(fontSize: 13),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  t.session.attach,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: context.colors.warning,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Icon(
-                  PhosphorIconsFill.caretRight,
-                  size: 16,
-                  color: context.colors.textTertiary,
-                ),
-              ],
+          const SizedBox(width: AppTheme.space12),
+          Expanded(
+            child: Text(
+              SessionTab.displayName(tab.muxName),
+              overflow: TextOverflow.ellipsis,
+              style: context.colors.uiStyle.copyWith(fontSize: AppTheme.font13),
             ),
           ),
-        ),
+          const SizedBox(width: AppTheme.space8),
+          Text(
+            t.session.attach,
+            style: TextStyle(
+              fontSize: AppTheme.font12,
+              fontWeight: FontWeight.w600,
+              color: context.colors.warning,
+            ),
+          ),
+          const SizedBox(width: AppTheme.space6),
+          Icon(
+            PhosphorIconsFill.caretRight,
+            size: AppTheme.icon16,
+            color: context.colors.textTertiary,
+          ),
+        ],
       ),
     );
   }

@@ -13,8 +13,10 @@ import '../../providers/groups_provider.dart';
 import '../../providers/snippets_provider.dart';
 import '../../theme/theme.dart';
 import '../../utils/group_match.dart';
+import '../groups/group_filter_chips.dart';
 import '../terminal/terminal_scheme_theme.dart';
-import '../ui/group_filter_chips.dart';
+import '../ui/app_card.dart';
+import '../ui/app_search_field.dart';
 import 'snippet_args_dialog.dart';
 
 /// Floating spotlight-style snippet picker: search and group filter. One that
@@ -36,8 +38,8 @@ Future<void> showSnippetSpotlight(
     context: context,
     barrierDismissible: true,
     barrierLabel: Translations.of(context).commandPalette.insertSnippetTitle,
-    barrierColor: Colors.black54,
-    transitionDuration: const Duration(milliseconds: 260),
+    barrierColor: AppTheme.scrim,
+    transitionDuration: AppTheme.motionMedium,
     transitionBuilder: (ctx, animation, _, child) {
       final curved = CurvedAnimation(
         parent: animation,
@@ -152,10 +154,10 @@ class _SnippetPickerPanelState extends ConsumerState<SnippetPickerPanel> {
       duration: AppTheme.motionSlow,
       curve: AppTheme.interactiveCurve,
       padding: EdgeInsets.fromLTRB(
-        28,
-        safePadding.top + 24,
-        28,
-        keyboardInset + safePadding.bottom + 24,
+        AppTheme.space24,
+        safePadding.top + AppTheme.space24,
+        AppTheme.space24,
+        keyboardInset + safePadding.bottom + AppTheme.space24,
       ),
       child: Align(
         alignment: const Alignment(0, -0.35),
@@ -163,13 +165,13 @@ class _SnippetPickerPanelState extends ConsumerState<SnippetPickerPanel> {
           color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(AppTheme.radiusLg),
           elevation: 12,
-          shadowColor: Colors.black54,
+          shadowColor: AppTheme.scrim,
           child: AnimatedContainer(
             duration: AppTheme.motionSlow,
             curve: AppTheme.interactiveCurve,
             width: cardWidth,
             height: cardHeight,
-            padding: const EdgeInsets.only(top: 6),
+            padding: const EdgeInsets.only(top: AppTheme.space6),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(AppTheme.radiusLg),
               border: Border.all(color: context.colors.surfaceBorderStrong),
@@ -178,7 +180,12 @@ class _SnippetPickerPanelState extends ConsumerState<SnippetPickerPanel> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppTheme.space16,
+                    AppTheme.space12,
+                    AppTheme.space8,
+                    AppTheme.space8,
+                  ),
                   child: Row(
                     children: [
                       Expanded(
@@ -197,55 +204,35 @@ class _SnippetPickerPanelState extends ConsumerState<SnippetPickerPanel> {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: TextField(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppTheme.space16,
+                  ),
+                  child: AppSearchField(
                     key: const ValueKey('snippetSearchField'),
                     controller: _searchCtrl,
                     focusNode: _searchFocusNode,
                     autofocus: true,
+                    dense: true,
                     textInputAction: TextInputAction.search,
-                    onTapOutside: (_) =>
-                        FocusManager.instance.primaryFocus?.unfocus(),
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: context.colors.textPrimary,
-                    ),
-                    decoration: InputDecoration(
-                      isDense: true,
-                      hintText: t.commandPalette.searchHintSnippets,
-                      hintStyle: TextStyle(
-                        color: context.colors.textTertiary,
-                        fontSize: 14,
-                      ),
-                      prefixIcon: const Icon(
-                        PhosphorIconsRegular.magnifyingGlass,
-                        size: 18,
-                      ),
-                      filled: true,
-                      fillColor: context.colors.surfaceCard,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                        borderSide: BorderSide(
-                          color: context.colors.surfaceBorder,
-                        ),
-                      ),
-                    ),
+                    hint: t.commandPalette.searchHintSnippets,
+                    clearTooltip: t.common.clearSearch,
                     onChanged: (v) => setState(() => _query = v),
                     onSubmitted: (_) => _submitFirst(),
                   ),
                 ),
                 if (showGroupFilter) ...[
-                  const SizedBox(height: 10),
+                  const SizedBox(height: AppTheme.space10),
                   GroupFilterChips(
                     groups: groupsWithColour,
                     selected: _selectedGroup,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppTheme.space16,
+                    ),
                     onChanged: (group) =>
                         setState(() => _selectedGroup = group),
                   ),
                 ],
-                const SizedBox(height: 8),
+                const SizedBox(height: AppTheme.space8),
                 Expanded(
                   child: _buildSnippetsList(t, snippets, filteredSnippets),
                 ),
@@ -265,21 +252,29 @@ class _SnippetPickerPanelState extends ConsumerState<SnippetPickerPanel> {
     if (filtered.isEmpty) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(AppTheme.space24),
           child: Text(
             allSnippets.isEmpty
                 ? t.commandPalette.empty
                 : t.commandPalette.noResults,
             textAlign: TextAlign.center,
-            style: TextStyle(color: context.colors.textTertiary, fontSize: 13),
+            style: TextStyle(
+              color: context.colors.textTertiary,
+              fontSize: AppTheme.font13,
+            ),
           ),
         ),
       );
     }
     return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.space12,
+        AppTheme.space4,
+        AppTheme.space12,
+        AppTheme.space16,
+      ),
       itemCount: filtered.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 6),
+      separatorBuilder: (_, _) => const SizedBox(height: AppTheme.space6),
       itemBuilder: (_, index) =>
           _buildTile(t, filtered[index], first: index == 0),
     );
@@ -288,57 +283,44 @@ class _SnippetPickerPanelState extends ConsumerState<SnippetPickerPanel> {
   /// The "Enter to run" hint is shown only on the row Enter would actually
   /// act on.
   Widget _buildTile(Translations t, Snippet snippet, {bool first = false}) {
-    return Container(
-      decoration: BoxDecoration(
-        color: context.colors.surfaceCard,
-        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-        border: Border.all(color: context.colors.surfaceBorder),
+    return AppCard(
+      onTap: () => unawaited(_select(snippet)),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppTheme.space12,
+        vertical: AppTheme.space10,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          InkWell(
-            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-            onTap: () => unawaited(_select(snippet)),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                snippet.name,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: context.colors.textPrimary,
-                                ),
-                              ),
-                            ),
-                            if (first)
-                              _EnterHint(label: t.commandPalette.enterToRun),
-                          ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        snippet.name,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: AppTheme.font14,
+                          fontWeight: FontWeight.w600,
+                          color: context.colors.textPrimary,
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          snippet.command.split('\n').first,
-                          overflow: TextOverflow.ellipsis,
-                          style: context.colors.monoStyle.copyWith(
-                            fontSize: 12,
-                            color: context.colors.textTertiary,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
+                    if (first) _EnterHint(label: t.commandPalette.enterToRun),
+                  ],
+                ),
+                const SizedBox(height: AppTheme.space2),
+                Text(
+                  snippet.command.split('\n').first,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.colors.monoStyle.copyWith(
+                    fontSize: AppTheme.font12,
+                    color: context.colors.textTertiary,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ],
@@ -356,8 +338,11 @@ class _EnterHint extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(left: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      margin: const EdgeInsets.only(left: AppTheme.space8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppTheme.space8,
+        vertical: AppTheme.space2,
+      ),
       decoration: BoxDecoration(
         color: context.colors.primaryHighlight,
         borderRadius: BorderRadius.circular(AppTheme.radiusXs),
@@ -367,14 +352,14 @@ class _EnterHint extends StatelessWidget {
         children: [
           Icon(
             PhosphorIconsRegular.keyReturn,
-            size: 12,
+            size: AppTheme.icon12,
             color: context.colors.primary,
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: AppTheme.space4),
           Text(
             label,
             style: TextStyle(
-              fontSize: 10,
+              fontSize: AppTheme.font10,
               fontWeight: FontWeight.w600,
               color: context.colors.primary,
             ),

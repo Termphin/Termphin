@@ -273,7 +273,8 @@ void main() {
               return Future.value();
             });
         addTearDown(
-          () => TestDefaultBinaryMessengerBinding.instance
+          () => TestDefaultBinaryMessengerBinding
+              .instance
               .defaultBinaryMessenger
               .setMockMethodCallHandler(SystemChannels.platform, null),
         );

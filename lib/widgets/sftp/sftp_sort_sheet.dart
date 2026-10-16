@@ -21,7 +21,10 @@ Future<(SftpSortField, bool)?> showSftpSortSheet(
         mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppTheme.space20,
+              vertical: AppTheme.space12,
+            ),
             child: Row(
               children: [
                 Text(t.sftp.sortBy, style: Theme.of(ctx).textTheme.titleMedium),
@@ -33,7 +36,7 @@ Future<(SftpSortField, bool)?> showSftpSortSheet(
                     descending
                         ? PhosphorIconsFill.sortDescending
                         : PhosphorIconsFill.sortAscending,
-                    size: 18,
+                    size: AppTheme.icon18,
                     color: colors.primary,
                   ),
                   label: Text(t.sftp.sortDirection),
@@ -62,7 +65,7 @@ Future<(SftpSortField, bool)?> showSftpSortSheet(
               ],
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppTheme.space10),
         ],
       ),
     ),

@@ -86,11 +86,11 @@ class _SnippetArgsDialogState extends State<SnippetArgsDialog> {
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
               style: colors.monoStyle.copyWith(
-                fontSize: 12,
+                fontSize: AppTheme.font12,
                 color: colors.textTertiary,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppTheme.space16),
             for (final (index, name) in _names.indexed) ...[
               TextField(
                 key: ValueKey('snippetArgField:$name'),
@@ -107,15 +107,18 @@ class _SnippetArgsDialogState extends State<SnippetArgsDialog> {
                     _focusNodes[_names[index + 1]]?.requestFocus();
                   }
                 },
-                style: TextStyle(fontSize: 15, color: colors.textPrimary),
+                style: TextStyle(
+                  fontSize: AppTheme.font15,
+                  color: colors.textPrimary,
+                ),
                 decoration: InputDecoration(
                   labelText: name,
-                  labelStyle: const TextStyle(fontSize: 13),
+                  labelStyle: const TextStyle(fontSize: AppTheme.font13),
                   filled: true,
                   fillColor: colors.fieldFill,
                   contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 14,
+                    horizontal: AppTheme.space14,
+                    vertical: AppTheme.space14,
                   ),
                   border: border,
                   enabledBorder: border,
@@ -124,7 +127,7 @@ class _SnippetArgsDialogState extends State<SnippetArgsDialog> {
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppTheme.space12),
             ],
           ],
         ),

@@ -79,9 +79,7 @@ void main() {
       expect(find.text(t.hostKey.pinnedLabel), findsNothing);
     });
 
-    testWidgets('anonymize hides the real host, not the port', (
-      tester,
-    ) async {
+    testWidgets('anonymize hides the real host, not the port', (tester) async {
       SharedPreferences.setMockInitialValues({});
       await anonymizeSetting.set(true);
       addTearDown(() => anonymizeSetting.set(false));

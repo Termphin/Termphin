@@ -44,8 +44,9 @@ file is found by asking what it is about, not what kind of class it holds.
 | `widgets/ssh/` | Connecting view, connection log, quality pill, host key and keyboard-interactive dialogs |
 | `widgets/sftp/` | File browser, folder picker, transfer bar and dialogs, editor pieces |
 | `widgets/settings/` | One widget per Settings section, each loading its own state, plus the PIN setup dialog |
-| `widgets/profiles/`, `widgets/snippets/`, `widgets/backup/`, `widgets/onboarding/` | Pieces that belong to one feature |
-| `widgets/ui/` | The shared kit: cards, sheets, notifications, form fields, nav rail, list headers, settings tiles, confirm and text-input dialogs, clipboard and link helpers |
+| `widgets/profiles/`, `widgets/snippets/`, `widgets/backup/`, `widgets/onboarding/`, `widgets/groups/` | Pieces that belong to one feature |
+| `widgets/shell/` | The main shell's navigation rail |
+| `widgets/ui/` | The shared kit: cards, badges, chips, sheets, notifications, form fields, list and section headers, settings tiles and controls, empty states, bar buttons, confirm and text-input dialogs, clipboard and link helpers. Generic only - nothing that knows about groups, profiles or settings storage |
 | `screens/terminal/state/` | The terminal screen's tab strip state (`TabStripController`), splits, swipe and reconciling, kept free of widgets so they unit-test |
 | `screens/` | `main_shell`, `home_screen`, `lock_screen`, `onboarding_screen`, then one folder per area: `terminal`, `settings`, `sftp`, `snippets`, `keys`, `groups`, `backup`, `search` |
 

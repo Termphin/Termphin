@@ -105,7 +105,7 @@ class _ToolbarKeyButtonState extends State<ToolbarKeyButton> {
             splashColor: activeColor.withValues(alpha: 0.22),
             child: Container(
               height: widget.height,
-              padding: const EdgeInsets.symmetric(horizontal: 3),
+              padding: const EdgeInsets.symmetric(horizontal: AppTheme.space2),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                 border: Border.all(
@@ -123,7 +123,7 @@ class _ToolbarKeyButtonState extends State<ToolbarKeyButton> {
                     softWrap: false,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: 12,
+                      fontSize: AppTheme.font12,
                       fontWeight: FontWeight.w600,
                       color: widget.active || widget.locked
                           ? s.foreground
@@ -187,7 +187,11 @@ class ToolbarEmptySlot extends StatelessWidget {
           ),
           alignment: Alignment.center,
           child: active
-              ? Icon(PhosphorIconsRegular.plus, size: 16, color: accent)
+              ? Icon(
+                  PhosphorIconsRegular.plus,
+                  size: AppTheme.icon16,
+                  color: accent,
+                )
               : const SizedBox.shrink(),
         ),
       ),

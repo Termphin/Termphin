@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:termphin/i18n/strings.g.dart';
 import 'package:termphin/models/profile_group.dart';
 import 'package:termphin/models/ssh_key.dart';
@@ -15,10 +14,11 @@ import 'package:termphin/screens/keys/key_form_screen.dart';
 import 'package:termphin/screens/keys/key_manager_screen.dart';
 import 'package:termphin/screens/search/global_search_launcher.dart';
 import 'package:termphin/screens/search/global_search_screen.dart';
+import 'package:termphin/widgets/groups/group_filter_chips.dart';
+import 'package:termphin/widgets/groups/group_picker_field.dart';
+import 'package:termphin/widgets/ui/app_badge.dart';
 import 'package:termphin/widgets/ui/app_dropdown.dart';
 import 'package:termphin/widgets/ui/empty_state.dart';
-import 'package:termphin/widgets/ui/group_filter_chips.dart';
-import 'package:termphin/widgets/ui/group_picker_field.dart';
 import 'package:termphin/widgets/ui/list_section_header.dart';
 import 'package:termphin/widgets/ui/selection_action_bar.dart';
 import 'package:termphin/widgets/ui/tag_chip.dart';
@@ -169,10 +169,10 @@ void main() {
       );
       expect(find.text('EmptyGroup'), findsNothing);
 
-      final countBadges = find.byType(CountBadge);
+      final countBadges = find.byType(AppBadge);
       expect(countBadges, findsNWidgets(2));
-      expect(tester.widget<CountBadge>(countBadges.at(0)).count, 2);
-      expect(tester.widget<CountBadge>(countBadges.at(1)).count, 1);
+      expect(tester.widget<AppBadge>(countBadges.at(0)).label, '2');
+      expect(tester.widget<AppBadge>(countBadges.at(1)).label, '1');
       expect(find.byType(EmptyStateHint), findsNothing);
 
       expect(find.text('General Key 1'), findsOneWidget);
@@ -206,10 +206,10 @@ void main() {
 
     expect(find.text('Orphan Key'), findsOneWidget);
 
-    final countBadges = find.byType(CountBadge);
+    final countBadges = find.byType(AppBadge);
     expect(countBadges, findsNWidgets(2));
-    expect(tester.widget<CountBadge>(countBadges.at(0)).count, 1);
-    expect(tester.widget<CountBadge>(countBadges.at(1)).count, 1);
+    expect(tester.widget<AppBadge>(countBadges.at(0)).label, '1');
+    expect(tester.widget<AppBadge>(countBadges.at(1)).label, '1');
   });
 
   testWidgets(

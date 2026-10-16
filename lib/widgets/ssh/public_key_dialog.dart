@@ -21,9 +21,9 @@ Future<void> showPublicKeyDialog(BuildContext context, SshKey key) {
             t.keys.keyCreatedInstructions,
             style: Theme.of(ctx).textTheme.bodyMedium,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppTheme.space12),
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(AppTheme.space10),
             decoration: BoxDecoration(
               color: ctx.colors.backgroundPrimary,
               borderRadius: BorderRadius.circular(AppTheme.radiusSm),

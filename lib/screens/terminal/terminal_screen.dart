@@ -32,6 +32,7 @@ import '../../theme/theme.dart';
 import '../../utils/platform_info.dart';
 import '../../widgets/profiles/profile_avatar.dart';
 import '../../widgets/sftp/sftp_browser_view.dart';
+import '../../widgets/shell/nav_rail.dart';
 import '../../widgets/snippets/snippet_args_dialog.dart';
 import '../../widgets/snippets/snippet_picker_panel.dart';
 import '../../widgets/ssh/connection_log_sheet.dart';
@@ -49,11 +50,11 @@ import '../../widgets/terminal/tab_menu_parts.dart';
 import '../../widgets/terminal/terminal_pane.dart';
 import '../../widgets/terminal/terminal_tab_pill.dart';
 import '../../widgets/terminal/tunnels_panel.dart';
+import '../../widgets/ui/app_badge.dart';
 import '../../widgets/ui/app_dropdown.dart';
 import '../../widgets/ui/app_notifications.dart';
 import '../../widgets/ui/app_sheet.dart';
 import '../../widgets/ui/confirm_dialog.dart';
-import '../../widgets/ui/nav_rail.dart';
 import '../../widgets/ui/section_header.dart';
 import '../settings/terminal_appearance_screen.dart';
 import '../settings/toolbar_profiles_screen.dart';
@@ -62,7 +63,7 @@ import 'state/tab_reconciler.dart';
 import 'state/tab_strip_controller.dart';
 
 /// Vertical padding inside the strip around a tab pill.
-const _kTabStripPaddingY = 6.0;
+const _kTabStripPaddingY = AppTheme.space6;
 
 /// The status avatar sets a floor: a single-line tab is still at least this
 /// tall, whatever the font scale is doing.
@@ -437,7 +438,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
         text: 'M',
         style: TextStyle(
           fontFamily: terminalSettings.fontFamily.value,
-          fontSize: 12,
+          fontSize: AppTheme.font12,
         ),
       ),
       textDirection: TextDirection.ltr,
@@ -862,7 +863,12 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+              padding: const EdgeInsets.fromLTRB(
+                AppTheme.space20,
+                AppTheme.space4,
+                AppTheme.space20,
+                AppTheme.space8,
+              ),
               child: SectionHeader(t.terminal.splitWithTitle),
             ),
             Flexible(
@@ -893,7 +899,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
                       dimension: 28,
                       child: Icon(
                         PhosphorIconsRegular.plus,
-                        size: 20,
+                        size: AppTheme.icon20,
                         color: context.colors.textSecondary,
                       ),
                     ),
@@ -947,7 +953,10 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
       child: Row(
         children: [
           Padding(
-            padding: const EdgeInsets.only(left: 6, right: 3),
+            padding: const EdgeInsets.only(
+              left: AppTheme.space6,
+              right: AppTheme.space2,
+            ),
             child: _buildTabBarAction(
               key: const ValueKey('tabBarBackButton'),
               tooltip: t.common.back,
@@ -959,21 +968,24 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
             child: _buildTabList(
               axis: Axis.horizontal,
               padding: const EdgeInsets.fromLTRB(
-                3,
+                AppTheme.space2,
                 _kTabStripPaddingY,
-                3,
+                AppTheme.space2,
                 _kTabStripPaddingY,
               ),
             ),
           ),
           if (_terminalLive()) ...[
             Padding(
-              padding: const EdgeInsets.only(left: 3),
+              padding: const EdgeInsets.only(left: AppTheme.space2),
               child: _buildQuickSettingsButton(),
             ),
           ],
           Padding(
-            padding: const EdgeInsets.only(left: 3, right: 6),
+            padding: const EdgeInsets.only(
+              left: AppTheme.space2,
+              right: AppTheme.space6,
+            ),
             child: _buildAddTabButton(),
           ),
         ],
@@ -1037,13 +1049,18 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
             child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(6, 6, 6, 3),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppTheme.space6,
+                    AppTheme.space6,
+                    AppTheme.space6,
+                    AppTheme.space2,
+                  ),
                   child: collapsed
                       ? Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             toggle,
-                            const SizedBox(height: 3),
+                            const SizedBox(height: AppTheme.space2),
                             backButton,
                           ],
                         )
@@ -1052,13 +1069,18 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
                 Expanded(
                   child: _buildTabList(
                     axis: Axis.vertical,
-                    padding: const EdgeInsets.fromLTRB(3, 3, 3, 3),
+                    padding: const EdgeInsets.all(AppTheme.space2),
                     stretch: !collapsed,
                     collapsed: collapsed,
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(6, 3, 6, 6),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppTheme.space6,
+                    AppTheme.space2,
+                    AppTheme.space6,
+                    AppTheme.space6,
+                  ),
                   child: Align(
                     alignment: collapsed
                         ? Alignment.center
@@ -1070,7 +1092,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               _buildQuickSettingsButton(),
-                              const SizedBox(height: 3),
+                              const SizedBox(height: AppTheme.space2),
                               _buildAddTabButton(),
                             ],
                           )
@@ -1078,7 +1100,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               _buildAddTabButton(),
-                              const SizedBox(width: 6),
+                              const SizedBox(width: AppTheme.space6),
                               _buildQuickSettingsButton(),
                             ],
                           ),
@@ -1185,8 +1207,8 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
     return Container(
       key: ValueKey('splitTab-${entry.first}'),
       padding: vertical
-          ? const EdgeInsets.symmetric(vertical: 2)
-          : const EdgeInsets.symmetric(horizontal: 2),
+          ? const EdgeInsets.symmetric(vertical: AppTheme.space2)
+          : const EdgeInsets.symmetric(horizontal: AppTheme.space2),
       decoration: BoxDecoration(
         color: context.colors.surfaceOffset,
         borderRadius: radius,
@@ -1208,7 +1230,10 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
         children: [
           for (final (i, id) in entry.indexed) ...[
             if (i > 0)
-              SizedBox(width: vertical ? 0 : 2, height: vertical ? 2 : 0),
+              SizedBox(
+                width: vertical ? 0 : AppTheme.space2,
+                height: vertical ? AppTheme.space2 : 0,
+              ),
             _buildTab(
               _sessions.indexWhere((s) => s.$1 == id),
               stretch: stretch,
@@ -1313,7 +1338,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
       height: 52,
       enabled: false,
       child: Padding(
-        padding: const EdgeInsets.only(top: AppTheme.spaceXs),
+        padding: const EdgeInsets.only(top: AppTheme.space4),
         child: ViewModeSegments(
           sessionId: session.$1,
           mode: _modeFor(session.$1),
@@ -1367,7 +1392,9 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
           _TabConnectionAction.manageTunnels,
           PhosphorIconsRegular.arrowsLeftRight,
           t.portForwarding.manageTunnels,
-          trailing: activeTunnels > 0 ? CountBadge(activeTunnels) : null,
+          trailing: activeTunnels > 0
+              ? AppBadge.count(activeTunnels, tone: BadgeTone.highlight)
+              : null,
         ),
       if (persistent)
         entry(
@@ -1412,10 +1439,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
         enabled: false,
         child: Align(
           alignment: Alignment.bottomLeft,
-          child: Text(
-            t.session.menuSection.toUpperCase(),
-            style: colors.sectionLabel,
-          ),
+          child: SectionHeader(t.session.menuSection),
         ),
       ),
       ...actions,
@@ -1523,7 +1547,11 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
           customBorder: shape,
           child: SizedBox.square(
             dimension: 36,
-            child: Icon(icon, size: 18, color: context.colors.textSecondary),
+            child: Icon(
+              icon,
+              size: AppTheme.icon18,
+              color: context.colors.textSecondary,
+            ),
           ),
         ),
       ),
@@ -1711,7 +1739,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
           ColoredBox(
             color: backgroundColor,
             child: Padding(
-              padding: const EdgeInsets.only(bottom: 6),
+              padding: const EdgeInsets.only(bottom: AppTheme.space6),
               child: _buildToolbarForActiveSession(),
             ),
           ),

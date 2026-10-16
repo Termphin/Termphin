@@ -60,7 +60,12 @@ class PortForwardingRuleTile extends StatelessWidget {
 
     return ListTile(
       onTap: onTap,
-      contentPadding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+      contentPadding: const EdgeInsets.fromLTRB(
+        AppTheme.space12,
+        AppTheme.space8,
+        AppTheme.space8,
+        AppTheme.space8,
+      ),
       leading: Container(
         width: 36,
         height: 36,
@@ -72,14 +77,14 @@ class PortForwardingRuleTile extends StatelessWidget {
           isLocal
               ? PhosphorIconsFill.arrowLineDown
               : PhosphorIconsFill.arrowLineUp,
-          size: 18,
+          size: AppTheme.icon18,
           color: accent,
         ),
       ),
       title: Text(
         rule.displayName,
         style: colors.uiStyle.copyWith(
-          fontSize: 14,
+          fontSize: AppTheme.font14,
           fontWeight: FontWeight.w600,
           color: colors.textPrimary,
         ),
@@ -87,7 +92,7 @@ class PortForwardingRuleTile extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
       ),
       subtitle: Padding(
-        padding: const EdgeInsets.only(top: 4),
+        padding: const EdgeInsets.only(top: AppTheme.space4),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -98,7 +103,7 @@ class PortForwardingRuleTile extends StatelessWidget {
               destPort: destPort,
               accent: accent,
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: AppTheme.space4),
             Row(
               children: [
                 Text(
@@ -106,20 +111,23 @@ class PortForwardingRuleTile extends StatelessWidget {
                       ? t.portForwarding.localForward
                       : t.portForwarding.remoteForward,
                   style: colors.uiSmall.copyWith(
-                    fontSize: 11,
+                    fontSize: AppTheme.font11,
                     fontWeight: FontWeight.w600,
                     color: accent,
                   ),
                 ),
                 if (_statusText(t) case final text?) ...[
-                  Text(' · ', style: colors.uiSmall.copyWith(fontSize: 11)),
+                  Text(
+                    ' · ',
+                    style: colors.uiSmall.copyWith(fontSize: AppTheme.font11),
+                  ),
                   Flexible(
                     child: Text(
                       text,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: colors.uiSmall.copyWith(
-                        fontSize: 11,
+                        fontSize: AppTheme.font11,
                         fontWeight: FontWeight.w600,
                         color: status == TunnelStatus.error
                             ? colors.error
@@ -131,11 +139,11 @@ class PortForwardingRuleTile extends StatelessWidget {
               ],
             ),
             if (status == TunnelStatus.error && errorMessage != null) ...[
-              const SizedBox(height: 3),
+              const SizedBox(height: AppTheme.space2),
               Text(
                 errorMessage!,
                 style: colors.uiSmall.copyWith(
-                  fontSize: 11,
+                  fontSize: AppTheme.font11,
                   color: colors.error,
                 ),
               ),
@@ -158,7 +166,7 @@ class PortForwardingRuleTile extends StatelessWidget {
               onPressed: onDelete,
               icon: Icon(
                 PhosphorIconsFill.trash,
-                size: 16,
+                size: AppTheme.icon16,
                 color: colors.textTertiary,
               ),
               visualDensity: VisualDensity.compact,
@@ -201,10 +209,10 @@ class _EndpointLine extends StatelessWidget {
       children: [
         Flexible(child: _endpoint(colors, sourceLabel, sourcePort, accent)),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6),
+          padding: const EdgeInsets.symmetric(horizontal: AppTheme.space6),
           child: Icon(
             PhosphorIconsFill.arrowRight,
-            size: 11,
+            size: AppTheme.icon10,
             color: colors.textTertiary,
           ),
         ),
@@ -219,7 +227,7 @@ class _EndpointLine extends StatelessWidget {
   /// each read on their own, both by a screen reader and by the tests that
   /// assert which end is named first.
   Widget _endpoint(AppColors colors, String label, int port, Color labelColor) {
-    final style = colors.uiSmall.copyWith(fontSize: 11);
+    final style = colors.uiSmall.copyWith(fontSize: AppTheme.font11);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [

@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../theme/theme.dart';
-import '../profiles/profile_avatar.dart';
+import '../ui/app_card.dart';
+import 'profile_avatar.dart';
 
 /// Preview, icon grid and colour row for a machine's [ProfileAvatar].
 ///
@@ -25,20 +26,16 @@ class AvatarPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final avatarColor = ProfileAvatarColor.forHex(colorHex);
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: context.colors.surfaceCard,
-        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-        border: Border.all(color: context.colors.surfaceBorder),
-      ),
+    return AppCard(
+      padding: const EdgeInsets.all(AppTheme.space14),
+      borderRadius: BorderRadius.circular(AppTheme.radiusLg),
       child: Column(
         children: [
           ProfileAvatar(iconName: iconName, colorHex: colorHex, size: 56),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppTheme.space16),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: AppTheme.space8,
+            runSpacing: AppTheme.space8,
             alignment: WrapAlignment.center,
             children: ProfileAvatarData.icons.map((item) {
               final selected = (iconName ?? 'desktop') == item.id;
@@ -72,7 +69,7 @@ class AvatarPicker extends StatelessWidget {
               );
             }).toList(),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: AppTheme.space14),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: ProfileAvatarColor.colors.map((item) {
@@ -83,7 +80,9 @@ class AvatarPicker extends StatelessWidget {
                   duration: AppTheme.interactiveDuration,
                   width: 32,
                   height: 32,
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: AppTheme.space4,
+                  ),
                   decoration: BoxDecoration(
                     color: item.color,
                     shape: BoxShape.circle,
@@ -97,7 +96,7 @@ class AvatarPicker extends StatelessWidget {
                   child: selected
                       ? const Icon(
                           PhosphorIconsRegular.check,
-                          size: 14,
+                          size: AppTheme.icon14,
                           color: ProfileAvatarColor.onSwatch,
                         )
                       : null,

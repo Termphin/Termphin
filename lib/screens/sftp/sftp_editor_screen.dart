@@ -25,6 +25,7 @@ import '../../widgets/sftp/editor_selection_toolbar.dart';
 import '../../widgets/terminal/pinch_font_zoom.dart';
 import '../../widgets/ui/app_notifications.dart';
 import '../../widgets/ui/confirm_dialog.dart';
+import '../../widgets/ui/empty_state.dart';
 
 /// Files larger than this are shown without syntax highlighting to keep the
 /// editor responsive.
@@ -474,15 +475,18 @@ class _SftpEditorScreenState extends State<SftpEditorScreen> {
         backgroundColor: context.colors.backgroundPrimary,
         appBar: AppBar(
           bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(1),
-            child: Container(height: 1, color: context.colors.surfaceBorder),
+            preferredSize: const Size.fromHeight(AppTheme.hairline),
+            child: Container(
+              height: AppTheme.hairline,
+              color: context.colors.surfaceBorder,
+            ),
           ),
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 widget.fileItem.filename,
-                style: const TextStyle(fontSize: 16),
+                style: const TextStyle(fontSize: AppTheme.font16),
               ),
               Text(
                 sftpPathToDisplay(widget.path),
@@ -515,7 +519,7 @@ class _SftpEditorScreenState extends State<SftpEditorScreen> {
             if (_isSaving)
               const Center(
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  padding: EdgeInsets.symmetric(horizontal: AppTheme.space16),
                   child: SizedBox(
                     width: 20,
                     height: 20,
@@ -570,7 +574,7 @@ class _SftpEditorScreenState extends State<SftpEditorScreen> {
           fontSize: _fontSize,
           language: highlight ? lang : null,
         ),
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(AppTheme.space12),
         indicatorBuilder: editorLineNumbers(),
       ),
     );
@@ -579,25 +583,11 @@ class _SftpEditorScreenState extends State<SftpEditorScreen> {
   Widget _buildBody() {
     if (_isLoading) return const Center(child: CircularProgressIndicator());
     if (_error.isNotEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                PhosphorIconsFill.warningCircle,
-                color: context.colors.error,
-                size: 48,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                t.editor.error(error: _error),
-                style: TextStyle(color: context.colors.error),
-              ),
-            ],
-          ),
-        ),
+      return EmptyStatePanel(
+        icon: PhosphorIconsFill.warningCircle,
+        title: t.editor.error(error: _error),
+        tone: EmptyStateTone.error,
+        compact: true,
       );
     }
 
@@ -606,7 +596,10 @@ class _SftpEditorScreenState extends State<SftpEditorScreen> {
         if (_isLargeFileMode)
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppTheme.space12,
+              vertical: AppTheme.space8,
+            ),
             decoration: BoxDecoration(
               color: context.colors.surfaceCard,
               border: Border(
@@ -617,10 +610,10 @@ class _SftpEditorScreenState extends State<SftpEditorScreen> {
               children: [
                 Icon(
                   PhosphorIconsFill.info,
-                  size: 13,
+                  size: AppTheme.icon12,
                   color: context.colors.textTertiary,
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: AppTheme.space6),
                 Text(
                   t.editor.lines(
                     start: _windowStartLine + 1,
@@ -628,16 +621,16 @@ class _SftpEditorScreenState extends State<SftpEditorScreen> {
                     total: _allLines.length,
                   ),
                   style: context.colors.uiStyle.copyWith(
-                    fontSize: 12,
+                    fontSize: AppTheme.font12,
                     color: context.colors.textTertiary,
                   ),
                 ),
                 if (_windowEndLine < _allLines.length) ...[
-                  const SizedBox(width: 6),
+                  const SizedBox(width: AppTheme.space6),
                   Text(
                     t.editor.scrollToLoadMore,
                     style: context.colors.uiStyle.copyWith(
-                      fontSize: 12,
+                      fontSize: AppTheme.font12,
                       color: context.colors.primary,
                     ),
                   ),

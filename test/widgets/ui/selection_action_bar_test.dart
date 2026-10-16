@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:termphin/i18n/strings.g.dart';
 import 'package:termphin/models/profile_group.dart';
-import 'package:termphin/widgets/ui/group_picker_sheet.dart';
+import 'package:termphin/widgets/groups/group_picker_sheet.dart';
 import 'package:termphin/widgets/ui/selection_action_bar.dart';
 
 import '../../support/test_app.dart';

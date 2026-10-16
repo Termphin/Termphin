@@ -12,6 +12,7 @@ import '../../widgets/ui/action_dock_tile.dart';
 import '../../widgets/ui/app_notifications.dart';
 import '../../widgets/ui/confirm_dialog.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
+import '../../widgets/ui/section_header.dart';
 
 /// What the action dock lists, drawn as the panel itself, tile for tile, over
 /// a tray of the hidden ones.
@@ -141,24 +142,32 @@ class _ActionDockSettingsScreenState extends State<ActionDockSettingsScreen> {
           ? const Center(child: CircularProgressIndicator())
           : ListView(
               controller: scrollController,
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 32).add(gutter),
+              padding: const EdgeInsets.fromLTRB(
+                AppTheme.space16,
+                0,
+                AppTheme.space16,
+                AppTheme.space32,
+              ).add(gutter),
               children: [
                 LargeTitleHeader(
                   title: t.settings.actionDock,
                   subtitle: t.settings.actionDockSubtitle,
-                  padding: const EdgeInsets.only(top: 24, bottom: 8),
+                  padding: const EdgeInsets.only(
+                    top: AppTheme.space24,
+                    bottom: AppTheme.space8,
+                  ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppTheme.space16),
                 Column(
                   key: const ValueKey('actionDockEditor'),
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _SectionLabel(t.settings.actionDockPreview),
-                    const SizedBox(height: 8),
+                    SectionHeader(t.settings.actionDockPreview),
+                    const SizedBox(height: AppTheme.space8),
                     Center(child: _buildPanel(t)),
-                    const SizedBox(height: 24),
-                    _SectionLabel(t.settings.actionDockHiddenLabel),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppTheme.space24),
+                    SectionHeader(t.settings.actionDockHiddenLabel),
+                    const SizedBox(height: AppTheme.space8),
                     Center(child: _buildTray(t)),
                   ],
                 ),
@@ -468,7 +477,7 @@ class _InsertBar extends StatelessWidget {
         width: 3,
         decoration: BoxDecoration(
           color: context.colors.primary,
-          borderRadius: BorderRadius.circular(2),
+          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
         ),
       ),
     );
@@ -510,33 +519,19 @@ class _Badge extends StatelessWidget {
             child: Align(
               alignment: Alignment.topRight,
               child: Container(
-                margin: const EdgeInsets.all(4),
+                margin: const EdgeInsets.all(AppTheme.space4),
                 width: 18,
                 height: 18,
                 decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-                child: Icon(icon, size: 11, color: context.colors.onPrimary),
+                child: Icon(
+                  icon,
+                  size: AppTheme.icon10,
+                  color: context.colors.onPrimary,
+                ),
               ),
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: TextStyle(
-        color: context.colors.textTertiary,
-        fontSize: 11,
-        fontWeight: FontWeight.w600,
       ),
     );
   }
@@ -555,7 +550,10 @@ class _EmptyNote extends StatelessWidget {
         child: Text(
           text,
           textAlign: TextAlign.center,
-          style: TextStyle(color: context.colors.textTertiary, fontSize: 12),
+          style: TextStyle(
+            color: context.colors.textTertiary,
+            fontSize: AppTheme.font12,
+          ),
         ),
       ),
     );

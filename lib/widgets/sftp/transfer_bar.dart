@@ -168,8 +168,8 @@ class _TransferBarState extends State<TransferBar>
                         onTap: _collapse,
                         child: FadeTransition(
                           opacity: _openCurve,
-                          child: ColoredBox(
-                            color: Colors.black.withValues(alpha: 0.35),
+                          child: const ColoredBox(
+                            color: AppTheme.shadowColor,
                           ),
                         ),
                       ),
@@ -275,7 +275,7 @@ class _Strip extends StatelessWidget {
         expanded
             ? PhosphorIconsRegular.caretUp
             : PhosphorIconsRegular.caretDown,
-        size: 18,
+        size: AppTheme.icon18,
         color: colors.textSecondary,
       ),
     );
@@ -285,7 +285,7 @@ class _Strip extends StatelessWidget {
       return ContextBar(
         leading: Icon(
           PhosphorIconsFill.warningCircle,
-          size: 24,
+          size: AppTheme.icon24,
           color: colors.error,
         ),
         title: t.sftp.queue.failedCount(
@@ -348,7 +348,12 @@ class _Panel extends StatelessWidget {
     final anyFailed = jobs.any((job) => job.state == TransferJobState.failed);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.space8,
+        AppTheme.space6,
+        AppTheme.space8,
+        AppTheme.space8,
+      ),
       child: AnimatedSize(
         duration: MediaQuery.disableAnimationsOf(context)
             ? Duration.zero
@@ -369,7 +374,9 @@ class _Panel extends StatelessWidget {
                 constraints: BoxConstraints(maxHeight: maxHeight),
                 child: ListView(
                   shrinkWrap: true,
-                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: AppTheme.space6,
+                  ),
                   children: [
                     for (final job in jobs)
                       _JobRow(
@@ -382,7 +389,9 @@ class _Panel extends StatelessWidget {
                       Align(
                         alignment: Alignment.centerRight,
                         child: Padding(
-                          padding: const EdgeInsets.only(right: 6),
+                          padding: const EdgeInsets.only(
+                            right: AppTheme.space6,
+                          ),
                           child: TextButton(
                             onPressed: queue.clearFinished,
                             child: Text(t.sftp.queue.clearFinished),
@@ -420,19 +429,24 @@ class _JobRow extends StatelessWidget {
     final running = job.state == TransferJobState.running;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 6, 4, 6),
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.space14,
+        AppTheme.space6,
+        AppTheme.space4,
+        AppTheme.space6,
+      ),
       child: Row(
         children: [
           Icon(
             _kindIcon(job.kind),
-            size: 18,
+            size: AppTheme.icon18,
             color: failed
                 ? colors.error
                 : running
                 ? colors.primary
                 : colors.textTertiary,
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: AppTheme.space12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -443,7 +457,7 @@ class _JobRow extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: colors.uiStyle.copyWith(color: colors.textPrimary),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: AppTheme.space2),
                 Text(
                   _statusLine(t, job, rate),
                   maxLines: failed ? 3 : 1,
@@ -462,12 +476,12 @@ class _JobRow extends StatelessWidget {
               onPressed: onCancel,
               icon: Icon(
                 PhosphorIconsRegular.x,
-                size: 16,
+                size: AppTheme.icon16,
                 color: colors.textSecondary,
               ),
             )
           else
-            const SizedBox(width: 12),
+            const SizedBox(width: AppTheme.space12),
         ],
       ),
     );

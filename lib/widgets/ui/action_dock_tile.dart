@@ -75,15 +75,17 @@ class ActionDockTile extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 20, color: iconColor),
-              const SizedBox(height: 4),
+              Icon(icon, size: AppTheme.icon20, color: iconColor),
+              const SizedBox(height: AppTheme.space4),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 3),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppTheme.space2,
+                ),
                 child: TwoLineLabel(
                   text: label,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: AppTheme.font10,
                     height: 1.25,
                     fontWeight: FontWeight.w600,
                     color: textColor,

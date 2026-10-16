@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../i18n/strings.g.dart';
+import '../../theme/theme.dart';
 import '../../widgets/settings/about_settings_section.dart';
 import '../../widgets/settings/analytics_settings_section.dart';
 import '../../widgets/settings/appearance_settings_section.dart';
@@ -63,40 +64,48 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
               controller: scrollController,
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 32).add(gutter),
+              padding: const EdgeInsets.fromLTRB(
+                AppTheme.space16,
+                0,
+                AppTheme.space16,
+                AppTheme.space32,
+              ).add(gutter),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   LargeTitleHeader(
                     title: t.settings.title,
                     subtitle: t.settings.subtitle,
-                    padding: const EdgeInsets.only(top: 24, bottom: 8),
+                    padding: const EdgeInsets.only(
+                      top: AppTheme.space24,
+                      bottom: AppTheme.space8,
+                    ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppTheme.space16),
                   const AppearanceSettingsSection(),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: AppTheme.space20),
                   const OrganizationSettingsSection(),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: AppTheme.space20),
                   const TerminalSettingsSection(),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: AppTheme.space20),
                   TerminalControlsSettingsSection(appVersion: _appVersion),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: AppTheme.space20),
                   const SftpSettingsSection(),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: AppTheme.space20),
                   const ConnectionSettingsSection(),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: AppTheme.space20),
                   const SecuritySettingsSection(),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: AppTheme.space20),
                   const DataBackupSettingsSection(),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: AppTheme.space20),
                   const PrivacySettingsSection(),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: AppTheme.space20),
                   const FeedbackSettingsSection(),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: AppTheme.space20),
                   const OpenSourceSettingsSection(),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: AppTheme.space20),
                   const AnalyticsSettingsSection(),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: AppTheme.space20),
                   AboutSettingsSection(version: _version),
                 ],
               ),

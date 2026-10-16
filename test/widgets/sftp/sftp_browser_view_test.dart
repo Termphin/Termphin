@@ -168,48 +168,47 @@ void main() {
     });
   });
 
-  testWidgets(
-    'a slower navigation does not overwrite a faster, newer one',
-    (tester) async {
-      final tree = FakeSftpTree({
-        '/home/user': [sftpDir('a')],
-        '/home/user/a': [sftpFile('old-in-a.txt')],
-        '/srv': [sftpFile('new-in-b.txt')],
-      });
-      final sftp = FakeSftpClient(tree);
-      var terminal = '/home/user';
-      final key = GlobalKey<SftpBrowserViewState>();
-      await pumpTestApp(
-        tester,
-        Scaffold(
-          body: SftpBrowserView(
-            key: key,
-            session: _sessionOn(FakeSftpSshService(sftp)),
-            terminalDirectory: () async => terminal,
-          ),
+  testWidgets('a slower navigation does not overwrite a faster, newer one', (
+    tester,
+  ) async {
+    final tree = FakeSftpTree({
+      '/home/user': [sftpDir('a')],
+      '/home/user/a': [sftpFile('old-in-a.txt')],
+      '/srv': [sftpFile('new-in-b.txt')],
+    });
+    final sftp = FakeSftpClient(tree);
+    var terminal = '/home/user';
+    final key = GlobalKey<SftpBrowserViewState>();
+    await pumpTestApp(
+      tester,
+      Scaffold(
+        body: SftpBrowserView(
+          key: key,
+          session: _sessionOn(FakeSftpSshService(sftp)),
+          terminalDirectory: () async => terminal,
         ),
-      );
-      await tester.pumpAndSettle();
+      ),
+    );
+    await tester.pumpAndSettle();
 
-      sftp.gateListing('/home/user/a');
-      await tester.tap(find.text('a'));
-      await tester.pump();
+    sftp.gateListing('/home/user/a');
+    await tester.tap(find.text('a'));
+    await tester.pump();
 
-      terminal = '/srv';
-      await key.currentState!.followTerminal();
-      await tester.pumpAndSettle();
+    terminal = '/srv';
+    await key.currentState!.followTerminal();
+    await tester.pumpAndSettle();
 
-      expect(find.text('new-in-b.txt'), findsOneWidget);
-      expect(find.text('srv'), findsOneWidget);
+    expect(find.text('new-in-b.txt'), findsOneWidget);
+    expect(find.text('srv'), findsOneWidget);
 
-      sftp.releaseListing('/home/user/a');
-      await tester.pumpAndSettle();
+    sftp.releaseListing('/home/user/a');
+    await tester.pumpAndSettle();
 
-      expect(find.text('new-in-b.txt'), findsOneWidget);
-      expect(find.text('old-in-a.txt'), findsNothing);
-      expect(find.text('srv'), findsOneWidget);
-    },
-  );
+    expect(find.text('new-in-b.txt'), findsOneWidget);
+    expect(find.text('old-in-a.txt'), findsNothing);
+    expect(find.text('srv'), findsOneWidget);
+  });
 
   testWidgets('hides dotfiles until the show-hidden toggle is tapped', (
     tester,

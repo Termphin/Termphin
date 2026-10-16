@@ -10,8 +10,8 @@ import '../../providers/ssh_connection_provider.dart';
 import '../../services/app/identity_anonymizer.dart';
 import '../../services/app/manual_urls.dart';
 import '../../theme/theme.dart';
+import '../settings/manual_link.dart';
 import '../ui/app_sheet.dart';
-import '../ui/manual_link.dart';
 
 /// The connection log for a session, readable after the tab is past the
 /// connecting screen. Live, since the log keeps growing for as long as the
@@ -30,7 +30,12 @@ Future<void> showConnectionLogSheet(
       final t = Translations.of(sheetContext);
       return SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+          padding: const EdgeInsets.fromLTRB(
+            AppTheme.space20,
+            AppTheme.space16,
+            AppTheme.space20,
+            AppTheme.space16,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -39,7 +44,7 @@ Future<void> showConnectionLogSheet(
                 t.connection.viewLog,
                 style: Theme.of(sheetContext).textTheme.titleMedium,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppTheme.space12),
               Consumer(
                 builder: (context, ref, _) {
                   final rawLog = ref
@@ -59,7 +64,7 @@ Future<void> showConnectionLogSheet(
                         child: SelectableText(
                           log.isEmpty ? t.connection.logEmpty : log.join('\n'),
                           style: context.colors.monoStyle.copyWith(
-                            fontSize: 12,
+                            fontSize: AppTheme.font12,
                             color: context.colors.textSecondary,
                             height: 1.55,
                           ),
@@ -69,11 +74,14 @@ Future<void> showConnectionLogSheet(
                   );
                 },
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppTheme.space8),
               TextButton.icon(
                 onPressed: () =>
                     openManual(sheetContext, ManualPage.troubleshooting),
-                icon: const Icon(PhosphorIconsRegular.question, size: 18),
+                icon: const Icon(
+                  PhosphorIconsRegular.question,
+                  size: AppTheme.icon18,
+                ),
                 label: Text(t.manual.troubleshooting),
               ),
             ],

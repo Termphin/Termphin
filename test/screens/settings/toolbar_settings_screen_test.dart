@@ -8,7 +8,8 @@ import 'package:termphin/i18n/strings.g.dart';
 import 'package:termphin/screens/settings/toolbar_settings_screen.dart';
 import 'package:termphin/services/settings/app_settings.dart';
 import 'package:termphin/services/settings/toolbar_layout.dart';
-import 'package:termphin/widgets/ui/toolbar_key_button.dart';
+import 'package:termphin/widgets/terminal/toolbar_key_button.dart';
+import 'package:termphin/widgets/ui/tag_chip.dart';
 
 import '../../support/test_app.dart';
 
@@ -187,14 +188,14 @@ void main() {
 
     final second = find.text(t.settings.layoutLabel(number: 2));
     final before = tester.getSize(
-      find.ancestor(of: second, matching: find.byType(ChoiceChip)),
+      find.ancestor(of: second, matching: find.byType(TagChip)),
     );
 
     await tester.tap(second);
     await tester.pumpAndSettle();
 
     final after = tester.getSize(
-      find.ancestor(of: second, matching: find.byType(ChoiceChip)),
+      find.ancestor(of: second, matching: find.byType(TagChip)),
     );
     expect(after, before);
   });

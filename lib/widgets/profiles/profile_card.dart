@@ -7,6 +7,7 @@ import '../../models/ssh_profile.dart';
 import '../../providers/anonymize_provider.dart';
 import '../../services/app/identity_anonymizer.dart';
 import '../../theme/theme.dart';
+import '../ui/app_card.dart';
 import '../ui/app_dropdown.dart';
 import '../ui/selection_action_bar.dart';
 import 'profile_avatar.dart';
@@ -67,9 +68,6 @@ class ProfileCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final radius = attachedBelow
-        ? const BorderRadius.vertical(top: Radius.circular(AppTheme.radiusMd))
-        : BorderRadius.circular(AppTheme.radiusMd);
     final anonymize = ref.watch(anonymizeProvider);
     final displayName = anonymize
         ? IdentityAnonymizer.name(profile.id)
@@ -82,184 +80,164 @@ class ProfileCard extends ConsumerWidget {
         : profile.host;
     final t = Translations.of(context);
 
-    final side = SelectionStyle.side(context, selected: selected);
-    return Material(
-      color: context.colors.surfaceElevated.invisible,
-      borderRadius: radius,
-      child: Ink(
-        decoration: BoxDecoration(
-          color: SelectionStyle.fill(
-            context,
-            context.colors.surfaceElevated,
+    return AppCard.segment(
+      first: true,
+      last: !attachedBelow,
+      selected: selected,
+      onTap: onTap,
+      onLongPress: onLongPress,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppTheme.space14,
+        vertical: AppTheme.space14,
+      ),
+      child: Row(
+        children: [
+          SelectionCheck(
             selected: selected,
+            size: 42,
+            child: ProfileAvatar(
+              iconName: profile.iconName,
+              colorHex: profile.colorHex,
+              isActive: isActive,
+              size: 42,
+            ),
           ),
-          borderRadius: radius,
-          border: Border(
-            top: side,
-            left: side,
-            right: side,
-            bottom: attachedBelow && !selected ? BorderSide.none : side,
-          ),
-        ),
-        child: InkWell(
-          borderRadius: radius,
-          onTap: onTap,
-          onLongPress: onLongPress,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            child: Row(
+          const SizedBox(width: AppTheme.space14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SelectionCheck(
-                  selected: selected,
-                  size: 42,
-                  child: ProfileAvatar(
-                    iconName: profile.iconName,
-                    colorHex: profile.colorHex,
-                    isActive: isActive,
-                    size: 42,
-                  ),
+                Text(
+                  displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.colors.itemTitle,
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                const SizedBox(height: AppTheme.space4),
+                Text(
+                  '$displayUsername@$displayHost:${profile.port}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.colors.uiStyle,
+                ),
+                if (isLoadingSessions) ...[
+                  const SizedBox(height: AppTheme.space4),
+                  Row(
                     children: [
-                      Text(
-                        displayName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.colors.itemTitle,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '$displayUsername@$displayHost:${profile.port}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.colors.uiStyle,
-                      ),
-                      if (isLoadingSessions) ...[
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            SizedBox.square(
-                              dimension: 10,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 1.6,
-                                color: context.colors.textTertiary,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Flexible(
-                              child: Text(
-                                t.session.loadingServerSessions,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: context.colors.uiSmall.copyWith(
-                                  color: context.colors.textTertiary,
-                                ),
-                              ),
-                            ),
-                            if (onCancelLoadSessions != null) ...[
-                              const SizedBox(width: 6),
-                              InkResponse(
-                                key: const ValueKey('cancelLoadSessions'),
-                                onTap: onCancelLoadSessions,
-                                radius: 14,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(2),
-                                  child: Text(
-                                    t.session.stopLoading,
-                                    style: context.colors.uiSmall.copyWith(
-                                      color: context.colors.primary,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
+                      SizedBox.square(
+                        dimension: AppTheme.icon10,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 1.6,
+                          color: context.colors.textTertiary,
                         ),
-                      ] else if (sessionsCheckedLabel != null) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          sessionsCheckedLabel!,
+                      ),
+                      const SizedBox(width: AppTheme.space6),
+                      Flexible(
+                        child: Text(
+                          t.session.loadingServerSessions,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: context.colors.uiSmall.copyWith(
                             color: context.colors.textTertiary,
                           ),
                         ),
+                      ),
+                      if (onCancelLoadSessions != null) ...[
+                        const SizedBox(width: AppTheme.space6),
+                        InkResponse(
+                          key: const ValueKey('cancelLoadSessions'),
+                          onTap: onCancelLoadSessions,
+                          radius: 14,
+                          child: Padding(
+                            padding: const EdgeInsets.all(AppTheme.space2),
+                            child: Text(
+                              t.session.stopLoading,
+                              style: context.colors.uiSmall.copyWith(
+                                color: context.colors.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
                       ],
                     ],
                   ),
-                ),
-                const SizedBox(width: 8),
-                if (selectionMode)
-                  const SizedBox(width: 40)
-                else
-                  AppActionDropdown<_ProfileCardAction>(
-                    tooltip: t.profiles.moreActions,
-                    iconSize: 20,
-                    iconColor: context.colors.textTertiary,
-                    buttonSize: 40,
-                    width: 220,
-                    items: [
-                      DropdownItem(
-                        value: _ProfileCardAction.edit,
-                        intrinsicHeight: true,
-                        child: AppDropdownItem(
-                          icon: PhosphorIconsRegular.pencilSimple,
-                          label: t.common.edit,
-                        ),
-                      ),
-                      DropdownItem(
-                        value: _ProfileCardAction.loadSessions,
-                        intrinsicHeight: true,
-                        enabled: !isLoadingSessions,
-                        child: isLoadingSessions
-                            ? Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const SizedBox.square(
-                                    dimension: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Text(t.session.loadSessions),
-                                ],
-                              )
-                            : AppDropdownItem(
-                                icon: PhosphorIconsRegular.cloudArrowDown,
-                                label: t.session.loadSessions,
-                              ),
-                      ),
-                      DropdownItem(
-                        value: _ProfileCardAction.delete,
-                        intrinsicHeight: true,
-                        child: AppDropdownItem(
-                          icon: PhosphorIconsRegular.trash,
-                          label: t.common.delete,
-                          color: context.colors.error,
-                        ),
-                      ),
-                    ],
-                    onSelected: (action) {
-                      switch (action) {
-                        case _ProfileCardAction.edit:
-                          onEdit();
-                        case _ProfileCardAction.loadSessions:
-                          onLoadSessions();
-                        case _ProfileCardAction.delete:
-                          onDelete();
-                      }
-                    },
+                ] else if (sessionsCheckedLabel != null) ...[
+                  const SizedBox(height: AppTheme.space4),
+                  Text(
+                    sessionsCheckedLabel!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.colors.uiSmall.copyWith(
+                      color: context.colors.textTertiary,
+                    ),
                   ),
+                ],
               ],
             ),
           ),
-        ),
+          const SizedBox(width: AppTheme.space8),
+          if (selectionMode)
+            const SizedBox(width: AppTheme.space40)
+          else
+            AppActionDropdown<_ProfileCardAction>(
+              tooltip: t.profiles.moreActions,
+              iconSize: AppTheme.icon20,
+              iconColor: context.colors.textTertiary,
+              buttonSize: 40,
+              width: 220,
+              items: [
+                DropdownItem(
+                  value: _ProfileCardAction.edit,
+                  intrinsicHeight: true,
+                  child: AppDropdownItem(
+                    icon: PhosphorIconsRegular.pencilSimple,
+                    label: t.common.edit,
+                  ),
+                ),
+                DropdownItem(
+                  value: _ProfileCardAction.loadSessions,
+                  intrinsicHeight: true,
+                  enabled: !isLoadingSessions,
+                  child: isLoadingSessions
+                      ? Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const SizedBox.square(
+                              dimension: AppTheme.icon16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                            const SizedBox(width: AppTheme.space10),
+                            Text(t.session.loadSessions),
+                          ],
+                        )
+                      : AppDropdownItem(
+                          icon: PhosphorIconsRegular.cloudArrowDown,
+                          label: t.session.loadSessions,
+                        ),
+                ),
+                DropdownItem(
+                  value: _ProfileCardAction.delete,
+                  intrinsicHeight: true,
+                  child: AppDropdownItem(
+                    icon: PhosphorIconsRegular.trash,
+                    label: t.common.delete,
+                    color: context.colors.error,
+                  ),
+                ),
+              ],
+              onSelected: (action) {
+                switch (action) {
+                  case _ProfileCardAction.edit:
+                    onEdit();
+                  case _ProfileCardAction.loadSessions:
+                    onLoadSessions();
+                  case _ProfileCardAction.delete:
+                    onDelete();
+                }
+              },
+            ),
+        ],
       ),
     );
   }

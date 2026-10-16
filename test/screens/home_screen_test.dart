@@ -15,12 +15,12 @@ import 'package:termphin/screens/home_screen.dart';
 import 'package:termphin/screens/search/global_search_launcher.dart';
 import 'package:termphin/services/ssh/ssh_session_manager.dart';
 import 'package:termphin/services/storage/group_storage.dart';
+import 'package:termphin/widgets/groups/group_dot.dart';
+import 'package:termphin/widgets/groups/group_filter_chips.dart';
+import 'package:termphin/widgets/groups/group_section_header.dart';
 import 'package:termphin/widgets/profiles/profile_card.dart';
 import 'package:termphin/widgets/profiles/profile_form_dialog.dart';
-import 'package:termphin/widgets/ui/group_dot.dart';
-import 'package:termphin/widgets/ui/group_filter_chips.dart';
-import 'package:termphin/widgets/ui/group_section_header.dart';
-import 'package:termphin/widgets/ui/list_section_header.dart';
+import 'package:termphin/widgets/ui/app_badge.dart';
 import 'package:termphin/widgets/ui/selection_action_bar.dart';
 
 import '../support/fakes.dart';
@@ -326,7 +326,7 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(find.byType(CountBadge), findsNWidgets(2));
+      expect(find.byType(AppBadge), findsNWidgets(2));
       expect(find.text('Server A'), findsOneWidget);
       expect(find.text('Server B'), findsOneWidget);
     },

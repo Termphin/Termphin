@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../theme/theme.dart';
+
 /// The horizontal drag that moves between tabs.
 ///
 /// Lifted out of `TerminalScreenState`, which was holding eleven fields for
@@ -23,7 +25,7 @@ class SessionSwipeController extends ChangeNotifier {
     required this.isBlocked,
   }) : _animation = AnimationController(
          vsync: vsync,
-         duration: const Duration(milliseconds: 180),
+         duration: AppTheme.motionSlow,
        ) {
     _animation.addListener(() {
       final tween = _tween;

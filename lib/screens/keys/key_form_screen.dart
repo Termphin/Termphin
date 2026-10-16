@@ -12,10 +12,11 @@ import '../../providers/ssh_keys_provider.dart';
 import '../../services/storage/group_storage.dart';
 import '../../services/storage/ssh_key_storage.dart';
 import '../../theme/theme.dart';
+import '../../widgets/groups/group_picker_field.dart';
 import '../../widgets/ssh/public_key_dialog.dart';
+import '../../widgets/ui/app_card.dart';
 import '../../widgets/ui/app_form_field.dart';
 import '../../widgets/ui/app_notifications.dart';
-import '../../widgets/ui/group_picker_field.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
 import '../../widgets/ui/section_header.dart';
 
@@ -297,11 +298,11 @@ class _KeyFormScreenState extends ConsumerState<KeyFormScreen> {
         ),
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 12),
+            padding: const EdgeInsets.only(right: AppTheme.space12),
             child: _isSaving
                 ? const SizedBox(
-                    width: 20,
-                    height: 20,
+                    width: AppTheme.icon20,
+                    height: AppTheme.icon20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : ListenableBuilder(
@@ -319,7 +320,7 @@ class _KeyFormScreenState extends ConsumerState<KeyFormScreen> {
                               ? context.colors.primary
                               : context.colors.textTertiary,
                           fontWeight: FontWeight.w700,
-                          fontSize: 15,
+                          fontSize: AppTheme.font15,
                         ),
                       ),
                     ),
@@ -332,19 +333,19 @@ class _KeyFormScreenState extends ConsumerState<KeyFormScreen> {
         child: ContentGutter(
           builder: (context, gutter) => ListView(
             padding: EdgeInsets.fromLTRB(
-              20,
-              _isEditing ? 8 : 16,
-              20,
-              40,
+              AppTheme.space20,
+              _isEditing ? AppTheme.space8 : AppTheme.space16,
+              AppTheme.space20,
+              AppTheme.space40,
             ).add(gutter),
             children: [
               SectionHeader(t.groups.groupTitle),
-              const SizedBox(height: 10),
+              const SizedBox(height: AppTheme.space10),
               GroupPickerField(
                 group: _group,
                 onChanged: (group) => setState(() => _group = group),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: AppTheme.space20),
               AppFormField(
                 key: const ValueKey('keyNameField'),
                 controller: _nameCtrl,
@@ -354,9 +355,9 @@ class _KeyFormScreenState extends ConsumerState<KeyFormScreen> {
                 action: TextInputAction.next,
                 autofocus: !_isEditing,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: AppTheme.space24),
               SectionHeader(t.keys.keyTypeLabel),
-              const SizedBox(height: 10),
+              const SizedBox(height: AppTheme.space10),
               if (_isEditing) ...[
                 _KeyTypeOption(
                   icon: _keyTypeIcon(widget.existing!.keyType),
@@ -375,7 +376,7 @@ class _KeyFormScreenState extends ConsumerState<KeyFormScreen> {
                   onTap: () =>
                       setState(() => _selectedType = _KeyFormType.ed25519),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppTheme.space8),
                 _KeyTypeOption(
                   key: const ValueKey('keyTypeOption:rsa2048'),
                   icon: PhosphorIconsFill.lock,
@@ -385,7 +386,7 @@ class _KeyFormScreenState extends ConsumerState<KeyFormScreen> {
                   onTap: () =>
                       setState(() => _selectedType = _KeyFormType.rsa2048),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppTheme.space8),
                 _KeyTypeOption(
                   key: const ValueKey('keyTypeOption:rsa4096'),
                   icon: PhosphorIconsFill.shieldCheck,
@@ -395,7 +396,7 @@ class _KeyFormScreenState extends ConsumerState<KeyFormScreen> {
                   onTap: () =>
                       setState(() => _selectedType = _KeyFormType.rsa4096),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppTheme.space8),
                 _KeyTypeOption(
                   key: const ValueKey('keyTypeOption:import'),
                   icon: PhosphorIconsFill.fileArrowUp,
@@ -406,19 +407,22 @@ class _KeyFormScreenState extends ConsumerState<KeyFormScreen> {
                       setState(() => _selectedType = _KeyFormType.import),
                 ),
                 if (_selectedType == _KeyFormType.import) ...[
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppTheme.space16),
                   OutlinedButton.icon(
                     onPressed: _readingFile ? null : _pickKeyFile,
                     icon: _readingFile
                         ? const SizedBox.square(
-                            dimension: 16,
+                            dimension: AppTheme.icon16,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Icon(PhosphorIconsFill.fileArrowUp, size: 18),
+                        : const Icon(
+                            PhosphorIconsFill.fileArrowUp,
+                            size: AppTheme.icon18,
+                          ),
                     label: Text(t.keys.selectPrivateKeyFile),
                   ),
                   if (_selectedFileName != null) ...[
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppTheme.space8),
                     Text(
                       t.keys.selectedFile(name: _selectedFileName!),
                       overflow: TextOverflow.ellipsis,
@@ -427,7 +431,7 @@ class _KeyFormScreenState extends ConsumerState<KeyFormScreen> {
                       ),
                     ),
                   ],
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppTheme.space12),
                   AppFormField(
                     key: const ValueKey('keyPemField'),
                     controller: _pemCtrl,
@@ -441,7 +445,7 @@ class _KeyFormScreenState extends ConsumerState<KeyFormScreen> {
                     onChanged: _onPemChanged,
                   ),
                   if (_pemIsEncrypted) ...[
-                    const SizedBox(height: 12),
+                    const SizedBox(height: AppTheme.space12),
                     AppFormField(
                       key: const ValueKey('keyPassphraseField'),
                       controller: _passphraseCtrl,
@@ -450,7 +454,7 @@ class _KeyFormScreenState extends ConsumerState<KeyFormScreen> {
                       obscure: true,
                       action: TextInputAction.done,
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: AppTheme.space6),
                     Text(
                       t.keys.keyPassphraseNote,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -460,33 +464,28 @@ class _KeyFormScreenState extends ConsumerState<KeyFormScreen> {
                   ],
                 ],
                 if (_isSaving) ...[
-                  const SizedBox(height: 20),
-                  Container(
+                  const SizedBox(height: AppTheme.space20),
+                  AppCard(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: context.colors.surfaceCard,
-                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                      border: Border.all(color: context.colors.surfaceBorder),
+                      horizontal: AppTheme.space16,
+                      vertical: AppTheme.space12,
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         SizedBox.square(
-                          dimension: 16,
+                          dimension: AppTheme.icon16,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
                             color: context.colors.primary,
                           ),
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: AppTheme.space10),
                         Text(
                           t.keys.generating,
                           style: TextStyle(
                             color: context.colors.textSecondary,
-                            fontSize: 14,
+                            fontSize: AppTheme.font14,
                           ),
                         ),
                       ],
@@ -526,59 +525,48 @@ class _KeyTypeOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: context.colors.surfaceCard,
-      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-            border: Border.all(
-              color: isSelected
-                  ? context.colors.primary
-                  : context.colors.surfaceBorder,
-              width: isSelected ? 1.5 : 1.0,
+    return AppCard(
+      elevated: true,
+      selected: isSelected,
+      onTap: onTap,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppTheme.space16,
+        vertical: AppTheme.space14,
+      ),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            color: isSelected
+                ? context.colors.primary
+                : context.colors.textSecondary,
+            size: AppTheme.icon22,
+          ),
+          const SizedBox(width: AppTheme.space14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: context.colors.textPrimary,
+                    fontSize: AppTheme.font14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: AppTheme.space2),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: context.colors.textTertiary,
+                    fontSize: AppTheme.font12,
+                  ),
+                ),
+              ],
             ),
           ),
-          child: Row(
-            children: [
-              Icon(
-                icon,
-                color: isSelected
-                    ? context.colors.primary
-                    : context.colors.textSecondary,
-                size: 22,
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: TextStyle(
-                        color: context.colors.textPrimary,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        color: context.colors.textTertiary,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
+        ],
       ),
     );
   }

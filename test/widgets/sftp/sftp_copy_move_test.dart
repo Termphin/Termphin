@@ -11,6 +11,7 @@ import 'package:termphin/services/sftp/sftp_remote_ops.dart';
 import 'package:termphin/services/sftp/transfer_queue.dart';
 import 'package:termphin/widgets/sftp/sftp_browser_view.dart';
 import 'package:termphin/widgets/sftp/sftp_folder_picker.dart';
+import 'package:termphin/widgets/ui/tag_chip.dart';
 
 import '../../support/fixtures.dart';
 import '../../support/sftp_fakes.dart';
@@ -697,7 +698,7 @@ void main() {
       await tester.tap(find.text('Move to…'));
       await tester.pumpAndSettle();
       await tester.tap(
-        _inPicker(find.widgetWithText(ActionChip, '/home/user/app')),
+        _inPicker(find.widgetWithText(TagChip, '/home/user/app')),
       );
       await tester.pumpAndSettle();
       await _confirm(tester, 'Move here');

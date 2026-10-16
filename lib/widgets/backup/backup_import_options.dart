@@ -11,6 +11,7 @@ import '../ui/app_form_field.dart';
 import '../ui/app_sheet.dart';
 import '../ui/large_title_scaffold.dart';
 import '../ui/section_header.dart';
+import '../ui/settings_tile.dart';
 import 'backup_option_tile.dart';
 
 /// Date and time of an export, in the ambient locale's own order rather than
@@ -61,10 +62,10 @@ class _PassphraseSheetState extends State<_PassphraseSheet> {
     final t = Translations.of(context);
     return Padding(
       padding: EdgeInsets.fromLTRB(
-        20,
-        4,
-        20,
-        20 + MediaQuery.viewInsetsOf(context).bottom,
+        AppTheme.space20,
+        AppTheme.space4,
+        AppTheme.space20,
+        AppTheme.space20 + MediaQuery.viewInsetsOf(context).bottom,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -74,19 +75,19 @@ class _PassphraseSheetState extends State<_PassphraseSheet> {
             t.exportScreen.passphrasePromptTitle,
             style: Theme.of(context).textTheme.titleMedium,
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: AppTheme.space6),
           Text(
             widget.wrong
                 ? t.exportScreen.passphraseWrong
                 : t.exportScreen.passphrasePromptBody,
             style: TextStyle(
-              fontSize: 13,
+              fontSize: AppTheme.font13,
               color: widget.wrong
                   ? context.colors.error
                   : context.colors.textTertiary,
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: AppTheme.space14),
           AppFormField(
             controller: _controller,
             label: t.exportScreen.passphraseLabel,
@@ -96,7 +97,7 @@ class _PassphraseSheetState extends State<_PassphraseSheet> {
             action: TextInputAction.done,
             onSubmitted: (_) => _submit(),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppTheme.space16),
           Row(
             children: [
               Expanded(
@@ -105,7 +106,7 @@ class _PassphraseSheetState extends State<_PassphraseSheet> {
                   child: Text(t.common.cancel),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: AppTheme.space10),
               Expanded(
                 child: ElevatedButton(
                   onPressed: _submit,
@@ -240,46 +241,50 @@ class _ImportOptionsPanelState extends State<ImportOptionsPanel> {
 
     return ContentGutter(
       builder: (context, gutter) => ListView(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20).add(gutter),
+        padding: const EdgeInsets.fromLTRB(
+          AppTheme.space20,
+          AppTheme.space16,
+          AppTheme.space20,
+          AppTheme.space20,
+        ).add(gutter),
         children: [
           Row(
             children: [
               if (preview.wasEncrypted) ...[
                 Icon(
                   PhosphorIconsFill.lockKey,
-                  size: 13,
+                  size: AppTheme.icon12,
                   color: context.colors.textTertiary,
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: AppTheme.space4),
               ],
               Expanded(
                 child: Text(
                   t.exportScreen.exportedAt(
                     date: formatBackupDate(preview.exportedAt),
                   ),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: context.colors.textTertiary,
-                  ),
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: AppTheme.space14),
           if (preview.containsSecrets) ...[
             BackupWarningBanner(t.exportScreen.importSecretsWarning),
-            const SizedBox(height: 14),
+            const SizedBox(height: AppTheme.space14),
           ],
           SectionHeader(t.exportScreen.whatToImport),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppTheme.space8),
           AppCard.fields(
             children: [
               for (final section in present) ...[
-                if (section != present.first) const AppDivider(indent: 50),
+                if (section != present.first)
+                  const AppDivider(indent: AppTheme.space48),
                 _sectionTile(section, sectionTitles[section]!),
               ],
               if (preview.hasTerminalSettings) ...[
-                if (present.isNotEmpty) const AppDivider(indent: 50),
+                if (present.isNotEmpty)
+                  const AppDivider(indent: AppTheme.space48),
                 BackupOptionTile(
                   icon: PhosphorIconsFill.terminal,
                   title: t.exportScreen.includeTerminalSettings,
@@ -290,7 +295,7 @@ class _ImportOptionsPanelState extends State<ImportOptionsPanel> {
               ],
               if (preview.hasAppPreferences) ...[
                 if (present.isNotEmpty || preview.hasTerminalSettings)
-                  const AppDivider(indent: 50),
+                  const AppDivider(indent: AppTheme.space48),
                 BackupOptionTile(
                   icon: PhosphorIconsFill.sliders,
                   title: t.exportScreen.includeAppPreferences,
@@ -302,17 +307,14 @@ class _ImportOptionsPanelState extends State<ImportOptionsPanel> {
             ],
           ),
           if (preview.conflictCount > 0) ...[
-            const SizedBox(height: 20),
+            const SizedBox(height: AppTheme.space20),
             SectionHeader(t.exportScreen.conflictsTitle),
-            const SizedBox(height: 6),
+            const SizedBox(height: AppTheme.space6),
             Text(
               t.exportScreen.conflictSummary(n: preview.conflictCount),
-              style: TextStyle(
-                fontSize: 12,
-                color: context.colors.textTertiary,
-              ),
+              style: Theme.of(context).textTheme.bodySmall,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppTheme.space8),
             AppCard.fields(
               children: [
                 _conflictTile(
@@ -321,7 +323,7 @@ class _ImportOptionsPanelState extends State<ImportOptionsPanel> {
                   t.exportScreen.conflictsSkipSubtitle,
                   PhosphorIconsFill.shieldCheck,
                 ),
-                const AppDivider(indent: 50),
+                const AppDivider(indent: AppTheme.space48),
                 _conflictTile(
                   ImportConflicts.replace,
                   t.exportScreen.conflictsReplace,
@@ -361,7 +363,11 @@ class _ImportOptionsPanelState extends State<ImportOptionsPanel> {
   Widget _sectionItems(_SectionModel section) {
     final t = Translations.of(context);
     return Padding(
-      padding: const EdgeInsets.only(left: 50, right: 14, bottom: 8),
+      padding: const EdgeInsets.only(
+        left: AppTheme.space48,
+        right: AppTheme.space14,
+        bottom: AppTheme.space8,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -413,7 +419,7 @@ class _ImportOptionsPanelState extends State<ImportOptionsPanel> {
             : section.selected.add(item.id);
       }),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2),
+        padding: const EdgeInsets.symmetric(vertical: AppTheme.space2),
         child: Row(
           children: [
             Checkbox(
@@ -432,7 +438,7 @@ class _ImportOptionsPanelState extends State<ImportOptionsPanel> {
                     : section.selected.remove(item.id);
               }),
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: AppTheme.space4),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -442,7 +448,7 @@ class _ImportOptionsPanelState extends State<ImportOptionsPanel> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: AppTheme.font13,
                       color: context.colors.textPrimary,
                     ),
                   ),
@@ -453,7 +459,7 @@ class _ImportOptionsPanelState extends State<ImportOptionsPanel> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: AppTheme.font11,
                         color: context.colors.textTertiary,
                       ),
                     ),
@@ -462,14 +468,20 @@ class _ImportOptionsPanelState extends State<ImportOptionsPanel> {
             ),
             if (item.exists)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppTheme.space6,
+                  vertical: AppTheme.space2,
+                ),
                 decoration: BoxDecoration(
                   color: context.colors.warning.withAlpha(28),
                   borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                 ),
                 child: Text(
                   t.exportScreen.alreadyHere,
-                  style: TextStyle(fontSize: 10, color: context.colors.warning),
+                  style: TextStyle(
+                    fontSize: AppTheme.font10,
+                    color: context.colors.warning,
+                  ),
                 ),
               ),
           ],
@@ -485,29 +497,23 @@ class _ImportOptionsPanelState extends State<ImportOptionsPanel> {
     IconData icon,
   ) {
     final selected = _conflicts == value;
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-      leading: Icon(
-        icon,
-        size: 22,
-        color: selected ? context.colors.primary : context.colors.textTertiary,
+    return SettingsTile(
+      icon: icon,
+      iconColor: selected
+          ? context.colors.primary
+          : context.colors.textTertiary,
+      title: title,
+      subtitle: subtitle,
+      dense: true,
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppTheme.space14,
+        vertical: AppTheme.space2,
       ),
-      title: Text(
-        title,
-        style: TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-          color: context.colors.textPrimary,
-        ),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: TextStyle(fontSize: 12, color: context.colors.textTertiary),
-      ),
-      trailing: selected
+      trailing: SettingsTileTrailing.none,
+      trailingWidget: selected
           ? Icon(
               PhosphorIconsRegular.check,
-              size: 20,
+              size: AppTheme.icon20,
               color: context.colors.primary,
             )
           : null,
@@ -516,9 +522,12 @@ class _ImportOptionsPanelState extends State<ImportOptionsPanel> {
   }
 
   static final _compactButton = TextButton.styleFrom(
-    padding: const EdgeInsets.symmetric(horizontal: 8),
+    padding: const EdgeInsets.symmetric(horizontal: AppTheme.space8),
     minimumSize: const Size(0, 32),
     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-    textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+    textStyle: const TextStyle(
+      fontSize: AppTheme.font12,
+      fontWeight: FontWeight.w600,
+    ),
   );
 }

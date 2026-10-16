@@ -11,6 +11,7 @@ import '../../theme/theme.dart';
 import '../../utils/platform_info.dart';
 import '../ssh/remote_agent_info_sheet.dart';
 import '../ui/app_card.dart';
+import '../ui/app_divider.dart';
 import '../ui/permission_tile.dart';
 import '../ui/section_header.dart';
 import '../ui/settings_tile.dart';
@@ -138,81 +139,79 @@ class _ConnectionSettingsSectionState extends State<ConnectionSettingsSection>
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SectionHeader(t.settings.connection),
-        const SizedBox(height: 10),
-        AppCard(
-          child: Column(
-            children: [
-              SettingsSwitchTile(
-                title: t.settings.remoteAgentToggle,
-                subtitle: t.settings.remoteAgentToggleSubtitle,
-                value: _remoteAgentEnabled,
-                onChanged: _onRemoteAgentToggle,
-              ),
-              const Divider(height: 1),
+        const SizedBox(height: AppTheme.space10),
+        AppCard.fields(
+          children: [
+            SettingsSwitchTile(
+              title: t.settings.remoteAgentToggle,
+              subtitle: t.settings.remoteAgentToggleSubtitle,
+              value: _remoteAgentEnabled,
+              onChanged: _onRemoteAgentToggle,
+            ),
+            const AppDivider(),
+            SettingsTile(
+              title: t.settings.remoteAgentHowItWorks,
+              subtitle: t.settings.remoteAgentHowItWorksSubtitle,
+              onTap: () => showRemoteAgentInfoSheet(context),
+            ),
+            if (isIOSPlatform) ...[
+              const AppDivider(),
               SettingsTile(
-                title: t.settings.remoteAgentHowItWorks,
-                subtitle: t.settings.remoteAgentHowItWorksSubtitle,
-                onTap: () => showRemoteAgentInfoSheet(context),
+                title: t.settings.backgroundSuspended,
+                subtitle: t.settings.backgroundSuspendedSubtitle,
+                trailing: SettingsTileTrailing.none,
               ),
-              if (isIOSPlatform) ...[
-                const Divider(height: 1),
-                SettingsTile(
-                  title: t.settings.backgroundSuspended,
-                  subtitle: t.settings.backgroundSuspendedSubtitle,
-                  trailing: SettingsTileTrailing.none,
-                ),
-              ],
-              if (isAndroidPlatform) ...[
-                const Divider(height: 1),
-                PermissionTile(
-                  leading: Icon(
-                    _batteryUnrestricted
-                        ? PhosphorIconsRegular.batteryCharging
-                        : PhosphorIconsRegular.batteryWarning,
-                    color: _batteryUnrestricted
-                        ? context.colors.primary
-                        : context.colors.warning,
-                  ),
-                  title: t.settings.batteryUnrestricted,
-                  subtitle: t.settings.batteryUnrestrictedSubtitle,
-                  granted: _batteryUnrestricted,
-                  onTap: _onBatteryOptimizationTap,
-                ),
-              ],
-              const Divider(height: 1),
+            ],
+            if (isAndroidPlatform) ...[
+              const AppDivider(),
               PermissionTile(
                 leading: Icon(
-                  _notificationsGranted
-                      ? PhosphorIconsRegular.bell
-                      : PhosphorIconsRegular.bellSlash,
-                  color: _notificationsGranted
+                  _batteryUnrestricted
+                      ? PhosphorIconsRegular.batteryCharging
+                      : PhosphorIconsRegular.batteryWarning,
+                  color: _batteryUnrestricted
                       ? context.colors.primary
                       : context.colors.warning,
                 ),
-                title: t.settings.notificationsPermission,
-                subtitle: t.settings.notificationsPermissionSubtitle,
-                granted: _notificationsGranted,
-                onTap: _onNotificationsTap,
+                title: t.settings.batteryUnrestricted,
+                subtitle: t.settings.batteryUnrestrictedSubtitle,
+                granted: _batteryUnrestricted,
+                onTap: _onBatteryOptimizationTap,
               ),
-              if (_localNetworkEnforced) ...[
-                const Divider(height: 1),
-                PermissionTile(
-                  leading: Icon(
-                    _localNetworkGranted
-                        ? PhosphorIconsRegular.houseLine
-                        : PhosphorIconsRegular.warningCircle,
-                    color: _localNetworkGranted
-                        ? context.colors.primary
-                        : context.colors.warning,
-                  ),
-                  title: t.settings.localNetworkPermission,
-                  subtitle: t.settings.localNetworkPermissionSubtitle,
-                  granted: _localNetworkGranted,
-                  onTap: _onLocalNetworkTap,
-                ),
-              ],
             ],
-          ),
+            const AppDivider(),
+            PermissionTile(
+              leading: Icon(
+                _notificationsGranted
+                    ? PhosphorIconsRegular.bell
+                    : PhosphorIconsRegular.bellSlash,
+                color: _notificationsGranted
+                    ? context.colors.primary
+                    : context.colors.warning,
+              ),
+              title: t.settings.notificationsPermission,
+              subtitle: t.settings.notificationsPermissionSubtitle,
+              granted: _notificationsGranted,
+              onTap: _onNotificationsTap,
+            ),
+            if (_localNetworkEnforced) ...[
+              const AppDivider(),
+              PermissionTile(
+                leading: Icon(
+                  _localNetworkGranted
+                      ? PhosphorIconsRegular.houseLine
+                      : PhosphorIconsRegular.warningCircle,
+                  color: _localNetworkGranted
+                      ? context.colors.primary
+                      : context.colors.warning,
+                ),
+                title: t.settings.localNetworkPermission,
+                subtitle: t.settings.localNetworkPermissionSubtitle,
+                granted: _localNetworkGranted,
+                onTap: _onLocalNetworkTap,
+              ),
+            ],
+          ],
         ),
       ],
     );

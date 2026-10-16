@@ -129,7 +129,12 @@ after editing the JSON.
   non-`const`; drop the `const`. Fade to `someColor.invisible`, never
   `Colors.transparent`. Both palettes are pinned by
   `test/theme/palette_contrast_test.dart`.
-- **Use the shared kit in `lib/widgets/ui/`** instead of hand-rolling:
+- **Sizes come from the tokens on `AppTheme`**: `spaceN` for paddings and
+  spacers, `fontN`, `iconN`, `radius*`, the shadow constants and `scrim` -
+  never a literal. `test/theme/design_tokens_test.dart` enforces it
+  (`docs/architecture/ui.md`).
+- **Use the shared kit in `lib/widgets/ui/`** instead of hand-rolling - `AppCard`,
+  `AppBadge`, `TagChip`, `SectionHeader`, `EmptyStatePanel`, `AppSearchField`,
   `showConfirmDialog` (`destructive: true` for anything that loses data),
   `showTextInputDialog`, `SettingsTile`/`SettingsSwitchTile`,
   `copyToClipboard`, `openExternalUrl`.

@@ -20,6 +20,10 @@ class AppSearchField extends StatelessWidget {
     required this.onChanged,
     this.focusNode,
     this.trailing,
+    this.autofocus = false,
+    this.onSubmitted,
+    this.textInputAction,
+    this.dense = false,
   });
 
   final TextEditingController controller;
@@ -28,6 +32,10 @@ class AppSearchField extends StatelessWidget {
   final ValueChanged<String> onChanged;
   final FocusNode? focusNode;
   final Widget? trailing;
+  final bool autofocus;
+  final ValueChanged<String>? onSubmitted;
+  final TextInputAction? textInputAction;
+  final bool dense;
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +49,7 @@ class AppSearchField extends StatelessWidget {
             },
             icon: Icon(
               PhosphorIconsRegular.x,
-              size: 16,
+              size: AppTheme.icon16,
               color: context.colors.textTertiary,
             ),
           );
@@ -49,17 +57,21 @@ class AppSearchField extends StatelessWidget {
     return TextField(
       controller: controller,
       focusNode: focusNode,
-      autofocus: false,
+      autofocus: autofocus,
+      textInputAction: textInputAction,
       onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
       onChanged: onChanged,
+      onSubmitted: onSubmitted,
       textAlignVertical: TextAlignVertical.center,
       decoration: InputDecoration(
         hintText: hint,
         isDense: true,
-        contentPadding: const EdgeInsets.symmetric(vertical: 18),
+        contentPadding: EdgeInsets.symmetric(
+          vertical: dense ? AppTheme.space10 : AppTheme.space16,
+        ),
         prefixIcon: Icon(
           PhosphorIconsFill.magnifyingGlass,
-          size: 18,
+          size: AppTheme.icon18,
           color: context.colors.textTertiary,
         ),
         suffixIcon: trailing == null

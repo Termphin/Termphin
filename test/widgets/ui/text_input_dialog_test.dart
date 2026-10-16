@@ -9,10 +9,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('returns the trimmed text on confirm', (tester) async {
-    await pumpTestApp(
-      tester,
-      const _TextInputHost(initialValue: '  hello  '),
-    );
+    await pumpTestApp(tester, const _TextInputHost(initialValue: '  hello  '));
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
 

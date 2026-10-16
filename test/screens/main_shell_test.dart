@@ -12,9 +12,9 @@ import 'package:termphin/services/settings/tab_bar_settings.dart';
 import 'package:termphin/services/ssh/ssh_session_manager.dart';
 import 'package:termphin/theme/theme.dart';
 import 'package:termphin/widgets/profiles/profile_avatar.dart';
+import 'package:termphin/widgets/shell/nav_rail.dart';
 import 'package:termphin/widgets/terminal/floating_action_dock.dart';
 import 'package:termphin/widgets/ui/app_notifications.dart';
-import 'package:termphin/widgets/ui/nav_rail.dart';
 
 import '../support/fakes.dart';
 import '../support/fixtures.dart';

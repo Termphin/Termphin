@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:termphin/i18n/strings.g.dart';
 import 'package:termphin/models/profile_group.dart';
 import 'package:termphin/models/ssh_key.dart';
@@ -14,8 +13,8 @@ import 'package:termphin/providers/ssh_keys_provider.dart';
 import 'package:termphin/screens/keys/key_form_screen.dart';
 import 'package:termphin/services/ssh/ssh_link.dart';
 import 'package:termphin/services/ssh/ssh_service.dart';
+import 'package:termphin/widgets/groups/group_picker_field.dart';
 import 'package:termphin/widgets/profiles/profile_form_dialog.dart';
-import 'package:termphin/widgets/ui/group_picker_field.dart';
 import 'package:termphin/widgets/ui/section_header.dart';
 
 import '../../support/fakes.dart';

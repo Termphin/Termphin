@@ -251,7 +251,7 @@ class _NotificationHostState extends State<_NotificationHost> {
             top: false,
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
+              padding: const EdgeInsets.symmetric(horizontal: AppTheme.space10),
               child: ClipRect(
                 clipper: const _TopOverflowClipper(),
                 child: Column(
@@ -391,7 +391,7 @@ class _NotificationCardState extends State<_NotificationCard>
       sizeFactor: curve,
       alignment: Alignment.topCenter,
       child: Padding(
-        padding: const EdgeInsets.only(top: 8),
+        padding: const EdgeInsets.only(top: AppTheme.space8),
         child: SlideTransition(
           position: Tween(
             begin: const Offset(0, -1.35),
@@ -409,30 +409,37 @@ class _NotificationCardState extends State<_NotificationCard>
                   color: context.colors.surfaceElevated,
                   borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                   elevation: 6,
-                  shadowColor: Colors.black54,
+                  shadowColor: AppTheme.scrim,
                   child: Container(
-                    padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+                    padding: const EdgeInsets.fromLTRB(
+                      AppTheme.space16,
+                      AppTheme.space14,
+                      AppTheme.space12,
+                      AppTheme.space14,
+                    ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(icon, size: 21, color: color),
-                        const SizedBox(width: 12),
+                        Icon(icon, size: AppTheme.icon20, color: color),
+                        const SizedBox(width: AppTheme.space12),
                         Expanded(
                           child: Padding(
-                            padding: const EdgeInsets.only(top: 1),
+                            padding: const EdgeInsets.only(
+                              top: AppTheme.hairline,
+                            ),
                             child: Text(
                               data.message,
                               style: Theme.of(context).textTheme.bodyMedium
                                   ?.copyWith(
                                     color: context.colors.textPrimary,
-                                    fontSize: 14.5,
+                                    fontSize: AppTheme.font14,
                                     height: 1.35,
                                   ),
                             ),
                           ),
                         ),
                         if (data.actionLabel != null) ...[
-                          const SizedBox(width: 4),
+                          const SizedBox(width: AppTheme.space4),
                           TextButton(
                             onPressed: () {
                               data.onAction?.call();
@@ -441,7 +448,7 @@ class _NotificationCardState extends State<_NotificationCard>
                             style: TextButton.styleFrom(
                               foregroundColor: context.colors.primary,
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
+                                horizontal: AppTheme.space10,
                               ),
                               minimumSize: const Size(0, 34),
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -449,7 +456,7 @@ class _NotificationCardState extends State<_NotificationCard>
                             child: Text(data.actionLabel!),
                           ),
                         ] else
-                          const SizedBox(width: 4),
+                          const SizedBox(width: AppTheme.space4),
                       ],
                     ),
                   ),

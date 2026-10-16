@@ -9,14 +9,15 @@ import '../../i18n/strings.g.dart';
 import '../../services/settings/terminal_settings.dart';
 import '../../services/settings/toolbar_layout.dart';
 import '../../theme/theme.dart';
+import '../ui/app_card.dart';
 import '../ui/app_sheet.dart';
 import '../ui/segmented_switch.dart';
 import '../ui/settings_controls.dart';
 import '../ui/stepper_row.dart';
-import '../ui/toolbar_key_button.dart';
 import 'special_keys_toolbar.dart'
     show toolbarActionSemanticLabel, toolbarSchemeFromTheme;
 import 'terminal_scheme_theme.dart';
+import 'toolbar_key_button.dart';
 
 enum SessionQuickTab { toolbar, appearance }
 
@@ -134,7 +135,10 @@ class _SessionQuickSheetState extends State<SessionQuickSheet> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppTheme.space20,
+            vertical: AppTheme.space14,
+          ),
           child: Text(
             widget.showToolbarTab
                 ? t.toolbar.quickSettings
@@ -144,7 +148,12 @@ class _SessionQuickSheetState extends State<SessionQuickSheet> {
         ),
         if (widget.showToolbarTab)
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+            padding: const EdgeInsets.fromLTRB(
+              AppTheme.space16,
+              0,
+              AppTheme.space16,
+              AppTheme.space4,
+            ),
             child: SegmentedSwitch<SessionQuickTab>(
               selected: _tab,
               segments: [
@@ -184,42 +193,6 @@ class _SessionQuickSheetState extends State<SessionQuickSheet> {
   }
 }
 
-/// The card everything in the sheet sits on - the add-session sheet's, so the
-/// two read as one family.
-class _SheetCard extends StatelessWidget {
-  const _SheetCard({required this.child, this.onTap, this.highlighted = false});
-
-  final Widget child;
-  final VoidCallback? onTap;
-  final bool highlighted;
-
-  @override
-  Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(AppTheme.radiusMd);
-    final decoration = BoxDecoration(
-      color: context.colors.surfaceElevated,
-      borderRadius: radius,
-      border: Border.all(
-        color: highlighted
-            ? context.colors.primary
-            : context.colors.surfaceBorder,
-        width: highlighted ? 1.5 : 1,
-      ),
-    );
-    if (onTap == null) {
-      return DecoratedBox(decoration: decoration, child: child);
-    }
-    return Material(
-      color: context.colors.surfaceElevated.invisible,
-      borderRadius: radius,
-      child: Ink(
-        decoration: decoration,
-        child: InkWell(onTap: onTap, borderRadius: radius, child: child),
-      ),
-    );
-  }
-}
-
 /// An accent icon and label leading off the sheet, the way "New session"
 /// does under a machine.
 class _ActionRow extends StatelessWidget {
@@ -236,19 +209,25 @@ class _ActionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _SheetCard(
+    return AppCard(
+      elevated: true,
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 13, 14, 13),
+        padding: const EdgeInsets.fromLTRB(
+          AppTheme.space16,
+          AppTheme.space12,
+          AppTheme.space14,
+          AppTheme.space12,
+        ),
         child: Row(
           children: [
-            Icon(icon, size: 16, color: context.colors.primary),
-            const SizedBox(width: 12),
+            Icon(icon, size: AppTheme.icon16, color: context.colors.primary),
+            const SizedBox(width: AppTheme.space12),
             Expanded(
               child: Text(
                 label,
                 style: context.colors.uiStyle.copyWith(
-                  fontSize: 13,
+                  fontSize: AppTheme.font13,
                   fontWeight: FontWeight.w600,
                   color: context.colors.primary,
                 ),
@@ -256,7 +235,7 @@ class _ActionRow extends StatelessWidget {
             ),
             Icon(
               PhosphorIconsRegular.caretRight,
-              size: 14,
+              size: AppTheme.icon14,
               color: context.colors.textTertiary,
             ),
           ],
@@ -286,7 +265,12 @@ class _ToolbarTab extends StatelessWidget {
       valueListenable: toolbarSettings.profiles,
       builder: (context, profiles, _) => ListView(
         shrinkWrap: true,
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        padding: const EdgeInsets.fromLTRB(
+          AppTheme.space16,
+          AppTheme.space12,
+          AppTheme.space16,
+          AppTheme.space16,
+        ),
         children: [
           for (final profile in profiles.profiles) ...[
             _ProfileCard(
@@ -301,7 +285,7 @@ class _ToolbarTab extends StatelessWidget {
                 onPicked();
               },
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppTheme.space12),
           ],
           _ActionRow(
             key: const ValueKey('sessionQuickManageToolbars'),
@@ -341,11 +325,17 @@ class _ProfileCard extends StatelessWidget {
       selected: active,
       child: KeyedSubtree(
         key: ValueKey('toolbarProfileCard-${profile.id}'),
-        child: _SheetCard(
+        child: AppCard(
+          elevated: true,
+          selected: active,
           onTap: onTap,
-          highlighted: active,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+            padding: const EdgeInsets.fromLTRB(
+              AppTheme.space12,
+              AppTheme.space10,
+              AppTheme.space12,
+              AppTheme.space12,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -357,7 +347,7 @@ class _ProfileCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: context.colors.uiStyle.copyWith(
-                          fontSize: 14,
+                          fontSize: AppTheme.font14,
                           fontWeight: FontWeight.w600,
                           color: active
                               ? context.colors.textPrimary
@@ -365,19 +355,19 @@ class _ProfileCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: AppTheme.space8),
                     Icon(
                       active
                           ? PhosphorIconsFill.radioButton
                           : PhosphorIconsRegular.circle,
-                      size: 20,
+                      size: AppTheme.icon20,
                       color: active
                           ? context.colors.primary
                           : context.colors.textTertiary,
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: AppTheme.space10),
                 ToolbarLayoutPreview(
                   layout: profile.layout,
                   snippetLabels: snippetLabels,
@@ -441,7 +431,9 @@ class ToolbarLayoutPreview extends StatelessWidget {
             for (final id in rowIds)
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppTheme.space2,
+                  ),
                   child: _key(t, scheme, id, keyHeight),
                 ),
               ),
@@ -515,11 +507,22 @@ class _AppearanceTab extends StatelessWidget {
       listenable: settings.changes,
       builder: (context, _) => ListView(
         shrinkWrap: true,
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        padding: const EdgeInsets.fromLTRB(
+          AppTheme.space16,
+          AppTheme.space12,
+          AppTheme.space16,
+          AppTheme.space16,
+        ),
         children: [
-          _SheetCard(
+          AppCard(
+            elevated: true,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
+              padding: const EdgeInsets.fromLTRB(
+                AppTheme.space14,
+                AppTheme.space14,
+                AppTheme.space14,
+                AppTheme.space8,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -530,16 +533,16 @@ class _AppearanceTab extends StatelessWidget {
                     labels: kTerminalSchemeLabels,
                     onChanged: (v) => unawaited(settings.scheme.set(v)),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppTheme.space16),
                   SettingsDropdownField(
                     key: const ValueKey('quickFontField'),
                     label: t.settings.font,
                     value: settings.fontFamily.value,
                     labels: kTerminalFontLabels,
-                    itemsInOwnFont: true,
+                    itemFontFamily: (f) => f,
                     onChanged: (v) => unawaited(settings.fontFamily.set(v)),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppTheme.space16),
                   ValueStepperRow(
                     label: t.settings.fontSize,
                     value: settings.fontSize.value,
@@ -553,7 +556,7 @@ class _AppearanceTab extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppTheme.space12),
           _ActionRow(
             key: const ValueKey('sessionQuickOpenAppearance'),
             icon: PhosphorIconsRegular.slidersHorizontal,

@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import '../../i18n/strings.g.dart';
 import '../../models/profile_group.dart';
 import '../../services/storage/group_storage.dart';
+import '../../theme/theme.dart';
+import '../ui/tag_chip.dart';
 import 'group_dot.dart';
-import 'tag_chip.dart';
 
 /// The horizontal strip of group filters: "All", then one chip per group.
 ///
@@ -25,7 +26,12 @@ class GroupFilterChips extends StatelessWidget {
     required this.groups,
     required this.selected,
     required this.onChanged,
-    this.padding = const EdgeInsets.fromLTRB(16, 0, 16, 12),
+    this.padding = const EdgeInsets.fromLTRB(
+      AppTheme.space16,
+      0,
+      AppTheme.space16,
+      AppTheme.space12,
+    ),
   });
 
   final List<ProfileGroup> groups;
@@ -52,7 +58,7 @@ class GroupFilterChips extends StatelessWidget {
             ),
             for (final group in groups)
               Padding(
-                padding: const EdgeInsets.only(left: 6),
+                padding: const EdgeInsets.only(left: AppTheme.space6),
                 child: TagChip(
                   label: group.name == GroupStorage.defaultGroup
                       ? t.groups.general

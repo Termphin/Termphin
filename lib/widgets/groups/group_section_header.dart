@@ -6,8 +6,8 @@ import '../../models/profile_group.dart';
 import '../../screens/groups/group_form_screen.dart';
 import '../../services/storage/group_storage.dart';
 import '../../theme/theme.dart';
+import '../ui/list_section_header.dart';
 import 'group_dot.dart';
-import 'list_section_header.dart';
 
 /// The load-sessions run outlives the tap by a round trip per machine, so
 /// its button becomes the progress *and* the way out of it while running.
@@ -76,7 +76,7 @@ class GroupSectionHeader extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           GroupDot(colorHex: group.colorHex, size: 8),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppTheme.space8),
           Text(
             group.name == GroupStorage.defaultGroup
                 ? t.groups.general
@@ -88,45 +88,46 @@ class GroupSectionHeader extends StatelessWidget {
       count: count,
       actions: [
         if (onLoadSessions != null)
-          IconButton(
+          ListSectionHeader.action(
             key: const ValueKey('groupLoadSessionsButton'),
             tooltip: isLoadingSessions
                 ? t.session.stopLoading
                 : t.session.loadGroupSessions,
-            iconSize: 20,
-            color: context.colors.textSecondary,
-            visualDensity: VisualDensity.compact,
             icon: isLoadingSessions
                 ? Stack(
                     alignment: Alignment.center,
                     children: [
                       SizedBox.square(
-                        dimension: 18,
+                        dimension: AppTheme.icon18,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
                           color: context.colors.textTertiary,
                         ),
                       ),
-                      const Icon(PhosphorIconsRegular.x, size: 11),
+                      const Icon(PhosphorIconsRegular.x, size: AppTheme.icon10),
                     ],
                   )
                 : const Icon(PhosphorIconsRegular.cloudArrowDown),
             onPressed: isLoadingSessions
                 ? onCancelLoadSessions
                 : onLoadSessions,
+            color: context.colors.textSecondary,
           ),
-        IconButton(
+        ListSectionHeader.action(
           tooltip: t.groups.editGroup,
-          iconSize: 20,
-          color: context.colors.textSecondary,
-          visualDensity: VisualDensity.compact,
           icon: const Icon(PhosphorIconsRegular.pencilSimple),
           onPressed: () => showGroupFormScreen(context, existing: group),
+          color: context.colors.textSecondary,
         ),
       ],
       onAdd: onAdd,
       addTooltip: addTooltip,
-      padding: padding ?? const EdgeInsets.fromLTRB(16, 4, 16, 4),
+      padding:
+          padding ??
+          const EdgeInsets.symmetric(
+            horizontal: AppTheme.space16,
+            vertical: AppTheme.space4,
+          ),
     );
   }
 }

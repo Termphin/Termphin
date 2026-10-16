@@ -45,7 +45,7 @@ class _LockScreenState extends State<LockScreen>
   /// A wrong PIN shakes the dots, the way the system lock screen does.
   late final AnimationController _shake = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 420),
+    duration: AppTheme.motionShake,
   );
 
   bool get _keysEnabled =>
@@ -184,7 +184,10 @@ class _LockScreenState extends State<LockScreen>
             final keypadHeight = wide
                 ? constraints.maxHeight - 32
                 : constraints.maxHeight * 0.52;
-            final key = ((keypadHeight - 3 * 14) / 4).clamp(52.0, 80.0);
+            final key = ((keypadHeight - 3 * AppTheme.space14) / 4).clamp(
+              52.0,
+              80.0,
+            );
 
             final header = _Header(
               pin: _pin,
@@ -254,7 +257,7 @@ class _Header extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppTheme.radiusLg),
           child: Image.asset('assets/logo.png', width: 84, height: 84),
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: AppTheme.space16),
         Text(
           'Termphin',
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -262,14 +265,14 @@ class _Header extends StatelessWidget {
             fontWeight: FontWeight.w700,
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: AppTheme.space6),
         Text(
           t.lock.enterPin,
           style: Theme.of(
             context,
           ).textTheme.bodyMedium?.copyWith(color: colors.textSecondary),
         ),
-        const SizedBox(height: 28),
+        const SizedBox(height: AppTheme.space24),
         AnimatedBuilder(
           animation: shake,
           builder: (context, child) => Transform.translate(
@@ -287,7 +290,9 @@ class _Header extends StatelessWidget {
                 duration: AppTheme.motionFast,
                 width: 16,
                 height: 16,
-                margin: const EdgeInsets.symmetric(horizontal: 11),
+                margin: const EdgeInsets.symmetric(
+                  horizontal: AppTheme.space10,
+                ),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: filled
@@ -304,7 +309,7 @@ class _Header extends StatelessWidget {
             }),
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: AppTheme.space20),
         SizedBox(
           height: 22,
           child: Row(
@@ -319,9 +324,12 @@ class _Header extends StatelessWidget {
                     color: colors.primary,
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: AppTheme.space8),
               ],
-              Text(status, style: TextStyle(color: statusColor, fontSize: 14)),
+              Text(
+                status,
+                style: TextStyle(color: statusColor, fontSize: AppTheme.font14),
+              ),
             ],
           ),
         ),
@@ -385,7 +393,7 @@ class _Keypad extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [digit(row[0]), gap, digit(row[1]), gap, digit(row[2])],
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: AppTheme.space14),
           ],
           Row(
             mainAxisSize: MainAxisSize.min,

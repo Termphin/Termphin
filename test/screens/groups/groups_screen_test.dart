@@ -17,7 +17,7 @@ import 'package:termphin/screens/groups/group_form_screen.dart';
 import 'package:termphin/screens/groups/groups_screen.dart';
 import 'package:termphin/services/storage/group_storage.dart';
 import 'package:termphin/services/storage/snippet_storage.dart';
-import 'package:termphin/widgets/ui/group_dot.dart';
+import 'package:termphin/widgets/groups/group_dot.dart';
 
 import '../../support/fakes.dart';
 import '../../support/fixtures.dart';

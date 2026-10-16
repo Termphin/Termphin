@@ -51,7 +51,8 @@ void main() {
 
     expect(
       find.byWidgetPredicate(
-        (widget) => widget is Icon && widget.icon == PhosphorIconsFill.caretRight,
+        (widget) =>
+            widget is Icon && widget.icon == PhosphorIconsFill.caretRight,
       ),
       findsOneWidget,
     );

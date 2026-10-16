@@ -6,6 +6,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../i18n/strings.g.dart';
 import '../../services/completion/command_completion.dart';
 import '../../theme/theme.dart';
+import '../ui/app_divider.dart';
 
 /// Most suggestions shown at once.
 const kMaxShownSuggestions = 3;
@@ -151,8 +152,7 @@ class _Card extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     for (var i = 0; i < suggestions.length; i++) ...[
-                      if (i > 0)
-                        Divider(height: 1, color: colors.surfaceDivider),
+                      if (i > 0) const AppDivider(),
                       _Row(
                         suggestion: suggestions[i],
                         onTap: () => onAccept(suggestions[i]),
@@ -170,10 +170,10 @@ class _Card extends StatelessWidget {
                 key: const ValueKey('commandSuggestionDismiss'),
                 onTap: onDismiss,
                 child: SizedBox(
-                  width: 40,
+                  width: AppTheme.icon40,
                   child: Icon(
                     PhosphorIconsRegular.x,
-                    size: 16,
+                    size: AppTheme.icon16,
                     color: colors.textSecondary,
                   ),
                 ),
@@ -200,7 +200,7 @@ class _Row extends StatelessWidget {
     final colors = context.colors;
     final style = TextStyle(
       fontFamily: AppTheme.monoFamily,
-      fontSize: 13,
+      fontSize: AppTheme.font13,
       height: 1.3,
       color: colors.textPrimary,
     );
@@ -214,17 +214,22 @@ class _Row extends StatelessWidget {
       key: ValueKey('commandSuggestion-$label'),
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+        padding: const EdgeInsets.fromLTRB(
+          AppTheme.space10,
+          AppTheme.space8,
+          AppTheme.space10,
+          AppTheme.space8,
+        ),
         child: Row(
           children: [
             Icon(
               suggestion.kind == SuggestionKind.history
                   ? PhosphorIconsRegular.clockCounterClockwise
                   : PhosphorIconsRegular.lightning,
-              size: 14,
+              size: AppTheme.icon14,
               color: colors.textTertiary,
             ),
-            const SizedBox(width: 7),
+            const SizedBox(width: AppTheme.space6),
             Flexible(
               child: Text.rich(
                 TextSpan(

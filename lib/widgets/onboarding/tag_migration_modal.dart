@@ -4,6 +4,8 @@ import '../../i18n/strings.g.dart';
 import '../../services/app/tag_migration_service.dart';
 import '../../theme/theme.dart';
 import '../ui/app_divider.dart';
+import '../ui/confirm_dialog.dart';
+import '../ui/settings_tile.dart';
 
 /// A ceiling, not a height: four tags are four rows tall. Past this the list
 /// scrolls inside the card rather than growing the dialog off a short screen.
@@ -53,27 +55,14 @@ class _TagMigrationModalState extends State<TagMigrationModal> {
 
   Future<void> _skip() async {
     final t = Translations.of(context);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(t.tagMigration.skipDialogTitle),
-        content: Text(t.tagMigration.skipDialogMessage),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(t.common.cancel),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(ctx).colorScheme.error,
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(t.tagMigration.skipDialogConfirm),
-          ),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      title: t.tagMigration.skipDialogTitle,
+      message: t.tagMigration.skipDialogMessage,
+      confirmLabel: t.tagMigration.skipDialogConfirm,
+      destructive: true,
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
 
     setState(() => _busy = true);
     await _service.skip();
@@ -102,7 +91,10 @@ class _TagMigrationModalState extends State<TagMigrationModal> {
 
     return Dialog(
       backgroundColor: colors.surfaceElevated,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
+      insetPadding: const EdgeInsets.symmetric(
+        horizontal: AppTheme.space24,
+        vertical: AppTheme.space40,
+      ),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppTheme.radiusXl),
         side: BorderSide(color: colors.surfaceBorderStrong),
@@ -113,7 +105,12 @@ class _TagMigrationModalState extends State<TagMigrationModal> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+              padding: const EdgeInsets.fromLTRB(
+                AppTheme.space20,
+                AppTheme.space24,
+                AppTheme.space20,
+                AppTheme.space12,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -123,14 +120,14 @@ class _TagMigrationModalState extends State<TagMigrationModal> {
                       color: colors.textPrimary,
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: AppTheme.space10),
                   Text(
                     t.tagMigration.explanation,
                     style: textTheme.bodyMedium?.copyWith(
                       color: colors.textSecondary,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppTheme.space8),
                   Text(
                     t.tagMigration.multipleTagsNotice,
                     style: textTheme.bodySmall?.copyWith(
@@ -145,41 +142,27 @@ class _TagMigrationModalState extends State<TagMigrationModal> {
                 constraints: const BoxConstraints(maxHeight: _kMaxListHeight),
                 child: ListView.separated(
                   shrinkWrap: true,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppTheme.space8,
+                  ),
                   itemCount: candidates.length,
-                  separatorBuilder: (_, _) => const AppDivider(indent: 16),
+                  separatorBuilder: (_, _) =>
+                      const AppDivider(indent: AppTheme.space16),
                   itemBuilder: (context, i) {
                     final candidate = candidates[i];
-                    return CheckboxListTile(
+                    return SettingsCheckboxTile(
                       contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
+                        horizontal: AppTheme.space12,
                       ),
                       value: _selected.contains(candidate.name),
-                      title: Text(
-                        candidate.name,
-                        style: colors.uiStyle.copyWith(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                          color: colors.textPrimary,
-                        ),
-                      ),
-                      subtitle: Text(
-                        t.tagMigration.usageCount(n: candidate.totalCount),
-                        style: colors.uiStyle.copyWith(
-                          fontSize: 13,
-                          color: colors.textTertiary,
-                        ),
-                      ),
-                      checkColor: colors.onPrimary,
-                      fillColor: WidgetStateProperty.resolveWith(
-                        (states) => states.contains(WidgetState.selected)
-                            ? colors.primary
-                            : null,
+                      title: candidate.name,
+                      subtitle: t.tagMigration.usageCount(
+                        n: candidate.totalCount,
                       ),
                       onChanged: _busy
                           ? null
                           : (checked) => setState(() {
-                              if (checked == true) {
+                              if (checked) {
                                 _selected.add(candidate.name);
                               } else {
                                 _selected.remove(candidate.name);
@@ -191,7 +174,12 @@ class _TagMigrationModalState extends State<TagMigrationModal> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+              padding: const EdgeInsets.fromLTRB(
+                AppTheme.space20,
+                AppTheme.space12,
+                AppTheme.space20,
+                AppTheme.space20,
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -210,7 +198,7 @@ class _TagMigrationModalState extends State<TagMigrationModal> {
                           ),
                   ),
                   if (_selected.isNotEmpty) ...[
-                    const SizedBox(height: 4),
+                    const SizedBox(height: AppTheme.space4),
                     TextButton(
                       onPressed: _busy ? null : _skip,
                       child: Text(t.tagMigration.startFresh),

@@ -145,8 +145,12 @@ class _SegmentLabel extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 16, color: selected ? colors.primary : color),
-            const SizedBox(width: 6),
+            Icon(
+              icon,
+              size: AppTheme.icon16,
+              color: selected ? colors.primary : color,
+            ),
+            const SizedBox(width: AppTheme.space6),
           ],
           Flexible(
             child: Text(
@@ -155,7 +159,7 @@ class _SegmentLabel extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: color,
-                fontSize: 13,
+                fontSize: AppTheme.font13,
                 fontWeight: FontWeight.w600,
               ),
             ),

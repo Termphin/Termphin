@@ -16,6 +16,7 @@ import '../../theme/theme.dart';
 import '../../widgets/backup/backup_import_options.dart';
 import '../../widgets/ui/app_notifications.dart';
 import '../../widgets/ui/backup_action_bar.dart';
+import '../../widgets/ui/empty_state.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
 
 /// Reads a backup file and puts the chosen parts of it onto this device.
@@ -242,7 +243,12 @@ class _EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = Translations.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.space20,
+        AppTheme.space16,
+        AppTheme.space20,
+        AppTheme.space20,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -252,28 +258,13 @@ class _EmptyState extends StatelessWidget {
               color: context.colors.textTertiary,
             ),
           ),
-          const Spacer(),
-          Center(
-            child: Column(
-              children: [
-                Icon(
-                  PhosphorIconsRegular.folderOpen,
-                  size: 44,
-                  color: context.colors.textTertiary,
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  t.exportScreen.noFileChosen,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: context.colors.textTertiary,
-                  ),
-                ),
-              ],
+          Expanded(
+            child: EmptyStatePanel(
+              icon: PhosphorIconsRegular.folderOpen,
+              title: t.exportScreen.noFileChosen,
+              compact: true,
             ),
           ),
-          const Spacer(),
         ],
       ),
     );

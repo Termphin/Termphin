@@ -4,6 +4,7 @@ import 'package:re_editor/re_editor.dart' as re;
 
 import '../../i18n/strings.g.dart';
 import '../../theme/theme.dart';
+import '../ui/bar_icon_button.dart';
 
 /// Find, and in an editable file replace, above the text.
 ///
@@ -22,6 +23,10 @@ class EditorFindBar extends StatelessWidget implements PreferredSizeWidget {
   final bool readOnly;
 
   static const double _rowHeight = 52;
+
+  /// Width of the replace row's leading gap, matching [BarIconButton]'s own
+  /// footprint so the replace field lines up under the find field above it.
+  static const double _leadingWidth = 30;
 
   @override
   Size get preferredSize {
@@ -53,7 +58,12 @@ class EditorFindBar extends StatelessWidget implements PreferredSizeWidget {
         color: colors.surfaceCard,
         border: Border(bottom: BorderSide(color: colors.surfaceDivider)),
       ),
-      padding: const EdgeInsets.fromLTRB(8, 4, 4, 4),
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.space8,
+        AppTheme.space4,
+        AppTheme.space4,
+        AppTheme.space4,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -62,7 +72,7 @@ class EditorFindBar extends StatelessWidget implements PreferredSizeWidget {
             child: Row(
               children: [
                 if (!readOnly)
-                  _BarButton(
+                  BarIconButton(
                     tooltip: t.editor.replace,
                     icon: replacing
                         ? PhosphorIconsRegular.caretDown
@@ -92,7 +102,9 @@ class EditorFindBar extends StatelessWidget implements PreferredSizeWidget {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppTheme.space6,
+                  ),
                   child: Text(
                     count,
                     style: colors.uiSmall.copyWith(
@@ -102,17 +114,17 @@ class EditorFindBar extends StatelessWidget implements PreferredSizeWidget {
                     ),
                   ),
                 ),
-                _BarButton(
+                BarIconButton(
                   tooltip: t.editor.previousMatch,
                   icon: PhosphorIconsRegular.arrowUp,
                   onPressed: total == 0 ? null : controller.previousMatch,
                 ),
-                _BarButton(
+                BarIconButton(
                   tooltip: t.editor.nextMatch,
                   icon: PhosphorIconsRegular.arrowDown,
                   onPressed: total == 0 ? null : controller.nextMatch,
                 ),
-                _BarButton(
+                BarIconButton(
                   tooltip: t.editor.closeFind,
                   icon: PhosphorIconsRegular.x,
                   onPressed: controller.close,
@@ -125,7 +137,7 @@ class EditorFindBar extends StatelessWidget implements PreferredSizeWidget {
               height: _rowHeight,
               child: Row(
                 children: [
-                  const SizedBox(width: 40),
+                  const SizedBox(width: _leadingWidth),
                   Expanded(
                     child: _Field(
                       controller: controller.replaceInputController,
@@ -134,7 +146,7 @@ class EditorFindBar extends StatelessWidget implements PreferredSizeWidget {
                       onSubmitted: (_) => controller.replaceMatch(),
                     ),
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: AppTheme.space4),
                   TextButton(
                     onPressed: total == 0 ? null : controller.replaceMatch,
                     child: Text(t.editor.replace),
@@ -167,11 +179,13 @@ class _Field extends StatelessWidget {
   final ValueChanged<String> onSubmitted;
   final List<Widget> trailing;
 
+  static const double height = 40;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
     return Container(
-      height: 40,
+      height: height,
       decoration: BoxDecoration(
         color: colors.fieldFill,
         borderRadius: BorderRadius.circular(AppTheme.radiusSm),
@@ -190,13 +204,18 @@ class _Field extends StatelessWidget {
               style: colors.monoStyle.copyWith(color: colors.textPrimary),
               decoration: InputDecoration(
                 hintText: hint,
-                hintStyle: TextStyle(color: colors.textTertiary, fontSize: 14),
+                hintStyle: TextStyle(
+                  color: colors.textTertiary,
+                  fontSize: AppTheme.font14,
+                ),
                 isDense: true,
                 filled: false,
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppTheme.space10,
+                ),
               ),
             ),
           ),
@@ -229,8 +248,11 @@ class _OptionToggle extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppTheme.radiusXs),
         child: Container(
-          margin: const EdgeInsets.only(right: 4),
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+          margin: const EdgeInsets.only(right: AppTheme.space4),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppTheme.space6,
+            vertical: AppTheme.space4,
+          ),
           decoration: BoxDecoration(
             color: on ? colors.primary.withValues(alpha: 0.15) : null,
             borderRadius: BorderRadius.circular(AppTheme.radiusXs),
@@ -246,25 +268,4 @@ class _OptionToggle extends StatelessWidget {
       ),
     );
   }
-}
-
-class _BarButton extends StatelessWidget {
-  const _BarButton({
-    required this.tooltip,
-    required this.icon,
-    required this.onPressed,
-  });
-
-  final String tooltip;
-  final IconData icon;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) => IconButton(
-    tooltip: tooltip,
-    visualDensity: VisualDensity.compact,
-    icon: Icon(icon, size: 18),
-    color: context.colors.textSecondary,
-    onPressed: onPressed,
-  );
 }

@@ -8,6 +8,7 @@ import '../../services/analytics/analytics_service.dart';
 import '../../services/settings/editor_settings.dart';
 import '../../services/settings/setting.dart';
 import '../../services/settings/terminal_settings.dart';
+import '../../theme/theme.dart';
 import '../../utils/editor_languages.dart';
 import '../../widgets/sftp/code_editor_style.dart';
 import '../../widgets/terminal/pinch_font_zoom.dart';
@@ -16,6 +17,7 @@ import '../../widgets/ui/app_card.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
 import '../../widgets/ui/section_header.dart';
 import '../../widgets/ui/settings_controls.dart';
+import '../../widgets/ui/settings_tile.dart';
 import '../../widgets/ui/stepper_row.dart';
 
 /// Canned file for the preview: it stands for a file, it is not copy.
@@ -77,13 +79,18 @@ class _EditorSettingsScreenState extends State<EditorSettingsScreen> {
           builder: (context, gutter) => Column(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 12).add(gutter),
+                padding: const EdgeInsets.fromLTRB(
+                  AppTheme.space16,
+                  AppTheme.space16,
+                  AppTheme.space16,
+                  AppTheme.space12,
+                ).add(gutter),
                 child: SizedBox(
                   key: const ValueKey('editorPreview'),
                   height: 188,
                   width: double.infinity,
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                     child: TerminalSchemeTheme(
                       child: Builder(
                         builder: (context) => PinchFontZoom(
@@ -100,7 +107,7 @@ class _EditorSettingsScreenState extends State<EditorSettingsScreen> {
                               fontSize: fontSize,
                               language: editorLanguageForExtension('yaml'),
                             ),
-                            padding: const EdgeInsets.all(12),
+                            padding: const EdgeInsets.all(AppTheme.space12),
                             indicatorBuilder: editorLineNumbers(),
                           ),
                         ),
@@ -111,13 +118,23 @@ class _EditorSettingsScreenState extends State<EditorSettingsScreen> {
               ),
               Expanded(
                 child: ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 32).add(gutter),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppTheme.space16,
+                    AppTheme.space4,
+                    AppTheme.space16,
+                    AppTheme.space32,
+                  ).add(gutter),
                   children: [
                     SectionHeader(t.settings.editorStyle),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: AppTheme.space10),
                     AppCard(
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
+                        padding: const EdgeInsets.fromLTRB(
+                          AppTheme.space14,
+                          AppTheme.space14,
+                          AppTheme.space14,
+                          AppTheme.space8,
+                        ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -125,10 +142,10 @@ class _EditorSettingsScreenState extends State<EditorSettingsScreen> {
                               label: t.settings.font,
                               value: _settings.fontFamily.value,
                               labels: kTerminalFontLabels,
-                              itemsInOwnFont: true,
+                              itemFontFamily: (f) => f,
                               onChanged: (v) => _write(_settings.fontFamily, v),
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: AppTheme.space16),
                             ValueStepperRow(
                               label: t.settings.fontSize,
                               value: fontSize,
@@ -159,20 +176,26 @@ class _EditorSettingsScreenState extends State<EditorSettingsScreen> {
                                   _write(_settings.tabWidth, v.round()),
                             ),
                             Padding(
-                              padding: const EdgeInsets.only(bottom: 6),
+                              padding: const EdgeInsets.only(
+                                bottom: AppTheme.space6,
+                              ),
                               child: Text(
                                 t.settings.editorPinchHint,
                                 style: Theme.of(context).textTheme.bodySmall,
                               ),
                             ),
-                            SettingsSwitchRow(
-                              label: t.settings.editorLineNumbers,
+                            SettingsSwitchTile(
+                              dense: true,
+                              contentPadding: EdgeInsets.zero,
+                              title: t.settings.editorLineNumbers,
                               value: _settings.lineNumbers.value,
                               onChanged: (v) =>
                                   _write(_settings.lineNumbers, v),
                             ),
-                            SettingsSwitchRow(
-                              label: t.settings.editorWordWrap,
+                            SettingsSwitchTile(
+                              dense: true,
+                              contentPadding: EdgeInsets.zero,
+                              title: t.settings.editorWordWrap,
                               subtitle: t.settings.editorWordWrapSubtitle,
                               value: _settings.wordWrap.value,
                               onChanged: (v) => _write(_settings.wordWrap, v),

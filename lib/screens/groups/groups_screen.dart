@@ -13,11 +13,11 @@ import '../../providers/ssh_keys_provider.dart';
 import '../../services/storage/group_storage.dart';
 import '../../services/storage/ssh_key_storage.dart';
 import '../../theme/theme.dart';
+import '../../widgets/groups/group_dot.dart';
 import '../../widgets/ui/app_badge.dart';
 import '../../widgets/ui/app_card.dart';
 import '../../widgets/ui/app_divider.dart';
 import '../../widgets/ui/confirm_dialog.dart';
-import '../../widgets/ui/group_dot.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
 import 'group_form_screen.dart';
 
@@ -155,7 +155,12 @@ class _GroupsScreenState extends ConsumerState<GroupsScreen> {
                   ),
                 ),
                 SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppTheme.space16,
+                    AppTheme.space8,
+                    AppTheme.space16,
+                    AppTheme.space16,
+                  ),
                   sliver: SliverToBoxAdapter(
                     child: AppCard.fields(
                       children: [
@@ -166,21 +171,21 @@ class _GroupsScreenState extends ConsumerState<GroupsScreen> {
                           ),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 14,
+                              horizontal: AppTheme.space16,
+                              vertical: AppTheme.space14,
                             ),
                             child: Row(
                               children: [
                                 Icon(
                                   PhosphorIconsRegular.plus,
-                                  size: 18,
+                                  size: AppTheme.icon18,
                                   color: context.colors.primary,
                                 ),
-                                const SizedBox(width: 12),
+                                const SizedBox(width: AppTheme.space12),
                                 Text(
                                   t.groups.newGroup,
                                   style: context.colors.uiStyle.copyWith(
-                                    fontSize: 14,
+                                    fontSize: AppTheme.font14,
                                     fontWeight: FontWeight.w600,
                                     color: context.colors.primary,
                                   ),
@@ -195,10 +200,10 @@ class _GroupsScreenState extends ConsumerState<GroupsScreen> {
                 ),
                 SliverPadding(
                   padding: EdgeInsets.fromLTRB(
-                    16,
+                    AppTheme.space16,
                     0,
-                    16,
-                    groups.length > 1 ? 8 : 32,
+                    AppTheme.space16,
+                    groups.length > 1 ? AppTheme.space8 : AppTheme.space32,
                   ),
                   sliver: SliverToBoxAdapter(
                     child: AppCard(
@@ -260,8 +265,8 @@ class _GroupsScreenState extends ConsumerState<GroupsScreen> {
                                   onTap: () => _editGroup(group),
                                   child: Padding(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 10,
+                                      horizontal: AppTheme.space12,
+                                      vertical: AppTheme.space10,
                                     ),
                                     child: Row(
                                       children: [
@@ -269,7 +274,7 @@ class _GroupsScreenState extends ConsumerState<GroupsScreen> {
                                           colorHex: group.colorHex,
                                           size: 10,
                                         ),
-                                        const SizedBox(width: 12),
+                                        const SizedBox(width: AppTheme.space12),
                                         Expanded(
                                           child: Column(
                                             crossAxisAlignment:
@@ -288,7 +293,9 @@ class _GroupsScreenState extends ConsumerState<GroupsScreen> {
                                                     ),
                                                   ),
                                                   if (isDefault) ...[
-                                                    const SizedBox(width: 8),
+                                                    const SizedBox(
+                                                      width: AppTheme.space8,
+                                                    ),
                                                     AppBadge(
                                                       t.groups.defaultBadge,
                                                       tone: BadgeTone.accent,
@@ -296,15 +303,14 @@ class _GroupsScreenState extends ConsumerState<GroupsScreen> {
                                                   ],
                                                 ],
                                               ),
-                                              const SizedBox(height: 2),
+                                              const SizedBox(
+                                                height: AppTheme.space2,
+                                              ),
                                               Text(
                                                 countText,
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  color: context
-                                                      .colors
-                                                      .textTertiary,
-                                                ),
+                                                style: Theme.of(
+                                                  context,
+                                                ).textTheme.bodySmall,
                                               ),
                                             ],
                                           ),
@@ -312,7 +318,7 @@ class _GroupsScreenState extends ConsumerState<GroupsScreen> {
                                         if (!isDefault)
                                           IconButton(
                                             tooltip: t.common.delete,
-                                            iconSize: 18,
+                                            iconSize: AppTheme.icon18,
                                             visualDensity:
                                                 VisualDensity.compact,
                                             color: Theme.of(
@@ -339,14 +345,16 @@ class _GroupsScreenState extends ConsumerState<GroupsScreen> {
                 ),
                 if (groups.length > 1)
                   SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+                    padding: const EdgeInsets.fromLTRB(
+                      AppTheme.space20,
+                      0,
+                      AppTheme.space20,
+                      AppTheme.space32,
+                    ),
                     sliver: SliverToBoxAdapter(
                       child: Text(
                         t.groups.reorderHint,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: context.colors.textTertiary,
-                        ),
+                        style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ),
                   ),

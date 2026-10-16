@@ -8,6 +8,8 @@ import '../../services/app/whats_new_service.dart';
 import '../../services/completion/command_completion.dart';
 import '../../services/settings/setting.dart';
 import '../../theme/theme.dart';
+import '../ui/section_header.dart';
+import '../ui/settings_tile.dart';
 
 /// The settings a highlight may offer a switch for, by preferences key.
 ///
@@ -92,7 +94,7 @@ class FeatureInfoButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(left: 4),
+      padding: const EdgeInsets.only(left: AppTheme.space4),
       child: Tooltip(
         message: Translations.of(context).settings.howItWorks,
         child: Semantics(
@@ -104,7 +106,7 @@ class FeatureInfoButton extends StatelessWidget {
               dimension: 28,
               child: Icon(
                 PhosphorIconsRegular.info,
-                size: 16,
+                size: AppTheme.icon16,
                 color: context.colors.textTertiary,
               ),
             ),
@@ -227,7 +229,10 @@ class _WhatsNewModalState extends State<WhatsNewModal> {
 
     return Dialog(
       backgroundColor: colors.surfaceElevated,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
+      insetPadding: const EdgeInsets.symmetric(
+        horizontal: AppTheme.space24,
+        vertical: AppTheme.space40,
+      ),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppTheme.radiusXl),
         side: BorderSide(color: colors.surfaceBorderStrong),
@@ -243,14 +248,22 @@ class _WhatsNewModalState extends State<WhatsNewModal> {
             ),
             if (widget.highlights.length > 1)
               Padding(
-                padding: const EdgeInsets.only(top: 4, bottom: 4),
+                padding: const EdgeInsets.only(
+                  top: AppTheme.space4,
+                  bottom: AppTheme.space4,
+                ),
                 child: _PageDots(
                   count: widget.highlights.length,
                   current: _page,
                 ),
               ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+              padding: const EdgeInsets.fromLTRB(
+                AppTheme.space20,
+                AppTheme.space12,
+                AppTheme.space20,
+                AppTheme.space20,
+              ),
               child: SizedBox(
                 width: double.infinity,
                 child: FilledButton(
@@ -287,7 +300,12 @@ class _HighlightPage extends StatelessWidget {
     final image = highlight.image;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.space20,
+        AppTheme.space24,
+        AppTheme.space20,
+        AppTheme.space8,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -308,24 +326,17 @@ class _HighlightPage extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppTheme.space16),
           ],
           if (announce) ...[
-            Text(
-              t.whatsNew.nowAvailable.toUpperCase(),
-              style: textTheme.labelSmall?.copyWith(
-                color: colors.primary,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.6,
-              ),
-            ),
-            const SizedBox(height: 8),
+            SectionHeader(t.whatsNew.nowAvailable, color: colors.primary),
+            const SizedBox(height: AppTheme.space8),
           ],
           Text(
             highlight.title,
             style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppTheme.space10),
           Text(
             highlight.body,
             style: textTheme.bodyMedium?.copyWith(
@@ -335,15 +346,14 @@ class _HighlightPage extends StatelessWidget {
           ),
           if (announce)
             if (whatsNewToggles[highlight.setting] case final toggle?) ...[
-              const SizedBox(height: 12),
+              const SizedBox(height: AppTheme.space12),
               ValueListenableBuilder<bool>(
                 valueListenable: toggle.setting,
-                builder: (context, enabled, _) => SwitchListTile(
+                builder: (context, enabled, _) => SettingsSwitchTile(
                   key: ValueKey('whatsNewToggle-${highlight.setting}'),
                   contentPadding: EdgeInsets.zero,
-                  title: Text(toggle.label(t)),
+                  title: toggle.label(t),
                   value: enabled,
-                  activeThumbColor: colors.primary,
                   onChanged: toggle.setting.set,
                 ),
               ),
@@ -370,7 +380,7 @@ class _PageDots extends StatelessWidget {
           AnimatedContainer(
             duration: AppTheme.interactiveDuration,
             curve: Curves.easeOut,
-            margin: const EdgeInsets.symmetric(horizontal: 3),
+            margin: const EdgeInsets.symmetric(horizontal: AppTheme.space2),
             height: 6,
             width: i == current ? 18 : 6,
             decoration: BoxDecoration(

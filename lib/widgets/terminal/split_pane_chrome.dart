@@ -13,7 +13,7 @@ const kSplitHeaderHeight = 30.0;
 
 /// About as long as the system keyboard takes to slide in, so a stacked
 /// split folds while it does.
-const kSplitFoldDuration = Duration(milliseconds: 250);
+const kSplitFoldDuration = AppTheme.motionMedium;
 
 /// Mirrors the drag feedback the old LongPressDraggable ghost used - a
 /// lifted, bordered pill - so a dragged tab or split header looks lifted
@@ -32,7 +32,7 @@ Widget tabDragProxyDecorator(
         child: Material(
           color: context.colors.backgroundPrimary.invisible,
           borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-          shadowColor: Colors.black.withValues(alpha: 0.35),
+          shadowColor: AppTheme.shadowColor,
           elevation: 10 * t,
           child: child,
         ),
@@ -67,7 +67,7 @@ class SplitPaneHeader extends StatelessWidget {
       child: AnimatedContainer(
         duration: AppTheme.motionFast,
         height: kSplitHeaderHeight,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
+        padding: const EdgeInsets.symmetric(horizontal: AppTheme.space10),
         color: focused
             ? Color.alphaBlend(
                 colors.primary.withValues(alpha: 0.14),
@@ -81,14 +81,14 @@ class SplitPaneHeader extends StatelessWidget {
               colorHex: profile.colorHex,
               size: 18,
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppTheme.space8),
             Expanded(
               child: Text(
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: AppTheme.font13,
                   fontWeight: focused ? FontWeight.w600 : FontWeight.w500,
                   color: focused ? colors.primary : colors.textSecondary,
                 ),
@@ -150,7 +150,7 @@ class SplitDivider extends StatelessWidget {
                     height: horizontal ? 32 : 3,
                     decoration: BoxDecoration(
                       color: context.colors.textTertiary,
-                      borderRadius: BorderRadius.circular(2),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusXxs),
                     ),
                   ),
                 ),

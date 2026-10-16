@@ -14,11 +14,11 @@ import 'tab_menu_parts.dart';
 /// own height is derived from these in `terminalTabBarHeight` rather than
 /// written down separately - two numbers that have to agree but are declared
 /// apart only agree until one of them is edited.
-const kTabNameSize = 13.0;
+const kTabNameSize = AppTheme.font13;
 const kTabLineHeight = 1.25;
 
 /// Vertical padding inside a tab pill.
-const kTabPillPaddingY = 6.0;
+const kTabPillPaddingY = AppTheme.space6;
 
 /// One tab's pill: the avatar ringed in its connection status, the name, the
 /// view-mode badge and the overflow menu.
@@ -92,7 +92,7 @@ class TerminalTabPill<T> extends StatelessWidget {
         shape: BoxShape.circle,
         border: Border.all(color: statusBorderColor, width: 1.25),
       ),
-      padding: const EdgeInsets.all(1),
+      padding: const EdgeInsets.all(AppTheme.hairline),
       child: ProfileAvatar(
         iconName: profile.iconName,
         colorHex: profile.colorHex,
@@ -106,8 +106,8 @@ class TerminalTabPill<T> extends StatelessWidget {
         key: ValueKey('sessionTabContent-$sessionId'),
         duration: AppTheme.motionFast,
         padding: EdgeInsets.only(
-          left: collapsed ? 4 : 14,
-          right: 4,
+          left: collapsed ? AppTheme.space4 : AppTheme.space14,
+          right: AppTheme.space4,
           top: kTabPillPaddingY,
           bottom: kTabPillPaddingY,
         ),
@@ -131,7 +131,7 @@ class TerminalTabPill<T> extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   avatar,
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppTheme.space8),
                   if (stretch)
                     Expanded(child: _buildName(activeText, inactiveText))
                   else
@@ -139,7 +139,7 @@ class TerminalTabPill<T> extends StatelessWidget {
                       constraints: const BoxConstraints(maxWidth: 170),
                       child: _buildName(activeText, inactiveText),
                     ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: AppTheme.space6),
                   if (status == ConnectionStatus.connected)
                     ViewModeBadge(
                       key: ValueKey('viewModeBadge-$sessionId'),
@@ -237,7 +237,7 @@ class ViewModeBadge extends StatelessWidget {
             child: Icon(
               modeIcons[mode]!.$1,
               key: ValueKey(mode),
-              size: 15,
+              size: AppTheme.icon14,
               color: idleColor,
             ),
           ),

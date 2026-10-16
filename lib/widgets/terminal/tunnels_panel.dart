@@ -5,6 +5,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../i18n/strings.g.dart';
 import '../../models/port_forwarding_rule.dart';
 import '../../providers/port_forwarding_provider.dart';
+import '../../theme/theme.dart';
 import '../ui/add_row_card.dart';
 import '../ui/app_card.dart';
 import '../ui/app_divider.dart';
@@ -37,7 +38,12 @@ class _TunnelsPanelState extends ConsumerState<TunnelsPanel> {
 
     return SafeArea(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+        padding: const EdgeInsets.fromLTRB(
+          AppTheme.space20,
+          AppTheme.space14,
+          AppTheme.space20,
+          AppTheme.space20,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -46,27 +52,27 @@ class _TunnelsPanelState extends ConsumerState<TunnelsPanel> {
               t.portForwarding.title,
               style: Theme.of(context).textTheme.titleMedium,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppTheme.space16),
 
             if (entries.isEmpty)
               EmptyStateHint(
                 icon: PhosphorIconsRegular.arrowsLeftRight,
                 text: t.portForwarding.noRulesYet,
-                padding: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.only(bottom: AppTheme.space16),
               ),
 
             if (profileEntries.isNotEmpty) ...[
               SectionHeader(t.portForwarding.profileRules),
-              const SizedBox(height: 10),
+              const SizedBox(height: AppTheme.space10),
               _group(profileEntries, isFromProfile: true),
-              const SizedBox(height: 20),
+              const SizedBox(height: AppTheme.space20),
             ],
 
             if (adhocEntries.isNotEmpty) ...[
               SectionHeader(t.portForwarding.adhocTunnels),
-              const SizedBox(height: 10),
+              const SizedBox(height: AppTheme.space10),
               _group(adhocEntries, isFromProfile: false),
-              const SizedBox(height: 20),
+              const SizedBox(height: AppTheme.space20),
             ],
 
             AddRowCard(

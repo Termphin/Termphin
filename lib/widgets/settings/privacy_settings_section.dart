@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../i18n/strings.g.dart';
 import '../../providers/anonymize_provider.dart';
+import '../../theme/theme.dart';
 import '../ui/app_card.dart';
 import '../ui/section_header.dart';
 import '../ui/settings_tile.dart';
@@ -23,7 +24,7 @@ class PrivacySettingsSection extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SectionHeader(t.settings.privacy),
-        const SizedBox(height: 10),
+        const SizedBox(height: AppTheme.space10),
         AppCard(
           child: SettingsSwitchTile(
             title: t.settings.anonymize,

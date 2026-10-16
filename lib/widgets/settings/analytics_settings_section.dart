@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../i18n/strings.g.dart';
 import '../../services/analytics/analytics_service.dart';
+import '../../theme/theme.dart';
 import '../ui/app_card.dart';
 import '../ui/section_header.dart';
 import '../ui/settings_tile.dart';
@@ -49,7 +50,7 @@ class _AnalyticsSettingsSectionState extends State<AnalyticsSettingsSection> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SectionHeader(t.settings.analytics),
-        const SizedBox(height: 10),
+        const SizedBox(height: AppTheme.space10),
         AppCard(
           child: SettingsSwitchTile(
             title: t.settings.analyticsToggle,

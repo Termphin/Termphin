@@ -19,9 +19,10 @@ import '../services/ssh/ssh_session_manager.dart';
 import '../theme/theme.dart';
 import '../utils/platform_info.dart';
 import '../widgets/profiles/profile_avatar.dart';
+import '../widgets/shell/nav_rail.dart';
 import '../widgets/terminal/terminal_scheme_theme.dart';
+import '../widgets/ui/app_badge.dart';
 import '../widgets/ui/app_notifications.dart';
-import '../widgets/ui/nav_rail.dart';
 import 'home_screen.dart';
 import 'keys/key_manager_screen.dart';
 import 'settings/settings_screen.dart';
@@ -122,8 +123,8 @@ class _MainShellState extends ConsumerState<MainShell>
     }
     _terminalMotion = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 320),
-      reverseDuration: const Duration(milliseconds: 220),
+      duration: AppTheme.motionPage,
+      reverseDuration: AppTheme.motionPageReverse,
       value: _terminalVisible ? 1 : 0,
     );
     unawaited(
@@ -435,7 +436,9 @@ class _SessionDock extends ConsumerWidget {
           },
           child: Container(
             height: 58,
-            padding: EdgeInsets.symmetric(horizontal: collapsed ? 8 : 14),
+            padding: EdgeInsets.symmetric(
+              horizontal: collapsed ? AppTheme.space8 : AppTheme.space14,
+            ),
             decoration: BoxDecoration(
               border: Border(
                 top: BorderSide(color: context.colors.surfaceBorder),
@@ -458,7 +461,7 @@ class _SessionDock extends ConsumerWidget {
                         isActive: !shouldRestore,
                         size: 34,
                       ),
-                      const SizedBox(width: 11),
+                      const SizedBox(width: AppTheme.space10),
                       Expanded(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -471,7 +474,7 @@ class _SessionDock extends ConsumerWidget {
                               style: Theme.of(context).textTheme.labelLarge
                                   ?.copyWith(fontWeight: FontWeight.w600),
                             ),
-                            const SizedBox(height: 2),
+                            const SizedBox(height: AppTheme.space2),
                             Text(
                               shouldRestore
                                   ? t.session.restoreDock(
@@ -490,44 +493,22 @@ class _SessionDock extends ConsumerWidget {
                         ),
                       ),
                       if (sessionCount > 1) ...[
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: context.colors.surfaceCard,
-                            borderRadius: BorderRadius.circular(
-                              AppTheme.radiusXs,
-                            ),
-                            border: Border.all(
-                              color: context.colors.surfaceBorder,
-                            ),
-                          ),
-                          child: Text(
-                            '$sessionCount',
-                            style: Theme.of(context).textTheme.labelMedium
-                                ?.copyWith(
-                                  color: context.colors.textPrimary,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
+                        AppBadge.count(sessionCount),
+                        const SizedBox(width: AppTheme.space10),
                       ],
                       Icon(
                         shouldRestore
                             ? PhosphorIconsFill.arrowClockwise
                             : PhosphorIconsFill.terminalWindow,
-                        size: 19,
+                        size: AppTheme.icon18,
                         color: shouldRestore
                             ? context.colors.warning
                             : context.colors.textSecondary,
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: AppTheme.space4),
                       Icon(
                         PhosphorIconsFill.caretRight,
-                        size: 15,
+                        size: AppTheme.icon14,
                         color: context.colors.textTertiary,
                       ),
                     ],
@@ -579,7 +560,7 @@ class _BottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const itemGap = 8.0;
+    const itemGap = AppTheme.space8;
 
     return Container(
       decoration: BoxDecoration(
@@ -589,7 +570,12 @@ class _BottomNavBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+          padding: const EdgeInsets.fromLTRB(
+            AppTheme.space10,
+            AppTheme.space8,
+            AppTheme.space10,
+            AppTheme.space10,
+          ),
           child: LayoutBuilder(
             builder: (context, constraints) {
               final totalGap = itemGap * (items.length - 1);
@@ -663,7 +649,7 @@ class _BottomNavItem extends StatelessWidget {
         child: AnimatedContainer(
           duration: AppTheme.interactiveDuration,
           curve: AppTheme.interactiveCurve,
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: AppTheme.space8),
           decoration: BoxDecoration(
             color: selected
                 ? context.colors.primaryHighlight
@@ -675,16 +661,16 @@ class _BottomNavItem extends StatelessWidget {
             children: [
               Icon(
                 selected ? data.selectedIcon : data.icon,
-                size: 22,
+                size: AppTheme.icon22,
                 color: selected
                     ? context.colors.primary
                     : context.colors.textSecondary,
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: AppTheme.space4),
               Text(
                 data.label,
                 style: context.colors.uiSmall.copyWith(
-                  fontSize: 11,
+                  fontSize: AppTheme.font11,
                   color: selected
                       ? context.colors.primary
                       : context.colors.textSecondary,
@@ -738,7 +724,7 @@ class _Sidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     final safeInset = MediaQuery.paddingOf(context).left;
     final width = navRailWidth(collapsed) + safeInset;
-    final itemInset = collapsed ? 8.0 : 12.0;
+    final itemInset = collapsed ? AppTheme.space8 : AppTheme.space12;
 
     return AnimatedContainer(
       duration: AppTheme.motionSlow,
@@ -758,7 +744,12 @@ class _Sidebar extends StatelessWidget {
             child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppTheme.space12,
+                    AppTheme.space12,
+                    AppTheme.space12,
+                    AppTheme.space4,
+                  ),
                   child: Align(
                     alignment: collapsed
                         ? Alignment.center
@@ -768,11 +759,18 @@ class _Sidebar extends StatelessWidget {
                 ),
                 Expanded(
                   child: ListView(
-                    padding: EdgeInsets.fromLTRB(itemInset, 4, itemInset, 12),
+                    padding: EdgeInsets.fromLTRB(
+                      itemInset,
+                      AppTheme.space4,
+                      itemInset,
+                      AppTheme.space12,
+                    ),
                     children: [
                       for (int i = 0; i < items.length; i++)
                         Padding(
-                          padding: const EdgeInsets.only(bottom: 4),
+                          padding: const EdgeInsets.only(
+                            bottom: AppTheme.space4,
+                          ),
                           child: _SidebarNavItem(
                             data: items[i],
                             selected: currentIndex == i,
@@ -821,7 +819,7 @@ class _SidebarNavItem extends StatelessWidget {
         : context.colors.textSecondary;
     final icon = Icon(
       selected ? data.selectedIcon : data.icon,
-      size: 20,
+      size: AppTheme.icon20,
       color: foreground,
     );
 
@@ -835,8 +833,8 @@ class _SidebarNavItem extends StatelessWidget {
           duration: AppTheme.interactiveDuration,
           curve: AppTheme.interactiveCurve,
           padding: EdgeInsets.symmetric(
-            horizontal: collapsed ? 0 : 14,
-            vertical: 11,
+            horizontal: collapsed ? 0 : AppTheme.space14,
+            vertical: AppTheme.space10,
           ),
           decoration: BoxDecoration(
             color: selected
@@ -849,7 +847,7 @@ class _SidebarNavItem extends StatelessWidget {
               : Row(
                   children: [
                     icon,
-                    const SizedBox(width: 12),
+                    const SizedBox(width: AppTheme.space12),
                     Text(
                       data.label,
                       style: context.colors.uiStyle.copyWith(
