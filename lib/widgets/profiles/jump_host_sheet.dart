@@ -13,10 +13,11 @@ import '../../services/storage/group_storage.dart';
 import '../../theme/theme.dart';
 import '../../utils/group_match.dart';
 import '../../utils/profile_sort.dart';
-import '../ui/group_filter_chips.dart';
+import '../groups/group_filter_chips.dart';
 import '../ui/section_header.dart';
 import '../ui/sheet_handle.dart';
 import 'profile_avatar.dart';
+import 'profile_pick_card.dart';
 
 /// Picks the profile a connection hops through, or none at all.
 ///
@@ -85,7 +86,7 @@ class _JumpHostSheetContentState extends ConsumerState<JumpHostSheetContent> {
     ];
 
     Widget row(SshProfile p) => Padding(
-      padding: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.only(top: AppTheme.space12),
       child: _MachineRow(
         key: ValueKey('jumpHostCandidate:${p.id}'),
         profile: p,
@@ -106,11 +107,11 @@ class _JumpHostSheetContentState extends ConsumerState<JumpHostSheetContent> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SheetHandle(topPadding: 8),
+              const SheetHandle(topPadding: AppTheme.space8),
               Padding(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 14,
+                  horizontal: AppTheme.space20,
+                  vertical: AppTheme.space14,
                 ),
                 child: Text(
                   t.profileForm.jumpHost,
@@ -118,7 +119,9 @@ class _JumpHostSheetContentState extends ConsumerState<JumpHostSheetContent> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppTheme.space16,
+                ),
                 child: GlobalSearchLauncher(
                   heroTag: 'globalSearch-jumpHost',
                   hint: t.terminal.searchDevices,
@@ -129,17 +132,27 @@ class _JumpHostSheetContentState extends ConsumerState<JumpHostSheetContent> {
               GroupFilterChips(
                 groups: allGroups,
                 selected: _selectedGroup,
-                padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                padding: const EdgeInsets.fromLTRB(
+                  AppTheme.space16,
+                  AppTheme.space10,
+                  AppTheme.space16,
+                  0,
+                ),
                 onChanged: (group) => setState(() => _selectedGroup = group),
               ),
               Expanded(
                 child: ListView(
                   key: const ValueKey('jumpHostList'),
                   controller: scrollController,
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppTheme.space16,
+                    0,
+                    AppTheme.space16,
+                    AppTheme.space16,
+                  ),
                   children: [
                     Padding(
-                      padding: const EdgeInsets.only(top: 12),
+                      padding: const EdgeInsets.only(top: AppTheme.space12),
                       child: _DirectRow(
                         selected: widget.selectedId == null,
                         onTap: () => widget.onPick(null),
@@ -148,7 +161,12 @@ class _JumpHostSheetContentState extends ConsumerState<JumpHostSheetContent> {
                     for (final p in sameGroup) row(p),
                     if (sameGroup.isNotEmpty && otherGroups.isNotEmpty)
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(0, 20, 0, 0),
+                        padding: const EdgeInsets.fromLTRB(
+                          0,
+                          AppTheme.space20,
+                          0,
+                          0,
+                        ),
                         child: SectionHeader(t.groups.otherGroups),
                       ),
                     for (final p in otherGroups) row(p),
@@ -163,88 +181,6 @@ class _JumpHostSheetContentState extends ConsumerState<JumpHostSheetContent> {
   }
 }
 
-/// The card chrome shared by both rows, matching the new-session sheet's
-/// machine card, with a check on the current choice.
-class _PickCard extends StatelessWidget {
-  const _PickCard({
-    super.key,
-    required this.leading,
-    required this.title,
-    required this.subtitle,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final Widget leading;
-  final String title;
-  final String? subtitle;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(AppTheme.radiusMd);
-    return Material(
-      color: context.colors.surfaceElevated.invisible,
-      borderRadius: radius,
-      child: Ink(
-        decoration: BoxDecoration(
-          color: context.colors.surfaceElevated,
-          borderRadius: radius,
-          border: Border.all(
-            color: selected
-                ? context.colors.primary
-                : context.colors.surfaceBorder,
-          ),
-        ),
-        child: InkWell(
-          borderRadius: radius,
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              children: [
-                leading,
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.colors.itemTitle,
-                      ),
-                      if (subtitle != null) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          subtitle!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: context.colors.uiStyle,
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                if (selected) ...[
-                  const SizedBox(width: 8),
-                  Icon(
-                    PhosphorIconsRegular.checkCircle,
-                    size: 20,
-                    color: context.colors.primary,
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _DirectRow extends StatelessWidget {
   const _DirectRow({required this.selected, required this.onTap});
 
@@ -254,7 +190,7 @@ class _DirectRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Translations.of(context);
-    return _PickCard(
+    return ProfilePickCard(
       key: const ValueKey('jumpHostDirect'),
       leading: SizedBox(
         width: 42,
@@ -265,7 +201,6 @@ class _DirectRow extends StatelessWidget {
         ),
       ),
       title: t.profileForm.jumpHostNone,
-      subtitle: null,
       selected: selected,
       onTap: onTap,
     );
@@ -288,7 +223,7 @@ class _MachineRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _PickCard(
+    return ProfilePickCard(
       leading: ProfileAvatar(
         iconName: profile.iconName,
         colorHex: profile.colorHex,

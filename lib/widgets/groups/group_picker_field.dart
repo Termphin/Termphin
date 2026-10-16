@@ -9,7 +9,7 @@ import '../../providers/groups_provider.dart';
 import '../../screens/groups/group_form_screen.dart';
 import '../../services/storage/group_storage.dart';
 import '../../theme/theme.dart';
-import 'app_dropdown.dart';
+import '../ui/app_dropdown.dart';
 import 'group_dot.dart';
 
 /// Sentinel value for the "New group" entry. A dropdown picks a value, and
@@ -63,12 +63,11 @@ class GroupPickerField extends ConsumerWidget {
         : [ProfileGroup(name: group), ...groups];
 
     return Container(
-      decoration: BoxDecoration(
-        color: context.colors.fieldFill,
-        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-        border: Border.all(color: context.colors.surfaceBorder),
+      decoration: context.colors.fieldDecoration,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppTheme.space14,
+        vertical: AppTheme.space6,
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       child: DropdownButton2<String>(
         valueListenable: ValueNotifier(group),
         isExpanded: true,
@@ -80,7 +79,7 @@ class GroupPickerField extends ConsumerWidget {
               child: Row(
                 children: [
                   GroupDot(colorHex: g.colorHex),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: AppTheme.space10),
                   Flexible(
                     child: Text(
                       _label(t, g.name),
@@ -88,7 +87,7 @@ class GroupPickerField extends ConsumerWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: context.colors.textPrimary,
-                        fontSize: 15,
+                        fontSize: AppTheme.font15,
                       ),
                     ),
                   ),
@@ -113,10 +112,10 @@ class GroupPickerField extends ConsumerWidget {
         iconStyleData: IconStyleData(
           icon: Icon(
             PhosphorIconsFill.caretDown,
-            size: 16,
+            size: AppTheme.icon16,
             color: context.colors.textTertiary,
           ),
-          iconSize: 16,
+          iconSize: AppTheme.icon16,
         ),
         dropdownStyleData: appDropdownStyle(
           context,
@@ -124,7 +123,7 @@ class GroupPickerField extends ConsumerWidget {
           offset: const Offset(0, -6),
         ),
         menuItemStyleData: appDropdownItemStyle(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
+          padding: const EdgeInsets.symmetric(horizontal: AppTheme.space10),
         ),
         items: [
           for (final g in available)

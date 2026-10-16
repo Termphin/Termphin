@@ -7,7 +7,9 @@ import '../../i18n/strings.g.dart';
 import '../../services/analytics/analytics_service.dart';
 import '../../services/app/release_notes_service.dart';
 import '../../theme/theme.dart';
+import '../../widgets/ui/app_divider.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
+import '../../widgets/ui/section_header.dart';
 
 /// Full history of release notes, opened from Settings.
 ///
@@ -51,15 +53,15 @@ class _ReleaseNotesScreenState extends State<ReleaseNotesScreen> {
             : ContentGutter(
                 builder: (context, gutter) => ListView.separated(
                   padding: const EdgeInsets.fromLTRB(
-                    16,
-                    16,
-                    16,
-                    32,
+                    AppTheme.space16,
+                    AppTheme.space16,
+                    AppTheme.space16,
+                    AppTheme.space32,
                   ).add(gutter),
                   itemCount: entries.length,
                   separatorBuilder: (_, _) => const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                    child: Divider(height: 1),
+                    padding: EdgeInsets.symmetric(vertical: AppTheme.space12),
+                    child: AppDivider(),
                   ),
                   itemBuilder: (_, index) => _VersionSection(
                     entry: entries[index],
@@ -95,7 +97,7 @@ class _VersionSectionState extends State<_VersionSection> {
           borderRadius: BorderRadius.circular(AppTheme.radiusSm),
           onTap: () => setState(() => _expanded = !_expanded),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
+            padding: const EdgeInsets.symmetric(vertical: AppTheme.space6),
             child: Row(
               children: [
                 Text(
@@ -110,7 +112,7 @@ class _VersionSectionState extends State<_VersionSection> {
                   duration: AppTheme.interactiveDuration,
                   child: Icon(
                     PhosphorIconsRegular.caretDown,
-                    size: 18,
+                    size: AppTheme.icon18,
                     color: context.colors.textTertiary,
                   ),
                 ),
@@ -159,28 +161,15 @@ class _CategorySection extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final (icon, color) = _categoryStyle(context, category.label);
     return Padding(
-      padding: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.only(top: AppTheme.space16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(icon, size: 14, color: color),
-              const SizedBox(width: 6),
-              Text(
-                category.label.toUpperCase(),
-                style: textTheme.labelSmall?.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.4,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
+          SectionHeader(category.label, icon: icon, color: color),
+          const SizedBox(height: AppTheme.space8),
           for (final item in category.items)
             Padding(
-              padding: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.only(bottom: AppTheme.space8),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

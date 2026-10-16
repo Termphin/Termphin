@@ -14,6 +14,7 @@ import '../widgets/ui/app_card.dart';
 import '../widgets/ui/app_divider.dart';
 import '../widgets/ui/clipboard_and_links.dart';
 import '../widgets/ui/permission_tile.dart';
+import '../widgets/ui/settings_tile.dart';
 
 const _pageCount = 4;
 const _serverPage = 1;
@@ -98,7 +99,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+              padding: const EdgeInsets.fromLTRB(
+                AppTheme.space24,
+                AppTheme.space8,
+                AppTheme.space24,
+                AppTheme.space24,
+              ),
               child: Column(
                 children: [
                   Row(
@@ -107,19 +113,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       _pageCount,
                       (index) => AnimatedContainer(
                         duration: AppTheme.motionSlow,
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: AppTheme.space4,
+                        ),
                         width: index == _page ? 20 : 6,
                         height: 6,
                         decoration: BoxDecoration(
                           color: index == _page
                               ? context.colors.primary
                               : context.colors.surfaceBorder,
-                          borderRadius: BorderRadius.circular(3),
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.radiusPill,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: AppTheme.space20),
                   _OnboardingActions(
                     page: _page,
                     canContinue: _page != _serverPage || _answer != null,
@@ -182,7 +192,7 @@ class _WelcomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = Translations.of(context);
     return _CenteredScroll(
-      padding: const EdgeInsets.symmetric(horizontal: 28),
+      padding: const EdgeInsets.symmetric(horizontal: AppTheme.space24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -190,7 +200,7 @@ class _WelcomePage extends StatelessWidget {
             borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             child: Image.asset('assets/logo.png', width: 76, height: 76),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: AppTheme.space20),
           Text(
             t.onboarding.welcomeTitle,
             textAlign: TextAlign.center,
@@ -198,7 +208,7 @@ class _WelcomePage extends StatelessWidget {
               context,
             ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppTheme.space12),
           Text(
             t.onboarding.welcomeBody,
             textAlign: TextAlign.center,
@@ -224,7 +234,7 @@ class _ServerPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = Translations.of(context);
     return _CenteredScroll(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: AppTheme.space24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -232,7 +242,7 @@ class _ServerPage extends StatelessWidget {
             fill: PhosphorIconsFill.hardDrives,
             regular: PhosphorIconsRegular.hardDrives,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppTheme.space16),
           Text(
             t.onboarding.serverTitle,
             textAlign: TextAlign.center,
@@ -240,7 +250,7 @@ class _ServerPage extends StatelessWidget {
               context,
             ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppTheme.space12),
           Text(
             t.onboarding.serverBody,
             textAlign: TextAlign.center,
@@ -248,7 +258,7 @@ class _ServerPage extends StatelessWidget {
               color: context.colors.textSecondary,
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppTheme.space24),
           _ChoiceTile(
             icon: PhosphorIconsRegular.checkCircle,
             title: t.onboarding.serverYes,
@@ -256,7 +266,7 @@ class _ServerPage extends StatelessWidget {
             selected: answer == ServerAnswer.hasServer,
             onTap: () => onChanged(ServerAnswer.hasServer),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppTheme.space10),
           _ChoiceTile(
             icon: PhosphorIconsRegular.question,
             title: t.onboarding.serverNotYet,
@@ -270,7 +280,7 @@ class _ServerPage extends StatelessWidget {
             alignment: Alignment.topCenter,
             child: answer == ServerAnswer.notYet
                 ? const Padding(
-                    padding: EdgeInsets.only(top: 16),
+                    padding: EdgeInsets.only(top: AppTheme.space16),
                     child: ServerGuideList(),
                   )
                 : const SizedBox(width: double.infinity),
@@ -299,55 +309,37 @@ class _ChoiceTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final radius = BorderRadius.circular(AppTheme.radiusMd);
-    return Material(
-      color: colors.surfaceElevated.invisible,
-      borderRadius: radius,
-      child: InkWell(
-        borderRadius: radius,
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: AppTheme.interactiveDuration,
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: selected
-                ? colors.primary.withValues(alpha: 0.08)
-                : colors.surfaceElevated,
-            borderRadius: radius,
-            border: Border.all(
-              color: selected ? colors.primary : colors.surfaceBorder,
+    return AppCard(
+      elevated: true,
+      selected: selected,
+      onTap: onTap,
+      padding: const EdgeInsets.all(AppTheme.space14),
+      child: Row(
+        children: [
+          Icon(icon, size: AppTheme.icon24, color: colors.primary),
+          const SizedBox(width: AppTheme.space14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: colors.itemTitle),
+                const SizedBox(height: AppTheme.space2),
+                Text(
+                  subtitle,
+                  style: colors.uiSmall.copyWith(color: colors.textSecondary),
+                ),
+              ],
             ),
           ),
-          child: Row(
-            children: [
-              Icon(icon, size: 24, color: colors.primary),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: colors.itemTitle),
-                    const SizedBox(height: 3),
-                    Text(
-                      subtitle,
-                      style: colors.uiSmall.copyWith(
-                        color: colors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Icon(
-                selected
-                    ? PhosphorIconsRegular.checkCircle
-                    : PhosphorIconsRegular.circle,
-                size: 22,
-                color: selected ? colors.primary : colors.textTertiary,
-              ),
-            ],
+          const SizedBox(width: AppTheme.space8),
+          Icon(
+            selected
+                ? PhosphorIconsRegular.checkCircle
+                : PhosphorIconsRegular.circle,
+            size: AppTheme.icon22,
+            color: selected ? colors.primary : colors.textTertiary,
           ),
-        ),
+        ],
       ),
     );
   }
@@ -510,7 +502,7 @@ class _PermissionsPageState extends State<_PermissionsPage>
   Widget build(BuildContext context) {
     final t = Translations.of(context);
     return _CenteredScroll(
-      padding: const EdgeInsets.symmetric(horizontal: 28),
+      padding: const EdgeInsets.symmetric(horizontal: AppTheme.space24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -518,7 +510,7 @@ class _PermissionsPageState extends State<_PermissionsPage>
             fill: PhosphorIconsFill.shieldCheck,
             regular: PhosphorIconsRegular.shieldCheck,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppTheme.space16),
           Text(
             t.onboarding.permissionsTitle,
             textAlign: TextAlign.center,
@@ -526,7 +518,7 @@ class _PermissionsPageState extends State<_PermissionsPage>
               context,
             ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppTheme.space8),
           Text(
             t.onboarding.permissionsBody,
             textAlign: TextAlign.center,
@@ -534,7 +526,7 @@ class _PermissionsPageState extends State<_PermissionsPage>
               color: context.colors.textSecondary,
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: AppTheme.space20),
           Opacity(
             opacity: _loaded ? 1 : 0.5,
             child: AppCard(
@@ -551,7 +543,7 @@ class _PermissionsPageState extends State<_PermissionsPage>
                         granted: _batteryUnrestricted,
                         onTap: _loaded ? _onBatteryTap : null,
                       ),
-                      const AppDivider(indent: 14),
+                      const AppDivider(indent: AppTheme.space14),
                     ],
                     PermissionTile(
                       dense: true,
@@ -561,7 +553,7 @@ class _PermissionsPageState extends State<_PermissionsPage>
                       onTap: _loaded ? _onNotificationsTap : null,
                     ),
                     if (_localNetworkEnforced) ...[
-                      const AppDivider(indent: 14),
+                      const AppDivider(indent: AppTheme.space14),
                       PermissionTile(
                         dense: true,
                         title: t.onboarding.localNetworkTitle,
@@ -591,7 +583,7 @@ class _AnalyticsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = Translations.of(context);
     return _CenteredScroll(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
+      padding: const EdgeInsets.symmetric(horizontal: AppTheme.space32),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -599,7 +591,7 @@ class _AnalyticsPage extends StatelessWidget {
             fill: PhosphorIconsFill.chartLineUp,
             regular: PhosphorIconsRegular.chartLineUp,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppTheme.space16),
           Text(
             t.analyticsConsent.title,
             textAlign: TextAlign.center,
@@ -607,7 +599,7 @@ class _AnalyticsPage extends StatelessWidget {
               context,
             ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppTheme.space12),
           Text(
             t.analyticsConsent.body,
             textAlign: TextAlign.center,
@@ -615,29 +607,22 @@ class _AnalyticsPage extends StatelessWidget {
               color: context.colors.textSecondary,
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: AppTheme.space20),
           AppCard(
             clipChild: true,
             child: Material(
               color: context.colors.surfaceCard.invisible,
-              child: CheckboxListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14),
-                title: Text(
-                  t.analyticsConsent.checkboxLabel,
-                  style: const TextStyle(fontSize: 14),
+              child: SettingsCheckboxTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppTheme.space14,
                 ),
+                title: t.analyticsConsent.checkboxLabel,
                 value: checked,
-                checkColor: context.colors.onPrimary,
-                fillColor: WidgetStateProperty.resolveWith(
-                  (s) => s.contains(WidgetState.selected)
-                      ? context.colors.primary
-                      : null,
-                ),
-                onChanged: (v) => onChanged(v ?? false),
+                onChanged: onChanged,
               ),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppTheme.space24),
           Text(
             t.analyticsConsent.legalNotice,
             textAlign: TextAlign.center,
@@ -645,7 +630,7 @@ class _AnalyticsPage extends StatelessWidget {
               context,
             ).textTheme.bodySmall?.copyWith(color: context.colors.textTertiary),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: AppTheme.space4),
           const _LegalLinks(),
         ],
       ),
@@ -689,7 +674,10 @@ class _LegalLink extends StatelessWidget {
     return TextButton(
       onPressed: () => openExternalUrl(context, Uri.parse(url)),
       style: TextButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppTheme.space10,
+          vertical: AppTheme.space4,
+        ),
         minimumSize: Size.zero,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         textStyle: Theme.of(context).textTheme.bodySmall,

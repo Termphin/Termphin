@@ -77,7 +77,12 @@ class _PinSetupDialogState extends State<PinSetupDialog> {
     final t = Translations.of(context);
     return Dialog(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+        padding: const EdgeInsets.fromLTRB(
+          AppTheme.space20,
+          AppTheme.space24,
+          AppTheme.space20,
+          AppTheme.space16,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -85,7 +90,7 @@ class _PinSetupDialogState extends State<PinSetupDialog> {
               _confirming ? t.lock.confirmPin : t.lock.setPin,
               style: Theme.of(context).textTheme.titleMedium,
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppTheme.space20),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
@@ -96,7 +101,9 @@ class _PinSetupDialogState extends State<PinSetupDialog> {
                   return Container(
                     width: 14,
                     height: 14,
-                    margin: const EdgeInsets.symmetric(horizontal: 8),
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: AppTheme.space8,
+                    ),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: filled
@@ -116,25 +123,28 @@ class _PinSetupDialogState extends State<PinSetupDialog> {
               ),
             ),
             if (!_confirming) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: AppTheme.space8),
               Text(
                 t.lock.pinLengthHint,
                 style: TextStyle(
                   color: context.colors.textTertiary,
-                  fontSize: 12,
+                  fontSize: AppTheme.font12,
                 ),
               ),
             ],
-            const SizedBox(height: 8),
+            const SizedBox(height: AppTheme.space8),
             AnimatedOpacity(
               opacity: _error.isNotEmpty ? 1 : 0,
               duration: AppTheme.interactiveDuration,
               child: Text(
                 _error,
-                style: TextStyle(color: context.colors.error, fontSize: 12),
+                style: TextStyle(
+                  color: context.colors.error,
+                  fontSize: AppTheme.font12,
+                ),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppTheme.space12),
             for (final row in [
               ['1', '2', '3'],
               ['4', '5', '6'],
@@ -142,7 +152,7 @@ class _PinSetupDialogState extends State<PinSetupDialog> {
               ['', '0', 'del'],
             ])
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 3),
+                padding: const EdgeInsets.symmetric(vertical: AppTheme.space2),
                 child: Row(
                   children: row.map((k) {
                     if (k.isEmpty) {
@@ -157,7 +167,7 @@ class _PinSetupDialogState extends State<PinSetupDialog> {
                               message: t.lock.pinNext,
                               child: Icon(
                                 PhosphorIconsRegular.check,
-                                size: 20,
+                                size: AppTheme.icon20,
                                 color: context.colors.primary,
                               ),
                             ),
@@ -171,7 +181,7 @@ class _PinSetupDialogState extends State<PinSetupDialog> {
                           onTap: _onDelete,
                           child: Icon(
                             PhosphorIconsFill.backspace,
-                            size: 18,
+                            size: AppTheme.icon18,
                             color: context.colors.textSecondary,
                           ),
                         ),
@@ -182,7 +192,7 @@ class _PinSetupDialogState extends State<PinSetupDialog> {
                         child: Text(
                           k,
                           style: TextStyle(
-                            fontSize: 20,
+                            fontSize: AppTheme.font20,
                             color: context.colors.textPrimary,
                           ),
                         ),
@@ -192,7 +202,7 @@ class _PinSetupDialogState extends State<PinSetupDialog> {
                   }).toList(),
                 ),
               ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppTheme.space8),
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: Text(t.common.cancel),
@@ -212,7 +222,7 @@ class _DialogKey extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
+      padding: const EdgeInsets.symmetric(horizontal: AppTheme.space4),
       child: Material(
         color: context.colors.surfaceElevated,
         borderRadius: BorderRadius.circular(AppTheme.radiusSm),

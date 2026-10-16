@@ -2,6 +2,15 @@ import 'package:flutter/material.dart';
 
 import '../../theme/theme.dart';
 
+/// Tone for the empty state panel: whether it's neutral or an error state.
+enum EmptyStateTone {
+  /// Neutral: icon colour textSecondary, frame fill surfaceCard.
+  neutral,
+
+  /// Error: icon colour error, frame fill errorHighlight, no border.
+  error,
+}
+
 /// Full-height empty state for a screen with nothing to list yet: framed
 /// icon, headline, optional explanation and optional call to action.
 ///
@@ -14,54 +23,78 @@ class EmptyStatePanel extends StatelessWidget {
     required this.title,
     this.subtitle,
     this.action,
+    this.tone = EmptyStateTone.neutral,
+    this.compact = false,
   });
 
   final IconData icon;
   final String title;
   final String? subtitle;
   final Widget? action;
+  final EmptyStateTone tone;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+    final isError = tone == EmptyStateTone.error;
+    final frameSize = compact ? 44.0 : 58.0;
+    final iconSize = compact ? AppTheme.icon22 : AppTheme.icon26;
+    final outerPadding = compact
+        ? const EdgeInsets.all(AppTheme.space24)
+        : const EdgeInsets.fromLTRB(
+            AppTheme.space32,
+            AppTheme.space48,
+            AppTheme.space32,
+            AppTheme.space40,
+          );
+
     return Center(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(32, 48, 32, 40),
+        padding: outerPadding,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 58,
-              height: 58,
+              width: frameSize,
+              height: frameSize,
               decoration: BoxDecoration(
-                color: context.colors.surfaceCard,
+                color: isError ? colors.errorHighlight : colors.surfaceCard,
                 borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                border: Border.all(color: context.colors.surfaceBorder),
+                border: isError
+                    ? null
+                    : Border.all(color: colors.surfaceBorder),
               ),
               child: Center(
                 child: Icon(
                   icon,
-                  size: 26,
-                  color: context.colors.textSecondary,
+                  size: iconSize,
+                  color: isError ? colors.error : colors.textSecondary,
                 ),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppTheme.space20),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleLarge,
+              style: compact
+                  ? Theme.of(context).textTheme.titleMedium
+                  : Theme.of(context).textTheme.titleLarge,
             ),
             if (subtitle != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: AppTheme.space8),
               Text(
                 subtitle!,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: context.colors.textTertiary,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: colors.textTertiary),
               ),
             ],
-            if (action != null) ...[const SizedBox(height: 20), action!],
+            if (action != null) ...[
+              const SizedBox(height: AppTheme.space20),
+              action!,
+            ],
           ],
         ),
       ),
@@ -77,7 +110,10 @@ class EmptyStateHint extends StatelessWidget {
     super.key,
     required this.icon,
     required this.text,
-    this.padding = const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+    this.padding = const EdgeInsets.symmetric(
+      vertical: AppTheme.space24,
+      horizontal: AppTheme.space16,
+    ),
   });
 
   final IconData icon;
@@ -90,8 +126,8 @@ class EmptyStateHint extends StatelessWidget {
       padding: padding,
       child: Row(
         children: [
-          Icon(icon, size: 18, color: context.colors.textTertiary),
-          const SizedBox(width: 10),
+          Icon(icon, size: AppTheme.icon18, color: context.colors.textTertiary),
+          const SizedBox(width: AppTheme.space10),
           Expanded(
             child: Text(
               text,

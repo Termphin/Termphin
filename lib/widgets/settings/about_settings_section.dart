@@ -11,6 +11,7 @@ import '../../services/app/review_prompt_service.dart';
 import '../../theme/theme.dart';
 import '../../utils/platform_info.dart';
 import '../ui/app_card.dart';
+import '../ui/app_divider.dart';
 import '../ui/app_notifications.dart';
 import '../ui/clipboard_and_links.dart';
 import '../ui/section_header.dart';
@@ -32,10 +33,10 @@ class AboutSettingsSection extends StatelessWidget {
       applicationName: 'Termphin',
       applicationVersion: version,
       applicationIcon: Padding(
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(AppTheme.space8),
         child: Icon(
           PhosphorIconsFill.terminalWindow,
-          size: 40,
+          size: AppTheme.icon40,
           color: context.colors.primary,
         ),
       ),
@@ -77,63 +78,56 @@ class AboutSettingsSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SectionHeader(t.settings.about),
-        const SizedBox(height: 10),
-        AppCard(
-          clipChild: true,
-          child: Column(
-            children: [
+        const SizedBox(height: AppTheme.space10),
+        AppCard.fields(
+          children: [
+            SettingsTile(
+              title: 'Termphin',
+              subtitle: version == null
+                  ? t.settings.aboutTagline
+                  : t.settings.aboutVersion(version: version!),
+              trailing: SettingsTileTrailing.none,
+            ),
+            const AppDivider(),
+            SettingsTile(
+              title: t.settings.releaseNotes,
+              subtitle: t.settings.releaseNotesSubtitle,
+              onTap: () => _showReleaseNotes(context),
+            ),
+            if (ReviewPromptService.instance.canOpenStoreListing) ...[
+              const AppDivider(),
               SettingsTile(
-                title: 'Termphin',
-                subtitle: version == null
-                    ? t.settings.aboutTagline
-                    : t.settings.aboutVersion(version: version!),
-                trailing: SettingsTileTrailing.none,
-              ),
-              const Divider(height: 1),
-              SettingsTile(
-                title: t.settings.releaseNotes,
-                subtitle: t.settings.releaseNotesSubtitle,
-                onTap: () => _showReleaseNotes(context),
-              ),
-              if (ReviewPromptService.instance.canOpenStoreListing) ...[
-                const Divider(height: 1),
-                SettingsTile(
-                  title: t.settings.rateApp,
-                  subtitle: isIOSPlatform
-                      ? t.settings.rateAppSubtitleIos
-                      : t.settings.rateAppSubtitle,
-                  trailing: SettingsTileTrailing.external,
-                  onTap: () => _rateApp(context),
-                ),
-              ],
-              const Divider(height: 1),
-              SettingsTile(
-                title: t.settings.licenses,
-                subtitle: t.settings.licensesSubtitle,
-                onTap: () => _showLicenses(context),
-              ),
-              const Divider(height: 1),
-              SettingsTile(
-                title: t.settings.privacyPolicy,
-                subtitle: t.settings.privacyPolicySubtitle,
+                title: t.settings.rateApp,
+                subtitle: isIOSPlatform
+                    ? t.settings.rateAppSubtitleIos
+                    : t.settings.rateAppSubtitle,
                 trailing: SettingsTileTrailing.external,
-                onTap: () => openExternalUrl(
-                  context,
-                  Uri.parse(LegalUrls.privacyPolicy),
-                ),
-              ),
-              const Divider(height: 1),
-              SettingsTile(
-                title: t.settings.terms,
-                subtitle: t.settings.termsSubtitle,
-                trailing: SettingsTileTrailing.external,
-                onTap: () => openExternalUrl(
-                  context,
-                  Uri.parse(LegalUrls.termsOfService),
-                ),
+                onTap: () => _rateApp(context),
               ),
             ],
-          ),
+            const AppDivider(),
+            SettingsTile(
+              title: t.settings.licenses,
+              subtitle: t.settings.licensesSubtitle,
+              onTap: () => _showLicenses(context),
+            ),
+            const AppDivider(),
+            SettingsTile(
+              title: t.settings.privacyPolicy,
+              subtitle: t.settings.privacyPolicySubtitle,
+              trailing: SettingsTileTrailing.external,
+              onTap: () =>
+                  openExternalUrl(context, Uri.parse(LegalUrls.privacyPolicy)),
+            ),
+            const AppDivider(),
+            SettingsTile(
+              title: t.settings.terms,
+              subtitle: t.settings.termsSubtitle,
+              trailing: SettingsTileTrailing.external,
+              onTap: () =>
+                  openExternalUrl(context, Uri.parse(LegalUrls.termsOfService)),
+            ),
+          ],
         ),
       ],
     );

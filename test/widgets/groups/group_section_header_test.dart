@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:termphin/models/profile_group.dart';
-import 'package:termphin/widgets/ui/group_section_header.dart';
+import 'package:termphin/widgets/groups/group_section_header.dart';
 
 import '../../support/test_app.dart';
 

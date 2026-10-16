@@ -25,7 +25,7 @@ class StepperRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: AppTheme.space4),
       child: Row(
         children: [
           Expanded(
@@ -91,7 +91,7 @@ class ValueStepperRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: AppTheme.space4),
       child: Row(
         children: [
           Expanded(
@@ -147,7 +147,7 @@ class _StepperButton extends StatelessWidget {
           ),
           child: Icon(
             icon,
-            size: 15,
+            size: AppTheme.icon14,
             color: enabled
                 ? context.colors.textSecondary
                 : context.colors.textTertiary,

@@ -148,13 +148,14 @@ class ErrorReportsScreen extends ConsumerWidget {
                 : ContentGutter(
                     builder: (context, gutter) => ListView.separated(
                       padding: const EdgeInsets.fromLTRB(
-                        16,
-                        16,
-                        16,
-                        32,
+                        AppTheme.space16,
+                        AppTheme.space16,
+                        AppTheme.space16,
+                        AppTheme.space32,
                       ).add(gutter),
                       itemCount: items.length + 1,
-                      separatorBuilder: (_, _) => const SizedBox(height: 10),
+                      separatorBuilder: (_, _) =>
+                          const SizedBox(height: AppTheme.space10),
                       itemBuilder: (context, index) => index == 0
                           ? Text(
                               t.errorReports.privacy,
@@ -190,7 +191,7 @@ class _ReportCard extends StatelessWidget {
         ? ' · ${t.errorReports.repeated(count: report.count)}'
         : '';
     final mono = context.colors.monoStyle.copyWith(
-      fontSize: 12,
+      fontSize: AppTheme.font12,
       color: context.colors.textSecondary,
       height: 1.5,
     );
@@ -210,7 +211,12 @@ class _ReportCard extends StatelessWidget {
             context,
           ).textTheme.bodySmall?.copyWith(color: context.colors.textTertiary),
         ),
-        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        childrenPadding: const EdgeInsets.fromLTRB(
+          AppTheme.space16,
+          0,
+          AppTheme.space16,
+          AppTheme.space16,
+        ),
         children: [
           SizedBox(
             width: double.infinity,

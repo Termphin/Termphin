@@ -23,6 +23,7 @@ import '../../utils/sftp_error_handler.dart';
 import '../../utils/sftp_path.dart';
 import '../../utils/text_sniffer.dart';
 import '../terminal/terminal_scheme_theme.dart';
+import '../ui/app_divider.dart';
 import '../ui/app_dropdown.dart';
 import '../ui/app_notifications.dart';
 import '../ui/clipboard_and_links.dart';
@@ -123,7 +124,6 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
 
   Color get _background => Theme.of(context).scaffoldBackgroundColor;
   Color get _surface => Theme.of(context).colorScheme.surface;
-  Color get _border => Theme.of(context).dividerColor;
   Color get _accent => Theme.of(context).colorScheme.primary;
   Color get _errorColor => Theme.of(context).colorScheme.error;
 
@@ -1165,7 +1165,7 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
                       setState(() => _editingPath = editing),
                   trailing: _sftp != null ? _buildAddButton() : null,
                 ),
-          Divider(height: 1, color: _border),
+          const AppDivider(),
           Expanded(
             child: Stack(
               children: [
@@ -1235,7 +1235,11 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
       ],
       child: SizedBox.square(
         dimension: 40,
-        child: Icon(PhosphorIconsRegular.plus, color: _accent, size: 22),
+        child: Icon(
+          PhosphorIconsRegular.plus,
+          color: _accent,
+          size: AppTheme.icon22,
+        ),
       ),
     );
   }
@@ -1256,7 +1260,7 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
     if (_error.isNotEmpty) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(AppTheme.space20),
           child: Text(_error, style: TextStyle(color: _errorColor)),
         ),
       );

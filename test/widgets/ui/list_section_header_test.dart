@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:termphin/widgets/ui/app_badge.dart';
 import 'package:termphin/widgets/ui/list_section_header.dart';
 
 import '../../support/test_app.dart';
@@ -17,7 +18,7 @@ void main() {
 
     expect(find.text('All machines'), findsOneWidget);
     expect(find.text('5'), findsOneWidget);
-    expect(find.byType(CountBadge), findsOneWidget);
+    expect(find.byType(AppBadge), findsOneWidget);
   });
 
   testWidgets('ListSectionHeader triggers onAdd when add button is tapped', (

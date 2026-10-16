@@ -95,13 +95,14 @@ class _KnownHostsScreenState extends ConsumerState<KnownHostsScreen> {
             : ContentGutter(
                 builder: (context, gutter) => ListView.separated(
                   padding: const EdgeInsets.fromLTRB(
-                    16,
-                    16,
-                    16,
-                    32,
+                    AppTheme.space16,
+                    AppTheme.space16,
+                    AppTheme.space16,
+                    AppTheme.space32,
                   ).add(gutter),
                   itemCount: hosts.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 10),
+                  separatorBuilder: (_, _) =>
+                      const SizedBox(height: AppTheme.space10),
                   itemBuilder: (_, index) =>
                       _HostCard(host: hosts[index], onForget: _forget),
                 ),
@@ -127,7 +128,7 @@ class _HostCard extends ConsumerWidget {
         : host.host;
     return AppCard(
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(AppTheme.space14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -146,9 +147,9 @@ class _HostCard extends ConsumerWidget {
                 ),
               ],
             ),
-            const SizedBox(height: AppTheme.spaceXs),
+            const SizedBox(height: AppTheme.space4),
             SelectableText(host.fingerprint, style: colors.monoSmall),
-            const SizedBox(height: AppTheme.spaceXs),
+            const SizedBox(height: AppTheme.space4),
             Text(
               '${host.keyType} · '
               '${t.settings.knownHostsAddedAt(date: DateFormat.yMMMd().format(host.addedAt))}',

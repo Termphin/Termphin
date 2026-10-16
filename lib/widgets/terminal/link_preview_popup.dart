@@ -123,13 +123,7 @@ class _LinkPreviewPopupState extends State<LinkPreviewPopup> {
         color: context.colors.surfaceElevated,
         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: context.colors.surfaceBorderStrong),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x66000000),
-            blurRadius: 16,
-            offset: Offset(0, 4),
-          ),
-        ],
+        boxShadow: AppTheme.popupShadow,
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -139,8 +133,8 @@ class _LinkPreviewPopupState extends State<LinkPreviewPopup> {
           if (_loading)
             _PreviewRow(
               leading: SizedBox(
-                width: 16,
-                height: 16,
+                width: AppTheme.icon16,
+                height: AppTheme.icon16,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
                   color: context.colors.primary,
@@ -179,20 +173,23 @@ class _LinkPreviewPopupState extends State<LinkPreviewPopup> {
                 top: BorderSide(color: context.colors.surfaceDivider),
               ),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppTheme.space12,
+              vertical: AppTheme.space8,
+            ),
             child: Row(
               children: [
                 Icon(
                   PhosphorIconsRegular.link,
-                  size: 12,
+                  size: AppTheme.icon12,
                   color: context.colors.primary,
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: AppTheme.space6),
                 Expanded(
                   child: Text(
                     widget.url,
                     style: TextStyle(
-                      fontSize: 11,
+                      fontSize: AppTheme.font11,
                       color: context.colors.primary,
                     ),
                     maxLines: 1,
@@ -256,12 +253,12 @@ class _PreviewRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(AppTheme.space12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           leading,
-          const SizedBox(width: 10),
+          const SizedBox(width: AppTheme.space10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -271,7 +268,7 @@ class _PreviewRow extends StatelessWidget {
                   Text(
                     title!,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: AppTheme.font12,
                       fontWeight: FontWeight.w600,
                       color: context.colors.textPrimary,
                     ),
@@ -279,11 +276,11 @@ class _PreviewRow extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 if (subtitle != null) ...[
-                  const SizedBox(height: 3),
+                  const SizedBox(height: AppTheme.space2),
                   Text(
                     subtitle!,
                     style: TextStyle(
-                      fontSize: 11,
+                      fontSize: AppTheme.font11,
                       color: context.colors.textSecondary,
                     ),
                     maxLines: 2,
@@ -313,7 +310,7 @@ class _FallbackThumb extends StatelessWidget {
       ),
       child: Icon(
         PhosphorIconsFill.globe,
-        size: 22,
+        size: AppTheme.icon22,
         color: context.colors.textSecondary,
       ),
     );
@@ -345,19 +342,22 @@ class _ActionBtn extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+          padding: const EdgeInsets.symmetric(
+            vertical: AppTheme.space10,
+            horizontal: AppTheme.space6,
+          ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 13, color: color),
-              const SizedBox(width: 5),
+              Icon(icon, size: AppTheme.icon12, color: color),
+              const SizedBox(width: AppTheme.space4),
               Flexible(
                 child: Text(
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: AppTheme.font12,
                     fontWeight: FontWeight.w500,
                     color: color,
                   ),

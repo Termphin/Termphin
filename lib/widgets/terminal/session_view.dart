@@ -37,6 +37,7 @@ import '../../theme/theme.dart';
 import '../../utils/connection_error_text.dart';
 import '../../utils/sftp_error_handler.dart';
 import '../../utils/sftp_path.dart';
+import '../settings/manual_link.dart';
 import '../sftp/confirm_overwrite.dart';
 import '../sftp/sftp_browser_view.dart';
 import '../sftp/sftp_folder_picker.dart';
@@ -44,10 +45,10 @@ import '../sftp/transfer_bar.dart';
 import '../ssh/connecting_view.dart';
 import '../ssh/connection_log_sheet.dart';
 import '../ssh/connection_quality_pill.dart';
+import '../ui/app_card.dart';
 import '../ui/app_notifications.dart';
 import '../ui/clipboard_and_links.dart';
 import '../ui/cursor_menu.dart';
-import '../ui/manual_link.dart';
 import 'command_suggestion_popup.dart';
 import 'floating_action_dock.dart';
 import 'link_preview_popup.dart';
@@ -997,111 +998,125 @@ class SessionViewState extends ConsumerState<SessionView> {
       final t = Translations.of(context);
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(AppTheme.space20),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 420),
-            child: Container(
+            child: SizedBox(
               width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 22),
-              decoration: BoxDecoration(
-                color: context.colors.surfaceCard,
+              child: AppCard(
                 borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-                border: Border.all(color: context.colors.surfaceBorder),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: context.colors.error.withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      PhosphorIconsFill.warningCircle,
-                      color: context.colors.error,
-                      size: 28,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Text(
-                    t.terminal.connectFailed,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  if (state.errorMessage != null) ...[
-                    const SizedBox(height: 7),
-                    SelectableText(
-                      connectionErrorText(
-                        t,
-                        state.failureReason,
-                        widget.sessionKey.$2.authMethod,
-                        fallback: state.errorMessage!,
+                padding: const EdgeInsets.fromLTRB(
+                  AppTheme.space24,
+                  AppTheme.space24,
+                  AppTheme.space24,
+                  AppTheme.space20,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: AppTheme.icon48,
+                      height: AppTheme.icon48,
+                      decoration: BoxDecoration(
+                        color: context.colors.error.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
                       ),
+                      child: Icon(
+                        PhosphorIconsFill.warningCircle,
+                        color: context.colors.error,
+                        size: AppTheme.icon28,
+                      ),
+                    ),
+                    const SizedBox(height: AppTheme.space14),
+                    Text(
+                      t.terminal.connectFailed,
                       textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: context.colors.textTertiary,
-                        height: 1.4,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                  ],
-                  const SizedBox(height: 20),
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: [
-                      if (state.failureReason ==
-                          SshFailureReason.localNetworkBlocked)
-                        ElevatedButton.icon(
-                          onPressed: _onAllowLocalNetwork,
-                          icon: const Icon(
-                            PhosphorIconsFill.houseLine,
-                            size: 18,
-                          ),
-                          label: Text(t.connection.allowLocalNetwork),
+                    if (state.errorMessage != null) ...[
+                      const SizedBox(height: AppTheme.space6),
+                      SelectableText(
+                        connectionErrorText(
+                          t,
+                          state.failureReason,
+                          widget.sessionKey.$2.authMethod,
+                          fallback: state.errorMessage!,
                         ),
-                      if (state.failureReason ==
-                          SshFailureReason.localNetworkUnverified)
-                        OutlinedButton.icon(
-                          onPressed: _onOpenLocalNetworkSettings,
-                          icon: const Icon(PhosphorIconsRegular.gear, size: 18),
-                          label: Text(t.connection.openLocalNetworkSettings),
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: context.colors.textTertiary,
+                          height: 1.4,
                         ),
-                      _RetryButton(
-                        primary:
-                            state.failureReason !=
-                            SshFailureReason.localNetworkBlocked,
-                        label: t.common.retry,
-                        onPressed: () => ref
-                            .read(
-                              sshConnectionProvider(widget.sessionKey).notifier,
-                            )
-                            .connect(),
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: widget.onClose,
-                        icon: const Icon(PhosphorIconsRegular.x, size: 18),
-                        label: Text(t.common.close),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 6),
-                  TextButton.icon(
-                    onPressed: () => openManual(
-                      context,
-                      connectionErrorManualPage(
-                        state.failureReason,
-                        widget.sessionKey.$2.authMethod,
-                      ),
+                    const SizedBox(height: AppTheme.space20),
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: AppTheme.space10,
+                      runSpacing: AppTheme.space10,
+                      children: [
+                        if (state.failureReason ==
+                            SshFailureReason.localNetworkBlocked)
+                          ElevatedButton.icon(
+                            onPressed: _onAllowLocalNetwork,
+                            icon: const Icon(
+                              PhosphorIconsFill.houseLine,
+                              size: AppTheme.icon18,
+                            ),
+                            label: Text(t.connection.allowLocalNetwork),
+                          ),
+                        if (state.failureReason ==
+                            SshFailureReason.localNetworkUnverified)
+                          OutlinedButton.icon(
+                            onPressed: _onOpenLocalNetworkSettings,
+                            icon: const Icon(
+                              PhosphorIconsRegular.gear,
+                              size: AppTheme.icon18,
+                            ),
+                            label: Text(t.connection.openLocalNetworkSettings),
+                          ),
+                        _RetryButton(
+                          primary:
+                              state.failureReason !=
+                              SshFailureReason.localNetworkBlocked,
+                          label: t.common.retry,
+                          onPressed: () => ref
+                              .read(
+                                sshConnectionProvider(
+                                  widget.sessionKey,
+                                ).notifier,
+                              )
+                              .connect(),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: widget.onClose,
+                          icon: const Icon(
+                            PhosphorIconsRegular.x,
+                            size: AppTheme.icon18,
+                          ),
+                          label: Text(t.common.close),
+                        ),
+                      ],
                     ),
-                    icon: const Icon(PhosphorIconsRegular.question, size: 18),
-                    label: Text(t.manual.howToFix),
-                  ),
-                ],
+                    const SizedBox(height: AppTheme.space6),
+                    TextButton.icon(
+                      onPressed: () => openManual(
+                        context,
+                        connectionErrorManualPage(
+                          state.failureReason,
+                          widget.sessionKey.$2.authMethod,
+                        ),
+                      ),
+                      icon: const Icon(
+                        PhosphorIconsRegular.question,
+                        size: AppTheme.icon18,
+                      ),
+                      label: Text(t.manual.howToFix),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -1375,59 +1390,65 @@ class SessionViewState extends ConsumerState<SessionView> {
     final t = Translations.of(context);
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(AppTheme.space20),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
-          child: Container(
+          child: SizedBox(
             width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 22),
-            decoration: BoxDecoration(
-              color: context.colors.surfaceCard,
+            child: AppCard(
               borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-              border: Border.all(color: context.colors.surfaceBorder),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: context.colors.primary.withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
+              padding: const EdgeInsets.fromLTRB(
+                AppTheme.space24,
+                AppTheme.space24,
+                AppTheme.space24,
+                AppTheme.space20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: AppTheme.icon48,
+                    height: AppTheme.icon48,
+                    decoration: BoxDecoration(
+                      color: context.colors.primary.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      PhosphorIconsFill.plugs,
+                      color: context.colors.primary,
+                      size: AppTheme.icon26,
+                    ),
                   ),
-                  child: Icon(
-                    PhosphorIconsFill.plugs,
-                    color: context.colors.primary,
-                    size: 26,
+                  const SizedBox(height: AppTheme.space14),
+                  Text(
+                    t.session.offlineTitle,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  t.session.offlineTitle,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
+                  const SizedBox(height: AppTheme.space6),
+                  Text(
+                    t.session.offlineBody,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: context.colors.textTertiary,
+                      height: 1.4,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 7),
-                Text(
-                  t.session.offlineBody,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: context.colors.textTertiary,
-                    height: 1.4,
+                  const SizedBox(height: AppTheme.space20),
+                  ElevatedButton.icon(
+                    onPressed: () => ref
+                        .read(sshConnectionProvider(widget.sessionKey).notifier)
+                        .connect(),
+                    icon: const Icon(
+                      PhosphorIconsFill.plugsConnected,
+                      size: AppTheme.icon18,
+                    ),
+                    label: Text(t.session.attach),
                   ),
-                ),
-                const SizedBox(height: 20),
-                ElevatedButton.icon(
-                  onPressed: () => ref
-                      .read(sshConnectionProvider(widget.sessionKey).notifier)
-                      .connect(),
-                  icon: const Icon(PhosphorIconsFill.plugsConnected, size: 18),
-                  label: Text(t.session.attach),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -1453,7 +1474,7 @@ class _PhaseSwitcher extends StatelessWidget {
     return AnimatedSwitcher(
       duration: MediaQuery.disableAnimationsOf(context)
           ? Duration.zero
-          : const Duration(milliseconds: 280),
+          : AppTheme.motionMedium,
       reverseDuration: MediaQuery.disableAnimationsOf(context)
           ? Duration.zero
           : AppTheme.motionSlow,
@@ -1494,13 +1515,7 @@ class _CopyPastePopup extends StatelessWidget {
         color: surface,
         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: border),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.35),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        boxShadow: AppTheme.floatingShadow,
       ),
       child: IntrinsicHeight(
         child: Row(
@@ -1549,13 +1564,7 @@ class _PasteUploadPathMenu extends StatelessWidget {
         color: surface,
         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: border),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.35),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        boxShadow: AppTheme.floatingShadow,
       ),
       child: IntrinsicHeight(
         child: Row(
@@ -1591,8 +1600,8 @@ class _PopupIconBtn extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Icon(icon, size: 16, color: textColor),
+          padding: const EdgeInsets.all(AppTheme.space12),
+          child: Icon(icon, size: AppTheme.icon16, color: textColor),
         ),
       ),
     );
@@ -1620,17 +1629,20 @@ class _PopupBtn extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppTheme.space16,
+            vertical: AppTheme.space10,
+          ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 16, color: textColor),
-              const SizedBox(width: 7),
+              Icon(icon, size: AppTheme.icon16, color: textColor),
+              const SizedBox(width: AppTheme.space6),
               Text(
                 label,
                 style: TextStyle(
                   color: textColor,
-                  fontSize: 14,
+                  fontSize: AppTheme.font14,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -1664,23 +1676,17 @@ class _ScrollToBottomButton extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(AppTheme.radiusXl),
           child: Container(
-            width: 40,
-            height: 40,
+            width: AppTheme.icon40,
+            height: AppTheme.icon40,
             decoration: BoxDecoration(
               color: backgroundColor.withValues(alpha: 0.85),
               borderRadius: BorderRadius.circular(AppTheme.radiusXl),
               border: Border.all(color: borderColor, width: 1),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.35),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+              boxShadow: AppTheme.raisedShadow,
             ),
             child: Icon(
               PhosphorIconsFill.arrowLineDown,
-              size: 20,
+              size: AppTheme.icon20,
               color: accent,
             ),
           ),
@@ -1706,7 +1712,7 @@ class _RetryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const icon = Icon(PhosphorIconsFill.arrowClockwise, size: 18);
+    const icon = Icon(PhosphorIconsFill.arrowClockwise, size: AppTheme.icon18);
     final text = Text(label);
     return primary
         ? ElevatedButton.icon(onPressed: onPressed, icon: icon, label: text)

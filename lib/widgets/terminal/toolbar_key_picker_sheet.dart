@@ -7,8 +7,10 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../i18n/strings.g.dart';
 import '../../services/settings/toolbar_layout.dart';
 import '../../theme/theme.dart';
-import '../ui/toolbar_key_button.dart';
+import '../ui/settings_tile.dart';
+import '../ui/tag_chip.dart';
 import 'special_keys_toolbar.dart' show toolbarSchemeFromTheme;
+import 'toolbar_key_button.dart';
 
 String toolbarCategoryLabel(Translations t, ToolbarActionCategory category) {
   return switch (category) {
@@ -50,7 +52,7 @@ class _KeyChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 56,
+      width: AppTheme.icon56,
       child: ToolbarKeyButton(
         label: label,
         semanticLabel: label,
@@ -62,6 +64,10 @@ class _KeyChip extends StatelessWidget {
     );
   }
 }
+
+/// Height of the CTRL, ALT and SHIFT toggles: a comfortable thumb target, since
+/// they are flipped on and off while building a key.
+const double _modifierChipHeight = 38;
 
 /// Builds a custom key by tapping it out: hold the modifiers you want, then hit
 /// the key. No naming step - the label is the combo itself (`Ctrl+R`, `Alt+Shift+←`).
@@ -256,7 +262,12 @@ class _CustomKeyBuilderScreenState extends State<_CustomKeyBuilderScreen> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+            padding: const EdgeInsets.fromLTRB(
+              AppTheme.space16,
+              AppTheme.space12,
+              AppTheme.space16,
+              AppTheme.space12,
+            ),
             child: Row(
               children: [
                 Expanded(
@@ -266,7 +277,7 @@ class _CustomKeyBuilderScreenState extends State<_CustomKeyBuilderScreen> {
                     onTap: () => setState(() => _textMode = false),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: AppTheme.space8),
                 Expanded(
                   child: _ModeTab(
                     label: t.toolbar.textMode,
@@ -288,7 +299,12 @@ class _CustomKeyBuilderScreenState extends State<_CustomKeyBuilderScreen> {
     return SafeArea(
       top: false,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        padding: const EdgeInsets.fromLTRB(
+          AppTheme.space16,
+          AppTheme.space12,
+          AppTheme.space16,
+          AppTheme.space12,
+        ),
         decoration: BoxDecoration(
           border: Border(top: BorderSide(color: context.colors.surfaceBorder)),
         ),
@@ -320,30 +336,41 @@ class _CustomKeyBuilderScreenState extends State<_CustomKeyBuilderScreen> {
       focusNode: _keyboardFocus,
       onKeyEvent: _onHardwareKey,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        padding: const EdgeInsets.fromLTRB(
+          AppTheme.space16,
+          AppTheme.space12,
+          AppTheme.space16,
+          AppTheme.space24,
+        ),
         children: [
           Row(
             children: [
-              _ModifierChip(
+              TagChip(
                 label: 'CTRL',
                 selected: _ctrl,
+                solid: true,
+                minHeight: _modifierChipHeight,
                 onTap: () => setState(() => _ctrl = !_ctrl),
               ),
-              const SizedBox(width: 8),
-              _ModifierChip(
+              const SizedBox(width: AppTheme.space8),
+              TagChip(
                 label: 'ALT',
                 selected: _alt,
+                solid: true,
+                minHeight: _modifierChipHeight,
                 onTap: () => setState(() => _alt = !_alt),
               ),
-              const SizedBox(width: 8),
-              _ModifierChip(
+              const SizedBox(width: AppTheme.space8),
+              TagChip(
                 label: 'SHIFT',
                 selected: _shift,
+                solid: true,
+                minHeight: _modifierChipHeight,
                 onTap: () => setState(() => _shift = !_shift),
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: AppTheme.space14),
           GestureDetector(
             onTap: _focusCapture,
             child: Container(
@@ -396,7 +423,7 @@ class _CustomKeyBuilderScreenState extends State<_CustomKeyBuilderScreen> {
                       color: combo == null
                           ? context.colors.textTertiary
                           : context.colors.primary,
-                      fontSize: 26,
+                      fontSize: AppTheme.font26,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -404,21 +431,24 @@ class _CustomKeyBuilderScreenState extends State<_CustomKeyBuilderScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppTheme.space8),
           Text(
             t.toolbar.comboHint,
-            style: TextStyle(color: context.colors.textTertiary, fontSize: 12),
+            style: TextStyle(
+              color: context.colors.textTertiary,
+              fontSize: AppTheme.font12,
+            ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: AppTheme.space14),
           Text(
             t.toolbar.comboSpecialKeys,
             style: TextStyle(
               color: context.colors.textTertiary,
-              fontSize: 11,
+              fontSize: AppTheme.font11,
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppTheme.space8),
           _keyGrid([...kComboSpecialKeys, ...kComboFunctionKeys]),
         ],
       ),
@@ -427,8 +457,8 @@ class _CustomKeyBuilderScreenState extends State<_CustomKeyBuilderScreen> {
 
   Widget _keyGrid(List<String> keys) {
     return Wrap(
-      spacing: 6,
-      runSpacing: 6,
+      spacing: AppTheme.space6,
+      runSpacing: AppTheme.space6,
       children: [
         for (final key in keys)
           _KeyChip(
@@ -442,7 +472,12 @@ class _CustomKeyBuilderScreenState extends State<_CustomKeyBuilderScreen> {
 
   Widget _buildTextMode(Translations t) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.space16,
+        AppTheme.space12,
+        AppTheme.space16,
+        AppTheme.space24,
+      ),
       children: [
         TextField(
           controller: _textController,
@@ -457,15 +492,12 @@ class _CustomKeyBuilderScreenState extends State<_CustomKeyBuilderScreen> {
           onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
           onSubmitted: (_) => _submitText(),
         ),
-        SwitchListTile(
+        SettingsSwitchTile(
           contentPadding: EdgeInsets.zero,
-          title: Text(t.toolbar.customAppendEnter),
-          subtitle: Text(
-            t.toolbar.customAppendEnterSubtitle,
-            style: TextStyle(color: context.colors.textTertiary, fontSize: 12),
-          ),
+          dense: true,
+          title: t.toolbar.customAppendEnter,
+          subtitle: t.toolbar.customAppendEnterSubtitle,
           value: _appendEnter,
-          activeThumbColor: context.colors.primary,
           onChanged: (value) => setState(() => _appendEnter = value),
         ),
       ],
@@ -511,55 +543,8 @@ class _ModeTab extends StatelessWidget {
               color: selected
                   ? context.colors.primary
                   : context.colors.textSecondary,
-              fontSize: 13,
+              fontSize: AppTheme.font13,
               fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ModifierChip extends StatelessWidget {
-  const _ModifierChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: selected ? context.colors.primary : context.colors.surfaceCard,
-      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-        child: Container(
-          height: 38,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-            border: Border.all(
-              color: selected
-                  ? context.colors.primary
-                  : context.colors.surfaceBorder,
-            ),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: selected
-                  ? context.colors.backgroundPrimary
-                  : context.colors.textSecondary,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
             ),
           ),
         ),

@@ -32,6 +32,7 @@ import '../../theme/theme.dart';
 import '../../utils/platform_info.dart';
 import '../../widgets/profiles/profile_avatar.dart';
 import '../../widgets/sftp/sftp_browser_view.dart';
+import '../../widgets/shell/nav_rail.dart';
 import '../../widgets/snippets/snippet_args_dialog.dart';
 import '../../widgets/snippets/snippet_picker_panel.dart';
 import '../../widgets/ssh/connection_log_sheet.dart';
@@ -49,11 +50,12 @@ import '../../widgets/terminal/tab_menu_parts.dart';
 import '../../widgets/terminal/terminal_pane.dart';
 import '../../widgets/terminal/terminal_tab_pill.dart';
 import '../../widgets/terminal/tunnels_panel.dart';
+import '../../widgets/ui/app_badge.dart';
 import '../../widgets/ui/app_dropdown.dart';
 import '../../widgets/ui/app_notifications.dart';
 import '../../widgets/ui/app_sheet.dart';
 import '../../widgets/ui/confirm_dialog.dart';
-import '../../widgets/ui/nav_rail.dart';
+import '../../widgets/ui/fade_over_color.dart';
 import '../../widgets/ui/section_header.dart';
 import '../settings/terminal_appearance_screen.dart';
 import '../settings/toolbar_profiles_screen.dart';
@@ -62,7 +64,7 @@ import 'state/tab_reconciler.dart';
 import 'state/tab_strip_controller.dart';
 
 /// Vertical padding inside the strip around a tab pill.
-const _kTabStripPaddingY = 6.0;
+const _kTabStripPaddingY = AppTheme.space6;
 
 /// The status avatar sets a floor: a single-line tab is still at least this
 /// tall, whatever the font scale is doing.
@@ -153,7 +155,7 @@ class TerminalScreen extends ConsumerStatefulWidget {
 /// is up, since the navigation bar is behind it with nothing left to keep
 /// clear of.
 class TerminalScreenState extends ConsumerState<TerminalScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   /// Owns the sessions, which one is active, each tab's view mode, focus
   /// history and splits - everything that is pure state, with no
   /// `BuildContext`, `ref` or manager call anywhere near it.
@@ -173,6 +175,66 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
   late final TabReconciler _reconciler;
 
   late final SessionSwipeController _swipe;
+
+  /// Moving to another tab without a finger on it - a tap on its pill, or
+  /// the neighbour taking over from a tab that was closed - along Material's
+  /// shared X axis: the old page drifts a little the other way and fades
+  /// out, then the new one drifts in from the side it lies on and fades in.
+  /// A swipe keeps following the finger the full width; this is for the
+  /// switches nobody is dragging.
+  late final AnimationController _axis = AnimationController(
+    vsync: this,
+    duration: AppTheme.motionMedium,
+  );
+
+  /// The entry fading out, while it is still on screen; null when it is
+  /// already gone, as after a close.
+  int? _axisFrom;
+
+  /// What moves a page from frame to frame: the finger's drag and the X-axis
+  /// switch. Only each page's small transform listens to it, so a frame of
+  /// either rebuilds no page.
+  late final Listenable _pageMotion = Listenable.merge([_swipe.offset, _axis]);
+
+  /// +1 when the new page comes in from the right, -1 from the left.
+  double _axisSign = 1;
+
+  /// How far a page drifts along the axis, in logical pixels - enough to
+  /// say which way, not so much that it reads as a slide.
+  static const double _axisShift = 30;
+
+  /// Where along the switch the old page hands over to the new one.
+  static const double _axisHandover = 0.3;
+
+  void _startAxis({int? from, required double sign}) {
+    if (MediaQuery.disableAnimationsOf(context)) return;
+    setState(() {
+      _axisFrom = from;
+      _axisSign = sign;
+    });
+    _axisDone = _axis.forward(from: 0)
+      ..whenCompleteOrCancel(() {
+        if (mounted) setState(() => _axisFrom = null);
+      });
+  }
+
+  /// The switch in flight, for [_afterMotion] to wait on.
+  TickerFuture? _axisDone;
+
+  /// Runs [work] once the X-axis switch in flight has settled, or now when
+  /// none is. What follows a switch - persisting the active tab, reconnecting
+  /// a dropped one - would otherwise land in the switch's first frames and
+  /// cost it the smoothness it is there for.
+  void _afterMotion(VoidCallback work) {
+    final done = _axisDone;
+    if (done == null || !_axis.isAnimating) {
+      work();
+      return;
+    }
+    done.whenCompleteOrCancel(() {
+      if (mounted) work();
+    });
+  }
 
   late final SshSessionManager _manager = ref.read(sshSessionManagerProvider);
 
@@ -308,6 +370,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
     tabBarPositionSetting.removeListener(_onTabBarPositionChanged);
     _tabScrollController.dispose();
     _swipe.dispose();
+    _axis.dispose();
     _controller.dispose();
     toolbarSettings.enabled.removeListener(_onToolbarEnabledChanged);
     floatingDockSettings.enabled.removeListener(_onFloatingDockSettingChanged);
@@ -344,7 +407,10 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
           tabCount: () => _entries.length,
           activeIndex: () => _activeEntryIndex,
           onCommit: _onSwipeCommitted,
-          isBlocked: () => terminalSelectionDragActive.value || _dividerHeld,
+          isBlocked: () =>
+              terminalSelectionDragActive.value ||
+              _dividerHeld ||
+              _axis.isAnimating,
         )..addListener(() {
           if (mounted) setState(() {});
         });
@@ -437,7 +503,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
         text: 'M',
         style: TextStyle(
           fontFamily: terminalSettings.fontFamily.value,
-          fontSize: 12,
+          fontSize: AppTheme.font12,
         ),
       ),
       textDirection: TextDirection.ltr,
@@ -553,8 +619,13 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
   /// Shared by the strip's own close/detach path and by [_pruneTabsClosedElsewhere],
   /// so a tab removed from the home screen leaves exactly the way one removed
   /// from the tab's own menu does.
+  ///
+  /// When the tab on screen is the one leaving, its neighbour comes in along
+  /// the X axis from the side it was on.
   void _dropTabs(Set<String> ids) {
     if (!_sessionIds.any(ids.contains)) return;
+    final activeBefore = _activeEntryIndex;
+    final activeLeaves = _entries[activeBefore].every(ids.contains);
     _reconciler.forget(ids);
     for (final id in ids) {
       _tabKeys.remove(id);
@@ -565,8 +636,15 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
     if (_sessions.isEmpty && mounted) {
       widget.onClose?.call();
     } else {
-      _scrollToSessionTab(_sessions[_activeIndex].$1);
-      unawaited(_manager.setActiveSession(_sessions[_activeIndex].$1));
+      final next = _sessions[_activeIndex].$1;
+      _scrollToSessionTab(next);
+      if (activeLeaves && mounted) {
+        _startAxis(sign: _activeEntryIndex >= activeBefore ? 1 : -1);
+      }
+      _afterMotion(() {
+        if (_sessions.isEmpty || _sessions[_activeIndex].$1 != next) return;
+        unawaited(_manager.setActiveSession(next));
+      });
     }
   }
 
@@ -647,25 +725,40 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
     });
   }
 
-  void _selectSession(String sessionId, {bool haptic = true}) {
+  /// [onSelected] runs right after the switch and before anything heavier,
+  /// so a motion it starts is already running when that work is queued
+  /// behind it.
+  void _selectSession(
+    String sessionId, {
+    bool haptic = true,
+    VoidCallback? onSelected,
+  }) {
     final changed = _controller.select(sessionId);
     if (changed == null) return;
     if (changed && haptic) HapticFeedback.selectionClick();
     _scrollToSessionTab(sessionId);
-    unawaited(_manager.setActiveSession(sessionId));
-    final index = _sessions.indexWhere((item) => item.$1 == sessionId);
-    _attachIfNeeded(_sessions[index]);
+    onSelected?.call();
+    _afterMotion(() {
+      final index = _sessions.indexWhere((item) => item.$1 == sessionId);
+      if (index < 0 || index != _activeIndex) return;
+      unawaited(_manager.setActiveSession(sessionId));
+      _attachIfNeeded(_sessions[index]);
+    });
   }
 
-  /// A tap on a tab: the switch at once, then the page slides in, unless the
-  /// system asks for less motion. A split partner shares the page, so
-  /// focusing it moves nothing.
+  /// A tap on a tab: the switch at once, then the pages cross along the X
+  /// axis, unless the system asks for less motion. A split partner shares
+  /// the page, so focusing it moves nothing.
   void _onTabTapped(String sessionId) {
     final before = _activeEntryIndex;
-    _selectSession(sessionId);
-    final after = _activeEntryIndex;
-    if (after == before || MediaQuery.disableAnimationsOf(context)) return;
-    _swipe.slideIn(from: before, to: after);
+    _selectSession(
+      sessionId,
+      onSelected: () {
+        final after = _activeEntryIndex;
+        if (after == before) return;
+        _startAxis(from: before, sign: after > before ? 1 : -1);
+      },
+    );
   }
 
   /// A swipe that settled on another tab. The gesture decides when; making
@@ -683,34 +776,89 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
   Widget _buildSwipeSessionPage({
     required int index,
     required int activeIndex,
-    required double offset,
     required double width,
     required Widget child,
   }) {
-    final targetIndex = _swipe.targetIndex;
-    final isActive = index == activeIndex;
-    final isTarget = index == targetIndex;
-    final visible = isActive || isTarget;
-
-    var horizontalOffset = 0.0;
-    if (isActive) {
-      horizontalOffset = offset;
-    } else if (isTarget) {
-      horizontalOffset = offset + (index > activeIndex ? width : -width);
-    }
-
     return Positioned.fill(
-      child: Offstage(
-        offstage: !visible,
-        child: IgnorePointer(
-          ignoring: !isActive || targetIndex != null || _swipe.isAnimating,
-          child: Transform.translate(
-            key: ValueKey('sessionSwipePage-$index'),
-            offset: Offset(horizontalOffset, 0),
-            child: child,
-          ),
-        ),
+      child: AnimatedBuilder(
+        animation: _pageMotion,
+        child: RepaintBoundary(child: child),
+        builder: (context, page) {
+          final offset = _swipe.offset.value;
+          final targetIndex = _swipe.targetIndex;
+          final isActive = index == activeIndex;
+          final isTarget = index == targetIndex;
+          final axisRunning = _axis.isAnimating;
+          final isAxisFrom = axisRunning && index == _axisFrom && !isActive;
+          final visible = isActive || isTarget || isAxisFrom;
+
+          var horizontalOffset = 0.0;
+          if (isActive) {
+            horizontalOffset = offset;
+          } else if (isTarget) {
+            horizontalOffset = offset + (index > activeIndex ? width : -width);
+          }
+
+          return Offstage(
+            offstage: !visible,
+            child: IgnorePointer(
+              ignoring: !isActive || targetIndex != null || _swipe.isAnimating,
+              child: Transform.translate(
+                key: ValueKey('sessionSwipePage-$index'),
+                offset: Offset(horizontalOffset, 0),
+                child: _axisPage(
+                  incoming: isActive,
+                  running: axisRunning && (isActive || isAxisFrom),
+                  child: page!,
+                ),
+              ),
+            ),
+          );
+        },
       ),
+    );
+  }
+
+  /// One page's share of an X-axis switch at the current point of [_axis].
+  /// Built the same way whether a switch is running or not, so a page is
+  /// never re-parented - and its terminal never rebuilt - when one starts.
+  /// The page arrives already on its own layer, so each frame of the switch
+  /// only moves that layer instead of painting the terminal's text again.
+  /// The pages hand
+  /// over rather than cross-fade, so [FadeOverColor] fades them against the
+  /// screen's background without an offscreen pass.
+  Widget _axisPage({
+    required bool incoming,
+    required bool running,
+    required Widget child,
+  }) {
+    final background = Theme.of(context).scaffoldBackgroundColor;
+    if (!running) {
+      return Transform.translate(
+        offset: Offset.zero,
+        child: FadeOverColor(opacity: 1, color: background, child: child),
+      );
+    }
+    final t = _axis.value;
+    final travel = Easing.emphasizedDecelerate.transform(t);
+    final double opacity;
+    final double dx;
+    if (incoming) {
+      opacity = const Interval(
+        _axisHandover,
+        1,
+        curve: Curves.easeOut,
+      ).transform(t);
+      dx = _axisSign * _axisShift * (1 - travel);
+    } else {
+      opacity =
+          1 -
+          const Interval(0, _axisHandover, curve: Curves.easeIn).transform(t);
+      dx = -_axisSign * _axisShift * travel;
+    }
+    return Transform.translate(
+      offset: Offset(dx, 0),
+      child: FadeOverColor(opacity: opacity, color: background, child: child),
     );
   }
 
@@ -862,7 +1010,12 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+              padding: const EdgeInsets.fromLTRB(
+                AppTheme.space20,
+                AppTheme.space4,
+                AppTheme.space20,
+                AppTheme.space8,
+              ),
               child: SectionHeader(t.terminal.splitWithTitle),
             ),
             Flexible(
@@ -893,7 +1046,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
                       dimension: 28,
                       child: Icon(
                         PhosphorIconsRegular.plus,
-                        size: 20,
+                        size: AppTheme.icon20,
                         color: context.colors.textSecondary,
                       ),
                     ),
@@ -947,7 +1100,10 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
       child: Row(
         children: [
           Padding(
-            padding: const EdgeInsets.only(left: 6, right: 3),
+            padding: const EdgeInsets.only(
+              left: AppTheme.space6,
+              right: AppTheme.space2,
+            ),
             child: _buildTabBarAction(
               key: const ValueKey('tabBarBackButton'),
               tooltip: t.common.back,
@@ -959,21 +1115,24 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
             child: _buildTabList(
               axis: Axis.horizontal,
               padding: const EdgeInsets.fromLTRB(
-                3,
+                AppTheme.space2,
                 _kTabStripPaddingY,
-                3,
+                AppTheme.space2,
                 _kTabStripPaddingY,
               ),
             ),
           ),
           if (_terminalLive()) ...[
             Padding(
-              padding: const EdgeInsets.only(left: 3),
+              padding: const EdgeInsets.only(left: AppTheme.space2),
               child: _buildQuickSettingsButton(),
             ),
           ],
           Padding(
-            padding: const EdgeInsets.only(left: 3, right: 6),
+            padding: const EdgeInsets.only(
+              left: AppTheme.space2,
+              right: AppTheme.space6,
+            ),
             child: _buildAddTabButton(),
           ),
         ],
@@ -1037,13 +1196,18 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
             child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(6, 6, 6, 3),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppTheme.space6,
+                    AppTheme.space6,
+                    AppTheme.space6,
+                    AppTheme.space2,
+                  ),
                   child: collapsed
                       ? Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             toggle,
-                            const SizedBox(height: 3),
+                            const SizedBox(height: AppTheme.space2),
                             backButton,
                           ],
                         )
@@ -1052,13 +1216,18 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
                 Expanded(
                   child: _buildTabList(
                     axis: Axis.vertical,
-                    padding: const EdgeInsets.fromLTRB(3, 3, 3, 3),
+                    padding: const EdgeInsets.all(AppTheme.space2),
                     stretch: !collapsed,
                     collapsed: collapsed,
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(6, 3, 6, 6),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppTheme.space6,
+                    AppTheme.space2,
+                    AppTheme.space6,
+                    AppTheme.space6,
+                  ),
                   child: Align(
                     alignment: collapsed
                         ? Alignment.center
@@ -1070,7 +1239,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               _buildQuickSettingsButton(),
-                              const SizedBox(height: 3),
+                              const SizedBox(height: AppTheme.space2),
                               _buildAddTabButton(),
                             ],
                           )
@@ -1078,7 +1247,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               _buildAddTabButton(),
-                              const SizedBox(width: 6),
+                              const SizedBox(width: AppTheme.space6),
                               _buildQuickSettingsButton(),
                             ],
                           ),
@@ -1185,8 +1354,8 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
     return Container(
       key: ValueKey('splitTab-${entry.first}'),
       padding: vertical
-          ? const EdgeInsets.symmetric(vertical: 2)
-          : const EdgeInsets.symmetric(horizontal: 2),
+          ? const EdgeInsets.symmetric(vertical: AppTheme.space2)
+          : const EdgeInsets.symmetric(horizontal: AppTheme.space2),
       decoration: BoxDecoration(
         color: context.colors.surfaceOffset,
         borderRadius: radius,
@@ -1208,7 +1377,10 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
         children: [
           for (final (i, id) in entry.indexed) ...[
             if (i > 0)
-              SizedBox(width: vertical ? 0 : 2, height: vertical ? 2 : 0),
+              SizedBox(
+                width: vertical ? 0 : AppTheme.space2,
+                height: vertical ? AppTheme.space2 : 0,
+              ),
             _buildTab(
               _sessions.indexWhere((s) => s.$1 == id),
               stretch: stretch,
@@ -1313,7 +1485,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
       height: 52,
       enabled: false,
       child: Padding(
-        padding: const EdgeInsets.only(top: AppTheme.spaceXs),
+        padding: const EdgeInsets.only(top: AppTheme.space4),
         child: ViewModeSegments(
           sessionId: session.$1,
           mode: _modeFor(session.$1),
@@ -1367,7 +1539,9 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
           _TabConnectionAction.manageTunnels,
           PhosphorIconsRegular.arrowsLeftRight,
           t.portForwarding.manageTunnels,
-          trailing: activeTunnels > 0 ? CountBadge(activeTunnels) : null,
+          trailing: activeTunnels > 0
+              ? AppBadge.count(activeTunnels, tone: BadgeTone.highlight)
+              : null,
         ),
       if (persistent)
         entry(
@@ -1412,10 +1586,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
         enabled: false,
         child: Align(
           alignment: Alignment.bottomLeft,
-          child: Text(
-            t.session.menuSection.toUpperCase(),
-            style: colors.sectionLabel,
-          ),
+          child: SectionHeader(t.session.menuSection),
         ),
       ),
       ...actions,
@@ -1523,7 +1694,11 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
           customBorder: shape,
           child: SizedBox.square(
             dimension: 36,
-            child: Icon(icon, size: 18, color: context.colors.textSecondary),
+            child: Icon(
+              icon,
+              size: AppTheme.icon18,
+              color: context.colors.textSecondary,
+            ),
           ),
         ),
       ),
@@ -1670,30 +1845,21 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     _swipe.viewportWidth = constraints.maxWidth;
-                    return ValueListenableBuilder<double>(
-                      valueListenable: _swipe.offset,
-                      builder: (context, offset, _) {
-                        return ClipRect(
-                          child: Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              for (int i = 0; i < entries.length; i++)
-                                _buildSwipeSessionPage(
-                                  index: i,
-                                  activeIndex: activeEntry,
-                                  offset: offset,
-                                  width: constraints.maxWidth,
-                                  child: entries[i].length == 1
-                                      ? sessionViews[entries[i].first]!
-                                      : _buildSplitEntry(
-                                          entries[i],
-                                          sessionViews,
-                                        ),
-                                ),
-                            ],
-                          ),
-                        );
-                      },
+                    return ClipRect(
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          for (int i = 0; i < entries.length; i++)
+                            _buildSwipeSessionPage(
+                              index: i,
+                              activeIndex: activeEntry,
+                              width: constraints.maxWidth,
+                              child: entries[i].length == 1
+                                  ? sessionViews[entries[i].first]!
+                                  : _buildSplitEntry(entries[i], sessionViews),
+                            ),
+                        ],
+                      ),
                     );
                   },
                 ),
@@ -1711,7 +1877,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
           ColoredBox(
             color: backgroundColor,
             child: Padding(
-              padding: const EdgeInsets.only(bottom: 6),
+              padding: const EdgeInsets.only(bottom: AppTheme.space6),
               child: _buildToolbarForActiveSession(),
             ),
           ),

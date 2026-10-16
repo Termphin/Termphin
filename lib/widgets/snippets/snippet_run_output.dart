@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/theme.dart';
+import '../ui/app_card.dart';
 
 /// Scrollable, read-only output of one snippet run.
 ///
@@ -56,25 +57,23 @@ class _SnippetRunOutputState extends State<SnippetRunOutput> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       height: widget.height,
-      decoration: BoxDecoration(
-        color: context.colors.surfaceCard,
+      child: AppCard(
         borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-        border: Border.all(color: context.colors.surfaceBorder),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: SelectionArea(
-        child: SingleChildScrollView(
-          controller: _scrollController,
-          padding: const EdgeInsets.all(10),
-          child: SizedBox(
-            width: double.infinity,
-            child: Text(
-              widget.text,
-              style: context.colors.monoSmall.copyWith(
-                color: context.colors.textSecondary,
-                height: 1.35,
+        clipChild: true,
+        child: SelectionArea(
+          child: SingleChildScrollView(
+            controller: _scrollController,
+            padding: const EdgeInsets.all(AppTheme.space10),
+            child: SizedBox(
+              width: double.infinity,
+              child: Text(
+                widget.text,
+                style: context.colors.monoSmall.copyWith(
+                  color: context.colors.textSecondary,
+                  height: 1.35,
+                ),
               ),
             ),
           ),

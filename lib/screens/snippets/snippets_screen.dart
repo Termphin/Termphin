@@ -14,14 +14,15 @@ import '../../services/analytics/analytics_service.dart';
 import '../../services/storage/group_storage.dart';
 import '../../theme/theme.dart';
 import '../../utils/group_match.dart';
+import '../../widgets/groups/group_filter_chips.dart';
+import '../../widgets/groups/group_picker_sheet.dart';
+import '../../widgets/groups/group_section_header.dart';
+import '../../widgets/ui/app_card.dart';
 import '../../widgets/ui/app_dropdown.dart';
 import '../../widgets/ui/app_notifications.dart';
 import '../../widgets/ui/clipboard_and_links.dart';
 import '../../widgets/ui/confirm_dialog.dart';
 import '../../widgets/ui/empty_state.dart';
-import '../../widgets/ui/group_filter_chips.dart';
-import '../../widgets/ui/group_picker_sheet.dart';
-import '../../widgets/ui/group_section_header.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
 import '../../widgets/ui/selection_action_bar.dart';
 import '../search/global_search_launcher.dart';
@@ -304,7 +305,12 @@ class _SnippetsScreenState extends ConsumerState<SnippetsScreen> {
                     ),
                     if (snippets.isNotEmpty) ...[
                       const SliverPadding(
-                        padding: EdgeInsets.fromLTRB(16, 16, 16, 12),
+                        padding: EdgeInsets.fromLTRB(
+                          AppTheme.space16,
+                          AppTheme.space16,
+                          AppTheme.space16,
+                          AppTheme.space12,
+                        ),
                         sliver: SliverToBoxAdapter(
                           child: GlobalSearchLauncher(
                             heroTag: 'globalSearch-snippets',
@@ -333,13 +339,13 @@ class _SnippetsScreenState extends ConsumerState<SnippetsScreen> {
                               onPressed: () => showSnippetFormScreen(context),
                               icon: const Icon(
                                 PhosphorIconsRegular.plus,
-                                size: 18,
+                                size: AppTheme.icon18,
                               ),
                               label: Text(t.snippets.newTitle),
                               style: ElevatedButton.styleFrom(
                                 minimumSize: const Size(0, 46),
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 18,
+                                  horizontal: AppTheme.space16,
                                 ),
                               ),
                             ),
@@ -357,18 +363,23 @@ class _SnippetsScreenState extends ConsumerState<SnippetsScreen> {
                           ),
                           addTooltip: t.snippets.newTitle,
                           padding: EdgeInsets.fromLTRB(
-                            16,
-                            i == 0 ? 4 : 16,
-                            16,
-                            4,
+                            AppTheme.space16,
+                            i == 0 ? AppTheme.space4 : AppTheme.space16,
+                            AppTheme.space16,
+                            AppTheme.space4,
                           ),
                         ),
                         SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                          padding: const EdgeInsets.fromLTRB(
+                            AppTheme.space16,
+                            AppTheme.space4,
+                            AppTheme.space16,
+                            AppTheme.space12,
+                          ),
                           sliver: SliverList.separated(
                             itemCount: snippetsByGroup[group.name]!.length,
                             separatorBuilder: (_, _) =>
-                                const SizedBox(height: 10),
+                                const SizedBox(height: AppTheme.space10),
                             itemBuilder: (context, index) {
                               final snippet =
                                   snippetsByGroup[group.name]![index];
@@ -448,109 +459,92 @@ class _SnippetCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Translations.of(context);
-    final radius = BorderRadius.circular(AppTheme.radiusMd);
-    return Material(
-      color: context.colors.surfaceElevated.invisible,
-      borderRadius: radius,
-      child: AnimatedContainer(
-        duration: AppTheme.interactiveDuration,
-        decoration: BoxDecoration(
-          color: SelectionStyle.fill(
-            context,
-            context.colors.surfaceElevated,
-            selected: selected,
-          ),
-          borderRadius: radius,
-          border: Border.fromBorderSide(
-            SelectionStyle.side(context, selected: selected),
-          ),
-        ),
-        child: InkWell(
-          onTap: onTap,
-          onLongPress: onLongPress,
-          borderRadius: radius,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            child: Row(
+    return AppCard(
+      elevated: true,
+      selected: selected,
+      onTap: onTap,
+      onLongPress: onLongPress,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppTheme.space14,
+        vertical: AppTheme.space14,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (selectionMode) ...[
+            SelectionCheck(selected: selected, size: 22),
+            const SizedBox(width: AppTheme.space12),
+          ],
+          Expanded(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (selectionMode) ...[
-                  SelectionCheck(selected: selected, size: 22),
-                  const SizedBox(width: 12),
-                ],
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        snippet.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.colors.itemTitle,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        snippet.command,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.colors.monoSmall.copyWith(
-                          color: context.colors.textTertiary,
-                        ),
-                      ),
-                    ],
+                Text(
+                  snippet.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.colors.itemTitle,
+                ),
+                const SizedBox(height: AppTheme.space4),
+                Text(
+                  snippet.command,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.colors.monoSmall.copyWith(
+                    color: context.colors.textTertiary,
                   ),
                 ),
-                const SizedBox(width: 8),
-                if (selectionMode)
-                  const SizedBox(width: 40)
-                else
-                  AppActionDropdown<_SnippetAction>(
-                    tooltip: t.snippets.moreActions,
-                    iconSize: 20,
-                    iconColor: context.colors.textTertiary,
-                    buttonSize: 40,
-                    width: 220,
-                    items: [
-                      DropdownItem(
-                        value: _SnippetAction.edit,
-                        intrinsicHeight: true,
-                        child: AppDropdownItem(
-                          icon: PhosphorIconsRegular.pencilSimple,
-                          label: t.common.edit,
-                        ),
-                      ),
-                      DropdownItem(
-                        value: _SnippetAction.copy,
-                        intrinsicHeight: true,
-                        child: AppDropdownItem(
-                          icon: PhosphorIconsRegular.copy,
-                          label: t.snippets.copyCommand,
-                        ),
-                      ),
-                      DropdownItem(
-                        value: _SnippetAction.duplicate,
-                        intrinsicHeight: true,
-                        child: AppDropdownItem(
-                          icon: PhosphorIconsRegular.copySimple,
-                          label: t.common.duplicate,
-                        ),
-                      ),
-                      DropdownItem(
-                        value: _SnippetAction.delete,
-                        intrinsicHeight: true,
-                        child: AppDropdownItem(
-                          icon: PhosphorIconsRegular.trash,
-                          label: t.common.delete,
-                          color: context.colors.error,
-                        ),
-                      ),
-                    ],
-                    onSelected: onAction,
-                  ),
               ],
             ),
           ),
-        ),
+          const SizedBox(width: AppTheme.space8),
+          if (selectionMode)
+            const SizedBox(width: AppTheme.space40)
+          else
+            AppActionDropdown<_SnippetAction>(
+              tooltip: t.snippets.moreActions,
+              iconSize: AppTheme.icon20,
+              iconColor: context.colors.textTertiary,
+              buttonSize: 40,
+              width: 220,
+              items: [
+                DropdownItem(
+                  value: _SnippetAction.edit,
+                  intrinsicHeight: true,
+                  child: AppDropdownItem(
+                    icon: PhosphorIconsRegular.pencilSimple,
+                    label: t.common.edit,
+                  ),
+                ),
+                DropdownItem(
+                  value: _SnippetAction.copy,
+                  intrinsicHeight: true,
+                  child: AppDropdownItem(
+                    icon: PhosphorIconsRegular.copy,
+                    label: t.snippets.copyCommand,
+                  ),
+                ),
+                DropdownItem(
+                  value: _SnippetAction.duplicate,
+                  intrinsicHeight: true,
+                  child: AppDropdownItem(
+                    icon: PhosphorIconsRegular.copySimple,
+                    label: t.common.duplicate,
+                  ),
+                ),
+                DropdownItem(
+                  value: _SnippetAction.delete,
+                  intrinsicHeight: true,
+                  child: AppDropdownItem(
+                    icon: PhosphorIconsRegular.trash,
+                    label: t.common.delete,
+                    color: context.colors.error,
+                  ),
+                ),
+              ],
+              onSelected: onAction,
+            ),
+        ],
       ),
     );
   }

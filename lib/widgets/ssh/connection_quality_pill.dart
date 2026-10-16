@@ -66,7 +66,7 @@ class _ConnectionQualityPillState extends State<ConnectionQualityPill> {
   Widget build(BuildContext context) {
     final quality = widget.quality;
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 200),
+      duration: AppTheme.motionSlow,
       child: switch (quality.health) {
         ConnectionHealth.good => const SizedBox.shrink(),
         ConnectionHealth.slow => _Pill(
@@ -156,7 +156,7 @@ class ReconnectingIndicator extends StatelessWidget {
                     waitingForNetwork
                         ? PhosphorIconsFill.wifiSlash
                         : PhosphorIconsFill.plugs,
-                    size: 14,
+                    size: AppTheme.icon14,
                     color: colors.warning,
                   ),
                 ],
@@ -198,17 +198,20 @@ class _Pill extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppTheme.space10,
+              vertical: AppTheme.space6,
+            ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, size: 14, color: color),
-                const SizedBox(width: 6),
+                Icon(icon, size: AppTheme.icon14, color: color),
+                const SizedBox(width: AppTheme.space6),
                 Text(
                   label,
                   style: TextStyle(
                     color: colors.textPrimary,
-                    fontSize: 12,
+                    fontSize: AppTheme.font12,
                     fontWeight: FontWeight.w600,
                     fontFeatures: const [FontFeature.tabularFigures()],
                   ),

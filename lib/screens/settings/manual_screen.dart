@@ -10,6 +10,7 @@ import '../../services/app/manual_urls.dart';
 import '../../theme/theme.dart';
 import '../../widgets/ui/app_notifications.dart';
 import '../../widgets/ui/clipboard_and_links.dart';
+import '../../widgets/ui/empty_state.dart';
 
 /// The user manual, read inside the app.
 ///
@@ -132,38 +133,12 @@ class _ManualError extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Translations.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              PhosphorIconsRegular.cloudSlash,
-              size: 40,
-              color: context.colors.textTertiary,
-            ),
-            const SizedBox(height: 14),
-            Text(
-              t.manual.loadFailed,
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              t.manual.loadFailedBody,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: context.colors.textTertiary,
-              ),
-            ),
-            const SizedBox(height: 18),
-            FilledButton(onPressed: onRetry, child: Text(t.manual.retry)),
-          ],
-        ),
-      ),
+    return EmptyStatePanel(
+      icon: PhosphorIconsRegular.cloudSlash,
+      title: t.manual.loadFailed,
+      subtitle: t.manual.loadFailedBody,
+      tone: EmptyStateTone.error,
+      action: FilledButton(onPressed: onRetry, child: Text(t.manual.retry)),
     );
   }
 }

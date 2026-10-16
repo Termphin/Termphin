@@ -21,6 +21,7 @@ import '../../services/ssh/ssh_session_manager.dart';
 import '../../services/storage/group_storage.dart';
 import '../../theme/theme.dart';
 import '../../utils/group_match.dart';
+import '../groups/group_picker_field.dart';
 import '../terminal/port_forwarding_rule_sheet.dart';
 import '../terminal/port_forwarding_rule_tile.dart';
 import '../ui/add_row_card.dart';
@@ -29,12 +30,11 @@ import '../ui/app_divider.dart';
 import '../ui/app_form_field.dart';
 import '../ui/app_notifications.dart';
 import '../ui/app_sheet.dart';
-import '../ui/avatar_picker.dart';
 import '../ui/empty_state.dart';
-import '../ui/group_picker_field.dart';
 import '../ui/large_title_scaffold.dart';
 import '../ui/section_header.dart';
-import '../ui/settings_controls.dart';
+import '../ui/settings_tile.dart';
+import 'avatar_picker.dart';
 import 'jump_host_sheet.dart';
 
 enum _KeySource { keyManager, manual }
@@ -409,11 +409,11 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
         ),
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 12),
+            padding: const EdgeInsets.only(right: AppTheme.space12),
             child: _isSaving
                 ? const SizedBox(
-                    width: 20,
-                    height: 20,
+                    width: AppTheme.icon20,
+                    height: AppTheme.icon20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : TextButton(
@@ -429,7 +429,7 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
                       style: TextStyle(
                         color: context.colors.primary,
                         fontWeight: FontWeight.w700,
-                        fontSize: 15,
+                        fontSize: AppTheme.font15,
                       ),
                     ),
                   ),
@@ -443,27 +443,27 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
             key: _formKey,
             child: ListView(
               padding: EdgeInsets.fromLTRB(
-                20,
-                isNew ? 16 : 8,
-                20,
-                40,
+                AppTheme.space20,
+                isNew ? AppTheme.space16 : AppTheme.space8,
+                AppTheme.space20,
+                AppTheme.space40,
               ).add(gutter),
               children: [
                 SectionHeader(t.profileForm.avatar),
-                const SizedBox(height: 10),
+                const SizedBox(height: AppTheme.space10),
                 _buildAvatarSection(),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: AppTheme.space24),
                 SectionHeader(t.groups.groupTitle),
-                const SizedBox(height: 10),
+                const SizedBox(height: AppTheme.space10),
                 GroupPickerField(
                   group: _group,
                   onChanged: (g) => setState(() => _group = g),
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: AppTheme.space24),
                 SectionHeader(t.profileForm.connection),
-                const SizedBox(height: 10),
+                const SizedBox(height: AppTheme.space10),
                 AppFormField(
                   controller: _nameCtrl,
                   label: t.common.name,
@@ -471,7 +471,7 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
                   icon: PhosphorIconsFill.tag,
                   action: TextInputAction.next,
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: AppTheme.space10),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -489,7 +489,7 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
                             : null,
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: AppTheme.space10),
                     SizedBox(
                       width: 92,
                       child: AppFormField(
@@ -508,7 +508,7 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: AppTheme.space10),
                 AppFormField(
                   controller: _userCtrl,
                   label: t.profileForm.username,
@@ -520,25 +520,25 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
                       : null,
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: AppTheme.space24),
                 SectionHeader(
                   t.profileForm.fallbackHosts,
                   hint: t.profileForm.fallbackHostsHint,
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: AppTheme.space10),
                 _buildFallbackHostsSection(t),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: AppTheme.space24),
                 SectionHeader(
                   t.profileForm.jumpHost,
                   hint: t.profileForm.jumpHostHint,
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: AppTheme.space10),
                 _buildJumpHostSection(t),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: AppTheme.space24),
                 SectionHeader(t.profileForm.authentication),
-                const SizedBox(height: 10),
+                const SizedBox(height: AppTheme.space10),
                 _AuthMethodPicker(
                   selected: _authMethod,
                   onSelected: (method) {
@@ -554,7 +554,7 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
                   },
                 ),
                 if (_authMissing) ...[
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppTheme.space8),
                   Text(
                     t.profileForm.chooseAuth,
                     style: context.colors.uiSmall.copyWith(
@@ -562,7 +562,7 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
                     ),
                   ),
                 ],
-                const SizedBox(height: 12),
+                const SizedBox(height: AppTheme.space12),
 
                 if (_authMethod == AuthMethod.password)
                   AppFormField(
@@ -581,7 +581,7 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
                         _hidePassword
                             ? PhosphorIconsFill.eyeSlash
                             : PhosphorIconsFill.eye,
-                        size: 20,
+                        size: AppTheme.icon20,
                         color: context.colors.textTertiary,
                       ),
                       onPressed: () =>
@@ -590,10 +590,10 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
                   ),
 
                 if (_authMethod == AuthMethod.privateKey) _buildKeySection(),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppTheme.space16),
                 _buildConnectionTest(t),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: AppTheme.space24),
                 _buildPortForwardingSection(t),
               ],
             ),
@@ -616,35 +616,21 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
       children: [
         if (_fallbackHosts.isEmpty)
           Padding(
-            padding: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.only(bottom: AppTheme.space10),
             child: AppEmptyHint(text: t.profileForm.fallbackHostsEmpty),
           )
         else
-          Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            decoration: BoxDecoration(
-              color: context.colors.surfaceCard,
-              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-              border: Border.all(color: context.colors.surfaceBorder),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppTheme.space10),
+            child: AppCard.fields(
               children: [
-                for (var i = 0; i < _fallbackHosts.length; i++)
-                  Container(
+                for (var i = 0; i < _fallbackHosts.length; i++) ...[
+                  if (i > 0) const AppDivider(),
+                  Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 4,
+                      horizontal: AppTheme.space14,
+                      vertical: AppTheme.space4,
                     ),
-                    decoration: i == 0
-                        ? null
-                        : BoxDecoration(
-                            border: Border(
-                              top: BorderSide(
-                                color: context.colors.surfaceBorder,
-                              ),
-                            ),
-                          ),
                     child: Row(
                       children: [
                         SizedBox(
@@ -653,7 +639,7 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
                             '${i + 1}',
                             style: TextStyle(
                               color: context.colors.textTertiary,
-                              fontSize: 12,
+                              fontSize: AppTheme.font12,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -662,7 +648,7 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
                           child: Text(
                             _fallbackHosts[i],
                             style: context.colors.monoStyle.copyWith(
-                              fontSize: 13,
+                              fontSize: AppTheme.font13,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -671,7 +657,7 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
                           visualDensity: VisualDensity.compact,
                           icon: const Icon(
                             PhosphorIconsRegular.arrowUp,
-                            size: 16,
+                            size: AppTheme.icon16,
                           ),
                           onPressed: i == 0
                               ? null
@@ -684,7 +670,7 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
                           visualDensity: VisualDensity.compact,
                           icon: const Icon(
                             PhosphorIconsRegular.arrowDown,
-                            size: 16,
+                            size: AppTheme.icon16,
                           ),
                           onPressed: i == _fallbackHosts.length - 1
                               ? null
@@ -697,7 +683,7 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
                           visualDensity: VisualDensity.compact,
                           icon: Icon(
                             PhosphorIconsRegular.x,
-                            size: 16,
+                            size: AppTheme.icon16,
                             color: context.colors.error,
                           ),
                           onPressed: () =>
@@ -706,6 +692,7 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
                       ],
                     ),
                   ),
+                ],
               ],
             ),
           ),
@@ -718,9 +705,11 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
         ),
         if (_fallbackHosts.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: SettingsSwitchRow(
-              label: t.profileForm.mainHostFirst,
+            padding: const EdgeInsets.only(top: AppTheme.space6),
+            child: SettingsSwitchTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              title: t.profileForm.mainHostFirst,
               subtitle: t.profileForm.mainHostFirstHint,
               value: _mainHostFirst,
               onChanged: (value) => setState(() => _mainHostFirst = value),
@@ -774,42 +763,21 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
         .where((profile) => profile.id == _jumpHostProfileId)
         .firstOrNull;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: context.colors.surfaceCard,
-        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-        border: Border.all(color: context.colors.surfaceBorder),
-      ),
-      // The tile paints its ink on the nearest Material, which without this
-      // is the one behind the card - so the splash lands under the fill and
-      // never shows.
-      child: Material(
-        type: MaterialType.transparency,
-        child: ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 14),
-          leading: Icon(
-            PhosphorIconsRegular.arrowBendRightUp,
-            color: context.colors.textSecondary,
-          ),
-          title: Text(
-            selected == null
-                ? t.profileForm.jumpHostNone
-                : anonymize
-                ? IdentityAnonymizer.name(selected.id)
-                : selected.name,
-          ),
-          subtitle: selected == null
-              ? null
-              : Text(
-                  jumpHostAddress(selected, anonymize: anonymize),
-                  style: context.colors.monoSmall,
-                ),
-          trailing: Icon(
-            PhosphorIconsFill.caretRight,
-            color: context.colors.textTertiary,
-          ),
-          onTap: () => _pickJumpHost(t, candidates),
+    return AppCard(
+      child: SettingsTile(
+        icon: PhosphorIconsRegular.arrowBendRightUp,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppTheme.space14,
         ),
+        title: selected == null
+            ? t.profileForm.jumpHostNone
+            : anonymize
+            ? IdentityAnonymizer.name(selected.id)
+            : selected.name,
+        subtitle: selected == null
+            ? null
+            : jumpHostAddress(selected, anonymize: anonymize),
+        onTap: () => _pickJumpHost(t, candidates),
       ),
     );
   }
@@ -847,11 +815,14 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
           onPressed: _testConnection,
           icon: testing
               ? const SizedBox(
-                  width: 16,
-                  height: 16,
+                  width: AppTheme.icon16,
+                  height: AppTheme.icon16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Icon(PhosphorIconsRegular.plugsConnected, size: 18),
+              : const Icon(
+                  PhosphorIconsRegular.plugsConnected,
+                  size: AppTheme.icon18,
+                ),
           label: Text(
             testing
                 ? t.profileForm.testingConnection
@@ -859,7 +830,7 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
           ),
         ),
         if (result != null) ...[
-          const SizedBox(height: 10),
+          const SizedBox(height: AppTheme.space10),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -867,10 +838,10 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
                 result.ok
                     ? PhosphorIconsRegular.checkCircle
                     : PhosphorIconsFill.warningCircle,
-                size: 18,
+                size: AppTheme.icon18,
                 color: result.ok ? colors.success : colors.error,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppTheme.space8),
               Expanded(
                 child: Text(
                   result.message,
@@ -890,7 +861,7 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
     if (_keysLoading) {
       return const Center(
         child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 20),
+          padding: EdgeInsets.symmetric(vertical: AppTheme.space20),
           child: CircularProgressIndicator(strokeWidth: 2),
         ),
       );
@@ -909,7 +880,7 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
       final selected =
           _selectedKeyId == key.id && _keySource == _KeySource.keyManager;
       return Padding(
-        padding: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.only(bottom: AppTheme.space8),
         child: _KeyCard(
           sshKey: key,
           selected: selected,
@@ -935,69 +906,63 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
           for (final key in sameGroupKeys) buildKeyCard(key),
           if (hasKeySplit)
             Padding(
-              padding: const EdgeInsets.only(top: 8, bottom: 10),
+              padding: const EdgeInsets.only(
+                top: AppTheme.space8,
+                bottom: AppTheme.space10,
+              ),
               child: SectionHeader(t.groups.otherGroups),
             ),
           for (final key in otherGroupKeys) buildKeyCard(key),
-          const SizedBox(height: 4),
+          const SizedBox(height: AppTheme.space4),
         ],
 
         AddRowCard(label: t.profileForm.createKey, onTap: _createKey),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppTheme.space8),
 
-        GestureDetector(
+        AppCard(
           onTap: () => setState(() {
             _showManualEntry = !_showManualEntry;
             if (_showManualEntry) _keySource = _KeySource.manual;
           }),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: _showManualEntry
-                  ? context.colors.primary.withValues(alpha: 0.08)
-                  : context.colors.surfaceCard,
-              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-              border: Border.all(
+          selected: _showManualEntry,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppTheme.space14,
+            vertical: AppTheme.space12,
+          ),
+          child: Row(
+            children: [
+              Icon(
+                PhosphorIconsFill.pencilSimple,
+                size: AppTheme.icon18,
                 color: _showManualEntry
-                    ? context.colors.primary.withValues(alpha: 0.4)
-                    : context.colors.surfaceBorder,
+                    ? context.colors.primary
+                    : context.colors.textTertiary,
               ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  PhosphorIconsFill.pencilSimple,
-                  size: 18,
+              const SizedBox(width: AppTheme.space10),
+              Text(
+                t.profileForm.enterKeyManually,
+                style: TextStyle(
                   color: _showManualEntry
                       ? context.colors.primary
-                      : context.colors.textTertiary,
+                      : context.colors.textSecondary,
+                  fontSize: AppTheme.font14,
+                  fontWeight: FontWeight.w500,
                 ),
-                const SizedBox(width: 10),
-                Text(
-                  t.profileForm.enterKeyManually,
-                  style: TextStyle(
-                    color: _showManualEntry
-                        ? context.colors.primary
-                        : context.colors.textSecondary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const Spacer(),
-                Icon(
-                  _showManualEntry
-                      ? PhosphorIconsFill.caretUp
-                      : PhosphorIconsFill.caretDown,
-                  size: 20,
-                  color: context.colors.textTertiary,
-                ),
-              ],
-            ),
+              ),
+              const Spacer(),
+              Icon(
+                _showManualEntry
+                    ? PhosphorIconsFill.caretUp
+                    : PhosphorIconsFill.caretDown,
+                size: AppTheme.icon20,
+                color: context.colors.textTertiary,
+              ),
+            ],
           ),
         ),
 
         if (_showManualEntry) ...[
-          const SizedBox(height: 8),
+          const SizedBox(height: AppTheme.space8),
           AppFormField(
             controller: _privateKeyCtrl,
             minLines: 5,
@@ -1017,7 +982,7 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
           ),
         ],
 
-        const SizedBox(height: 12),
+        const SizedBox(height: AppTheme.space12),
         AppFormField(
           controller: _passphraseCtrl,
           label: t.profileForm.passphrase,
@@ -1033,7 +998,7 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
               _hidePassphrase
                   ? PhosphorIconsFill.eyeSlash
                   : PhosphorIconsFill.eye,
-              size: 20,
+              size: AppTheme.icon20,
               color: context.colors.textTertiary,
             ),
             onPressed: () => setState(() => _hidePassphrase = !_hidePassphrase),
@@ -1050,16 +1015,16 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SectionHeader(t.portForwarding.title),
-        const SizedBox(height: 10),
+        const SizedBox(height: AppTheme.space10),
         if (rules.isEmpty)
           EmptyStateHint(
             icon: PhosphorIconsRegular.arrowsLeftRight,
             text: t.portForwarding.noRulesYet,
-            padding: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.only(bottom: AppTheme.space12),
           )
         else
           Padding(
-            padding: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.only(bottom: AppTheme.space10),
             child: AppCard.fields(
               children: [
                 for (final (i, rule) in rules.indexed) ...[
@@ -1110,34 +1075,19 @@ class _AuthMethodPicker extends StatelessWidget {
       AuthMethod.password => t.profileForm.passwordHint,
       AuthMethod.privateKey => t.profileForm.sshKeyHint,
     };
-    return Container(
-      decoration: BoxDecoration(
-        color: context.colors.surfaceCard,
-        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-        border: Border.all(color: context.colors.surfaceBorder),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (var i = 0; i < rows.length; i++)
-            Container(
-              decoration: i == 0
-                  ? null
-                  : BoxDecoration(
-                      border: Border(
-                        top: BorderSide(color: context.colors.surfaceBorder),
-                      ),
-                    ),
-              child: _AuthMethodRow(
-                icon: rows[i].$2,
-                label: labelFor(rows[i].$1),
-                hint: hintFor(rows[i].$1),
-                selected: selected == rows[i].$1,
-                onTap: () => onSelected(rows[i].$1),
-              ),
-            ),
+    return AppCard.fields(
+      children: [
+        for (var i = 0; i < rows.length; i++) ...[
+          if (i > 0) const AppDivider(),
+          _AuthMethodRow(
+            icon: rows[i].$2,
+            label: labelFor(rows[i].$1),
+            hint: hintFor(rows[i].$1),
+            selected: selected == rows[i].$1,
+            onTap: () => onSelected(rows[i].$1),
+          ),
         ],
-      ),
+      ],
     );
   }
 }
@@ -1164,95 +1114,86 @@ class _KeyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return AppCard(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: AppTheme.interactiveDuration,
-        padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
-        decoration: BoxDecoration(
-          color: selected
-              ? context.colors.primary.withValues(alpha: 0.08)
-              : context.colors.surfaceCard,
-          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-          border: Border.all(
-            color: selected
-                ? context.colors.primary.withValues(alpha: 0.5)
-                : context.colors.surfaceBorder,
-            width: selected ? 1.5 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            AnimatedContainer(
-              duration: AppTheme.interactiveDuration,
-              width: 18,
-              height: 18,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
+      selected: selected,
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.space14,
+        AppTheme.space12,
+        AppTheme.space8,
+        AppTheme.space12,
+      ),
+      child: Row(
+        children: [
+          AnimatedContainer(
+            duration: AppTheme.interactiveDuration,
+            width: 18,
+            height: 18,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: selected
+                  ? context.colors.primary
+                  : context.colors.primary.invisible,
+              border: Border.all(
                 color: selected
                     ? context.colors.primary
-                    : context.colors.primary.invisible,
-                border: Border.all(
-                  color: selected
-                      ? context.colors.primary
-                      : context.colors.surfaceBorder,
-                  width: 2,
+                    : context.colors.surfaceBorder,
+                width: 2,
+              ),
+            ),
+            child: selected
+                ? Icon(
+                    PhosphorIconsRegular.check,
+                    size: AppTheme.icon12,
+                    color: context.colors.onPrimary,
+                  )
+                : null,
+          ),
+          const SizedBox(width: AppTheme.space12),
+          Expanded(
+            child: Row(
+              children: [
+                Text(
+                  sshKey.name,
+                  style: TextStyle(
+                    fontSize: AppTheme.font14,
+                    fontWeight: FontWeight.w600,
+                    color: selected
+                        ? context.colors.textPrimary
+                        : context.colors.textSecondary,
+                  ),
                 ),
-              ),
-              child: selected
-                  ? Icon(
-                      PhosphorIconsRegular.check,
-                      size: 12,
-                      color: context.colors.onPrimary,
-                    )
-                  : null,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Row(
-                children: [
-                  Text(
-                    sshKey.name,
+                const SizedBox(width: AppTheme.space8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppTheme.space6,
+                    vertical: AppTheme.space2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _typeColor(context).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusXs),
+                  ),
+                  child: Text(
+                    _typeLabel,
                     style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: selected
-                          ? context.colors.textPrimary
-                          : context.colors.textSecondary,
+                      color: _typeColor(context),
+                      fontSize: AppTheme.font10,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _typeColor(context).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(AppTheme.radiusXs),
-                    ),
-                    child: Text(
-                      _typeLabel,
-                      style: TextStyle(
-                        color: _typeColor(context),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-            IconButton(
-              icon: const Icon(PhosphorIconsFill.copy, size: 16),
-              color: context.colors.textTertiary,
-              tooltip: Translations.of(context).keys.copyPublicKey,
-              onPressed: onCopyPubkey,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-            ),
-          ],
-        ),
+          ),
+          IconButton(
+            icon: const Icon(PhosphorIconsFill.copy, size: AppTheme.icon16),
+            color: context.colors.textTertiary,
+            tooltip: Translations.of(context).keys.copyPublicKey,
+            onPressed: onCopyPubkey,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          ),
+        ],
       ),
     );
   }
@@ -1279,17 +1220,20 @@ class _AuthMethodRow extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppTheme.space14,
+          vertical: AppTheme.space14,
+        ),
         child: Row(
           children: [
             Icon(
               icon,
-              size: 18,
+              size: AppTheme.icon18,
               color: selected
                   ? context.colors.primary
                   : context.colors.textTertiary,
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: AppTheme.space12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1297,14 +1241,14 @@ class _AuthMethodRow extends StatelessWidget {
                   Text(
                     label,
                     style: TextStyle(
-                      fontSize: 15,
+                      fontSize: AppTheme.font15,
                       fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
                       color: selected
                           ? context.colors.textPrimary
                           : context.colors.textSecondary,
                     ),
                   ),
-                  const SizedBox(height: 3),
+                  const SizedBox(height: AppTheme.space2),
                   Text(
                     hint,
                     style: context.colors.uiSmall.copyWith(
@@ -1314,7 +1258,7 @@ class _AuthMethodRow extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: AppTheme.space12),
             AnimatedContainer(
               duration: AppTheme.interactiveDuration,
               width: 18,
@@ -1334,7 +1278,7 @@ class _AuthMethodRow extends StatelessWidget {
               child: selected
                   ? Icon(
                       PhosphorIconsRegular.check,
-                      size: 10,
+                      size: AppTheme.icon10,
                       color: context.colors.onPrimary,
                     )
                   : null,

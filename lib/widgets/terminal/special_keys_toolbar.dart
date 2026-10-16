@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import '../../i18n/strings.g.dart';
 import '../../services/settings/toolbar_layout.dart';
 import '../../theme/theme.dart';
-import '../ui/toolbar_key_button.dart';
+import 'toolbar_key_button.dart';
 
 export '../../services/settings/toolbar_layout.dart';
 
@@ -266,7 +266,12 @@ class _SpecialKeysToolbarState extends State<SpecialKeysToolbar> {
           ),
         ),
       ),
-      padding: const EdgeInsets.only(left: 4, right: 4, top: 6, bottom: 3),
+      padding: const EdgeInsets.only(
+        left: AppTheme.space4,
+        right: AppTheme.space4,
+        top: AppTheme.space6,
+        bottom: AppTheme.space2,
+      ),
       child: SizedBox(
         height:
             gridHeight +
@@ -310,7 +315,7 @@ class _SpecialKeysToolbarState extends State<SpecialKeysToolbar> {
         return Row(
           children: [
             for (int i = 0; i < pageCount; i++) ...[
-              if (i > 0) const SizedBox(width: 6),
+              if (i > 0) const SizedBox(width: AppTheme.space6),
               Expanded(
                 child: Semantics(
                   button: true,
@@ -327,7 +332,9 @@ class _SpecialKeysToolbarState extends State<SpecialKeysToolbar> {
                       );
                     },
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppTheme.space4,
+                      ),
                       child: AnimatedContainer(
                         duration: AppTheme.motionFast,
                         height: 2,
@@ -379,7 +386,7 @@ class _SpecialKeysToolbarState extends State<SpecialKeysToolbar> {
         for (final id in ids)
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2),
+              padding: const EdgeInsets.symmetric(horizontal: AppTheme.space2),
               child: _buildAction(id, buttonHeight),
             ),
           ),
@@ -469,21 +476,21 @@ TerminalColorScheme toolbarSchemeFromTheme(BuildContext context) {
     foreground: onSurface,
     cursor: primary,
     selection: primary.withValues(alpha: 0.28),
-    black: const Color(0xFF111111),
+    black: AppTheme.toolbarBlack,
     red: error,
     green: context.colors.success,
     yellow: context.colors.warning,
     blue: primary,
-    magenta: const Color(0xFF8B5CF6),
-    cyan: const Color(0xFF06B6D4),
+    magenta: AppTheme.toolbarMagenta,
+    cyan: AppTheme.toolbarCyan,
     white: onSurface.withValues(alpha: 0.9),
-    brightBlack: const Color(0xFF6B7280),
+    brightBlack: AppTheme.toolbarBrightBlack,
     brightRed: error,
     brightGreen: context.colors.success,
     brightYellow: context.colors.warning,
     brightBlue: primary,
-    brightMagenta: const Color(0xFFA78BFA),
-    brightCyan: const Color(0xFF22D3EE),
+    brightMagenta: AppTheme.toolbarBrightMagenta,
+    brightCyan: AppTheme.toolbarBrightCyan,
     brightWhite: onSurface,
     uiBorder: theme.dividerColor,
     uiSurface: surface,

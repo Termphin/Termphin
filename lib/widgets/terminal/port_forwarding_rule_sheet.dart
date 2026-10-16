@@ -138,7 +138,7 @@ class _PortForwardingRuleScreenState extends State<_PortForwardingRuleScreen> {
         ),
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 12),
+            padding: const EdgeInsets.only(right: AppTheme.space12),
             child: TextButton(
               onPressed: _canSave ? _save : null,
               child: Text(
@@ -148,7 +148,7 @@ class _PortForwardingRuleScreenState extends State<_PortForwardingRuleScreen> {
                       ? context.colors.primary
                       : context.colors.textTertiary,
                   fontWeight: FontWeight.w700,
-                  fontSize: 15,
+                  fontSize: AppTheme.font15,
                 ),
               ),
             ),
@@ -159,13 +159,18 @@ class _PortForwardingRuleScreenState extends State<_PortForwardingRuleScreen> {
         top: false,
         child: ContentGutter(
           builder: (context, gutter) => ListView(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 40).add(gutter),
+            padding: const EdgeInsets.fromLTRB(
+              AppTheme.space20,
+              AppTheme.space8,
+              AppTheme.space20,
+              AppTheme.space40,
+            ).add(gutter),
             children: [
               SectionHeader(
                 t.portForwarding.modeSection,
                 hint: t.portForwarding.modeQuestion,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: AppTheme.space10),
               Row(
                 children: [
                   Expanded(
@@ -177,7 +182,7 @@ class _PortForwardingRuleScreenState extends State<_PortForwardingRuleScreen> {
                       onTap: () => setState(() => _type = ForwardType.local),
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: AppTheme.space10),
                   Expanded(
                     child: _ModeOptionCard(
                       icon: PhosphorIconsFill.globe,
@@ -189,7 +194,7 @@ class _PortForwardingRuleScreenState extends State<_PortForwardingRuleScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: AppTheme.space10),
               Text(
                 isLocal
                     ? t.portForwarding.localForwardDescription
@@ -200,25 +205,25 @@ class _PortForwardingRuleScreenState extends State<_PortForwardingRuleScreen> {
                 ),
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: AppTheme.space24),
               SectionHeader(t.portForwarding.previewSection),
-              const SizedBox(height: 10),
+              const SizedBox(height: AppTheme.space10),
               _RoutePreview(
                 type: _type,
                 localPort: _localPortCtrl.text.trim(),
                 remotePort: _remotePortCtrl.text.trim(),
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: AppTheme.space24),
               SectionHeader(t.portForwarding.detailsSection),
-              const SizedBox(height: 10),
+              const SizedBox(height: AppTheme.space10),
               AppFormField(
                 controller: _nameCtrl,
                 label: t.portForwarding.name,
                 hint: t.common.optional,
                 icon: PhosphorIconsFill.tag,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: AppTheme.space10),
 
               if (isLocal) ...[
                 AppFormField(
@@ -230,14 +235,14 @@ class _PortForwardingRuleScreenState extends State<_PortForwardingRuleScreen> {
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   onChanged: (_) => setState(() {}),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: AppTheme.space10),
                 AppFormField(
                   controller: _remoteHostCtrl,
                   label: t.portForwarding.remoteHost,
                   hint: t.portForwarding.remoteHostHint,
                   icon: PhosphorIconsFill.globe,
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: AppTheme.space10),
                 AppFormField(
                   controller: _remotePortCtrl,
                   label: t.portForwarding.remotePort,
@@ -258,14 +263,14 @@ class _PortForwardingRuleScreenState extends State<_PortForwardingRuleScreen> {
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   onChanged: (_) => setState(() {}),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: AppTheme.space10),
                 AppFormField(
                   controller: _localHostCtrl,
                   label: t.portForwarding.localHostLabel,
                   hint: t.portForwarding.localHostLabelHint,
                   icon: PhosphorIconsFill.deviceMobile,
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: AppTheme.space10),
                 AppFormField(
                   controller: _localPortCtrl,
                   label: t.portForwarding.localPortTargetLabel,
@@ -314,7 +319,7 @@ class _ModeOptionCard extends StatelessWidget {
         borderRadius: radius,
         child: AnimatedContainer(
           duration: AppTheme.interactiveDuration,
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(AppTheme.space12),
           decoration: BoxDecoration(
             borderRadius: radius,
             border: Border.all(
@@ -326,10 +331,10 @@ class _ModeOptionCard extends StatelessWidget {
             children: [
               Icon(
                 icon,
-                size: 20,
+                size: AppTheme.icon20,
                 color: selected ? colors.primary : colors.textTertiary,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: AppTheme.space10),
               Text(
                 label,
                 style: colors.uiStyle.copyWith(
@@ -337,11 +342,11 @@ class _ModeOptionCard extends StatelessWidget {
                   color: selected ? colors.primary : colors.textPrimary,
                 ),
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: AppTheme.space2),
               TwoLineLabel(
                 text: subtitle,
                 style: colors.uiSmall.copyWith(
-                  fontSize: 11,
+                  fontSize: AppTheme.font11,
                   height: 1.3,
                   color: colors.textTertiary,
                 ),
@@ -373,7 +378,10 @@ class _RoutePreview extends StatelessWidget {
     final isLocal = type == ForwardType.local;
     return AppCard(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppTheme.space14,
+          vertical: AppTheme.space14,
+        ),
         child: Row(
           children: [
             Expanded(
@@ -386,10 +394,10 @@ class _RoutePreview extends StatelessWidget {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: AppTheme.space8),
               child: Icon(
                 PhosphorIconsFill.arrowRight,
-                size: 16,
+                size: AppTheme.icon16,
                 color: context.colors.textTertiary,
               ),
             ),
@@ -430,12 +438,12 @@ class _Endpoint extends StatelessWidget {
           label,
           textAlign: TextAlign.center,
           style: colors.uiSmall.copyWith(
-            fontSize: 11,
+            fontSize: AppTheme.font11,
             fontWeight: FontWeight.w600,
             color: highlight ? colors.primary : colors.textTertiary,
           ),
         ),
-        const SizedBox(height: 3),
+        const SizedBox(height: AppTheme.space2),
         Text(
           hasPort ? ':$port' : ':----',
           textAlign: TextAlign.center,

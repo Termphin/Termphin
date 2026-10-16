@@ -3,6 +3,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
 import '../../theme/theme.dart';
+import '../ui/bar_icon_button.dart';
 
 /// The search bar above a terminal pane. Only the controls - the pane owns
 /// the matches, the highlights and the scrolling.
@@ -59,7 +60,10 @@ class TerminalSearchBar extends StatelessWidget {
         color: colors.surfaceCard,
         border: Border(bottom: BorderSide(color: colors.surfaceDivider)),
       ),
-      padding: const EdgeInsets.only(left: 10, right: 2),
+      padding: const EdgeInsets.only(
+        left: AppTheme.space10,
+        right: AppTheme.space2,
+      ),
       child: Row(
         children: [
           Expanded(
@@ -75,7 +79,7 @@ class TerminalSearchBar extends StatelessWidget {
               textAlignVertical: TextAlignVertical.center,
               style: TextStyle(
                 fontFamily: AppTheme.uiFamily,
-                fontSize: 14,
+                fontSize: AppTheme.font14,
                 color: colors.textPrimary,
               ),
               decoration: InputDecoration(
@@ -98,7 +102,7 @@ class TerminalSearchBar extends StatelessWidget {
                   alignment: Alignment.centerLeft,
                   child: Icon(
                     PhosphorIconsFill.magnifyingGlass,
-                    size: 16,
+                    size: AppTheme.icon16,
                     color: colors.textTertiary,
                   ),
                 ),
@@ -120,13 +124,13 @@ class TerminalSearchBar extends StatelessWidget {
                       visualDensity: VisualDensity.compact,
                       onPressed: onToggleCase,
                       constraints: const BoxConstraints.tightFor(
-                        width: 28,
-                        height: 28,
+                        width: AppTheme.icon28,
+                        height: AppTheme.icon28,
                       ),
                       padding: EdgeInsets.zero,
                       icon: Icon(
                         PhosphorIconsRegular.textAa,
-                        size: 16,
+                        size: AppTheme.icon16,
                         color: caseSensitive
                             ? colors.primary
                             : colors.textTertiary,
@@ -137,24 +141,24 @@ class TerminalSearchBar extends StatelessWidget {
                             : null,
                       ),
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: AppTheme.space4),
                   ],
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 4),
-          _BarButton(
+          const SizedBox(width: AppTheme.space4),
+          BarIconButton(
             tooltip: t.terminalSearch.older,
             icon: PhosphorIconsRegular.arrowUp,
             onPressed: total == 0 ? null : onOlder,
           ),
-          _BarButton(
+          BarIconButton(
             tooltip: t.terminalSearch.newer,
             icon: PhosphorIconsRegular.arrowDown,
             onPressed: total == 0 ? null : onNewer,
           ),
-          _BarButton(
+          BarIconButton(
             tooltip: t.terminalSearch.close,
             icon: PhosphorIconsRegular.x,
             onPressed: onClose,
@@ -163,27 +167,4 @@ class TerminalSearchBar extends StatelessWidget {
       ),
     );
   }
-}
-
-class _BarButton extends StatelessWidget {
-  const _BarButton({
-    required this.tooltip,
-    required this.icon,
-    required this.onPressed,
-  });
-
-  final String tooltip;
-  final IconData icon;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) => IconButton(
-    tooltip: tooltip,
-    visualDensity: VisualDensity.compact,
-    constraints: const BoxConstraints.tightFor(width: 30, height: 30),
-    padding: EdgeInsets.zero,
-    icon: Icon(icon, size: 16),
-    color: context.colors.textSecondary,
-    onPressed: onPressed,
-  );
 }

@@ -40,7 +40,10 @@ void main() {
 
   tearDown(() => manager.dispose());
 
-  Future<void> openSheet(WidgetTester tester, (String, SshProfile) session) async {
+  Future<void> openSheet(
+    WidgetTester tester,
+    (String, SshProfile) session,
+  ) async {
     await pumpTestApp(
       tester,
       Scaffold(

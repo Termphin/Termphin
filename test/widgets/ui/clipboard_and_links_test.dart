@@ -12,9 +12,7 @@ void main() {
 
   const urlLauncherChannel = MethodChannel('plugins.flutter.io/url_launcher');
 
-  testWidgets('puts the text on the clipboard and confirms it', (
-    tester,
-  ) async {
+  testWidgets('puts the text on the clipboard and confirms it', (tester) async {
     final clipboard = ClipboardMock()..install();
     addTearDown(clipboard.uninstall);
 

@@ -11,13 +11,16 @@ import '../../services/settings/toolbar_layout.dart';
 import '../../theme/theme.dart';
 import '../../widgets/terminal/special_keys_toolbar.dart'
     show toolbarSchemeFromTheme;
+import '../../widgets/terminal/toolbar_key_button.dart';
 import '../../widgets/terminal/toolbar_key_picker_sheet.dart';
 import '../../widgets/ui/app_dropdown.dart';
 import '../../widgets/ui/app_notifications.dart';
+import '../../widgets/ui/app_search_field.dart';
 import '../../widgets/ui/app_sheet.dart';
 import '../../widgets/ui/confirm_dialog.dart';
+import '../../widgets/ui/section_header.dart';
 import '../../widgets/ui/stepper_row.dart';
-import '../../widgets/ui/toolbar_key_button.dart';
+import '../../widgets/ui/tag_chip.dart';
 
 enum _ScreenAction { grid, reset }
 
@@ -438,7 +441,7 @@ class _ToolbarSettingsScreenState extends ConsumerState<ToolbarSettingsScreen> {
                 children: [
                   for (int page = 0; page < _layout.pages; page++)
                     Padding(
-                      padding: const EdgeInsets.only(right: 6),
+                      padding: const EdgeInsets.only(right: AppTheme.space6),
                       child: _PageChip(
                         label: t.settings.layoutLabel(number: page + 1),
                         selected: _page == page,
@@ -451,10 +454,10 @@ class _ToolbarSettingsScreenState extends ConsumerState<ToolbarSettingsScreen> {
           )
         else
           const Spacer(),
-        const SizedBox(width: 8),
+        const SizedBox(width: AppTheme.space8),
         IconButton(
           tooltip: t.settings.toolbarGridSize,
-          iconSize: 20,
+          iconSize: AppTheme.icon20,
           icon: const Icon(PhosphorIconsRegular.gridFour),
           onPressed: _showGridSheet,
         ),
@@ -474,7 +477,12 @@ class _ToolbarSettingsScreenState extends ConsumerState<ToolbarSettingsScreen> {
         child: ValueListenableBuilder<ToolbarLayout>(
           valueListenable: _layoutNotifier,
           builder: (ctx, layout, _) => Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            padding: const EdgeInsets.fromLTRB(
+              AppTheme.space16,
+              AppTheme.space16,
+              AppTheme.space16,
+              AppTheme.space8,
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -483,7 +491,7 @@ class _ToolbarSettingsScreenState extends ConsumerState<ToolbarSettingsScreen> {
                   t.settings.toolbarGridSize,
                   style: Theme.of(ctx).textTheme.titleMedium,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppTheme.space8),
                 StepperRow(
                   label: t.settings.toolbarColumns,
                   value: layout.columns,
@@ -547,7 +555,12 @@ class _ToolbarSettingsScreenState extends ConsumerState<ToolbarSettingsScreen> {
     return Container(
       width: double.infinity,
       height: 48,
-      padding: const EdgeInsets.fromLTRB(14, 0, 6, 0),
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.space14,
+        0,
+        AppTheme.space6,
+        0,
+      ),
       decoration: BoxDecoration(
         color: slot == null
             ? context.colors.backgroundPrimary
@@ -588,13 +601,19 @@ class _ToolbarSettingsScreenState extends ConsumerState<ToolbarSettingsScreen> {
           if (isCustom)
             TextButton.icon(
               onPressed: () => _editCustomKey(action),
-              icon: const Icon(PhosphorIconsRegular.pencilSimple, size: 16),
+              icon: const Icon(
+                PhosphorIconsRegular.pencilSimple,
+                size: AppTheme.icon16,
+              ),
               label: Text(t.common.edit),
             ),
           if (id.isNotEmpty)
             TextButton.icon(
               onPressed: () => _clearSlot(slot!),
-              icon: const Icon(PhosphorIconsRegular.trash, size: 16),
+              icon: const Icon(
+                PhosphorIconsRegular.trash,
+                size: AppTheme.icon16,
+              ),
               label: Text(t.settings.toolbarSlotRemove),
               style: TextButton.styleFrom(
                 foregroundColor: context.colors.error,
@@ -603,7 +622,7 @@ class _ToolbarSettingsScreenState extends ConsumerState<ToolbarSettingsScreen> {
           if (slot != null)
             IconButton(
               tooltip: t.common.clearSelection,
-              iconSize: 18,
+              iconSize: AppTheme.icon18,
               onPressed: () => setState(() => _selectedSlot = null),
               icon: const Icon(PhosphorIconsRegular.x),
             ),
@@ -721,21 +740,26 @@ class _ToolbarSettingsScreenState extends ConsumerState<ToolbarSettingsScreen> {
               _ScreenAction.reset => unawaited(_reset()),
             },
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: AppTheme.space4),
         ],
       ),
       body: SafeArea(
         top: false,
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final available = constraints.maxWidth - 24;
+            final available = constraints.maxWidth - AppTheme.space12 * 2;
             final slotWidth =
                 (available - _kSlotGap * (_layout.columns - 1)) /
                 _layout.columns;
             return Column(
               children: [
                 Container(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppTheme.space12,
+                    AppTheme.space8,
+                    AppTheme.space12,
+                    AppTheme.space12,
+                  ),
                   decoration: BoxDecoration(
                     color: context.colors.backgroundPrimary,
                     border: Border(
@@ -746,48 +770,38 @@ class _ToolbarSettingsScreenState extends ConsumerState<ToolbarSettingsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildPageBar(t),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: AppTheme.space10),
                       _buildGrid(scheme, slotWidth),
                     ],
                   ),
                 ),
                 _buildSelectionBar(t),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppTheme.space12,
+                    AppTheme.space10,
+                    AppTheme.space12,
+                    AppTheme.space6,
+                  ),
                   child: Row(
                     children: [
                       Expanded(
-                        child: TextField(
+                        child: AppSearchField(
                           controller: _searchController,
-                          onTapOutside: (_) =>
-                              FocusManager.instance.primaryFocus?.unfocus(),
-                          decoration: InputDecoration(
-                            hintText: t.toolbar.searchHint,
-                            prefixIcon: const Icon(
-                              PhosphorIconsRegular.magnifyingGlass,
-                              size: 16,
-                            ),
-                            suffixIcon: _poolQuery.isEmpty
-                                ? null
-                                : IconButton(
-                                    tooltip: t.common.clearSearch,
-                                    iconSize: 16,
-                                    icon: const Icon(PhosphorIconsRegular.x),
-                                    onPressed: () {
-                                      _searchController.clear();
-                                      setState(() => _poolQuery = '');
-                                    },
-                                  ),
-                            isDense: true,
-                          ),
+                          hint: t.toolbar.searchHint,
+                          clearTooltip: t.common.clearSearch,
+                          dense: true,
                           onChanged: (value) =>
                               setState(() => _poolQuery = value),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: AppTheme.space8),
                       IconButton.filledTonal(
                         tooltip: t.settings.toolbarAddCustom,
-                        icon: const Icon(PhosphorIconsRegular.plus, size: 18),
+                        icon: const Icon(
+                          PhosphorIconsRegular.plus,
+                          size: AppTheme.icon18,
+                        ),
                         onPressed: _addCustomKey,
                       ),
                     ],
@@ -804,18 +818,20 @@ class _ToolbarSettingsScreenState extends ConsumerState<ToolbarSettingsScreen> {
                           ),
                         )
                       : ListView(
-                          padding: const EdgeInsets.fromLTRB(12, 0, 12, 32),
+                          padding: const EdgeInsets.fromLTRB(
+                            AppTheme.space12,
+                            0,
+                            AppTheme.space12,
+                            AppTheme.space32,
+                          ),
                           children: [
                             for (final (title, ids) in sections) ...[
                               Padding(
                                 padding: const EdgeInsets.only(
-                                  top: 12,
-                                  bottom: 6,
+                                  top: AppTheme.space12,
+                                  bottom: AppTheme.space6,
                                 ),
-                                child: Text(
-                                  title.toUpperCase(),
-                                  style: context.colors.sectionLabel,
-                                ),
+                                child: SectionHeader(title),
                               ),
                               Wrap(
                                 spacing: _kSlotGap,
@@ -872,25 +888,8 @@ class _PageChip extends StatelessWidget {
         if (!selected) onSelected();
         return false;
       },
-      builder: (context, candidate, _) => ChoiceChip(
-        label: Text(label),
-        selected: selected,
-        showCheckmark: false,
-        labelStyle: context.colors.uiSmall.copyWith(
-          color: selected
-              ? context.colors.primary
-              : context.colors.textSecondary,
-          fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-        ),
-        backgroundColor: context.colors.surfaceCard,
-        selectedColor: context.colors.primary.withValues(alpha: 0.14),
-        side: BorderSide(
-          color: selected
-              ? context.colors.primary
-              : context.colors.surfaceBorder,
-        ),
-        onSelected: (_) => onSelected(),
-      ),
+      builder: (context, candidate, _) =>
+          TagChip(label: label, selected: selected, onTap: onSelected),
     );
   }
 }

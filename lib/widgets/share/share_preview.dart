@@ -6,6 +6,7 @@ import '../../services/sftp/upload_plan.dart';
 import '../../theme/theme.dart';
 import '../../utils/file_icon.dart';
 import '../../utils/format_size.dart';
+import '../ui/app_card.dart';
 import '../ui/section_header.dart';
 
 /// What was shared, above the list it is being sent to. Captioned like the
@@ -30,7 +31,10 @@ class SharePreview extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          padding: const EdgeInsets.only(
+            left: AppTheme.space4,
+            bottom: AppTheme.space8,
+          ),
           child: SectionHeader(caption),
         ),
         SizedBox(
@@ -39,7 +43,7 @@ class SharePreview extends StatelessWidget {
             scrollDirection: Axis.horizontal,
             clipBehavior: Clip.none,
             itemCount: files.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 8),
+            separatorBuilder: (_, _) => const SizedBox(width: AppTheme.space8),
             itemBuilder: (_, i) => _FileTile(files[i]),
           ),
         ),
@@ -56,45 +60,49 @@ class _FileTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return Container(
+    return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 230),
-      padding: const EdgeInsets.fromLTRB(10, 8, 14, 8),
-      decoration: BoxDecoration(
-        color: colors.surfaceCard,
-        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-        border: Border.all(color: colors.surfaceBorder),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          buildFileIcon(
-            file.name,
-            size: 28,
-            fallbackColor: colors.textSecondary,
-          ),
-          const SizedBox(width: 10),
-          Flexible(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  file.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: colors.itemTitle.copyWith(fontSize: 14),
-                ),
-                FutureBuilder<int?>(
-                  future: file.length(),
-                  builder: (context, size) => Text(
-                    size.data == null ? '' : formatFileSize(size.data),
-                    style: colors.uiSmall.copyWith(color: colors.textTertiary),
-                  ),
-                ),
-              ],
+      child: AppCard(
+        padding: const EdgeInsets.fromLTRB(
+          AppTheme.space10,
+          AppTheme.space8,
+          AppTheme.space14,
+          AppTheme.space8,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            buildFileIcon(
+              file.name,
+              size: AppTheme.icon28,
+              fallbackColor: colors.textSecondary,
             ),
-          ),
-        ],
+            const SizedBox(width: AppTheme.space10),
+            Flexible(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    file.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: colors.itemTitle.copyWith(fontSize: AppTheme.font14),
+                  ),
+                  FutureBuilder<int?>(
+                    future: file.length(),
+                    builder: (context, size) => Text(
+                      size.data == null ? '' : formatFileSize(size.data),
+                      style: colors.uiSmall.copyWith(
+                        color: colors.textTertiary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

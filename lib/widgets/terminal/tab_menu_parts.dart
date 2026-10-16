@@ -55,7 +55,7 @@ class TabMenuHeader extends StatelessWidget {
           colorHex: profile.colorHex,
           size: 30,
         ),
-        const SizedBox(width: AppTheme.spaceMd),
+        const SizedBox(width: AppTheme.space12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -67,7 +67,7 @@ class TabMenuHeader extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: colors.itemTitle.copyWith(fontWeight: FontWeight.w600),
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: AppTheme.space2),
               Text(
                 address,
                 maxLines: 1,
@@ -107,7 +107,10 @@ class LatencyPill extends StatelessWidget {
       ConnectionHealth.unresponsive => (colors.error, colors.errorHighlight),
     };
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppTheme.space8,
+        vertical: AppTheme.space4,
+      ),
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(AppTheme.radiusPill),
@@ -116,11 +119,11 @@ class LatencyPill extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 6,
-            height: 6,
+            width: AppTheme.space6,
+            height: AppTheme.space6,
             decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: AppTheme.space6),
           Text(
             Translations.of(context).session.latency(ms: ms),
             style: colors.uiSmall.copyWith(
@@ -129,29 +132,6 @@ class LatencyPill extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// A small count, such as how many tunnels are active, beside a menu item.
-class CountBadge extends StatelessWidget {
-  const CountBadge(this.count, {super.key});
-
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: colors.primaryHighlight,
-        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-      ),
-      child: Text(
-        '$count',
-        style: colors.uiSmall.copyWith(color: colors.primary),
       ),
     );
   }
@@ -192,7 +172,7 @@ class TabMenuLeave extends StatelessWidget {
     final endLabel = this.endLabel;
     final onEndSession = this.onEndSession;
     return Padding(
-      padding: const EdgeInsets.only(top: AppTheme.spaceSm),
+      padding: const EdgeInsets.only(top: AppTheme.space8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -205,7 +185,7 @@ class TabMenuLeave extends StatelessWidget {
                 foregroundColor: colors.primary,
                 side: BorderSide(color: colors.primary.withValues(alpha: 0.5)),
               ),
-              icon: Icon(closeIcon, size: 18),
+              icon: Icon(closeIcon, size: AppTheme.icon18),
               label: Text(
                 closeLabel,
                 maxLines: 1,
@@ -214,7 +194,7 @@ class TabMenuLeave extends StatelessWidget {
             ),
           ),
           if (endLabel != null && onEndSession != null) ...[
-            const SizedBox(height: AppTheme.spaceSm),
+            const SizedBox(height: AppTheme.space8),
             SizedBox(
               height: 44,
               child: OutlinedButton.icon(
@@ -224,7 +204,10 @@ class TabMenuLeave extends StatelessWidget {
                   foregroundColor: colors.error,
                   side: BorderSide(color: colors.surfaceBorderStrong),
                 ),
-                icon: const Icon(PhosphorIconsRegular.trash, size: 18),
+                icon: const Icon(
+                  PhosphorIconsRegular.trash,
+                  size: AppTheme.icon18,
+                ),
                 label: Text(
                   endLabel,
                   maxLines: 1,

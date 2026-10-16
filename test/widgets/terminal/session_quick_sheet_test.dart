@@ -8,7 +8,7 @@ import 'package:termphin/services/settings/toolbar_layout.dart';
 import 'package:termphin/theme/theme.dart';
 import 'package:termphin/widgets/terminal/session_quick_sheet.dart';
 import 'package:termphin/widgets/terminal/terminal_scheme_theme.dart';
-import 'package:termphin/widgets/ui/toolbar_key_button.dart';
+import 'package:termphin/widgets/terminal/toolbar_key_button.dart';
 
 import '../../support/test_app.dart';
 
@@ -138,9 +138,7 @@ void main() {
     expect(exits, ['appearance']);
   });
 
-  testWidgets('switching tabs keeps the sheet the same height', (
-    tester,
-  ) async {
+  testWidgets('switching tabs keeps the sheet the same height', (tester) async {
     await open(tester);
     final surface = find.byKey(const ValueKey('sessionQuickSurface'));
     final toolbarHeight = tester.getSize(surface).height;

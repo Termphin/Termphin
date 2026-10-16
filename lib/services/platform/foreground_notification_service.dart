@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 
 import '../../i18n/strings.g.dart';
+import '../../theme/theme.dart';
 import '../../utils/platform_info.dart';
 import 'local_notifications_service.dart';
 
@@ -38,7 +39,7 @@ class ForegroundNotificationService {
   /// fills the circle the tinted silhouette sits in.
   static const _notificationIcon = NotificationIcon(
     metaDataName: 'dev.termphin.notification_icon',
-    backgroundColor: Color(0xFF3795FB),
+    backgroundColor: AppTheme.notificationAccent,
   );
 
   bool _configured = false;

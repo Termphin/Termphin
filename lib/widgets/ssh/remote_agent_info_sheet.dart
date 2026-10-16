@@ -4,9 +4,9 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../i18n/strings.g.dart';
 import '../../services/app/manual_urls.dart';
 import '../../theme/theme.dart';
+import '../settings/manual_link.dart';
 import '../ui/app_sheet.dart';
 import '../ui/clipboard_and_links.dart';
-import '../ui/manual_link.dart';
 
 const _agentRepoUrl = 'https://github.com/Termphin/termphin-agent';
 
@@ -30,20 +30,25 @@ class RemoteAgentInfoSheet extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     return SafeArea(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+        padding: const EdgeInsets.fromLTRB(
+          AppTheme.space20,
+          AppTheme.space20,
+          AppTheme.space20,
+          AppTheme.space24,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(t.settings.agentSheetTitle, style: textTheme.titleLarge),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppTheme.space12),
             Text(
               t.settings.agentSheetIntro,
               style: textTheme.bodyMedium?.copyWith(
                 color: context.colors.textSecondary,
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppTheme.space20),
             _AgentPoint(
               icon: PhosphorIconsRegular.desktopTower,
               text: t.settings.agentSheetPointPlatforms,
@@ -72,23 +77,26 @@ class RemoteAgentInfoSheet extends StatelessWidget {
               icon: PhosphorIconsRegular.fingerprint,
               text: t.settings.agentSheetPointVerified,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppTheme.space8),
             Text(
               t.settings.agentSheetOpenSource,
               style: textTheme.bodyMedium?.copyWith(
                 color: context.colors.textSecondary,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppTheme.space16),
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
                 onPressed: () => _openRepo(context),
-                icon: const Icon(PhosphorIconsRegular.githubLogo, size: 18),
+                icon: const Icon(
+                  PhosphorIconsRegular.githubLogo,
+                  size: AppTheme.icon18,
+                ),
                 label: Text(t.settings.agentSheetRepoButton),
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: AppTheme.space4),
             SizedBox(
               width: double.infinity,
               child: TextButton(
@@ -118,12 +126,12 @@ class _AgentPoint extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.only(bottom: AppTheme.space14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: context.colors.primary),
-          const SizedBox(width: 12),
+          Icon(icon, size: AppTheme.icon18, color: context.colors.primary),
+          const SizedBox(width: AppTheme.space12),
           Expanded(
             child: Text(text, style: Theme.of(context).textTheme.bodyMedium),
           ),

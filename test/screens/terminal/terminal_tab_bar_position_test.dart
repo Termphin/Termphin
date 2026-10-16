@@ -9,9 +9,9 @@ import 'package:termphin/screens/terminal/terminal_screen.dart';
 import 'package:termphin/services/settings/app_settings.dart';
 import 'package:termphin/services/settings/tab_bar_settings.dart';
 import 'package:termphin/services/ssh/ssh_session_manager.dart';
+import 'package:termphin/widgets/shell/nav_rail.dart';
 import 'package:termphin/widgets/terminal/special_keys_toolbar.dart';
 import 'package:termphin/widgets/terminal/terminal_pane.dart';
-import 'package:termphin/widgets/ui/nav_rail.dart';
 
 import '../../support/fakes.dart';
 import '../../support/fixtures.dart';

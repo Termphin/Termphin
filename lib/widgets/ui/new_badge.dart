@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../i18n/strings.g.dart';
 import '../../services/app/version_compare.dart';
+import '../../theme/theme.dart';
 import 'app_badge.dart';
 
 /// Whether a row marked new until [until] still gets its badge in
@@ -23,7 +24,7 @@ class NewBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!isStillNew(appVersion, until)) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.only(left: 8),
+      padding: const EdgeInsets.only(left: AppTheme.space8),
       child: AppBadge(
         Translations.of(context).settings.newBadge,
         tone: BadgeTone.accent,

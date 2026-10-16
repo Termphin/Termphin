@@ -19,9 +19,11 @@ import '../services/ssh/ssh_session_manager.dart';
 import '../theme/theme.dart';
 import '../utils/platform_info.dart';
 import '../widgets/profiles/profile_avatar.dart';
+import '../widgets/shell/nav_rail.dart';
 import '../widgets/terminal/terminal_scheme_theme.dart';
+import '../widgets/ui/app_badge.dart';
 import '../widgets/ui/app_notifications.dart';
-import '../widgets/ui/nav_rail.dart';
+import '../widgets/ui/fade_over_color.dart';
 import 'home_screen.dart';
 import 'keys/key_manager_screen.dart';
 import 'settings/settings_screen.dart';
@@ -74,29 +76,52 @@ class _MainShellState extends ConsumerState<MainShell>
   GlobalKey<TerminalScreenState> _terminalKey =
       GlobalKey<TerminalScreenState>();
 
-  /// Brings the terminal up over the tabs and takes it back down: it rises a
-  /// little as it fades in while the screen behind it sinks back, and leaves
-  /// the same way, quicker. A closed strip is only dropped once it has gone,
-  /// so closing animates too.
+  /// Brings the terminal up over the tabs and takes it back down, along
+  /// Material's shared Z axis: the tabs drift away and fade out, then the
+  /// terminal comes forward and fades in; hiding plays it back, quicker. The
+  /// two never fade at the same time, so nothing is ever half of each - which
+  /// is what lets [FadeOverColorTransition] do the fading with a plain
+  /// colour instead of an offscreen layer per frame. A
+  /// closed strip is only dropped once it has gone, so closing animates too.
   late final AnimationController _terminalMotion;
   late final Animation<double> _terminalCurve = CurvedAnimation(
     parent: _terminalMotion,
-    curve: AppTheme.interactiveCurve,
-    reverseCurve: Curves.easeInCubic,
+    curve: Easing.emphasizedDecelerate,
+    reverseCurve: Easing.emphasizedAccelerate,
   );
+
+  /// The terminal fades in over the last part of the way in, after the tabs
+  /// are gone, and out over the first part of the way back.
   late final Animation<double> _terminalFade = CurvedAnimation(
     parent: _terminalMotion,
-    curve: const Interval(0, 0.6, curve: Curves.easeOut),
-    reverseCurve: const Interval(0.2, 1, curve: Curves.easeIn),
+    curve: const Interval(_handover, 1, curve: Curves.easeOut),
+    reverseCurve: const Interval(1 - _handover, 1, curve: Curves.easeIn),
   );
-  late final Animation<Offset> _terminalSlide = Tween(
-    begin: const Offset(0, 0.04),
-    end: Offset.zero,
+
+  /// The tabs fade out over the first part of the way in and back in over
+  /// the last part of the way back - the mirror of [_terminalFade].
+  late final Animation<double> _backgroundFade = ReverseAnimation(
+    CurvedAnimation(
+      parent: _terminalMotion,
+      curve: const Interval(0, _handover, curve: Curves.easeIn),
+      reverseCurve: const Interval(0, 1 - _handover, curve: Curves.easeOut),
+    ),
+  );
+  late final Animation<double> _terminalScale = Tween(
+    begin: _zDepth,
+    end: 1.0,
   ).animate(_terminalCurve);
   late final Animation<double> _backgroundScale = Tween(
     begin: 1.0,
-    end: 0.96,
+    end: 2 - _zDepth,
   ).animate(_terminalCurve);
+
+  /// Where along the motion one screen hands over to the other.
+  static const double _handover = 0.3;
+
+  /// How far back the terminal starts, as a scale; the tabs move forward by
+  /// the same step, so both read as one camera moving along the axis.
+  static const double _zDepth = 0.92;
 
   /// Bumped whenever the terminal is asked back, so a close still waiting
   /// for its exit to finish knows not to drop the strip after all.
@@ -112,6 +137,17 @@ class _MainShellState extends ConsumerState<MainShell>
     }
   }
 
+  /// Starts the terminal's entrance one frame late. The frame a terminal is
+  /// requested in is the one that builds it - a new screen, a new tab, its
+  /// connection set up - and an entrance started in it would spend its
+  /// first frames waiting on that. Built first, still invisible, the motion
+  /// then has every frame to itself.
+  void _animateTerminalAfterBuild() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _terminalVisible) _animateTerminal(visible: true);
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -122,8 +158,8 @@ class _MainShellState extends ConsumerState<MainShell>
     }
     _terminalMotion = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 320),
-      reverseDuration: const Duration(milliseconds: 220),
+      duration: AppTheme.motionPage,
+      reverseDuration: AppTheme.motionPageReverse,
       value: _terminalVisible ? 1 : 0,
     );
     unawaited(
@@ -334,12 +370,12 @@ class _MainShellState extends ConsumerState<MainShell>
             _terminalKey = GlobalKey<TerminalScreenState>();
           }
         });
-        _animateTerminal(visible: true);
-        _syncNotificationAnchor();
-        unawaited(AnalyticsService.instance.screen(AnalyticsScreen.terminal));
         if (hasLiveScreen) {
           _terminalKey.currentState?.openSession(next.$1, next.$2);
         }
+        _animateTerminalAfterBuild();
+        _syncNotificationAnchor();
+        unawaited(AnalyticsService.instance.screen(AnalyticsScreen.terminal));
       }
     });
 
@@ -360,27 +396,37 @@ class _MainShellState extends ConsumerState<MainShell>
       child: Stack(
         fit: StackFit.expand,
         children: [
-          ScaleTransition(
-            scale: _backgroundScale,
-            child: isWideLayout(context)
-                ? _buildDesktopScaffold(t)
-                : _buildMobileScaffold(t),
+          ColoredBox(color: context.colors.backgroundPrimary),
+          FadeOverColorTransition(
+            opacity: _backgroundFade,
+            color: context.colors.backgroundPrimary,
+            child: ScaleTransition(
+              scale: _backgroundScale,
+              child: RepaintBoundary(
+                child: isWideLayout(context)
+                    ? _buildDesktopScaffold(t)
+                    : _buildMobileScaffold(t),
+              ),
+            ),
           ),
           if (_terminalSession != null)
             IgnorePointer(
               ignoring: !_terminalVisible,
-              child: FadeTransition(
+              child: FadeOverColorTransition(
                 opacity: _terminalFade,
-                child: SlideTransition(
-                  position: _terminalSlide,
-                  child: TerminalSchemeTheme(
-                    child: TerminalScreen(
-                      key: _terminalKey,
-                      initialSessionId: _terminalSession!.$1,
-                      initialProfile: _terminalSession!.$2,
-                      siblingScope: _siblingScope,
-                      onClose: _onTerminalClose,
-                      onHide: _hideTerminal,
+                color: context.colors.backgroundPrimary,
+                child: ScaleTransition(
+                  scale: _terminalScale,
+                  child: RepaintBoundary(
+                    child: TerminalSchemeTheme(
+                      child: TerminalScreen(
+                        key: _terminalKey,
+                        initialSessionId: _terminalSession!.$1,
+                        initialProfile: _terminalSession!.$2,
+                        siblingScope: _siblingScope,
+                        onClose: _onTerminalClose,
+                        onHide: _hideTerminal,
+                      ),
                     ),
                   ),
                 ),
@@ -435,7 +481,9 @@ class _SessionDock extends ConsumerWidget {
           },
           child: Container(
             height: 58,
-            padding: EdgeInsets.symmetric(horizontal: collapsed ? 8 : 14),
+            padding: EdgeInsets.symmetric(
+              horizontal: collapsed ? AppTheme.space8 : AppTheme.space14,
+            ),
             decoration: BoxDecoration(
               border: Border(
                 top: BorderSide(color: context.colors.surfaceBorder),
@@ -458,7 +506,7 @@ class _SessionDock extends ConsumerWidget {
                         isActive: !shouldRestore,
                         size: 34,
                       ),
-                      const SizedBox(width: 11),
+                      const SizedBox(width: AppTheme.space10),
                       Expanded(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -471,7 +519,7 @@ class _SessionDock extends ConsumerWidget {
                               style: Theme.of(context).textTheme.labelLarge
                                   ?.copyWith(fontWeight: FontWeight.w600),
                             ),
-                            const SizedBox(height: 2),
+                            const SizedBox(height: AppTheme.space2),
                             Text(
                               shouldRestore
                                   ? t.session.restoreDock(
@@ -490,44 +538,22 @@ class _SessionDock extends ConsumerWidget {
                         ),
                       ),
                       if (sessionCount > 1) ...[
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: context.colors.surfaceCard,
-                            borderRadius: BorderRadius.circular(
-                              AppTheme.radiusXs,
-                            ),
-                            border: Border.all(
-                              color: context.colors.surfaceBorder,
-                            ),
-                          ),
-                          child: Text(
-                            '$sessionCount',
-                            style: Theme.of(context).textTheme.labelMedium
-                                ?.copyWith(
-                                  color: context.colors.textPrimary,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
+                        AppBadge.count(sessionCount),
+                        const SizedBox(width: AppTheme.space10),
                       ],
                       Icon(
                         shouldRestore
                             ? PhosphorIconsFill.arrowClockwise
                             : PhosphorIconsFill.terminalWindow,
-                        size: 19,
+                        size: AppTheme.icon18,
                         color: shouldRestore
                             ? context.colors.warning
                             : context.colors.textSecondary,
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: AppTheme.space4),
                       Icon(
                         PhosphorIconsFill.caretRight,
-                        size: 15,
+                        size: AppTheme.icon14,
                         color: context.colors.textTertiary,
                       ),
                     ],
@@ -579,7 +605,7 @@ class _BottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const itemGap = 8.0;
+    const itemGap = AppTheme.space8;
 
     return Container(
       decoration: BoxDecoration(
@@ -589,7 +615,12 @@ class _BottomNavBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+          padding: const EdgeInsets.fromLTRB(
+            AppTheme.space10,
+            AppTheme.space8,
+            AppTheme.space10,
+            AppTheme.space10,
+          ),
           child: LayoutBuilder(
             builder: (context, constraints) {
               final totalGap = itemGap * (items.length - 1);
@@ -663,7 +694,7 @@ class _BottomNavItem extends StatelessWidget {
         child: AnimatedContainer(
           duration: AppTheme.interactiveDuration,
           curve: AppTheme.interactiveCurve,
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: AppTheme.space8),
           decoration: BoxDecoration(
             color: selected
                 ? context.colors.primaryHighlight
@@ -675,16 +706,16 @@ class _BottomNavItem extends StatelessWidget {
             children: [
               Icon(
                 selected ? data.selectedIcon : data.icon,
-                size: 22,
+                size: AppTheme.icon22,
                 color: selected
                     ? context.colors.primary
                     : context.colors.textSecondary,
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: AppTheme.space4),
               Text(
                 data.label,
                 style: context.colors.uiSmall.copyWith(
-                  fontSize: 11,
+                  fontSize: AppTheme.font11,
                   color: selected
                       ? context.colors.primary
                       : context.colors.textSecondary,
@@ -738,7 +769,7 @@ class _Sidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     final safeInset = MediaQuery.paddingOf(context).left;
     final width = navRailWidth(collapsed) + safeInset;
-    final itemInset = collapsed ? 8.0 : 12.0;
+    final itemInset = collapsed ? AppTheme.space8 : AppTheme.space12;
 
     return AnimatedContainer(
       duration: AppTheme.motionSlow,
@@ -758,7 +789,12 @@ class _Sidebar extends StatelessWidget {
             child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppTheme.space12,
+                    AppTheme.space12,
+                    AppTheme.space12,
+                    AppTheme.space4,
+                  ),
                   child: Align(
                     alignment: collapsed
                         ? Alignment.center
@@ -768,11 +804,18 @@ class _Sidebar extends StatelessWidget {
                 ),
                 Expanded(
                   child: ListView(
-                    padding: EdgeInsets.fromLTRB(itemInset, 4, itemInset, 12),
+                    padding: EdgeInsets.fromLTRB(
+                      itemInset,
+                      AppTheme.space4,
+                      itemInset,
+                      AppTheme.space12,
+                    ),
                     children: [
                       for (int i = 0; i < items.length; i++)
                         Padding(
-                          padding: const EdgeInsets.only(bottom: 4),
+                          padding: const EdgeInsets.only(
+                            bottom: AppTheme.space4,
+                          ),
                           child: _SidebarNavItem(
                             data: items[i],
                             selected: currentIndex == i,
@@ -821,7 +864,7 @@ class _SidebarNavItem extends StatelessWidget {
         : context.colors.textSecondary;
     final icon = Icon(
       selected ? data.selectedIcon : data.icon,
-      size: 20,
+      size: AppTheme.icon20,
       color: foreground,
     );
 
@@ -835,8 +878,8 @@ class _SidebarNavItem extends StatelessWidget {
           duration: AppTheme.interactiveDuration,
           curve: AppTheme.interactiveCurve,
           padding: EdgeInsets.symmetric(
-            horizontal: collapsed ? 0 : 14,
-            vertical: 11,
+            horizontal: collapsed ? 0 : AppTheme.space14,
+            vertical: AppTheme.space10,
           ),
           decoration: BoxDecoration(
             color: selected
@@ -849,7 +892,7 @@ class _SidebarNavItem extends StatelessWidget {
               : Row(
                   children: [
                     icon,
-                    const SizedBox(width: 12),
+                    const SizedBox(width: AppTheme.space12),
                     Text(
                       data.label,
                       style: context.colors.uiStyle.copyWith(

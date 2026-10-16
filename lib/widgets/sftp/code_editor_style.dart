@@ -94,7 +94,7 @@ re.CodeEditorStyle codeEditorStyle(
 re.CodeIndicatorBuilder? editorLineNumbers() {
   if (!editorSettings.lineNumbers.value) return null;
   return (context, editingController, chunkController, notifier) => Padding(
-    padding: const EdgeInsets.only(right: 12),
+    padding: const EdgeInsets.only(right: AppTheme.space12),
     child: re.DefaultCodeLineNumber(
       controller: editingController,
       notifier: notifier,

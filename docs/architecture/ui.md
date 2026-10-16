@@ -320,8 +320,8 @@ Material 3, light and dark, in `lib/theme/theme.dart`. Every interface colour
 lives on `AppColors`, a `ThemeExtension`, and is read off the context:
 `context.colors.textPrimary`, **never a constant** - that is what makes a widget
 a dependent of the theme so it repaints when the palette changes. `AppTheme`
-keeps only what does not vary: radius, spacing and motion tokens, font families,
-terminal colour schemes. Reading a colour off the context means the surrounding
+keeps only what does not vary: the token scales, font families, terminal colour
+schemes. Reading a colour off the context means the surrounding
 expression cannot be `const` - drop the `const`, do not reach for the constant.
 
 `themeModeProvider` over `AppThemeMode`: `system` by default, `light`/`dark` to
@@ -344,6 +344,29 @@ extension), **never `Colors.transparent`** - that constant is transparent
 *black*, so the colour tweens through grey on its way out. Same reason
 `splashColor`/`highlightColor`/`hoverColor`/`focusColor` are set from the accent
 in `themeFor`.
+
+**Tokens, not numbers.** Every padding and spacer is an `AppTheme.spaceN`
+(2-48), every font size an `AppTheme.fontN`, every icon size an
+`AppTheme.iconN`, every corner a `radius*`, every shadow `floatingShadow`,
+`raisedShadow` or `popupShadow`, a barrier `scrim`. The names carry the value so
+a call site still reads as a layout. A value missing from a scale is snapped to
+the nearest step (ties toward the smaller) or, if it is really needed, added to
+the scale - never typed at the call site. Fixed brand colours (avatar swatches,
+the notification accent, toolbar key accents) are `AppTheme` constants too.
+`test/theme/design_tokens_test.dart` fails on a literal padding, spacer, font
+size, icon size, corner or colour anywhere in `lib/` outside `lib/theme/`.
+
+**The kit is the only place a shape is drawn.** Before writing a
+`Container(decoration: ...)`, a chip or a pill, use `lib/widgets/ui/`:
+`AppCard` (plain, `elevated` on sheets and panels, `selected`, tappable with
+`onTap`), `AppBadge`/`AppBadge.count` with a `BadgeTone`, `TagChip` (`solid` for
+a toggled mode), `SectionHeader` for a caption, `ListSectionHeader` and its
+`action` buttons, `SettingsTile`/`SettingsSwitchTile`/`SettingsCheckboxTile`
+(`dense` inside a packed card), `SettingsDropdownField<T>`/`SettingsDropdownRow<T>`,
+`AppSearchField` (`dense` in a bar), `BarIconButton`, `EmptyStatePanel`
+(`tone: error`, `compact`) and `EmptyStateHint`, `context.colors.fieldDecoration`
+for the box of any form control. A widget that knows about the app's data -
+groups, profiles, the toolbar layout - lives with its feature, not in the kit.
 
 **No sliders** - numeric settings use the `StepperRow`/`ValueStepperRow` +/-
 pair, which hits an exact value on the first try.

@@ -196,8 +196,9 @@ class ContextBar extends StatelessWidget {
         if (overflow.isNotEmpty) _OverflowMenu(actions: overflow),
         ?trailing,
         if (trailing == null && inline.isEmpty && overflow.isEmpty)
-          const SizedBox(width: 8),
-        if (inline.isNotEmpty || overflow.isNotEmpty) const SizedBox(width: 4),
+          const SizedBox(width: AppTheme.space8),
+        if (inline.isNotEmpty || overflow.isNotEmpty)
+          const SizedBox(width: AppTheme.space4),
       ],
     );
   }
@@ -238,7 +239,7 @@ class _ActionButton extends StatelessWidget {
         disabledColor: (action.color ?? colors.textSecondary).withValues(
           alpha: 0.35,
         ),
-        icon: Icon(action.icon, size: 20),
+        icon: Icon(action.icon, size: AppTheme.icon20),
       ),
     );
   }
@@ -258,7 +259,7 @@ class _OverflowMenu extends StatelessWidget {
         if (action.onPressed != null) action,
     ];
     return AppActionDropdown<int>(
-      iconSize: 20,
+      iconSize: AppTheme.icon20,
       iconColor: colors.textSecondary,
       buttonSize: ContextBar._slot,
       width: 220,
@@ -348,7 +349,7 @@ class ContextBarProgressRing extends StatelessWidget {
               '${(value * 100).floor()}',
               style: TextStyle(
                 color: colors.textPrimary,
-                fontSize: 10,
+                fontSize: AppTheme.font10,
                 fontWeight: FontWeight.w700,
                 fontFeatures: const [FontFeature.tabularFigures()],
               ),
@@ -376,7 +377,7 @@ class ContextBarClose extends StatelessWidget {
       tooltip: tooltip,
       onPressed: onPressed,
       color: context.colors.textPrimary,
-      icon: const Icon(PhosphorIconsRegular.x, size: 20),
+      icon: const Icon(PhosphorIconsRegular.x, size: AppTheme.icon20),
     );
   }
 }

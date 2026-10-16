@@ -92,7 +92,12 @@ class LargeTitleHeader extends StatelessWidget {
     super.key,
     required this.title,
     this.subtitle,
-    this.padding = const EdgeInsets.fromLTRB(16, 24, 16, 8),
+    this.padding = const EdgeInsets.fromLTRB(
+      AppTheme.space16,
+      AppTheme.space24,
+      AppTheme.space16,
+      AppTheme.space8,
+    ),
   });
 
   final String title;
@@ -102,7 +107,7 @@ class LargeTitleHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isWideLayout(context)) {
-      return const SizedBox(height: AppTheme.spaceLg);
+      return const SizedBox(height: AppTheme.space16);
     }
     return Padding(
       padding: padding,
@@ -111,7 +116,7 @@ class LargeTitleHeader extends StatelessWidget {
         children: [
           Text(title, style: Theme.of(context).textTheme.displayLarge),
           if (subtitle != null) ...[
-            const SizedBox(height: 4),
+            const SizedBox(height: AppTheme.space4),
             Text(
               subtitle!,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(

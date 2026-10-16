@@ -7,6 +7,7 @@ import '../../models/ssh_profile.dart';
 import '../../providers/anonymize_provider.dart';
 import '../../services/app/identity_anonymizer.dart';
 import '../../theme/theme.dart';
+import '../ui/app_card.dart';
 
 class ConnectingView extends ConsumerStatefulWidget {
   const ConnectingView({
@@ -100,7 +101,9 @@ class _ConnectingViewState extends ConsumerState<ConnectingView>
               bottom: 72,
               child: Center(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppTheme.space24,
+                  ),
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 400),
                     child: Column(
@@ -117,14 +120,14 @@ class _ConnectingViewState extends ConsumerState<ConnectingView>
                             ),
                           ),
                         ),
-                        const SizedBox(height: 18),
+                        const SizedBox(height: AppTheme.space16),
                         Text(
                           displayName,
                           style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.w600),
                           textAlign: TextAlign.center,
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: AppTheme.space6),
                         Text(
                           widget.restoringHistory
                               ? t.connection.restoringHistory
@@ -136,7 +139,7 @@ class _ConnectingViewState extends ConsumerState<ConnectingView>
                                 )
                               : t.connection.connecting,
                           style: TextStyle(
-                            fontSize: 13,
+                            fontSize: AppTheme.font13,
                             color: reconnecting
                                 ? context.colors.warning
                                 : context.colors.textTertiary,
@@ -145,19 +148,19 @@ class _ConnectingViewState extends ConsumerState<ConnectingView>
                         ),
                         if (reconnecting &&
                             widget.reconnectSecondsRemaining > 0) ...[
-                          const SizedBox(height: 4),
+                          const SizedBox(height: AppTheme.space4),
                           Text(
                             t.connection.reconnectingIn(
                               seconds: widget.reconnectSecondsRemaining,
                             ),
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: AppTheme.font12,
                               color: context.colors.textTertiary,
                             ),
                             textAlign: TextAlign.center,
                           ),
                         ],
-                        const SizedBox(height: 18),
+                        const SizedBox(height: AppTheme.space16),
                         SizedBox(
                           height: 154,
                           child: AnimatedSwitcher(
@@ -189,7 +192,10 @@ class _ConnectingViewState extends ConsumerState<ConnectingView>
               child: Center(
                 child: TextButton.icon(
                   onPressed: widget.onCancel,
-                  icon: const Icon(PhosphorIconsRegular.x, size: 16),
+                  icon: const Icon(
+                    PhosphorIconsRegular.x,
+                    size: AppTheme.icon16,
+                  ),
                   label: Text(t.common.cancel),
                   style: TextButton.styleFrom(
                     foregroundColor: context.colors.textSecondary,
@@ -219,65 +225,66 @@ class _ConnectionLogPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       width: double.infinity,
       height: double.infinity,
-      decoration: BoxDecoration(
-        color: context.colors.surfaceCard,
-        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-        border: Border.all(color: context.colors.surfaceBorder),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: SelectionArea(
-        child: Scrollbar(
-          controller: controller,
-          thumbVisibility: false,
-          child: SingleChildScrollView(
+      child: AppCard(
+        clipChild: true,
+        padding: EdgeInsets.zero,
+        child: SelectionArea(
+          child: Scrollbar(
             controller: controller,
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (var index = 0; index < lines.length; index++)
-                  Padding(
-                    padding: EdgeInsets.only(
-                      bottom: index == lines.length - 1 ? 0 : 7,
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 5,
-                          height: 5,
-                          margin: const EdgeInsets.only(top: 6, right: 9),
-                          decoration: BoxDecoration(
-                            color: index == lines.length - 1
-                                ? context.colors.primary
-                                : context.colors.textTertiary.withValues(
-                                    alpha: 0.35,
-                                  ),
-                            borderRadius: BorderRadius.circular(
-                              AppTheme.radiusXs,
+            thumbVisibility: false,
+            child: SingleChildScrollView(
+              controller: controller,
+              padding: const EdgeInsets.all(AppTheme.space12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (var index = 0; index < lines.length; index++)
+                    Padding(
+                      padding: EdgeInsets.only(
+                        bottom: index == lines.length - 1 ? 0 : AppTheme.space6,
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 5,
+                            height: 5,
+                            margin: const EdgeInsets.only(
+                              top: AppTheme.space6,
+                              right: AppTheme.space8,
                             ),
-                          ),
-                        ),
-                        Expanded(
-                          child: Text(
-                            lines[index],
-                            style: context.colors.monoSmall.copyWith(
-                              height: 1.4,
+                            decoration: BoxDecoration(
                               color: index == lines.length - 1
-                                  ? context.colors.textSecondary
+                                  ? context.colors.primary
                                   : context.colors.textTertiary.withValues(
-                                      alpha: 0.72,
+                                      alpha: 0.35,
                                     ),
+                              borderRadius: BorderRadius.circular(
+                                AppTheme.radiusXs,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                          Expanded(
+                            child: Text(
+                              lines[index],
+                              style: context.colors.monoSmall.copyWith(
+                                height: 1.4,
+                                color: index == lines.length - 1
+                                    ? context.colors.textSecondary
+                                    : context.colors.textTertiary.withValues(
+                                        alpha: 0.72,
+                                      ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

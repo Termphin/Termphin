@@ -12,6 +12,8 @@ import '../../services/app/identity_anonymizer.dart';
 import '../../theme/theme.dart';
 import '../../utils/relative_time.dart';
 import '../../widgets/snippets/snippet_run_output.dart';
+import '../../widgets/ui/app_badge.dart';
+import '../../widgets/ui/app_card.dart';
 import '../../widgets/ui/app_divider.dart';
 import '../../widgets/ui/app_dropdown.dart';
 import '../../widgets/ui/app_notifications.dart';
@@ -84,10 +86,16 @@ class SnippetRunsScreen extends ConsumerWidget {
                   )
                 else
                   SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                    padding: const EdgeInsets.fromLTRB(
+                      AppTheme.space16,
+                      AppTheme.space16,
+                      AppTheme.space16,
+                      AppTheme.space32,
+                    ),
                     sliver: SliverList.separated(
                       itemCount: batches.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 12),
+                      separatorBuilder: (_, _) =>
+                          const SizedBox(height: AppTheme.space12),
                       itemBuilder: (_, index) =>
                           _BatchCard(batch: batches[index]),
                     ),
@@ -182,17 +190,19 @@ class _BatchCardState extends ConsumerState<_BatchCard> {
     final done = batch.runs.where((run) => run.status.isTerminal).length;
     final running = batch.runs.length - done;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: context.colors.surfaceElevated,
-        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-        border: Border.all(color: context.colors.surfaceBorder),
-      ),
+    return AppCard(
+      elevated: true,
+      clipChild: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 6, 0),
+            padding: const EdgeInsets.fromLTRB(
+              AppTheme.space14,
+              AppTheme.space12,
+              AppTheme.space6,
+              0,
+            ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -201,7 +211,7 @@ class _BatchCardState extends ConsumerState<_BatchCard> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(batch.snippetName, style: context.colors.itemTitle),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: AppTheme.space4),
                       Text(
                         '${relativeTime(context, batch.startedAt)} · '
                         '${t.snippets.runSummary(done: done, total: batch.runs.length)}',
@@ -212,10 +222,10 @@ class _BatchCardState extends ConsumerState<_BatchCard> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: AppTheme.space8),
                 AppActionDropdown<_BatchAction>(
                   tooltip: t.snippets.moreActions,
-                  iconSize: 18,
+                  iconSize: AppTheme.icon18,
                   iconColor: context.colors.textTertiary,
                   buttonSize: 36,
                   width: 220,
@@ -261,15 +271,20 @@ class _BatchCardState extends ConsumerState<_BatchCard> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 4, 14, 12),
+            padding: const EdgeInsets.fromLTRB(
+              AppTheme.space14,
+              AppTheme.space4,
+              AppTheme.space14,
+              AppTheme.space12,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 8,
+                    horizontal: AppTheme.space10,
+                    vertical: AppTheme.space8,
                   ),
                   decoration: BoxDecoration(
                     color: context.colors.fieldFill,
@@ -285,28 +300,28 @@ class _BatchCardState extends ConsumerState<_BatchCard> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: AppTheme.space10),
                 Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
+                  spacing: AppTheme.space6,
+                  runSpacing: AppTheme.space6,
                   children: [
                     if (batch.succeededCount > 0)
-                      _CountPill(
+                      AppBadge(
+                        '${batch.succeededCount}',
+                        tone: BadgeTone.success,
                         icon: PhosphorIconsRegular.checkCircle,
-                        color: context.colors.success,
-                        label: '${batch.succeededCount}',
                       ),
                     if (batch.failedCount > 0)
-                      _CountPill(
+                      AppBadge(
+                        '${batch.failedCount}',
+                        tone: BadgeTone.error,
                         icon: PhosphorIconsFill.xCircle,
-                        color: context.colors.error,
-                        label: '${batch.failedCount}',
                       ),
                     if (running > 0)
-                      _CountPill(
+                      AppBadge(
+                        '$running',
+                        tone: BadgeTone.highlight,
                         icon: PhosphorIconsFill.circleNotch,
-                        color: context.colors.primary,
-                        label: '$running',
                       ),
                   ],
                 ),
@@ -322,46 +337,6 @@ class _BatchCardState extends ConsumerState<_BatchCard> {
                   setState(() => _overrides[run.id] = !_isExpanded(run)),
             ),
           ],
-        ],
-      ),
-    );
-  }
-}
-
-/// Count of runs in one state, e.g. "3" next to a green tick.
-class _CountPill extends StatelessWidget {
-  const _CountPill({
-    required this.icon,
-    required this.color,
-    required this.label,
-  });
-
-  final IconData icon;
-  final Color color;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-        border: Border.all(color: color.withValues(alpha: 0.35)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: color),
-          const SizedBox(width: 5),
-          Text(
-            label,
-            style: TextStyle(
-              color: color,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
         ],
       ),
     );
@@ -431,11 +406,16 @@ class _RunRow extends ConsumerWidget {
         InkWell(
           onTap: onToggle,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+            padding: const EdgeInsets.fromLTRB(
+              AppTheme.space14,
+              AppTheme.space10,
+              AppTheme.space8,
+              AppTheme.space10,
+            ),
             child: Row(
               children: [
-                Icon(icon, size: 18, color: color),
-                const SizedBox(width: 10),
+                Icon(icon, size: AppTheme.icon18, color: color),
+                const SizedBox(width: AppTheme.space10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -448,7 +428,7 @@ class _RunRow extends ConsumerWidget {
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: AppTheme.space2),
                       Text(
                         finishedAt == null
                             ? label
@@ -468,7 +448,7 @@ class _RunRow extends ConsumerWidget {
                     onPressed: () => _copyOutput(context),
                     icon: Icon(
                       PhosphorIconsRegular.copy,
-                      size: 16,
+                      size: AppTheme.icon16,
                       color: context.colors.textTertiary,
                     ),
                   ),
@@ -476,17 +456,22 @@ class _RunRow extends ConsumerWidget {
                   expanded
                       ? PhosphorIconsFill.caretUp
                       : PhosphorIconsFill.caretDown,
-                  size: 16,
+                  size: AppTheme.icon16,
                   color: context.colors.textTertiary,
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: AppTheme.space6),
               ],
             ),
           ),
         ),
         if (expanded)
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+            padding: const EdgeInsets.fromLTRB(
+              AppTheme.space14,
+              0,
+              AppTheme.space14,
+              AppTheme.space12,
+            ),
             child: run.output.isEmpty
                 ? Text(
                     t.snippets.runNoOutput,

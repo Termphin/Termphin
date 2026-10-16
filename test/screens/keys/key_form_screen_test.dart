@@ -9,7 +9,7 @@ import 'package:termphin/models/ssh_key.dart';
 import 'package:termphin/providers/groups_provider.dart';
 import 'package:termphin/providers/ssh_keys_provider.dart';
 import 'package:termphin/screens/keys/key_form_screen.dart';
-import 'package:termphin/widgets/ui/group_picker_field.dart';
+import 'package:termphin/widgets/groups/group_picker_field.dart';
 
 import '../../support/fakes.dart';
 import '../../support/fixtures.dart';

@@ -66,16 +66,16 @@ class ProfileAvatarColor {
 
   /// The ring and check drawn on a selected swatch. The swatches are a fixed
   /// palette that does not follow the theme, so neither does this.
-  static const Color onSwatch = Color(0xFFFFFFFF);
+  static const Color onSwatch = AppTheme.avatarForeground;
 
   static List<ProfileAvatarColor> colors = [
-    const ProfileAvatarColor('4DA3FF', Color(0xFF4DA3FF)),
-    const ProfileAvatarColor('4ADE80', Color(0xFF4ADE80)),
-    const ProfileAvatarColor('8B5CF6', Color(0xFF8B5CF6)),
-    const ProfileAvatarColor('F59E0B', Color(0xFFF59E0B)),
-    const ProfileAvatarColor('F87171', Color(0xFFF87171)),
-    const ProfileAvatarColor('06B6D4', Color(0xFF06B6D4)),
-    const ProfileAvatarColor('F472B6', Color(0xFFF472B6)),
+    ProfileAvatarColor('4DA3FF', AppTheme.avatarPalette[0]),
+    ProfileAvatarColor('4ADE80', AppTheme.avatarPalette[1]),
+    ProfileAvatarColor('8B5CF6', AppTheme.avatarPalette[2]),
+    ProfileAvatarColor('F59E0B', AppTheme.avatarPalette[3]),
+    ProfileAvatarColor('F87171', AppTheme.avatarPalette[4]),
+    ProfileAvatarColor('06B6D4', AppTheme.avatarPalette[5]),
+    ProfileAvatarColor('F472B6', AppTheme.avatarPalette[6]),
   ];
 
   static ProfileAvatarColor forHex(String? hex) {

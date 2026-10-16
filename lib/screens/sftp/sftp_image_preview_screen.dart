@@ -21,6 +21,7 @@ import '../../utils/sftp_path.dart';
 import '../../widgets/ui/app_notifications.dart';
 import '../../widgets/ui/clipboard_and_links.dart';
 import '../../widgets/ui/confirm_dialog.dart';
+import '../../widgets/ui/empty_state.dart';
 
 class _ImageEntry {
   final String path;
@@ -351,7 +352,7 @@ class _SftpImagePreviewScreenState extends State<SftpImagePreviewScreen>
     _zoomAnimController?.dispose();
     final animController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 220),
+      duration: AppTheme.motionPageReverse,
     );
     final animation = Matrix4Tween(begin: controller.value, end: end).animate(
       CurvedAnimation(parent: animController, curve: Curves.easeOutCubic),
@@ -390,8 +391,11 @@ class _SftpImagePreviewScreenState extends State<SftpImagePreviewScreen>
           onPressed: () => Navigator.of(context).pop(),
         ),
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(height: 1, color: context.colors.surfaceBorder),
+          preferredSize: const Size.fromHeight(AppTheme.hairline),
+          child: Container(
+            height: AppTheme.hairline,
+            color: context.colors.surfaceBorder,
+          ),
         ),
         title: entry == null
             ? const SizedBox.shrink()
@@ -400,7 +404,7 @@ class _SftpImagePreviewScreenState extends State<SftpImagePreviewScreen>
                 children: [
                   Text(
                     entry.filename,
-                    style: const TextStyle(fontSize: 16),
+                    style: const TextStyle(fontSize: AppTheme.font16),
                     overflow: TextOverflow.ellipsis,
                   ),
                   Row(
@@ -409,19 +413,19 @@ class _SftpImagePreviewScreenState extends State<SftpImagePreviewScreen>
                         Text(
                           formatFileSize(entry.size),
                           style: context.colors.uiStyle.copyWith(
-                            fontSize: 11,
+                            fontSize: AppTheme.font11,
                             color: context.colors.textTertiary,
                           ),
                         ),
                       if (_entries.length > 1) ...[
-                        const SizedBox(width: 8),
+                        const SizedBox(width: AppTheme.space8),
                         Text(
                           t.sftp.imageCounter(
                             current: _index + 1,
                             total: _entries.length,
                           ),
                           style: context.colors.uiStyle.copyWith(
-                            fontSize: 11,
+                            fontSize: AppTheme.font11,
                             color: context.colors.textTertiary,
                           ),
                         ),
@@ -445,7 +449,7 @@ class _SftpImagePreviewScreenState extends State<SftpImagePreviewScreen>
           IconButton(
             icon: _downloading
                 ? const SizedBox.square(
-                    dimension: 18,
+                    dimension: AppTheme.icon18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(PhosphorIconsFill.downloadSimple),
@@ -492,13 +496,13 @@ class _SftpImagePreviewScreenState extends State<SftpImagePreviewScreen>
                 color: context.colors.primary,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppTheme.space16),
             if (state.progress > 0)
               Text(
                 '${(state.progress * 100).round()}%',
                 style: TextStyle(color: context.colors.textSecondary),
               ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppTheme.space12),
             TextButton(
               onPressed: () => setState(state.cancel.cancel),
               child: Text(
@@ -512,26 +516,11 @@ class _SftpImagePreviewScreenState extends State<SftpImagePreviewScreen>
     }
 
     if (state.error.isNotEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                PhosphorIconsFill.imageBroken,
-                color: context.colors.textTertiary,
-                size: 48,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                state.error,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: context.colors.textSecondary),
-              ),
-            ],
-          ),
-        ),
+      return EmptyStatePanel(
+        icon: PhosphorIconsFill.imageBroken,
+        title: state.error,
+        tone: EmptyStateTone.error,
+        compact: true,
       );
     }
 
@@ -547,22 +536,11 @@ class _SftpImagePreviewScreenState extends State<SftpImagePreviewScreen>
           child: Image.file(
             state.file!,
             key: ValueKey(state.file!.path),
-            errorBuilder: (ctx, _, _) => Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    PhosphorIconsFill.imageBroken,
-                    color: context.colors.textTertiary,
-                    size: 48,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    Translations.of(ctx).sftp.imageDecodeError,
-                    style: TextStyle(color: context.colors.textSecondary),
-                  ),
-                ],
-              ),
+            errorBuilder: (ctx, _, _) => EmptyStatePanel(
+              icon: PhosphorIconsFill.imageBroken,
+              title: Translations.of(ctx).sftp.imageDecodeError,
+              tone: EmptyStateTone.error,
+              compact: true,
             ),
           ),
         ),

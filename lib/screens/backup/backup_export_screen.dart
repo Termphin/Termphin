@@ -176,10 +176,10 @@ class _BackupExportScreenState extends State<BackupExportScreen> {
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(
-                    20,
-                    16,
-                    20,
-                    20,
+                    AppTheme.space20,
+                    AppTheme.space16,
+                    AppTheme.space20,
+                    AppTheme.space20,
                   ).add(gutter),
                   children: [
                     Text(
@@ -188,7 +188,7 @@ class _BackupExportScreenState extends State<BackupExportScreen> {
                         color: context.colors.textTertiary,
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: AppTheme.space12),
                     AppCard.fields(
                       children: [
                         BackupOptionTile(
@@ -204,7 +204,7 @@ class _BackupExportScreenState extends State<BackupExportScreen> {
                             }
                           }),
                         ),
-                        const AppDivider(indent: 50),
+                        const AppDivider(indent: AppTheme.space48),
                         BackupOptionTile(
                           icon: PhosphorIconsFill.lock,
                           title: t.exportScreen.includePasswords,
@@ -215,7 +215,7 @@ class _BackupExportScreenState extends State<BackupExportScreen> {
                           onChanged: (v) =>
                               setState(() => _includePasswords = v),
                         ),
-                        const AppDivider(indent: 50),
+                        const AppDivider(indent: AppTheme.space48),
                         BackupOptionTile(
                           icon: PhosphorIconsFill.key,
                           title: t.exportScreen.includeInlineKeys,
@@ -226,7 +226,7 @@ class _BackupExportScreenState extends State<BackupExportScreen> {
                           onChanged: (v) =>
                               setState(() => _includeInlineKeys = v),
                         ),
-                        const AppDivider(indent: 50),
+                        const AppDivider(indent: AppTheme.space48),
                         BackupOptionTile(
                           icon: PhosphorIconsFill.key,
                           title: t.exportScreen.includeSshKeys,
@@ -235,7 +235,7 @@ class _BackupExportScreenState extends State<BackupExportScreen> {
                           sensitive: true,
                           onChanged: (v) => setState(() => _includeSshKeys = v),
                         ),
-                        const AppDivider(indent: 50),
+                        const AppDivider(indent: AppTheme.space48),
                         BackupOptionTile(
                           icon: PhosphorIconsFill.magicWand,
                           title: t.exportScreen.includeSnippets,
@@ -244,7 +244,7 @@ class _BackupExportScreenState extends State<BackupExportScreen> {
                           onChanged: (v) =>
                               setState(() => _includeSnippets = v),
                         ),
-                        const AppDivider(indent: 50),
+                        const AppDivider(indent: AppTheme.space48),
                         BackupOptionTile(
                           icon: PhosphorIconsFill.shieldCheck,
                           title: t.exportScreen.includeKnownHosts,
@@ -253,7 +253,7 @@ class _BackupExportScreenState extends State<BackupExportScreen> {
                           onChanged: (v) =>
                               setState(() => _includeKnownHosts = v),
                         ),
-                        const AppDivider(indent: 50),
+                        const AppDivider(indent: AppTheme.space48),
                         BackupOptionTile(
                           icon: PhosphorIconsFill.terminal,
                           title: t.exportScreen.includeTerminalSettings,
@@ -263,7 +263,7 @@ class _BackupExportScreenState extends State<BackupExportScreen> {
                           onChanged: (v) =>
                               setState(() => _includeTerminalSettings = v),
                         ),
-                        const AppDivider(indent: 50),
+                        const AppDivider(indent: AppTheme.space48),
                         BackupOptionTile(
                           icon: PhosphorIconsFill.sliders,
                           title: t.exportScreen.includeAppPreferences,
@@ -276,7 +276,7 @@ class _BackupExportScreenState extends State<BackupExportScreen> {
                       ],
                     ),
 
-                    const SizedBox(height: 10),
+                    const SizedBox(height: AppTheme.space10),
                     AppCard.fields(
                       children: [
                         BackupOptionTile(
@@ -291,7 +291,12 @@ class _BackupExportScreenState extends State<BackupExportScreen> {
                         ),
                         if (_encrypt)
                           Padding(
-                            padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                            padding: const EdgeInsets.fromLTRB(
+                              AppTheme.space14,
+                              0,
+                              AppTheme.space14,
+                              AppTheme.space14,
+                            ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -302,7 +307,7 @@ class _BackupExportScreenState extends State<BackupExportScreen> {
                                   obscure: true,
                                   onChanged: (_) => _clearPassphraseError(),
                                 ),
-                                const SizedBox(height: 10),
+                                const SizedBox(height: AppTheme.space10),
                                 AppFormField(
                                   controller: _passphraseConfirm,
                                   label: t.exportScreen.passphraseConfirmLabel,
@@ -312,11 +317,11 @@ class _BackupExportScreenState extends State<BackupExportScreen> {
                                   onChanged: (_) => _clearPassphraseError(),
                                 ),
                                 if (_passphraseError case final error?) ...[
-                                  const SizedBox(height: 8),
+                                  const SizedBox(height: AppTheme.space8),
                                   Text(
                                     error,
                                     style: TextStyle(
-                                      fontSize: 12,
+                                      fontSize: AppTheme.font12,
                                       color: context.colors.error,
                                     ),
                                   ),
@@ -328,22 +333,19 @@ class _BackupExportScreenState extends State<BackupExportScreen> {
                     ),
 
                     if (_summary(t, options) case final summary?) ...[
-                      const SizedBox(height: 10),
+                      const SizedBox(height: AppTheme.space10),
                       Text(
                         t.exportScreen.estimatedContents(summary: summary),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: context.colors.textTertiary,
-                        ),
+                        style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],
 
                     if (options.containsSecrets && !_encrypt) ...[
-                      const SizedBox(height: 10),
+                      const SizedBox(height: AppTheme.space10),
                       BackupWarningBanner(t.exportScreen.sensitiveWarning),
                     ],
 
-                    const SizedBox(height: 10),
+                    const SizedBox(height: AppTheme.space10),
                     ValueListenableBuilder<String>(
                       valueListenable: lastBackupAtSetting,
                       builder: (context, stored, _) {
@@ -354,10 +356,7 @@ class _BackupExportScreenState extends State<BackupExportScreen> {
                               : t.exportScreen.lastBackup(
                                   date: formatBackupDate(at),
                                 ),
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: context.colors.textTertiary,
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall,
                         );
                       },
                     ),

@@ -26,7 +26,10 @@ class AddRowCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: radius,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppTheme.space14,
+            vertical: AppTheme.space14,
+          ),
           decoration: BoxDecoration(
             borderRadius: radius,
             border: colors.isDark
@@ -35,12 +38,16 @@ class AddRowCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(PhosphorIconsRegular.plus, size: 18, color: colors.primary),
-              const SizedBox(width: 10),
+              Icon(
+                PhosphorIconsRegular.plus,
+                size: AppTheme.icon18,
+                color: colors.primary,
+              ),
+              const SizedBox(width: AppTheme.space10),
               Text(
                 label,
                 style: colors.uiStyle.copyWith(
-                  fontSize: 14,
+                  fontSize: AppTheme.font14,
                   fontWeight: FontWeight.w600,
                   color: colors.primary,
                 ),

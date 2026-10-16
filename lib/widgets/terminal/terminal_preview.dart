@@ -119,9 +119,9 @@ class _TerminalPreviewState extends State<TerminalPreview> {
             ),
             padding: EdgeInsets.fromLTRB(
               widget.sidePadding,
-              6,
+              app_theme.AppTheme.space6,
               widget.sidePadding,
-              6,
+              app_theme.AppTheme.space6,
             ),
             readOnly: true,
             autofocus: false,

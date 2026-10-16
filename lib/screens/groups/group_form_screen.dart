@@ -8,11 +8,12 @@ import '../../providers/groups_provider.dart';
 import '../../services/storage/group_storage.dart';
 import '../../theme/theme.dart';
 import '../../utils/route_pop.dart';
+import '../../widgets/groups/group_dot.dart';
 import '../../widgets/profiles/profile_avatar.dart';
+import '../../widgets/ui/app_card.dart';
 import '../../widgets/ui/app_form_field.dart';
 import '../../widgets/ui/app_notifications.dart';
 import '../../widgets/ui/confirm_dialog.dart';
-import '../../widgets/ui/group_dot.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
 import '../../widgets/ui/section_header.dart';
 import 'groups_screen.dart';
@@ -209,11 +210,11 @@ class _GroupFormScreenState extends ConsumerState<GroupFormScreen> {
               ),
             ),
           Padding(
-            padding: const EdgeInsets.only(right: 12),
+            padding: const EdgeInsets.only(right: AppTheme.space12),
             child: _isSaving
                 ? const SizedBox(
-                    width: 20,
-                    height: 20,
+                    width: AppTheme.icon20,
+                    height: AppTheme.icon20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : ListenableBuilder(
@@ -227,7 +228,7 @@ class _GroupFormScreenState extends ConsumerState<GroupFormScreen> {
                               ? context.colors.primary
                               : context.colors.textTertiary,
                           fontWeight: FontWeight.w700,
-                          fontSize: 15,
+                          fontSize: AppTheme.font15,
                         ),
                       ),
                     ),
@@ -240,10 +241,10 @@ class _GroupFormScreenState extends ConsumerState<GroupFormScreen> {
         child: ContentGutter(
           builder: (context, gutter) => ListView(
             padding: EdgeInsets.fromLTRB(
-              20,
-              _isEditing ? 8 : 16,
-              20,
-              40,
+              AppTheme.space20,
+              _isEditing ? AppTheme.space8 : AppTheme.space16,
+              AppTheme.space20,
+              AppTheme.space40,
             ).add(gutter),
             children: [
               _GroupPreview(
@@ -251,7 +252,7 @@ class _GroupFormScreenState extends ConsumerState<GroupFormScreen> {
                 colorHex: _selectedColorHex,
                 isDefaultGroup: _isDefaultGroup,
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: AppTheme.space20),
               AppFormField(
                 key: const ValueKey('groupNameField'),
                 controller: _nameCtrl,
@@ -264,21 +265,18 @@ class _GroupFormScreenState extends ConsumerState<GroupFormScreen> {
                 onSubmitted: (_) => _save(),
               ),
               if (_isDefaultGroup) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: AppTheme.space8),
                 Text(
                   t.groups.defaultNameLocked,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: context.colors.textTertiary,
-                  ),
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
-              const SizedBox(height: 24),
+              const SizedBox(height: AppTheme.space24),
               SectionHeader(t.groups.colorLabel),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppTheme.space12),
               Wrap(
-                spacing: 10,
-                runSpacing: 10,
+                spacing: AppTheme.space10,
+                runSpacing: AppTheme.space10,
                 children: [
                   Tooltip(
                     message: t.groups.noColour,
@@ -307,7 +305,7 @@ class _GroupFormScreenState extends ConsumerState<GroupFormScreen> {
                         child: _selectedColorHex == null
                             ? Icon(
                                 PhosphorIconsRegular.check,
-                                size: 16,
+                                size: AppTheme.icon16,
                                 color: context.colors.textPrimary,
                               )
                             : null,
@@ -341,7 +339,7 @@ class _GroupFormScreenState extends ConsumerState<GroupFormScreen> {
                         child: selected
                             ? const Icon(
                                 PhosphorIconsRegular.check,
-                                size: 16,
+                                size: AppTheme.icon16,
                                 color: ProfileAvatarColor.onSwatch,
                               )
                             : null,
@@ -351,10 +349,13 @@ class _GroupFormScreenState extends ConsumerState<GroupFormScreen> {
                 ],
               ),
               if (_isEditing && !_isDefaultGroup) ...[
-                const SizedBox(height: 32),
+                const SizedBox(height: AppTheme.space32),
                 OutlinedButton.icon(
                   onPressed: _isSaving ? null : _delete,
-                  icon: const Icon(PhosphorIconsRegular.trash, size: 18),
+                  icon: const Icon(
+                    PhosphorIconsRegular.trash,
+                    size: AppTheme.icon18,
+                  ),
                   label: Text(t.common.delete),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: context.colors.error,
@@ -393,17 +394,15 @@ class _GroupPreview extends StatelessWidget {
         final label = isDefaultGroup
             ? t.groups.general
             : (typed.isEmpty ? t.groups.groupNameHint : typed);
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: context.colors.surfaceCard,
-            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-            border: Border.all(color: context.colors.surfaceBorder),
+        return AppCard(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppTheme.space16,
+            vertical: AppTheme.space14,
           ),
           child: Row(
             children: [
               GroupDot(colorHex: colorHex, size: 10),
-              const SizedBox(width: 10),
+              const SizedBox(width: AppTheme.space10),
               Expanded(
                 child: Text(
                   label,

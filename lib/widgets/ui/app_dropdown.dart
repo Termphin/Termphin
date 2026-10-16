@@ -26,7 +26,9 @@ DropdownStyleData appDropdownStyle(
   double? maxHeight,
   DropdownDirection direction = DropdownDirection.textDirection,
   Offset offset = Offset.zero,
-  EdgeInsetsGeometry padding = const EdgeInsets.symmetric(vertical: 6),
+  EdgeInsetsGeometry padding = const EdgeInsets.symmetric(
+    vertical: AppTheme.space6,
+  ),
 }) => DropdownStyleData(
   width: width,
   maxHeight: maxHeight,
@@ -44,13 +46,13 @@ DropdownStyleData appDropdownStyle(
     thumbVisibility: const WidgetStatePropertyAll(true),
     thumbColor: WidgetStatePropertyAll(context.colors.textTertiary),
     thickness: const WidgetStatePropertyAll(3),
-    radius: const Radius.circular(2),
+    radius: const Radius.circular(AppTheme.radiusXxs),
     crossAxisMargin: 3,
   ),
 );
 
 MenuItemStyleData appDropdownItemStyle({
-  EdgeInsets padding = const EdgeInsets.symmetric(horizontal: 12),
+  EdgeInsets padding = const EdgeInsets.symmetric(horizontal: AppTheme.space12),
 }) => MenuItemStyleData(
   borderRadius: BorderRadius.circular(AppTheme.radiusSm),
   padding: padding,
@@ -289,15 +291,15 @@ class AppDropdownItem extends StatelessWidget {
     final iconColor = color ?? context.colors.textSecondary;
     final iconData = icon;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.symmetric(vertical: AppTheme.space12),
       child: Row(
         children: [
           if (iconData != null) ...[
-            Icon(iconData, size: 18, color: iconColor),
-            const SizedBox(width: 12),
+            Icon(iconData, size: AppTheme.icon18, color: iconColor),
+            const SizedBox(width: AppTheme.space12),
           ] else if (leading != null) ...[
             leading!,
-            const SizedBox(width: 10),
+            const SizedBox(width: AppTheme.space10),
           ],
           Expanded(
             child: Text(
@@ -307,17 +309,17 @@ class AppDropdownItem extends StatelessWidget {
               style: TextStyle(
                 color: effective,
                 fontFamily: fontFamily,
-                fontSize: 14,
+                fontSize: AppTheme.font14,
                 fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
               ),
             ),
           ),
           ?trailing,
           if (selected) ...[
-            const SizedBox(width: 10),
+            const SizedBox(width: AppTheme.space10),
             Icon(
               PhosphorIconsRegular.check,
-              size: 14,
+              size: AppTheme.icon14,
               color: context.colors.primary,
             ),
           ],

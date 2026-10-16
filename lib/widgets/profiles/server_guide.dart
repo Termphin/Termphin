@@ -7,10 +7,10 @@ import '../../i18n/strings.g.dart';
 import '../../services/analytics/analytics_service.dart';
 import '../../services/app/manual_urls.dart';
 import '../../theme/theme.dart';
+import '../settings/manual_link.dart';
 import '../ui/app_card.dart';
 import '../ui/app_divider.dart';
 import '../ui/app_sheet.dart';
-import '../ui/manual_link.dart';
 
 /// Where a server can come from, for someone who has none.
 ///
@@ -65,23 +65,28 @@ class _GuideRow extends StatelessWidget {
     return InkWell(
       onTap: () => openManual(context, page),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+        padding: const EdgeInsets.fromLTRB(
+          AppTheme.space14,
+          AppTheme.space14,
+          AppTheme.space14,
+          AppTheme.space12,
+        ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, size: 22, color: colors.primary),
-            const SizedBox(width: 14),
+            Icon(icon, size: AppTheme.icon22, color: colors.primary),
+            const SizedBox(width: AppTheme.space14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(title, style: colors.itemTitle),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: AppTheme.space4),
                   Text(
                     body,
                     style: colors.uiSmall.copyWith(color: colors.textSecondary),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: AppTheme.space6),
                   Text(
                     Translations.of(context).manual.readMore,
                     style: colors.uiSmall.copyWith(
@@ -107,7 +112,12 @@ Future<void> showServerGuideSheet(BuildContext context) {
     builder: (sheetContext) {
       final t = Translations.of(sheetContext);
       return SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+        padding: const EdgeInsets.fromLTRB(
+          AppTheme.space20,
+          AppTheme.space8,
+          AppTheme.space20,
+          AppTheme.space24,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
@@ -118,7 +128,7 @@ Future<void> showServerGuideSheet(BuildContext context) {
                 sheetContext,
               ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppTheme.space16),
             const ServerGuideList(),
           ],
         ),

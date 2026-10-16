@@ -110,7 +110,7 @@ class _SftpPathBarState extends State<SftpPathBar> {
         onTap: onTap,
         child: SizedBox.square(
           dimension: 40,
-          child: Icon(icon, color: color, size: 20),
+          child: Icon(icon, color: color, size: AppTheme.icon20),
         ),
       );
       return tooltip == null
@@ -124,7 +124,10 @@ class _SftpPathBarState extends State<SftpPathBar> {
         color: colors.surfaceCard,
         border: Border(bottom: BorderSide(color: colors.surfaceBorder)),
       ),
-      padding: const EdgeInsets.only(left: 4, right: 4),
+      padding: const EdgeInsets.only(
+        left: AppTheme.space4,
+        right: AppTheme.space4,
+      ),
       child: Row(
         children: [
           tool(
@@ -132,7 +135,7 @@ class _SftpPathBarState extends State<SftpPathBar> {
             color: accent,
             onTap: widget.onNavigateToRoot,
           ),
-          const SizedBox(width: 2),
+          const SizedBox(width: AppTheme.space2),
           Expanded(
             child: _editingPath
                 ? TextField(
@@ -142,7 +145,7 @@ class _SftpPathBarState extends State<SftpPathBar> {
                     onTapOutside: (_) => _pathFocusNode.unfocus(),
                     style: colors.monoStyle.copyWith(
                       color: textPrimary,
-                      fontSize: 14,
+                      fontSize: AppTheme.font14,
                       fontWeight: FontWeight.w600,
                     ),
                     decoration: const InputDecoration(
@@ -184,7 +187,7 @@ class _SftpPathBarState extends State<SftpPathBar> {
                                 isWindowsPath ? r' \ ' : ' / ',
                                 style: colors.monoStyle.copyWith(
                                   color: textTertiary,
-                                  fontSize: 14,
+                                  fontSize: AppTheme.font14,
                                 ),
                               ),
                             GestureDetector(
@@ -195,7 +198,7 @@ class _SftpPathBarState extends State<SftpPathBar> {
                                   color: i == segments.length - 1
                                       ? textPrimary
                                       : textSecondary,
-                                  fontSize: 14,
+                                  fontSize: AppTheme.font14,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -206,7 +209,7 @@ class _SftpPathBarState extends State<SftpPathBar> {
                     ),
                   ),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: AppTheme.space4),
           tool(
             icon: PhosphorIconsFill.arrowClockwise,
             color: textTertiary,

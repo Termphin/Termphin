@@ -74,7 +74,7 @@ class ProfileSortMenu extends StatelessWidget {
     };
     return AppActionDropdown<ProfileSort>(
       icon: icon,
-      iconSize: 18,
+      iconSize: AppTheme.icon18,
       buttonSize: 40,
       width: 200,
       direction: DropdownDirection.left,
@@ -107,7 +107,7 @@ class ProfileSortMenu extends StatelessWidget {
                   ProfileSort.nameAZ => PhosphorIconsRegular.sortAscending,
                   ProfileSort.nameZA => PhosphorIconsRegular.sortDescending,
                 },
-                size: 18,
+                size: AppTheme.icon18,
                 color: context.colors.textTertiary,
               ),
             )

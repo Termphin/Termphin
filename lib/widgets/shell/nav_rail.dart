@@ -51,7 +51,7 @@ class NavRailToggleButton extends StatelessWidget {
             dimension: 40,
             child: Icon(
               PhosphorIconsRegular.list,
-              size: 20,
+              size: AppTheme.icon20,
               color: context.colors.textSecondary,
             ),
           ),

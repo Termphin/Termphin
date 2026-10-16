@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../theme/theme.dart';
+import 'app_badge.dart';
 
 /// Reusable section or group header row.
 ///
@@ -19,7 +20,10 @@ class ListSectionHeader extends StatelessWidget {
     this.actions = const [],
     this.onAdd,
     this.addTooltip,
-    this.padding = const EdgeInsets.fromLTRB(16, 4, 16, 4),
+    this.padding = const EdgeInsets.symmetric(
+      horizontal: AppTheme.space16,
+      vertical: AppTheme.space4,
+    ),
   }) : assert(
          title != null || titleWidget != null,
          'Either title or titleWidget must be provided',
@@ -35,7 +39,10 @@ class ListSectionHeader extends StatelessWidget {
     List<Widget> actions = const [],
     VoidCallback? onAdd,
     String? addTooltip,
-    EdgeInsetsGeometry padding = const EdgeInsets.fromLTRB(16, 4, 16, 4),
+    EdgeInsetsGeometry padding = const EdgeInsets.symmetric(
+      horizontal: AppTheme.space16,
+      vertical: AppTheme.space4,
+    ),
   }) {
     return SliverToBoxAdapter(
       key: key,
@@ -76,18 +83,36 @@ class ListSectionHeader extends StatelessWidget {
   /// Insets around the header row.
   final EdgeInsetsGeometry padding;
 
+  /// The compact icon button every header action uses, so a group header's
+  /// extra buttons and the add button share one size and density.
+  static Widget action({
+    Key? key,
+    required Widget icon,
+    required String? tooltip,
+    required VoidCallback? onPressed,
+    Color? color,
+  }) {
+    return IconButton(
+      key: key,
+      tooltip: tooltip,
+      iconSize: AppTheme.icon20,
+      color: color,
+      visualDensity: VisualDensity.compact,
+      icon: icon,
+      onPressed: onPressed,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final effectiveActions = <Widget>[
       ...actions,
       if (onAdd != null)
-        IconButton(
-          tooltip: addTooltip,
-          iconSize: 20,
-          color: context.colors.primary,
-          visualDensity: VisualDensity.compact,
+        action(
           icon: const Icon(PhosphorIconsRegular.plus),
+          tooltip: addTooltip,
           onPressed: onAdd,
+          color: context.colors.primary,
         ),
     ];
 
@@ -99,38 +124,16 @@ class ListSectionHeader extends StatelessWidget {
           titleWidget ??
               Text(title!, style: Theme.of(context).textTheme.titleMedium),
           if (count != null) ...[
-            const SizedBox(width: 8),
-            CountBadge(count: count!),
+            const SizedBox(width: AppTheme.space8),
+            AppBadge.count(count!),
           ],
-          if (middle != null) ...[const SizedBox(width: 8), middle!],
+          if (middle != null) ...[
+            const SizedBox(width: AppTheme.space8),
+            middle!,
+          ],
           const Spacer(),
           ...effectiveActions,
         ],
-      ),
-    );
-  }
-}
-
-/// A compact pill badge displaying a number (count of items).
-class CountBadge extends StatelessWidget {
-  const CountBadge({super.key, required this.count});
-
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: context.colors.surfaceCard,
-        borderRadius: BorderRadius.circular(AppTheme.radiusXs),
-        border: Border.all(color: context.colors.surfaceBorder),
-      ),
-      child: Text(
-        '$count',
-        style: context.colors.uiSmall.copyWith(
-          color: context.colors.textSecondary,
-        ),
       ),
     );
   }

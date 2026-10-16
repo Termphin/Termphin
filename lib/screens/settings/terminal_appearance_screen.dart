@@ -12,6 +12,7 @@ import '../../widgets/ui/app_card.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
 import '../../widgets/ui/section_header.dart';
 import '../../widgets/ui/settings_controls.dart';
+import '../../widgets/ui/settings_tile.dart';
 import '../../widgets/ui/stepper_row.dart';
 
 /// Everything that decides how the terminal looks and behaves, with a live
@@ -83,7 +84,12 @@ class _TerminalAppearanceScreenState extends State<TerminalAppearanceScreen> {
           builder: (context, gutter) => Column(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 12).add(gutter),
+                padding: const EdgeInsets.fromLTRB(
+                  AppTheme.space16,
+                  AppTheme.space16,
+                  AppTheme.space16,
+                  AppTheme.space12,
+                ).add(gutter),
                 child: SizedBox(
                   height: 168,
                   width: double.infinity,
@@ -101,13 +107,23 @@ class _TerminalAppearanceScreenState extends State<TerminalAppearanceScreen> {
               ),
               Expanded(
                 child: ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 32).add(gutter),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppTheme.space16,
+                    AppTheme.space4,
+                    AppTheme.space16,
+                    AppTheme.space32,
+                  ).add(gutter),
                   children: [
                     SectionHeader(t.settings.terminalStyle),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: AppTheme.space10),
                     AppCard(
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
+                        padding: const EdgeInsets.fromLTRB(
+                          AppTheme.space14,
+                          AppTheme.space14,
+                          AppTheme.space14,
+                          AppTheme.space8,
+                        ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -117,15 +133,15 @@ class _TerminalAppearanceScreenState extends State<TerminalAppearanceScreen> {
                               labels: kTerminalSchemeLabels,
                               onChanged: (v) => _write(_settings.scheme, v),
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: AppTheme.space16),
                             SettingsDropdownField(
                               label: t.settings.font,
                               value: _fontFamily,
                               labels: kTerminalFontLabels,
-                              itemsInOwnFont: true,
+                              itemFontFamily: (f) => f,
                               onChanged: (v) => _write(_settings.fontFamily, v),
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: AppTheme.space16),
                             ValueStepperRow(
                               label: t.settings.fontSize,
                               value: _fontSize,
@@ -154,7 +170,7 @@ class _TerminalAppearanceScreenState extends State<TerminalAppearanceScreen> {
                               onChanged: (v) =>
                                   _write(_settings.sidePadding, v),
                             ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: AppTheme.space12),
                             SettingsDropdownRow(
                               label: t.settings.cursor,
                               value: _cursorStyle,
@@ -162,8 +178,10 @@ class _TerminalAppearanceScreenState extends State<TerminalAppearanceScreen> {
                               onChanged: (v) =>
                                   _write(_settings.cursorStyle, v),
                             ),
-                            SettingsSwitchRow(
-                              label: t.settings.cursorBlink,
+                            SettingsSwitchTile(
+                              dense: true,
+                              contentPadding: EdgeInsets.zero,
+                              title: t.settings.cursorBlink,
                               value: _cursorBlink,
                               onChanged: (v) =>
                                   _write(_settings.cursorBlink, v),
@@ -172,17 +190,24 @@ class _TerminalAppearanceScreenState extends State<TerminalAppearanceScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: AppTheme.space20),
                     SectionHeader(t.settings.terminalBehavior),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: AppTheme.space10),
                     AppCard(
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
+                        padding: const EdgeInsets.fromLTRB(
+                          AppTheme.space14,
+                          AppTheme.space8,
+                          AppTheme.space14,
+                          AppTheme.space8,
+                        ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            SettingsSwitchRow(
-                              label: t.settings.predictiveEcho,
+                            SettingsSwitchTile(
+                              dense: true,
+                              contentPadding: EdgeInsets.zero,
+                              title: t.settings.predictiveEcho,
                               subtitle: t.settings.predictiveEchoSubtitle,
                               value: _predictiveEcho,
                               onChanged: (v) =>

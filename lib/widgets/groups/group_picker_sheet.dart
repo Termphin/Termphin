@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import '../../i18n/strings.g.dart';
 import '../../models/profile_group.dart';
 import '../../services/storage/group_storage.dart';
-import 'app_sheet.dart';
+import '../../theme/theme.dart';
+import '../ui/app_sheet.dart';
+import '../ui/section_header.dart';
 import 'group_dot.dart';
-import 'section_header.dart';
 
 /// Asks which group to move the selected records into.
 ///
@@ -31,7 +32,12 @@ Future<String?> showGroupPickerSheet(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+            padding: const EdgeInsets.fromLTRB(
+              AppTheme.space20,
+              AppTheme.space4,
+              AppTheme.space20,
+              AppTheme.space8,
+            ),
             child: SectionHeader(t.selection.moveToGroup),
           ),
           Flexible(

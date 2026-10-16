@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../../i18n/strings.g.dart';
 import '../../services/settings/toolbar_layout.dart';
 import '../../theme/theme.dart';
+import '../../widgets/ui/app_badge.dart';
 import '../../widgets/ui/app_card.dart';
 import '../../widgets/ui/app_divider.dart';
 import '../../widgets/ui/app_dropdown.dart';
@@ -164,14 +165,24 @@ class _ToolbarProfilesScreenState extends State<ToolbarProfilesScreen> {
       title: t.settings.toolbarProfiles,
       bodyBuilder: (context, scrollController, gutter) => ListView(
         controller: scrollController,
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 32).add(gutter),
+        padding: const EdgeInsets.fromLTRB(
+          AppTheme.space16,
+          0,
+          AppTheme.space16,
+          AppTheme.space32,
+        ).add(gutter),
         children: [
           LargeTitleHeader(
             title: t.settings.toolbarProfiles,
             subtitle: t.settings.toolbarProfilesSubtitle,
-            padding: const EdgeInsets.fromLTRB(0, 24, 0, 8),
+            padding: const EdgeInsets.fromLTRB(
+              0,
+              AppTheme.space24,
+              0,
+              AppTheme.space8,
+            ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppTheme.space8),
           AppCard.fields(
             children: [
               InkWell(
@@ -179,21 +190,21 @@ class _ToolbarProfilesScreenState extends State<ToolbarProfilesScreen> {
                 borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
+                    horizontal: AppTheme.space16,
+                    vertical: AppTheme.space14,
                   ),
                   child: Row(
                     children: [
                       Icon(
                         PhosphorIconsRegular.plus,
-                        size: 18,
+                        size: AppTheme.icon18,
                         color: context.colors.primary,
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: AppTheme.space12),
                       Text(
                         t.settings.toolbarProfileNew,
                         style: context.colors.uiStyle.copyWith(
-                          fontSize: 14,
+                          fontSize: AppTheme.font14,
                           fontWeight: FontWeight.w600,
                           color: context.colors.primary,
                         ),
@@ -204,7 +215,7 @@ class _ToolbarProfilesScreenState extends State<ToolbarProfilesScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppTheme.space12),
           AppCard.fields(
             children: [
               for (final (index, profile) in profiles.profiles.indexed) ...[
@@ -260,19 +271,24 @@ class _ProfileRow extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
+        padding: const EdgeInsets.fromLTRB(
+          AppTheme.space14,
+          AppTheme.space10,
+          AppTheme.space6,
+          AppTheme.space10,
+        ),
         child: Row(
           children: [
             Icon(
               active
                   ? PhosphorIconsFill.radioButton
                   : PhosphorIconsRegular.circle,
-              size: 18,
+              size: AppTheme.icon18,
               color: active
                   ? context.colors.primary
                   : context.colors.textTertiary,
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: AppTheme.space12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -288,17 +304,15 @@ class _ProfileRow extends StatelessWidget {
                         ),
                       ),
                       if (active) ...[
-                        const SizedBox(width: 8),
-                        Text(
+                        const SizedBox(width: AppTheme.space8),
+                        AppBadge(
                           t.settings.toolbarProfileActive.toUpperCase(),
-                          style: context.colors.sectionLabel.copyWith(
-                            color: context.colors.primary,
-                          ),
+                          tone: BadgeTone.quiet,
                         ),
                       ],
                     ],
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: AppTheme.space2),
                   Text(
                     t.settings.toolbarProfileSummary(
                       count: keys,
@@ -314,7 +328,7 @@ class _ProfileRow extends StatelessWidget {
               ),
             ),
             AppActionDropdown<_ProfileAction>(
-              iconSize: 18,
+              iconSize: AppTheme.icon18,
               buttonSize: 40,
               iconColor: context.colors.textTertiary,
               width: 220,

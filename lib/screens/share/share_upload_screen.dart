@@ -311,7 +311,7 @@ class _ShareUploadScreenState extends ConsumerState<ShareUploadScreen> {
       body: _Status(
         leading: Icon(
           PhosphorIconsRegular.cloudArrowUp,
-          size: 40,
+          size: AppTheme.icon40,
           color: colors.primary,
         ),
         title: t.share.uploading,
@@ -331,7 +331,7 @@ class _ShareUploadScreenState extends ConsumerState<ShareUploadScreen> {
               ),
               style: colors.uiSmall.copyWith(color: colors.textTertiary),
             ),
-          const SizedBox(height: 20),
+          const SizedBox(height: AppTheme.space20),
           ClipRRect(
             borderRadius: BorderRadius.circular(AppTheme.radiusPill),
             child: LinearProgressIndicator(
@@ -341,7 +341,7 @@ class _ShareUploadScreenState extends ConsumerState<ShareUploadScreen> {
               valueColor: AlwaysStoppedAnimation<Color>(colors.primary),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppTheme.space8),
           Text(
             total == null
                 ? formatFileSize(progress?.bytes ?? 0)
@@ -349,7 +349,7 @@ class _ShareUploadScreenState extends ConsumerState<ShareUploadScreen> {
                       '${formatFileSize(total)}',
             style: colors.uiSmall.copyWith(color: colors.textTertiary),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: AppTheme.space20),
           TextButton(
             onPressed: () => _cancel?.cancel(),
             child: Text(t.common.cancel),
@@ -365,7 +365,7 @@ class _ShareUploadScreenState extends ConsumerState<ShareUploadScreen> {
       body: _Status(
         leading: Icon(
           PhosphorIconsRegular.checkCircle,
-          size: 48,
+          size: AppTheme.icon48,
           color: colors.success,
         ),
         title: t.share.done,
@@ -400,14 +400,14 @@ class _Status extends StatelessWidget {
     return SafeArea(
       child: Center(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 40),
+          padding: const EdgeInsets.symmetric(horizontal: AppTheme.space40),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               leading,
-              const SizedBox(height: 20),
+              const SizedBox(height: AppTheme.space20),
               Text(title, textAlign: TextAlign.center, style: colors.itemTitle),
-              const SizedBox(height: 6),
+              const SizedBox(height: AppTheme.space6),
               ...children,
             ],
           ),

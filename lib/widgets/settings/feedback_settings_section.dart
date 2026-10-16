@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import '../../i18n/strings.g.dart';
 import '../../screens/settings/error_reports_screen.dart';
 import '../../screens/settings/manual_screen.dart';
+import '../../theme/theme.dart';
 import '../ui/app_card.dart';
+import '../ui/app_divider.dart';
 import '../ui/clipboard_and_links.dart';
 import '../ui/section_header.dart';
 import '../ui/settings_tile.dart';
@@ -40,35 +42,33 @@ class FeedbackSettingsSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SectionHeader(t.settings.feedback),
-        const SizedBox(height: 10),
-        AppCard(
-          child: Column(
-            children: [
-              SettingsTile(
-                title: t.settings.sendFeedback,
-                subtitle: t.settings.sendFeedbackSubtitle,
-                onTap: () => _sendFeedback(context, isBug: false),
-              ),
-              const Divider(height: 1),
-              SettingsTile(
-                title: t.settings.reportBug,
-                subtitle: t.settings.reportBugSubtitle,
-                onTap: () => _sendFeedback(context, isBug: true),
-              ),
-              const Divider(height: 1),
-              SettingsTile(
-                title: t.settings.errorReports,
-                subtitle: t.settings.errorReportsSubtitle,
-                destination: () => const ErrorReportsScreen(),
-              ),
-              const Divider(height: 1),
-              SettingsTile(
-                title: t.settings.manual,
-                subtitle: t.settings.manualSubtitle,
-                destination: () => const ManualScreen(),
-              ),
-            ],
-          ),
+        const SizedBox(height: AppTheme.space10),
+        AppCard.fields(
+          children: [
+            SettingsTile(
+              title: t.settings.sendFeedback,
+              subtitle: t.settings.sendFeedbackSubtitle,
+              onTap: () => _sendFeedback(context, isBug: false),
+            ),
+            const AppDivider(),
+            SettingsTile(
+              title: t.settings.reportBug,
+              subtitle: t.settings.reportBugSubtitle,
+              onTap: () => _sendFeedback(context, isBug: true),
+            ),
+            const AppDivider(),
+            SettingsTile(
+              title: t.settings.errorReports,
+              subtitle: t.settings.errorReportsSubtitle,
+              destination: () => const ErrorReportsScreen(),
+            ),
+            const AppDivider(),
+            SettingsTile(
+              title: t.settings.manual,
+              subtitle: t.settings.manualSubtitle,
+              destination: () => const ManualScreen(),
+            ),
+          ],
         ),
       ],
     );

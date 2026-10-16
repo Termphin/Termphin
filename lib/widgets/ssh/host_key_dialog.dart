@@ -10,7 +10,7 @@ import '../../services/app/identity_anonymizer.dart';
 import '../../services/app/manual_urls.dart';
 import '../../services/ssh/ssh_prompts.dart';
 import '../../theme/theme.dart';
-import '../ui/manual_link.dart';
+import '../settings/manual_link.dart';
 
 /// Asks about a host key from outside any widget's context.
 ///
@@ -55,7 +55,7 @@ class _HostKeyDialog extends ConsumerWidget {
             ? PhosphorIconsFill.warningOctagon
             : PhosphorIconsRegular.shieldCheck,
         color: accent,
-        size: 28,
+        size: AppTheme.icon28,
       ),
       title: Text(_changed ? t.hostKey.changedTitle : t.hostKey.newTitle),
       content: SingleChildScrollView(
@@ -67,31 +67,31 @@ class _HostKeyDialog extends ConsumerWidget {
               t.hostKey.endpoint(host: displayHost, port: '${request.port}'),
               style: colors.itemTitle,
             ),
-            const SizedBox(height: AppTheme.spaceSm),
+            const SizedBox(height: AppTheme.space8),
             Text(
               _changed ? t.hostKey.changedBody : t.hostKey.newBody,
               style: colors.uiStyle,
             ),
-            const SizedBox(height: AppTheme.spaceLg),
+            const SizedBox(height: AppTheme.space16),
             _Fingerprint(
               label: t.hostKey.fingerprintLabel,
               value: request.fingerprint,
               accent: accent,
             ),
             if (_changed && request.pinnedFingerprint != null) ...[
-              const SizedBox(height: AppTheme.spaceSm),
+              const SizedBox(height: AppTheme.space8),
               _Fingerprint(
                 label: t.hostKey.pinnedLabel,
                 value: request.pinnedFingerprint!,
                 accent: colors.textTertiary,
               ),
             ],
-            const SizedBox(height: AppTheme.spaceMd),
+            const SizedBox(height: AppTheme.space12),
             Text(
               '${t.hostKey.keyTypeLabel}: ${request.keyType}',
               style: colors.uiSmall,
             ),
-            const SizedBox(height: AppTheme.spaceSm),
+            const SizedBox(height: AppTheme.space8),
             Text(t.hostKey.verifyHint, style: colors.uiSmall),
             Align(
               alignment: AlignmentDirectional.centerStart,
@@ -105,7 +105,7 @@ class _HostKeyDialog extends ConsumerWidget {
               ),
             ),
             if (_changed) ...[
-              const SizedBox(height: AppTheme.spaceLg),
+              const SizedBox(height: AppTheme.space16),
               Text(
                 t.hostKey.changedWarning,
                 style: colors.uiStyle.copyWith(
@@ -150,7 +150,7 @@ class _Fingerprint extends StatelessWidget {
     final colors = context.colors;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(AppTheme.spaceMd),
+      padding: const EdgeInsets.all(AppTheme.space12),
       decoration: BoxDecoration(
         color: colors.surfaceOffset,
         borderRadius: BorderRadius.circular(AppTheme.radiusSm),
@@ -160,7 +160,7 @@ class _Fingerprint extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(label, style: colors.uiSmall.copyWith(color: accent)),
-          const SizedBox(height: AppTheme.spaceXs),
+          const SizedBox(height: AppTheme.space4),
           SelectableText(
             value,
             style: colors.monoStyle.copyWith(color: colors.textPrimary),
