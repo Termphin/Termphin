@@ -16,8 +16,8 @@
 # before anyone has decided what version ships it. Nothing renders it: the app
 # and the landing changelog both drop any entry whose version is not a dotted
 # number. Give it the real number at release time and it appears in both.
-- version: "Unreleased"
-  date: "2026-10-11"
+- version: "1.13.0"
+  date: "2026-10-18"
   added:
     - "An Open source section in Settings: star Termphin on GitHub, browse issues, contribute"
     - "Error reports in Settings: see the errors Termphin ran into and send them with a bug report"
@@ -29,6 +29,10 @@
     - "Arranging the action dock is easier: drag tiles into place, hide them with one tap and reset to the defaults"
     - "Smarter autocomplete"
     - "Selection improvements"
+    - "Opening and leaving the terminal and switching tabs are animated"
+    - "Selecting machines, keys, snippets or files brings up one bar of actions, docked within reach"
+    - "Settings are easier to scan, with shorter descriptions"
+    - "A more consistent look across the app"
   fixed:
     - "The terminal no longer looks broken after coming back to the app until the keyboard is opened"
     - "The file browser no longer shows the previous folder's files after quick navigation"
@@ -36,6 +40,7 @@
     - "Pasting into a tab that has just closed no longer crashes the app"
     - "Typing a path in the file browser is no longer reset by a background refresh"
     - "A link that cannot be opened now says so instead of doing nothing"
+    - "The terminal's quick settings keep the same height when you switch between their tabs"
 - version: "1.12.0"
   date: "2026-10-11"
   added:
