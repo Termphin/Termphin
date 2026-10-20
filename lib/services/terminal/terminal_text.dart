@@ -1,5 +1,7 @@
 import 'dart:math';
 
+import 'package:terminal_view/core.dart';
+
 /// Turns raw terminal output into plain text fit for a read-only view.
 ///
 /// Escape sequences are dropped rather than interpreted: a snippet run's
@@ -263,3 +265,9 @@ bool isTypedInput(List<int> bytes) {
   if (bytes[0] != 0x1b || bytes.length == 1) return true;
   return !_terminalReport.hasMatch(String.fromCharCodes(bytes));
 }
+
+/// Everything [buffer] holds, scrollback included, as plain text - what "Copy
+/// all" and "Save output" hand over. Soft-wrapped rows join back into the line
+/// they came from, and the empty rows below the last output are dropped, so a
+/// short session does not come back padded with a screenful of blank lines.
+String terminalBufferText(Buffer buffer) => buffer.getText().trimRight();

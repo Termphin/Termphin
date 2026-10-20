@@ -718,6 +718,56 @@ class SessionViewState extends ConsumerState<SessionView> {
     await copyToClipboard(context, cwd, message: t.sftp.pathCopied);
   }
 
+  /// Puts everything the terminal holds, scrollback included, on the
+  /// clipboard. A clipboard has a size limit of its own on some systems, so a
+  /// refusal points to saving the output instead.
+  Future<void> copyAllOutput() async {
+    final t = Translations.of(context);
+    final text = _nativeController.bufferText();
+    if (text == null || text.isEmpty) {
+      AppNotifications.info(context, t.actionDock.nothingToCopy);
+      return;
+    }
+    try {
+      await copyToClipboard(context, text, message: t.actionDock.copiedAll);
+    } catch (_) {
+      if (!mounted) return;
+      AppNotifications.error(context, t.actionDock.copyAllFailed);
+    }
+  }
+
+  /// Saves everything the terminal holds, scrollback included, to a text file
+  /// wherever the user picks.
+  Future<void> saveOutput() async {
+    final t = Translations.of(context);
+    final text = _nativeController.bufferText();
+    if (text == null || text.isEmpty) {
+      AppNotifications.info(context, t.actionDock.nothingToCopy);
+      return;
+    }
+    final timestamp = DateTime.now()
+        .toIso8601String()
+        .replaceAll(':', '-')
+        .substring(0, 19);
+    try {
+      final savePath = await FilePicker.saveFile(
+        dialogTitle: t.actionDock.saveOutputDialogTitle,
+        fileName: 'termphin_output_$timestamp.txt',
+        type: FileType.custom,
+        allowedExtensions: ['txt'],
+        bytes: Uint8List.fromList(utf8.encode('$text\n')),
+      );
+      if (savePath == null || !mounted) return;
+      AppNotifications.success(context, t.actionDock.outputSaved);
+    } catch (e) {
+      if (!mounted) return;
+      AppNotifications.error(
+        context,
+        t.actionDock.saveOutputFailed(error: e.toString()),
+      );
+    }
+  }
+
   /// See [SftpBrowserView.terminalDirectory].
   Future<String?> _terminalDirectoryForSftp(ActiveSessionView session) async {
     if (!sftpFollowTerminalSetting.value) return null;

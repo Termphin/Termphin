@@ -298,6 +298,10 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
       },
       DockAction.search: () =>
           _sessionKeys[session.$1]?.currentState?.openSearch(),
+      DockAction.copyAll: () =>
+          unawaited(_sessionKeys[session.$1]?.currentState?.copyAllOutput()),
+      DockAction.saveOutput: () =>
+          unawaited(_sessionKeys[session.$1]?.currentState?.saveOutput()),
       DockAction.copyPath: () =>
           unawaited(_sessionKeys[session.$1]?.currentState?.copyCurrentPath()),
       DockAction.newSession: () => unawaited(_showAddSessionSheet()),

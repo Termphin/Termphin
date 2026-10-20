@@ -2988,6 +2988,30 @@ class Translations$actionDock$en {
 
 	/// en: 'Search'
 	String get search => 'Search';
+
+	/// en: 'Copy all'
+	String get copyAll => 'Copy all';
+
+	/// en: 'Terminal output copied'
+	String get copiedAll => 'Terminal output copied';
+
+	/// en: 'Couldn't copy the output - it may be too large for the clipboard. Try saving it to a file.'
+	String get copyAllFailed => 'Couldn\'t copy the output - it may be too large for the clipboard. Try saving it to a file.';
+
+	/// en: 'Save output'
+	String get saveOutput => 'Save output';
+
+	/// en: 'Save terminal output'
+	String get saveOutputDialogTitle => 'Save terminal output';
+
+	/// en: 'Terminal output saved'
+	String get outputSaved => 'Terminal output saved';
+
+	/// en: 'Couldn't save the output: {error}'
+	String saveOutputFailed({required Object error}) => 'Couldn\'t save the output: ${error}';
+
+	/// en: 'The terminal is empty.'
+	String get nothingToCopy => 'The terminal is empty.';
 }
 
 // Path: share
@@ -4661,6 +4685,14 @@ extension on Translations {
 			'actionDock.pasteUploadedPath' => 'Paste path',
 			'actionDock.paste' => 'Paste',
 			'actionDock.search' => 'Search',
+			'actionDock.copyAll' => 'Copy all',
+			'actionDock.copiedAll' => 'Terminal output copied',
+			'actionDock.copyAllFailed' => 'Couldn\'t copy the output - it may be too large for the clipboard. Try saving it to a file.',
+			'actionDock.saveOutput' => 'Save output',
+			'actionDock.saveOutputDialogTitle' => 'Save terminal output',
+			'actionDock.outputSaved' => 'Terminal output saved',
+			'actionDock.saveOutputFailed' => ({required Object error}) => 'Couldn\'t save the output: ${error}',
+			'actionDock.nothingToCopy' => 'The terminal is empty.',
 			'share.uploadTo' => 'Upload to',
 			'share.uploadManyTo' => ({required Object count}) => 'Upload ${count} files to',
 			'share.searchHint' => 'Search machines',
@@ -4742,6 +4774,8 @@ extension on Translations {
 			'keyboardInteractive.fallbackPrompt' => 'Response',
 			'keyboardInteractive.submit' => 'Send',
 			'manual.title' => 'Manual',
+			_ => null,
+		} ?? switch (path) {
 			'manual.loadFailed' => 'Could not load the manual.',
 			'manual.loadFailedBody' => 'Check your connection and try again.',
 			'manual.retry' => 'Try again',
@@ -4750,8 +4784,6 @@ extension on Translations {
 			'manual.howToFix' => 'How to fix this',
 			'manual.troubleshooting' => 'Troubleshooting guide',
 			'manual.readMore' => 'Read more in the manual',
-			_ => null,
-		} ?? switch (path) {
 			'manual.whatIsThis' => 'What is this?',
 			'tagMigration.title' => 'Convert tags to groups',
 			'tagMigration.explanation' => 'Tags have been replaced by groups. Each machine and snippet now belongs to a single group. Choose which tags to convert into groups.',

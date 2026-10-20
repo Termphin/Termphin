@@ -99,6 +99,10 @@ class TerminalPaneController {
 
   Future<String?> getSelectedText() async => _state?.selectedText;
 
+  /// See [terminalBufferText]; null before the pane is attached.
+  String? bufferText() =>
+      _state == null ? null : terminalBufferText(_state!._terminal.buffer);
+
   void clearSelection() => _state?.clearSelection();
 
   void doCopy() => _state?.copySelection();
