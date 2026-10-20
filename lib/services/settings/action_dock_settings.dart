@@ -12,6 +12,8 @@ enum DockAction {
   uploadFile,
   paste,
   search,
+  copyAll,
+  saveOutput,
   copyPath,
   newSession,
   tunnels,
@@ -23,6 +25,8 @@ enum DockAction {
 /// the few tiles you actually reach for, not the whole action list. The rest
 /// stay one switch away in Settings for whoever wants them.
 const kDefaultHiddenDockActions = <DockAction>{
+  DockAction.copyAll,
+  DockAction.saveOutput,
   DockAction.copyPath,
   DockAction.newSession,
   DockAction.tunnels,
@@ -35,6 +39,8 @@ IconData dockActionIcon(DockAction action) => switch (action) {
   DockAction.uploadFile => PhosphorIconsRegular.uploadSimple,
   DockAction.paste => PhosphorIconsRegular.clipboardText,
   DockAction.search => PhosphorIconsRegular.magnifyingGlass,
+  DockAction.copyAll => PhosphorIconsRegular.copy,
+  DockAction.saveOutput => PhosphorIconsRegular.downloadSimple,
   DockAction.copyPath => PhosphorIconsRegular.folderSimple,
   DockAction.newSession => PhosphorIconsRegular.plus,
   DockAction.tunnels => PhosphorIconsFill.arrowsLeftRight,
@@ -49,6 +55,8 @@ String dockActionLabel(Translations t, DockAction action) => switch (action) {
   DockAction.uploadFile => t.actionDock.uploadFile.replaceFirst(' ', '\n'),
   DockAction.paste => t.actionDock.paste,
   DockAction.search => t.actionDock.search,
+  DockAction.copyAll => t.actionDock.copyAll,
+  DockAction.saveOutput => t.actionDock.saveOutput,
   DockAction.copyPath => t.actionDock.copyPath,
   DockAction.newSession => t.terminal.newSession,
   DockAction.tunnels => t.portForwarding.manageTunnels,

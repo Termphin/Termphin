@@ -1023,7 +1023,15 @@
     "uploadedMany": "Uploaded {count} files to {path}",
     "pasteUploadedPath": "Paste path",
     "paste": "Paste",
-    "search": "Search"
+    "search": "Search",
+    "copyAll": "Copy all",
+    "copiedAll": "Terminal output copied",
+    "copyAllFailed": "Couldn't copy the output - it may be too large for the clipboard. Try saving it to a file.",
+    "saveOutput": "Save output",
+    "saveOutputDialogTitle": "Save terminal output",
+    "outputSaved": "Terminal output saved",
+    "saveOutputFailed": "Couldn't save the output: {error}",
+    "nothingToCopy": "The terminal is empty."
   },
   "share": {
     "uploadTo": "Upload to",

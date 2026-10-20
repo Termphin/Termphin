@@ -16,6 +16,10 @@
 # before anyone has decided what version ships it. Nothing renders it: the app
 # and the landing changelog both drop any entry whose version is not a dotted
 # number. Give it the real number at release time and it appears in both.
+- version: "Unreleased"
+  date: "2026-10-20"
+  added:
+    - "Copy all and Save output in the action dock: copy or save the whole terminal output"
 - version: "1.13.0"
   date: "2026-10-18"
   added:
