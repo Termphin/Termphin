@@ -16,7 +16,7 @@
 # before anyone has decided what version ships it. Nothing renders it: the app
 # and the landing changelog both drop any entry whose version is not a dotted
 # number. Give it the real number at release time and it appears in both.
-- version: "Unreleased"
+- version: "1.14.1"
   date: "2026-11-01"
   fixed:
     - "Fast upload to the temporary folder no longer fails with \"File or directory not found\" on some servers"
