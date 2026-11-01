@@ -34,11 +34,12 @@
 ## Download
 
 <a href="https://play.google.com/store/apps/details?id=dev.termphin.termphin"><img src="docs/images/google-play-badge.png" alt="Get it on Google Play" height="56"></a>
+<a href="https://apps.apple.com/app/id6813191168"><img src="docs/images/app-store-badge.svg" alt="Download on the App Store" height="56"></a>
 
 | Platform | Status |
 |---|---|
 | Android | [Google Play](https://play.google.com/store/apps/details?id=dev.termphin.termphin), or the APK from [Releases](../../releases/latest) |
-| iOS | Coming soon |
+| iOS | [App Store](https://apps.apple.com/app/id6813191168) |
 | macOS, Windows, Linux | Work in progress |
 
 The APK on Releases is signed with a different key than the Google Play build,
