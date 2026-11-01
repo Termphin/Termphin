@@ -831,14 +831,12 @@ class SessionViewState extends ConsumerState<SessionView> {
         case RemoteShellType.powershell:
           try {
             final result = await client
-                .run('[System.IO.Path]::GetTempPath()')
+                .run('[System.IO.Path]::GetTempPath()', stderr: false)
                 .timeout(const Duration(seconds: 5));
-            final raw = utf8.decode(result).trim();
-            if (raw.isEmpty) return '/tmp';
-            final posix = raw
-                .replaceAll('\\', '/')
-                .replaceAll(RegExp(r'/+$'), '');
-            return posix.startsWith('/') ? posix : '/$posix';
+            return tmpDirectoryFromOutput(
+              utf8.decode(result),
+              powershell: true,
+            );
           } catch (_) {
             return '/tmp';
           }
@@ -846,10 +844,12 @@ class SessionViewState extends ConsumerState<SessionView> {
         case RemoteShellType.unknown:
           try {
             final result = await client
-                .run(r'printf %s "${TMPDIR:-/tmp}"')
+                .run(r'printf %s "${TMPDIR:-/tmp}"', stderr: false)
                 .timeout(const Duration(seconds: 5));
-            final raw = utf8.decode(result).trim();
-            return raw.isEmpty ? '/tmp' : raw;
+            return tmpDirectoryFromOutput(
+              utf8.decode(result),
+              powershell: false,
+            );
           } catch (_) {
             return '/tmp';
           }

@@ -159,4 +159,45 @@ void main() {
       );
     });
   });
+
+  group('tmpDirectoryFromOutput', () {
+    test('takes the answer after an error a login script printed first', () {
+      const output =
+          "bash: line 38: export: `A=B': not a valid identifier\n/tmp";
+
+      expect(tmpDirectoryFromOutput(output, powershell: false), '/tmp');
+    });
+
+    test('keeps a TMPDIR the shell set', () {
+      expect(
+        tmpDirectoryFromOutput('/var/folders/x1/T/', powershell: false),
+        '/var/folders/x1/T/',
+      );
+    });
+
+    test('falls back to /tmp when the answer is not an absolute path', () {
+      expect(tmpDirectoryFromOutput('', powershell: false), '/tmp');
+      expect(
+        tmpDirectoryFromOutput('fish: Unsupported use of', powershell: false),
+        '/tmp',
+      );
+    });
+
+    test('spells a Windows temp directory the way SFTP does', () {
+      expect(
+        tmpDirectoryFromOutput(
+          'C:\\Users\\me\\AppData\\Local\\Temp\\\r\n',
+          powershell: true,
+        ),
+        '/C:/Users/me/AppData/Local/Temp',
+      );
+    });
+
+    test('falls back to /tmp when PowerShell answers with an error', () {
+      expect(
+        tmpDirectoryFromOutput('The term is not recognized', powershell: true),
+        '/tmp',
+      );
+    });
+  });
 }
