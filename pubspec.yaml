@@ -2,7 +2,7 @@ name: termphin
 description: "Termphin SSH client."
 publish_to: 'none'
 
-version: 1.14.1+25
+version: 1.14.2+26
 
 environment:
   sdk: ^3.9.2

@@ -16,6 +16,10 @@
 # before anyone has decided what version ships it. Nothing renders it: the app
 # and the landing changelog both drop any entry whose version is not a dotted
 # number. Give it the real number at release time and it appears in both.
+- version: "1.14.2"
+  date: "2026-11-07"
+  fixed:
+    - "No more errors when notifications are turned off for Termphin"
 - version: "1.14.1"
   date: "2026-11-01"
   fixed:
