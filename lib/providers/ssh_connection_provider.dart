@@ -489,11 +489,6 @@ class SshConnectionNotifier extends Notifier<SshConnectionState> {
     _managerListener = listener;
     _manager.addListener(listener);
 
-    final session = _manager.getSession(_sessionId);
-    if (session != null && !session.dropped) {
-      await _manager.requestReplay(_sessionId);
-    }
-    if (_disposed) return;
     final attached = _manager.getSession(_sessionId);
     if (attached == null || attached.dropped) {
       _removeManagerListener();

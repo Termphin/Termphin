@@ -77,6 +77,7 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 	late final Translations$tagMigration$en tagMigration = Translations$tagMigration$en.internal(_root);
 	late final Translations$selection$en selection = Translations$selection$en.internal(_root);
 	late final Translations$globalSearch$en globalSearch = Translations$globalSearch$en.internal(_root);
+	late final Translations$frameStats$en frameStats = Translations$frameStats$en.internal(_root);
 }
 
 // Path: nav
@@ -3566,6 +3567,24 @@ class Translations$globalSearch$en {
 	String get emptyGroup => 'Empty';
 }
 
+// Path: frameStats
+class Translations$frameStats$en {
+	Translations$frameStats$en.internal(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: '{frames} frames · ui {ui} ms · raster {raster} ms · {slow} slow'
+	String summary({required Object frames, required Object ui, required Object raster, required Object slow}) => '${frames} frames · ui ${ui} ms · raster ${raster} ms · ${slow} slow';
+
+	/// en: 'glyph atlas · tap for text'
+	String get glyphAtlas => 'glyph atlas · tap for text';
+
+	/// en: 'text · tap for glyph atlas'
+	String get paragraphs => 'text · tap for glyph atlas';
+}
+
 // Path: sftp.errors
 class Translations$sftp$errors$en {
 	Translations$sftp$errors$en.internal(this._root);
@@ -4827,6 +4846,9 @@ extension on Translations {
 			'globalSearch.snippetCount' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '${n} snippet', other: '${n} snippets', ), 
 			'globalSearch.keyCount' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '${n} key', other: '${n} keys', ), 
 			'globalSearch.emptyGroup' => 'Empty',
+			'frameStats.summary' => ({required Object frames, required Object ui, required Object raster, required Object slow}) => '${frames} frames · ui ${ui} ms · raster ${raster} ms · ${slow} slow',
+			'frameStats.glyphAtlas' => 'glyph atlas · tap for text',
+			'frameStats.paragraphs' => 'text · tap for glyph atlas',
 			_ => null,
 		};
 	}

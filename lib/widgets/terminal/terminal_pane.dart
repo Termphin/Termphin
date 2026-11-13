@@ -1,9 +1,7 @@
 import 'dart:async';
-import 'dart:collection';
 import 'dart:convert';
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -13,13 +11,17 @@ import '../../i18n/strings.g.dart';
 import '../../models/active_session.dart';
 import '../../services/completion/command_line_reader.dart';
 import '../../services/terminal/predictive_echo.dart';
+import '../../services/terminal/session_terminal.dart';
 import '../../services/terminal/terminal_search.dart';
 import '../../services/terminal/terminal_text.dart';
 import '../../theme/theme.dart' as app_theme;
 import '../ui/app_notifications.dart';
+import 'frame_stats_overlay.dart';
+import 'terminal_rendering.dart';
 import 'terminal_search_bar.dart';
 
-const kTerminalScrollbackLines = 10000;
+export '../../services/terminal/session_terminal.dart'
+    show kTerminalScrollbackLines;
 
 /// The fewest rows the PTY is ever told it has.
 ///
@@ -157,7 +159,7 @@ class TerminalPaneController {
 class TerminalPane extends StatefulWidget {
   const TerminalPane({
     super.key,
-    required this.outputStream,
+    required this.terminal,
     this.inputStream,
     this.inputReceipts,
     required this.onInput,
@@ -167,11 +169,12 @@ class TerminalPane extends StatefulWidget {
     this.onSelectionStateChanged,
     this.onScrollModeChanged,
     this.onLinkDetected,
-    this.initialHistory,
     this.onReady,
   });
 
-  final Stream<Uint8List> outputStream;
+  /// The session's terminal, which outlives this pane: mounting draws what
+  /// it already holds, and unmounting leaves it parsing.
+  final SessionTerminal terminal;
 
   /// What was actually sent to the shell, after any modifier the session
   /// applied to [onInput] - the bytes predictive echo predicts from.
@@ -187,7 +190,6 @@ class TerminalPane extends StatefulWidget {
   onSelectionStateChanged;
   final void Function(bool isManual)? onScrollModeChanged;
   final void Function(String url, double tapY)? onLinkDetected;
-  final Uint8List? initialHistory;
   final VoidCallback? onReady;
 
   @override
@@ -200,43 +202,13 @@ class _TerminalPaneState extends State<TerminalPane> {
   final _scrollController = ScrollController();
   final _focusNode = FocusNode();
 
-  /// Output arrives from SSH in whatever sized pieces the network hands
-  /// over, often many per frame. Feeding each one straight to the terminal
-  /// parses and repaints once per piece; queueing them here instead means
-  /// one parse and one repaint for everything that showed up since the
-  /// last drain.
-  final _pendingBytes = Queue<Uint8List>();
-  bool _drainScheduled = false;
-
-  /// Until the first layout, the terminal is still 80x24; output parsed at
-  /// that size addresses rows the real viewport has but this buffer
-  /// doesn't.
-  bool _terminalSized = false;
-  final _decoded = StringBuffer();
-  late final ByteConversionSink _utf8Sink;
-
-  /// How long a single drain may spend parsing before it yields. A burst of
-  /// output - `cat` on something large, a build log - would otherwise hold the
-  /// UI thread for as long as it takes to parse the whole thing, and the
-  /// terminal would stop responding to touch until it finished.
-  static const _drainBudget = Duration(milliseconds: 6);
-
-  /// Largest slice handed to the parser between budget checks.
-  static const _drainSlice = 4096;
-
-  /// Bytes of [TerminalPane.initialHistory] still waiting to be parsed.
-  ///
-  /// The replay is the raw scrollback, escape sequences and all, so anything
-  /// with a side effect outside the screen happens again every time the pane
-  /// remounts. For OSC 52 that means a copy the remote side asked for once
-  /// silently taking the clipboard back over on every return to the session,
-  /// until the sequence finally scrolls out of the history ring.
-  int _replayBytesLeft = 0;
-
+  /// The terminal this pane was mounted on, for as long as it lives. A
+  /// replay gives the session a new one, and the pane held on screen until
+  /// its replacement is ready goes on showing the one it had.
+  late final SessionTerminal _session;
   late final Terminal _terminal;
   late final PredictiveEcho _predictiveEcho;
   late final CommandLineReader _commandLine;
-  StreamSubscription<Uint8List>? _outputSubscription;
   StreamSubscription<SessionInput>? _inputSubscription;
   StreamSubscription<int>? _receiptSubscription;
 
@@ -270,38 +242,25 @@ class _TerminalPaneState extends State<TerminalPane> {
   @override
   void initState() {
     super.initState();
-    _terminal = Terminal(
-      maxLines: kTerminalScrollbackLines,
-      platform: _terminalPlatform(defaultTargetPlatform),
-      onOutput: (data) => widget.onInput(utf8.encode(data)),
-      onResize: (width, height, _, _) {
-        if (!_terminalSized) {
-          _terminalSized = true;
-          _scheduleDrain(immediate: true);
-        }
-        widget.onResize(width, height);
-      },
-      onBell: HapticFeedback.mediumImpact,
-      onPrivateOSC: _handlePrivateOSC,
-    );
+    _session = widget.terminal
+      ..bind(
+        this,
+        onOutput: (data) => widget.onInput(utf8.encode(data)),
+        onResize: (columns, rows) => widget.onResize(columns, rows),
+        onBell: HapticFeedback.mediumImpact,
+        onPrivateOsc: _handlePrivateOSC,
+      );
+    _terminal = _session.terminal;
     _predictiveEcho = PredictiveEcho(_terminal)..attach();
     _commandLine = CommandLineReader(_terminal)
       ..onSubmit = (command) =>
           widget.controller?.onCommandSubmitted?.call(command);
     _terminal.addListener(_onTerminalChanged);
+    terminalGlyphAtlas.addListener(_onRenderingChanged);
     _terminalController.addListener(_onSelectionChanged);
     _scrollController.addListener(_onScrollChanged);
     widget.controller?._attach(this);
 
-    _utf8Sink = const Utf8Decoder(
-      allowMalformed: true,
-    ).startChunkedConversion(_StringChunkSink(_decoded));
-    final initialHistory = widget.initialHistory;
-    if (initialHistory != null && initialHistory.isNotEmpty) {
-      _replayBytesLeft = initialHistory.length;
-      _enqueue(initialHistory);
-    }
-    _listenToOutput();
     _listenToInput();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -312,9 +271,6 @@ class _TerminalPaneState extends State<TerminalPane> {
   @override
   void didUpdateWidget(covariant TerminalPane oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.outputStream != widget.outputStream) {
-      _listenToOutput();
-    }
     if (oldWidget.inputStream != widget.inputStream ||
         oldWidget.inputReceipts != widget.inputReceipts) {
       _listenToInput();
@@ -323,9 +279,6 @@ class _TerminalPaneState extends State<TerminalPane> {
       oldWidget.controller?._detach(this);
       widget.controller?._attach(this);
     }
-    _terminal.onOutput = (data) => widget.onInput(utf8.encode(data));
-    _terminal.onResize = (width, height, _, _) =>
-        widget.onResize(width, height);
   }
 
   @override
@@ -336,12 +289,12 @@ class _TerminalPaneState extends State<TerminalPane> {
     _clearSearchMatches();
     _searchField.dispose();
     _searchFocus.dispose();
-    _outputSubscription?.cancel();
     _inputSubscription?.cancel();
     _receiptSubscription?.cancel();
-    _predictiveEcho.dispose();
     _terminal.removeListener(_onTerminalChanged);
-    _pendingBytes.clear();
+    terminalGlyphAtlas.removeListener(_onRenderingChanged);
+    _predictiveEcho.dispose();
+    _session.release(this);
     _terminalController
       ..removeListener(_onSelectionChanged)
       ..dispose();
@@ -349,13 +302,7 @@ class _TerminalPaneState extends State<TerminalPane> {
       ..removeListener(_onScrollChanged)
       ..dispose();
     _focusNode.dispose();
-    _terminal.dispose();
     super.dispose();
-  }
-
-  void _listenToOutput() {
-    unawaited(_outputSubscription?.cancel());
-    _outputSubscription = widget.outputStream.listen(_enqueue);
   }
 
   void _listenToInput() {
@@ -373,6 +320,10 @@ class _TerminalPaneState extends State<TerminalPane> {
 
   /// Output keeps coming while the search bar is open; recount once it
   /// settles.
+  void _onRenderingChanged() {
+    if (mounted) setState(() {});
+  }
+
   void _onTerminalChanged() {
     widget.controller?._screenChanged();
     if (!_searchOpen || _searchField.text.isEmpty) return;
@@ -477,68 +428,6 @@ class _TerminalPaneState extends State<TerminalPane> {
     _scrollController.jumpTo(target);
   }
 
-  void _enqueue(Uint8List data) {
-    if (data.isEmpty) return;
-    _pendingBytes.addLast(data);
-    _scheduleDrain(immediate: true);
-  }
-
-  /// The first drain after idle goes out on a microtask so an echoed
-  /// keystroke still lands in the same frame. Continuations go through the
-  /// event loop instead, giving the frame that was just scheduled a chance
-  /// to actually render before more parsing starts.
-  void _scheduleDrain({required bool immediate}) {
-    if (_drainScheduled) return;
-    _drainScheduled = true;
-    if (immediate) {
-      scheduleMicrotask(_drain);
-    } else {
-      Timer.run(_drain);
-    }
-  }
-
-  /// Ends the pass exactly where the replay does - live output queued
-  /// behind it would otherwise be parsed in the same `_terminal.write` and
-  /// take the replay's suppression with it. The write itself still runs
-  /// while [_replayBytesLeft] covers these bytes, so the handlers it
-  /// reaches can tell replayed sequences from live ones.
-  void _drain() {
-    _drainScheduled = false;
-    if (!mounted || _pendingBytes.isEmpty || !_terminalSized) return;
-
-    final clock = Stopwatch()..start();
-    final replaying = _replayBytesLeft > 0;
-    var fed = 0;
-
-    while (_pendingBytes.isNotEmpty) {
-      final chunk = _pendingBytes.first;
-      var take = chunk.length <= _drainSlice ? chunk.length : _drainSlice;
-      if (replaying && fed + take > _replayBytesLeft) {
-        take = _replayBytesLeft - fed;
-      }
-
-      _pendingBytes.removeFirst();
-      if (take < chunk.length) {
-        _pendingBytes.addFirst(Uint8List.sublistView(chunk, take));
-      }
-      _utf8Sink.add(Uint8List.sublistView(chunk, 0, take));
-      fed += take;
-
-      if (replaying && fed >= _replayBytesLeft) break;
-      if (clock.elapsed >= _drainBudget) break;
-    }
-
-    if (_decoded.isNotEmpty) {
-      final text = _decoded.toString();
-      _decoded.clear();
-      _terminal.write(text);
-    }
-
-    if (replaying) _replayBytesLeft -= fed;
-
-    if (_pendingBytes.isNotEmpty) _scheduleDrain(immediate: false);
-  }
-
   void focusTerminal() {
     _focusNode.requestFocus();
     _terminalViewKey.currentState?.requestKeyboard();
@@ -611,8 +500,15 @@ class _TerminalPaneState extends State<TerminalPane> {
 
   void scrollToBottom() {
     if (!_scrollController.hasClients) return;
-    _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+    _scrollController.jumpTo(_restingScrollOffset);
   }
+
+  /// Where the view sits while it follows the output. Not always the end:
+  /// while the keyboard slides and the resize is held back, it is where the
+  /// resize will leave it.
+  double get _restingScrollOffset =>
+      _terminalViewKey.currentState?.renderTerminal.restingScrollOffset ??
+      _scrollController.position.maxScrollExtent;
 
   String? get selectedText {
     final selection = _terminalController.selection;
@@ -638,7 +534,7 @@ class _TerminalPaneState extends State<TerminalPane> {
   /// Suppressed during replay: that copy already happened, once, live.
   void _handlePrivateOSC(String ps, List<String> args) {
     if (ps != '52' || args.length < 2) return;
-    if (_replayBytesLeft > 0) return;
+    if (_session.replaying) return;
     final payload = args[1];
     if (payload == '?' || payload.isEmpty) return;
 
@@ -742,7 +638,7 @@ class _TerminalPaneState extends State<TerminalPane> {
     if (!_scrollController.hasClients) return;
     final position = _scrollController.position;
     widget.onScrollModeChanged?.call(
-      position.pixels < position.maxScrollExtent - 1,
+      position.pixels < _restingScrollOffset - 1,
     );
     if (_selection == null) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1025,6 +921,8 @@ class _TerminalPaneState extends State<TerminalPane> {
       keyboardAppearance: Brightness.dark,
       cursorType: _terminalCursorType,
       blinkInterval: _blinkInterval,
+      resizeSettleDelay: kTerminalResizeSettleDelay,
+      glyphAtlas: terminalGlyphAtlas.value,
       simulateScroll: true,
       onTapUp: _onTapUp,
       foregroundPainter: _linkUnderlines(
@@ -1076,6 +974,13 @@ class _TerminalPaneState extends State<TerminalPane> {
               ),
             ),
           ),
+
+          if (kFrameStats)
+            const Positioned(
+              top: app_theme.AppTheme.space4,
+              right: app_theme.AppTheme.space4,
+              child: FrameStatsOverlay(),
+            ),
 
           if (selection != null) ...[
             _buildSelectionHandle(
@@ -1173,16 +1078,6 @@ class _SelectionGeometry {
   final double cellWidth;
 }
 
-TerminalTargetPlatform _terminalPlatform(TargetPlatform platform) =>
-    switch (platform) {
-      TargetPlatform.android => TerminalTargetPlatform.android,
-      TargetPlatform.iOS => TerminalTargetPlatform.ios,
-      TargetPlatform.linux => TerminalTargetPlatform.linux,
-      TargetPlatform.macOS => TerminalTargetPlatform.macos,
-      TargetPlatform.windows => TerminalTargetPlatform.windows,
-      TargetPlatform.fuchsia => TerminalTargetPlatform.fuchsia,
-    };
-
 /// Underlines the web addresses on the rows in view, so it shows what a tap
 /// would open. `terminal_view` draws no underline of its own.
 TerminalForegroundPainter _linkUnderlines(Terminal terminal, Color color) =>
@@ -1247,17 +1142,3 @@ TerminalForegroundPainter _linkUnderlines(Terminal terminal, Color color) =>
 }
 
 const _maxLineRows = 16;
-
-/// Collects the decoder's output so a whole drain can be handed to the
-/// terminal as one write.
-class _StringChunkSink implements Sink<String> {
-  _StringChunkSink(this._buffer);
-
-  final StringBuffer _buffer;
-
-  @override
-  void add(String data) => _buffer.write(data);
-
-  @override
-  void close() {}
-}

@@ -273,8 +273,16 @@ class PredictiveEcho implements TerminalOverlay {
     if (_hasPredictions) _reset();
   }
 
+  /// Lets go of the terminal as well as the timer: the terminal outlives the
+  /// pane this belongs to, and would otherwise go on drawing predictions
+  /// nobody will ever confirm, and calling back into a disposed pane's echo
+  /// after every write.
   void dispose() {
     _cancelTick();
+    if (!identical(terminal.overlay, this)) return;
+    terminal
+      ..overlay = null
+      ..onAfterWrite = null;
   }
 
   /// What the timer does, exposed so tests can drive it without waiting.

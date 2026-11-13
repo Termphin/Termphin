@@ -7,6 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:terminal_view/terminal_view.dart';
 import 'package:termphin/widgets/terminal/terminal_pane.dart';
 
+import '../../support/session_terminal.dart';
+
 void main() {
   testWidgets('touch drag scrolls the application in the alternate buffer', (
     tester,
@@ -96,7 +98,7 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: TerminalPane(
-            outputStream: outputStream.stream,
+            terminal: terminalFedBy(outputStream.stream),
             onInput: input.addAll,
             onResize: (_, _) {},
           ),
@@ -122,7 +124,7 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: TerminalPane(
-            outputStream: outputStream.stream,
+            terminal: terminalFedBy(outputStream.stream),
             onInput: input.addAll,
             onResize: (_, _) {},
           ),

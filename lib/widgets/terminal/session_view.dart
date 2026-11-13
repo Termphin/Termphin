@@ -334,7 +334,6 @@ class SessionViewState extends ConsumerState<SessionView> {
   void _onTerminalReady(int attachId) {
     _readyAttachId = attachId;
     _terminalReady = true;
-    _manager.getSession(widget.sessionKey.$1)?.pendingReplay = null;
     _applySettings();
     _nativeController.requestFit();
     ref
@@ -1202,14 +1201,14 @@ class SessionViewState extends ConsumerState<SessionView> {
   /// selection popup carves the risen toolbar's strip out of its own bound,
   /// or it would end up drawn underneath it.
   ///
-  /// The native view has to be in the tree to boot up and take the replayed
-  /// scrollback, but showing it while it does means watching the history
-  /// paint itself, so the connect screen is kept over it until it reports
-  /// ready - or, after a reconnect, over the terminal it replaces. That
-  /// outer stack stays even once it is ready: dropping it would put a
-  /// `Column` where the `Stack` used to be, and Flutter would rebuild that
-  /// whole subtree - including a fresh, empty platform view - instead of
-  /// keeping the terminal that just replayed the history.
+  /// The pane has to be in the tree to lay out and give the terminal its
+  /// size, but showing it while it does means watching a replay reflow, so
+  /// the connect screen is kept over it until it reports ready - or, after a
+  /// reconnect, over the terminal it replaces. That outer stack stays even
+  /// once it is ready: dropping it would put a `Column` where the `Stack`
+  /// used to be, and Flutter would rebuild that whole subtree - a fresh pane,
+  /// scrolled back to the end and without its selection or search - instead
+  /// of keeping the one that is there.
   Widget _buildTerminal(
     SshConnectionState state,
     ActiveSessionView session,
@@ -1405,13 +1404,12 @@ class SessionViewState extends ConsumerState<SessionView> {
       child: IgnorePointer(
         ignoring: !live,
         child: TerminalPane(
-          outputStream: session.outputStream,
+          terminal: session.terminal,
           inputStream: session.inputStream,
           inputReceipts: session.inputReceipts,
           onInput: _onInput,
           onResize: live ? _onResize : _ignoreResize,
           controller: live ? _nativeController : null,
-          initialHistory: session.pendingReplay,
           onReady: () => _onTerminalReady(attachId),
           onFontSizeChanged: _onFontSizeChanged,
           onSelectionStateChanged: (active, topY, bottomY) {

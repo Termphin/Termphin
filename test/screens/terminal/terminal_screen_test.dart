@@ -1110,6 +1110,13 @@ void main() {
       tester.view.viewInsets = FakeViewPadding(bottom: inset);
       await tester.pump(const Duration(milliseconds: 16));
     }
+    expect(
+      backend.calls.where((call) => call.method == 'resize'),
+      isEmpty,
+      reason: 'nothing is sent while the keyboard is still moving',
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 200));
     await tester.pumpAndSettle();
 
     final resizes = backend.calls.where((call) => call.method == 'resize');

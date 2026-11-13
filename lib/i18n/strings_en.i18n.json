@@ -1222,5 +1222,10 @@
       "other": "{n} keys"
     },
     "emptyGroup": "Empty"
+  },
+  "frameStats": {
+    "summary": "{frames} frames · ui {ui} ms · raster {raster} ms · {slow} slow",
+    "glyphAtlas": "glyph atlas · tap for text",
+    "paragraphs": "text · tap for glyph atlas"
   }
 }

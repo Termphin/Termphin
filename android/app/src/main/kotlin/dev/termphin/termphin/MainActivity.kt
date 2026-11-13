@@ -1,6 +1,7 @@
 package dev.termphin.termphin
 
 import android.content.Intent
+import android.os.Bundle
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 
@@ -8,6 +9,12 @@ class MainActivity : FlutterFragmentActivity() {
 
     private var downloadChannel: DownloadChannel? = null
     private var localNetworkChannel: LocalNetworkChannel? = null
+    private var imeInsetsGuard: ImeInsetsGuard? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        imeInsetsGuard = ImeInsetsGuard(window.decorView).also { it.install() }
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -19,12 +26,14 @@ class MainActivity : FlutterFragmentActivity() {
     override fun onResume() {
         super.onResume()
         window.decorView.requestApplyInsets()
+        imeInsetsGuard?.syncOnReturn()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) {
             window.decorView.requestApplyInsets()
+            imeInsetsGuard?.syncOnReturn()
         }
     }
 
