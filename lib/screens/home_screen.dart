@@ -24,6 +24,7 @@ import '../services/storage/group_storage.dart';
 import '../theme/theme.dart';
 import '../utils/group_match.dart';
 import '../utils/profile_sort.dart';
+import '../widgets/account/account_avatar_button.dart';
 import '../widgets/groups/group_filter_chips.dart';
 import '../widgets/groups/group_picker_sheet.dart';
 import '../widgets/groups/group_section_header.dart';
@@ -660,6 +661,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       child: LargeTitleScaffold(
         resizeToAvoidBottomInset: false,
         title: t.profiles.machinesHeading,
+        actions: const [AccountAvatarButton()],
         bodyBuilder: (context, scrollController, gutter) => ListenableBuilder(
           listenable: _manager,
           builder: (context, _) {
