@@ -3711,6 +3711,7 @@ class Translations$account$en {
 	/// en: 'Accounts are not available in this build.'
 	String get unavailable => 'Accounts are not available in this build.';
 
+	late final Translations$account$sync$en sync = Translations$account$sync$en.internal(_root);
 	late final Translations$account$failure$en failure = Translations$account$failure$en.internal(_root);
 }
 
@@ -3888,6 +3889,77 @@ class Translations$connection$errors$en {
 	String get jumpHostConfig => 'This profile\'s jump host is not set up right.';
 }
 
+// Path: account.sync
+class Translations$account$sync$en {
+	Translations$account$sync$en.internal(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'Sync'
+	String get title => 'Sync';
+
+	/// en: 'Keep machines, keys, snippets and groups the same on every device. End-to-end encrypted with a passphrase only you know.'
+	String get off => 'Keep machines, keys, snippets and groups the same on every device. End-to-end encrypted with a passphrase only you know.';
+
+	/// en: 'Turn on sync'
+	String get turnOn => 'Turn on sync';
+
+	/// en: 'Choose a sync passphrase'
+	String get choose => 'Choose a sync passphrase';
+
+	/// en: 'At least 8 characters. It cannot be recovered: lose it and the synced copy is lost, though your devices keep theirs.'
+	String get chooseHint => 'At least 8 characters. It cannot be recovered: lose it and the synced copy is lost, though your devices keep theirs.';
+
+	/// en: 'Repeat the passphrase'
+	String get repeat => 'Repeat the passphrase';
+
+	/// en: 'The two passphrases differ.'
+	String get mismatch => 'The two passphrases differ.';
+
+	/// en: 'Use at least 8 characters.'
+	String get tooShort => 'Use at least 8 characters.';
+
+	/// en: 'This account syncs. Enter its passphrase to bring this device in.'
+	String get locked => 'This account syncs. Enter its passphrase to bring this device in.';
+
+	/// en: 'Enter passphrase'
+	String get unlock => 'Enter passphrase';
+
+	/// en: 'Sync passphrase'
+	String get passphrase => 'Sync passphrase';
+
+	/// en: 'Sync now'
+	String get syncNow => 'Sync now';
+
+	/// en: 'Syncing…'
+	String get syncing => 'Syncing…';
+
+	/// en: 'Last synced {time}'
+	String lastSynced({required Object time}) => 'Last synced ${time}';
+
+	/// en: 'Not synced yet on this device'
+	String get neverSynced => 'Not synced yet on this device';
+
+	/// en: 'Synced: {pulled} in, {pushed} out'
+	String done({required Object pulled, required Object pushed}) => 'Synced: ${pulled} in, ${pushed} out';
+
+	/// en: 'Stop syncing on this device'
+	String get turnOff => 'Stop syncing on this device';
+
+	/// en: 'Stop syncing on this device?'
+	String get turnOffTitle => 'Stop syncing on this device?';
+
+	/// en: 'This device forgets the passphrase and keeps what it has. The synced copy and your other devices are not touched.'
+	String get turnOffMessage => 'This device forgets the passphrase and keeps what it has. The synced copy and your other devices are not touched.';
+
+	/// en: 'Confirm your email first, then sync can be turned on.'
+	String get verifyFirst => 'Confirm your email first, then sync can be turned on.';
+
+	late final Translations$account$sync$failure$en failure = Translations$account$sync$failure$en.internal(_root);
+}
+
 // Path: account.failure
 class Translations$account$failure$en {
 	Translations$account$failure$en.internal(this._root);
@@ -3922,6 +3994,30 @@ class Translations$account$failure$en {
 
 	/// en: 'That did not work. Try again.'
 	String get unknown => 'That did not work. Try again.';
+}
+
+// Path: account.sync.failure
+class Translations$account$sync$failure$en {
+	Translations$account$sync$failure$en.internal(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'Wrong passphrase.'
+	String get wrongPassphrase => 'Wrong passphrase.';
+
+	/// en: 'Sync is part of Pro.'
+	String get notPro => 'Sync is part of Pro.';
+
+	/// en: 'No connection. Try again when you are online.'
+	String get network => 'No connection. Try again when you are online.';
+
+	/// en: 'Sync was turned on from another device meanwhile. Enter its passphrase.'
+	String get alreadySetUp => 'Sync was turned on from another device meanwhile. Enter its passphrase.';
+
+	/// en: 'Sync did not work. Try again.'
+	String get unknown => 'Sync did not work. Try again.';
 }
 
 /// The flat map containing all translations for locale <en>.
@@ -5053,6 +5149,31 @@ extension on Translations {
 			'account.verifyNotYet' => 'Not confirmed yet. Open the link in the email first.',
 			'account.verifyDone' => 'Email confirmed',
 			'account.unavailable' => 'Accounts are not available in this build.',
+			'account.sync.title' => 'Sync',
+			'account.sync.off' => 'Keep machines, keys, snippets and groups the same on every device. End-to-end encrypted with a passphrase only you know.',
+			'account.sync.turnOn' => 'Turn on sync',
+			'account.sync.choose' => 'Choose a sync passphrase',
+			'account.sync.chooseHint' => 'At least 8 characters. It cannot be recovered: lose it and the synced copy is lost, though your devices keep theirs.',
+			'account.sync.repeat' => 'Repeat the passphrase',
+			'account.sync.mismatch' => 'The two passphrases differ.',
+			'account.sync.tooShort' => 'Use at least 8 characters.',
+			'account.sync.locked' => 'This account syncs. Enter its passphrase to bring this device in.',
+			'account.sync.unlock' => 'Enter passphrase',
+			'account.sync.passphrase' => 'Sync passphrase',
+			'account.sync.syncNow' => 'Sync now',
+			'account.sync.syncing' => 'Syncing…',
+			'account.sync.lastSynced' => ({required Object time}) => 'Last synced ${time}',
+			'account.sync.neverSynced' => 'Not synced yet on this device',
+			'account.sync.done' => ({required Object pulled, required Object pushed}) => 'Synced: ${pulled} in, ${pushed} out',
+			'account.sync.turnOff' => 'Stop syncing on this device',
+			'account.sync.turnOffTitle' => 'Stop syncing on this device?',
+			'account.sync.turnOffMessage' => 'This device forgets the passphrase and keeps what it has. The synced copy and your other devices are not touched.',
+			'account.sync.verifyFirst' => 'Confirm your email first, then sync can be turned on.',
+			'account.sync.failure.wrongPassphrase' => 'Wrong passphrase.',
+			'account.sync.failure.notPro' => 'Sync is part of Pro.',
+			'account.sync.failure.network' => 'No connection. Try again when you are online.',
+			'account.sync.failure.alreadySetUp' => 'Sync was turned on from another device meanwhile. Enter its passphrase.',
+			'account.sync.failure.unknown' => 'Sync did not work. Try again.',
 			'account.failure.invalidEmail' => 'That is not an email address.',
 			'account.failure.wrongCredentials' => 'Wrong email or password.',
 			'account.failure.emailInUse' => 'There is already an account with this email. Sign in the way you did before.',

@@ -48,6 +48,23 @@ service cloud.firestore {
       }
 
       /**
+       * The salt the sync passphrase is stretched with and a check sealed
+       * with the key, so a second device can tell a wrong passphrase. Made
+       * once; never changed.
+       */
+      match /syncMeta/{doc} {
+        allow read: if owner(uid) && pro();
+        allow create: if owner(uid) && pro() && doc == 'key'
+          && request.resource.data.keys().hasOnly(['salt', 'iterations', 'check', 'createdAt'])
+          && request.resource.data.salt is string
+          && request.resource.data.iterations is int
+          && request.resource.data.iterations >= 100000
+          && request.resource.data.check is string
+          && request.resource.data.createdAt == request.time;
+        allow update, delete: if false;
+      }
+
+      /**
        * Synced records, encrypted on the device before they leave it: the
        * server holds ciphertext it cannot read. Pro only.
        */

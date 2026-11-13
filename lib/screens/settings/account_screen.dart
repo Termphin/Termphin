@@ -9,6 +9,7 @@ import '../../providers/account_provider.dart';
 import '../../providers/anonymize_provider.dart';
 import '../../services/account/account_service.dart';
 import '../../theme/theme.dart';
+import '../../widgets/account/sync_card.dart';
 import '../../widgets/ui/app_card.dart';
 import '../../widgets/ui/app_form_field.dart';
 import '../../widgets/ui/app_notifications.dart';
@@ -346,6 +347,16 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
         _verificationCard(context, user, name),
         const SizedBox(height: AppTheme.space16),
       ],
+      if (user.emailVerified)
+        const SyncCard()
+      else
+        Text(
+          t.account.sync.verifyFirst,
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: context.colors.textTertiary),
+        ),
+      const SizedBox(height: AppTheme.space16),
       AppCard(
         child: Column(
           children: [

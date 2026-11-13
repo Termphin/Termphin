@@ -4,8 +4,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:termphin/i18n/strings.g.dart';
 import 'package:termphin/screens/settings/account_screen.dart';
 import 'package:termphin/services/account/account_service.dart';
+import 'package:termphin/services/sync/sync_service.dart';
 
 import '../../support/fake_account_backend.dart';
+import '../../support/sync_fakes.dart';
 import '../../support/test_app.dart';
 
 void main() {
@@ -17,9 +19,16 @@ void main() {
     backend = FakeAccountBackend();
     AccountService.backendOverride = () => backend;
     AccountService.instance.resetForTest();
+    SyncService.instanceOverride = SyncService(
+      cloud: FakeSyncCloud(),
+      vault: FakeSyncVault(),
+      local: FakeSyncLocal(),
+      uid: () => AccountService.instance.user?.uid,
+    );
   });
 
   tearDown(() {
+    SyncService.instanceOverride = null;
     AccountService.backendOverride = null;
     AccountService.instance.resetForTest();
   });
