@@ -11,6 +11,7 @@ import 'services/app/error_reports.dart';
 import 'services/app/identity_anonymizer.dart';
 import 'services/platform/foreground_notification_service.dart';
 import 'services/platform/local_notifications_service.dart';
+import 'services/push/push_service.dart';
 import 'services/settings/anonymize_setting.dart';
 import 'services/settings/app_settings.dart';
 import 'services/settings/terminal_settings.dart';
@@ -66,6 +67,7 @@ Future<void> main() async {
   await AnalyticsService.instance.init();
   AnalyticsService.instance.installErrorHandlers();
   await AccountService.instance.init();
+  unawaited(PushService.instance.init());
   unawaited(AnalyticsService.instance.capture(AnalyticsEvent.appOpened));
   runApp(const SshClientApp());
 }

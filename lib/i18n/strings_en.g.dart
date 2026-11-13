@@ -3711,6 +3711,7 @@ class Translations$account$en {
 	/// en: 'Accounts are not available in this build.'
 	String get unavailable => 'Accounts are not available in this build.';
 
+	late final Translations$account$push$en push = Translations$account$push$en.internal(_root);
 	late final Translations$account$sync$en sync = Translations$account$sync$en.internal(_root);
 	late final Translations$account$failure$en failure = Translations$account$failure$en.internal(_root);
 }
@@ -3887,6 +3888,42 @@ class Translations$connection$errors$en {
 
 	/// en: 'This profile's jump host is not set up right.'
 	String get jumpHostConfig => 'This profile\'s jump host is not set up right.';
+}
+
+// Path: account.push
+class Translations$account$push$en {
+	Translations$account$push$en.internal(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'Notifications from your servers'
+	String get title => 'Notifications from your servers';
+
+	/// en: 'When a program on a server asks for a notification and no phone is connected, it still reaches you. Part of Pro.'
+	String get body => 'When a program on a server asks for a notification and no phone is connected, it still reaches you. Part of Pro.';
+
+	/// en: 'On this phone'
+	String get thisPhone => 'On this phone';
+
+	/// en: 'Notifications are turned off for Termphin in the system settings.'
+	String get denied => 'Notifications are turned off for Termphin in the system settings.';
+
+	/// en: 'Send from these servers'
+	String get servers => 'Send from these servers';
+
+	/// en: 'Set up {name}'
+	String serverRow({required Object name}) => 'Set up ${name}';
+
+	/// en: '{name} will now send notifications through Termphin.'
+	String installed({required Object name}) => '${name} will now send notifications through Termphin.';
+
+	/// en: 'Connect to a server to set it up.'
+	String get noServers => 'Connect to a server to set it up.';
+
+	/// en: 'That did not work. Try again.'
+	String get failed => 'That did not work. Try again.';
 }
 
 // Path: account.sync
@@ -5149,6 +5186,15 @@ extension on Translations {
 			'account.verifyNotYet' => 'Not confirmed yet. Open the link in the email first.',
 			'account.verifyDone' => 'Email confirmed',
 			'account.unavailable' => 'Accounts are not available in this build.',
+			'account.push.title' => 'Notifications from your servers',
+			'account.push.body' => 'When a program on a server asks for a notification and no phone is connected, it still reaches you. Part of Pro.',
+			'account.push.thisPhone' => 'On this phone',
+			'account.push.denied' => 'Notifications are turned off for Termphin in the system settings.',
+			'account.push.servers' => 'Send from these servers',
+			'account.push.serverRow' => ({required Object name}) => 'Set up ${name}',
+			'account.push.installed' => ({required Object name}) => '${name} will now send notifications through Termphin.',
+			'account.push.noServers' => 'Connect to a server to set it up.',
+			'account.push.failed' => 'That did not work. Try again.',
 			'account.sync.title' => 'Sync',
 			'account.sync.off' => 'Keep machines, keys, snippets and groups the same on every device. End-to-end encrypted with a passphrase only you know.',
 			'account.sync.turnOn' => 'Turn on sync',

@@ -1268,6 +1268,17 @@
     "verifyNotYet": "Not confirmed yet. Open the link in the email first.",
     "verifyDone": "Email confirmed",
     "unavailable": "Accounts are not available in this build.",
+    "push": {
+      "title": "Notifications from your servers",
+      "body": "When a program on a server asks for a notification and no phone is connected, it still reaches you. Part of Pro.",
+      "thisPhone": "On this phone",
+      "denied": "Notifications are turned off for Termphin in the system settings.",
+      "servers": "Send from these servers",
+      "serverRow": "Set up {name}",
+      "installed": "{name} will now send notifications through Termphin.",
+      "noServers": "Connect to a server to set it up.",
+      "failed": "That did not work. Try again."
+    },
     "sync": {
       "title": "Sync",
       "off": "Keep machines, keys, snippets and groups the same on every device. End-to-end encrypted with a passphrase only you know.",
