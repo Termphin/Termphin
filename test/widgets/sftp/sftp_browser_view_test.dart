@@ -1,8 +1,7 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:termphin/models/active_session.dart';
 import 'package:termphin/services/settings/sftp_settings.dart';
 import 'package:termphin/widgets/sftp/sftp_browser_view.dart';

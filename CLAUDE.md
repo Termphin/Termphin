@@ -151,6 +151,10 @@ after editing the JSON.
   `showConfirmDialog` (`destructive: true` for anything that loses data),
   `showTextInputDialog`, `SettingsTile`/`SettingsSwitchTile`,
   `copyToClipboard`, `openExternalUrl`.
+- **Material comes from `package:material_ui`**, never
+  `package:flutter/material.dart` (deprecated since Flutter 3.50). A widget
+  from a package still on the framework's Material library (`dropdown_button2`)
+  goes inside `LegacyMaterial`, or it finds no `Material` ancestor and throws.
 - **Transient feedback is `AppNotifications`, sheets are `showAppSheet`.** Do not
   use `ScaffoldMessenger`/`SnackBar` or `showModalBottomSheet`.
 - **No sliders.** Numeric settings use `StepperRow`/`ValueStepperRow`.

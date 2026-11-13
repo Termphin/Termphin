@@ -1,6 +1,6 @@
 import 'package:dropdown_button2/dropdown_button2.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
@@ -10,6 +10,7 @@ import '../../screens/groups/group_form_screen.dart';
 import '../../services/storage/group_storage.dart';
 import '../../theme/theme.dart';
 import '../ui/app_dropdown.dart';
+import '../ui/legacy_material.dart';
 import 'group_dot.dart';
 
 /// Sentinel value for the "New group" entry. A dropdown picks a value, and
@@ -68,84 +69,86 @@ class GroupPickerField extends ConsumerWidget {
         horizontal: AppTheme.space14,
         vertical: AppTheme.space6,
       ),
-      child: DropdownButton2<String>(
-        valueListenable: ValueNotifier(group),
-        isExpanded: true,
-        underline: const SizedBox.shrink(),
-        selectedItemBuilder: (context) => [
-          for (final g in available)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Row(
-                children: [
-                  GroupDot(colorHex: g.colorHex),
-                  const SizedBox(width: AppTheme.space10),
-                  Flexible(
-                    child: Text(
-                      _label(t, g.name),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: context.colors.textPrimary,
-                        fontSize: AppTheme.font15,
+      child: LegacyMaterial(
+        child: DropdownButton2<String>(
+          valueListenable: ValueNotifier(group),
+          isExpanded: true,
+          underline: const SizedBox.shrink(),
+          selectedItemBuilder: (context) => [
+            for (final g in available)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Row(
+                  children: [
+                    GroupDot(colorHex: g.colorHex),
+                    const SizedBox(width: AppTheme.space10),
+                    Flexible(
+                      child: Text(
+                        _label(t, g.name),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: context.colors.textPrimary,
+                          fontSize: AppTheme.font15,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          const SizedBox.shrink(),
-        ],
-        onChanged: (value) {
-          if (value == null) return;
-          if (value == _newGroupValue) {
-            _createGroup(context);
-            return;
-          }
-          onChanged(value);
-        },
-        buttonStyleData: const ButtonStyleData(
-          height: 44,
-          padding: EdgeInsets.zero,
-          elevation: 0,
-        ),
-        iconStyleData: IconStyleData(
-          icon: Icon(
-            PhosphorIconsFill.caretDown,
-            size: AppTheme.icon16,
-            color: context.colors.textTertiary,
+            const SizedBox.shrink(),
+          ],
+          onChanged: (value) {
+            if (value == null) return;
+            if (value == _newGroupValue) {
+              _createGroup(context);
+              return;
+            }
+            onChanged(value);
+          },
+          buttonStyleData: const ButtonStyleData(
+            height: 44,
+            padding: EdgeInsets.zero,
+            elevation: 0,
           ),
-          iconSize: AppTheme.icon16,
-        ),
-        dropdownStyleData: appDropdownStyle(
-          context,
-          maxHeight: 320,
-          offset: const Offset(0, -6),
-        ),
-        menuItemStyleData: appDropdownItemStyle(
-          padding: const EdgeInsets.symmetric(horizontal: AppTheme.space10),
-        ),
-        items: [
-          for (final g in available)
+          iconStyleData: IconStyleData(
+            icon: Icon(
+              PhosphorIconsFill.caretDown,
+              size: AppTheme.icon16,
+              color: context.colors.textTertiary,
+            ),
+            iconSize: AppTheme.icon16,
+          ),
+          dropdownStyleData: appDropdownStyle(
+            context,
+            maxHeight: 320,
+            offset: const Offset(0, -6),
+          ),
+          menuItemStyleData: appDropdownItemStyle(
+            padding: const EdgeInsets.symmetric(horizontal: AppTheme.space10),
+          ),
+          items: [
+            for (final g in available)
+              DropdownItem<String>(
+                value: g.name,
+                intrinsicHeight: true,
+                child: AppDropdownItem(
+                  label: _label(t, g.name),
+                  leading: GroupDot(colorHex: g.colorHex),
+                  selected: g.name == group,
+                ),
+              ),
             DropdownItem<String>(
-              value: g.name,
+              value: _newGroupValue,
               intrinsicHeight: true,
               child: AppDropdownItem(
-                label: _label(t, g.name),
-                leading: GroupDot(colorHex: g.colorHex),
-                selected: g.name == group,
+                label: t.groups.newGroup,
+                icon: PhosphorIconsRegular.plus,
+                color: context.colors.primary,
               ),
             ),
-          DropdownItem<String>(
-            value: _newGroupValue,
-            intrinsicHeight: true,
-            child: AppDropdownItem(
-              label: t.groups.newGroup,
-              icon: PhosphorIconsRegular.plus,
-              color: context.colors.primary,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

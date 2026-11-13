@@ -158,7 +158,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(
-      find.byTooltip(
+      find.bySemanticsLabel(
         t.settings.actionDockHide(name: dockActionLabel(t, DockAction.paste)),
       ),
     );

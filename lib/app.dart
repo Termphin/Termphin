@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:app_links/app_links.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import 'i18n/strings.g.dart';
@@ -60,6 +60,11 @@ class _AppRoot extends ConsumerWidget {
 
   /// The share screen asks for the PIN itself and never outlives one share,
   /// so only the app proper can be locked again.
+  ///
+  /// [MaterialUiCompatibilityBridge] hands the theme down to the packages
+  /// still built on the framework's own Material library - the dropdowns,
+  /// the code editor, the web view - which would otherwise find no theme of
+  /// theirs and draw in Material's defaults.
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
@@ -72,12 +77,15 @@ class _AppRoot extends ConsumerWidget {
       themeMode: themeMode.themeMode,
       navigatorKey: navigatorKey,
       home: home ?? const _AppGate(),
-      builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
-        value: AppTheme.systemOverlayStyleFor(context.colors),
-        child: _ScaledMediaQuery(
-          child: home == null
-              ? _RelockLayer(child: child ?? const SizedBox.shrink())
-              : child ?? const SizedBox.shrink(),
+      // ignore: deprecated_member_use
+      builder: (context, child) => MaterialUiCompatibilityBridge(
+        child: AnnotatedRegion<SystemUiOverlayStyle>(
+          value: AppTheme.systemOverlayStyleFor(context.colors),
+          child: _ScaledMediaQuery(
+            child: home == null
+                ? _RelockLayer(child: child ?? const SizedBox.shrink())
+                : child ?? const SizedBox.shrink(),
+          ),
         ),
       ),
     );

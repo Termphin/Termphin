@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A label that always reserves the height of two lines, whether the text
 /// wraps to one or two - so a short label ("Paste") and a long one ("Manage
