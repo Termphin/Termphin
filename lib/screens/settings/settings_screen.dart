@@ -4,6 +4,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../../i18n/strings.g.dart';
 import '../../theme/theme.dart';
 import '../../widgets/settings/about_settings_section.dart';
+import '../../widgets/settings/account_settings_section.dart';
 import '../../widgets/settings/analytics_settings_section.dart';
 import '../../widgets/settings/appearance_settings_section.dart';
 import '../../widgets/settings/connection_settings_section.dart';
@@ -82,6 +83,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                   const SizedBox(height: AppTheme.space16),
+                  const AccountSettingsSection(),
                   const AppearanceSettingsSection(),
                   const SizedBox(height: AppTheme.space20),
                   const OrganizationSettingsSection(),

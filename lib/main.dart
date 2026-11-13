@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
 import 'screens/share/share_screen.dart';
+import 'services/account/account_service.dart';
 import 'services/analytics/analytics_service.dart';
 import 'services/app/error_reports.dart';
 import 'services/app/identity_anonymizer.dart';
@@ -64,6 +65,7 @@ Future<void> main() async {
 
   await AnalyticsService.instance.init();
   AnalyticsService.instance.installErrorHandlers();
+  await AccountService.instance.init();
   unawaited(AnalyticsService.instance.capture(AnalyticsEvent.appOpened));
   runApp(const SshClientApp());
 }

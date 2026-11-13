@@ -78,6 +78,7 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 	late final Translations$selection$en selection = Translations$selection$en.internal(_root);
 	late final Translations$globalSearch$en globalSearch = Translations$globalSearch$en.internal(_root);
 	late final Translations$frameStats$en frameStats = Translations$frameStats$en.internal(_root);
+	late final Translations$account$en account = Translations$account$en.internal(_root);
 }
 
 // Path: nav
@@ -3597,6 +3598,101 @@ class Translations$frameStats$en {
 	String get paragraphs => 'text · tap for glyph atlas';
 }
 
+// Path: account
+class Translations$account$en {
+	Translations$account$en.internal(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'Account'
+	String get section => 'Account';
+
+	/// en: 'Sign in'
+	String get signIn => 'Sign in';
+
+	/// en: 'For Pro: notifications from your servers on every device, and sync'
+	String get signInSubtitle => 'For Pro: notifications from your servers on every device, and sync';
+
+	/// en: 'Account'
+	String get title => 'Account';
+
+	/// en: 'An account is only needed for Pro. Everything else works without one.'
+	String get intro => 'An account is only needed for Pro. Everything else works without one.';
+
+	/// en: 'Continue with Google'
+	String get continueWithGoogle => 'Continue with Google';
+
+	/// en: 'Continue with Apple'
+	String get continueWithApple => 'Continue with Apple';
+
+	/// en: 'Or with an email address'
+	String get orEmail => 'Or with an email address';
+
+	/// en: 'Email'
+	String get email => 'Email';
+
+	/// en: 'Password'
+	String get password => 'Password';
+
+	/// en: 'Sign in'
+	String get signInWithEmail => 'Sign in';
+
+	/// en: 'Create account'
+	String get createAccount => 'Create account';
+
+	/// en: 'Forgot password?'
+	String get forgotPassword => 'Forgot password?';
+
+	/// en: 'A link to set a new password is on its way to {email}.'
+	String resetSent({required Object email}) => 'A link to set a new password is on its way to ${email}.';
+
+	/// en: 'Signed in as {name}'
+	String signedInAs({required Object name}) => 'Signed in as ${name}';
+
+	/// en: 'Signed in with {provider}'
+	String signedInWith({required Object provider}) => 'Signed in with ${provider}';
+
+	/// en: 'Google'
+	String get providerGoogle => 'Google';
+
+	/// en: 'Apple'
+	String get providerApple => 'Apple';
+
+	/// en: 'email and password'
+	String get providerPassword => 'email and password';
+
+	/// en: 'Sign out'
+	String get signOut => 'Sign out';
+
+	/// en: 'Delete account'
+	String get deleteAccount => 'Delete account';
+
+	/// en: 'Delete your account?'
+	String get deleteTitle => 'Delete your account?';
+
+	/// en: 'Your account and everything stored with it are deleted for good. Machines and keys on this device stay.'
+	String get deleteMessage => 'Your account and everything stored with it are deleted for good. Machines and keys on this device stay.';
+
+	/// en: 'Delete account'
+	String get deleteConfirm => 'Delete account';
+
+	/// en: 'Enter your password to delete the account'
+	String get passwordToDelete => 'Enter your password to delete the account';
+
+	/// en: 'Account deleted'
+	String get deleted => 'Account deleted';
+
+	/// en: 'Signed out'
+	String get signedOut => 'Signed out';
+
+	/// en: 'Accounts are not available in this build.'
+	String get unavailable => 'Accounts are not available in this build.';
+
+	late final Translations$account$failure$en failure = Translations$account$failure$en.internal(_root);
+}
+
 // Path: sftp.errors
 class Translations$sftp$errors$en {
 	Translations$sftp$errors$en.internal(this._root);
@@ -3769,6 +3865,42 @@ class Translations$connection$errors$en {
 
 	/// en: 'This profile's jump host is not set up right.'
 	String get jumpHostConfig => 'This profile\'s jump host is not set up right.';
+}
+
+// Path: account.failure
+class Translations$account$failure$en {
+	Translations$account$failure$en.internal(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'That is not an email address.'
+	String get invalidEmail => 'That is not an email address.';
+
+	/// en: 'Wrong email or password.'
+	String get wrongCredentials => 'Wrong email or password.';
+
+	/// en: 'There is already an account with this email. Sign in the way you did before.'
+	String get emailInUse => 'There is already an account with this email. Sign in the way you did before.';
+
+	/// en: 'Use a password of at least 6 characters.'
+	String get weakPassword => 'Use a password of at least 6 characters.';
+
+	/// en: 'Sign in again, then try once more.'
+	String get requiresRecentLogin => 'Sign in again, then try once more.';
+
+	/// en: 'No connection. Try again when you are online.'
+	String get network => 'No connection. Try again when you are online.';
+
+	/// en: 'Too many attempts. Wait a moment and try again.'
+	String get tooManyRequests => 'Too many attempts. Wait a moment and try again.';
+
+	/// en: 'This way of signing in is not available yet.'
+	String get unavailable => 'This way of signing in is not available yet.';
+
+	/// en: 'That did not work. Try again.'
+	String get unknown => 'That did not work. Try again.';
 }
 
 /// The flat map containing all translations for locale <en>.
@@ -4865,6 +4997,43 @@ extension on Translations {
 			'frameStats.summary' => ({required Object frames, required Object ui, required Object raster, required Object slow}) => '${frames} frames · ui ${ui} ms · raster ${raster} ms · ${slow} slow',
 			'frameStats.glyphAtlas' => 'glyph atlas · tap for text',
 			'frameStats.paragraphs' => 'text · tap for glyph atlas',
+			'account.section' => 'Account',
+			'account.signIn' => 'Sign in',
+			'account.signInSubtitle' => 'For Pro: notifications from your servers on every device, and sync',
+			'account.title' => 'Account',
+			'account.intro' => 'An account is only needed for Pro. Everything else works without one.',
+			'account.continueWithGoogle' => 'Continue with Google',
+			'account.continueWithApple' => 'Continue with Apple',
+			'account.orEmail' => 'Or with an email address',
+			'account.email' => 'Email',
+			'account.password' => 'Password',
+			'account.signInWithEmail' => 'Sign in',
+			'account.createAccount' => 'Create account',
+			'account.forgotPassword' => 'Forgot password?',
+			'account.resetSent' => ({required Object email}) => 'A link to set a new password is on its way to ${email}.',
+			'account.signedInAs' => ({required Object name}) => 'Signed in as ${name}',
+			'account.signedInWith' => ({required Object provider}) => 'Signed in with ${provider}',
+			'account.providerGoogle' => 'Google',
+			'account.providerApple' => 'Apple',
+			'account.providerPassword' => 'email and password',
+			'account.signOut' => 'Sign out',
+			'account.deleteAccount' => 'Delete account',
+			'account.deleteTitle' => 'Delete your account?',
+			'account.deleteMessage' => 'Your account and everything stored with it are deleted for good. Machines and keys on this device stay.',
+			'account.deleteConfirm' => 'Delete account',
+			'account.passwordToDelete' => 'Enter your password to delete the account',
+			'account.deleted' => 'Account deleted',
+			'account.signedOut' => 'Signed out',
+			'account.unavailable' => 'Accounts are not available in this build.',
+			'account.failure.invalidEmail' => 'That is not an email address.',
+			'account.failure.wrongCredentials' => 'Wrong email or password.',
+			'account.failure.emailInUse' => 'There is already an account with this email. Sign in the way you did before.',
+			'account.failure.weakPassword' => 'Use a password of at least 6 characters.',
+			'account.failure.requiresRecentLogin' => 'Sign in again, then try once more.',
+			'account.failure.network' => 'No connection. Try again when you are online.',
+			'account.failure.tooManyRequests' => 'Too many attempts. Wait a moment and try again.',
+			'account.failure.unavailable' => 'This way of signing in is not available yet.',
+			'account.failure.unknown' => 'That did not work. Try again.',
 			_ => null,
 		};
 	}
