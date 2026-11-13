@@ -21,6 +21,7 @@ class AccountUser {
     required this.provider,
     this.email,
     this.displayName,
+    this.emailVerified = true,
   });
 
   final String uid;
@@ -28,16 +29,23 @@ class AccountUser {
   final String? email;
   final String? displayName;
 
+  /// Whether the address has been shown to belong to the user. Google and
+  /// Apple vouch for theirs; a password account confirms its own by the
+  /// link mailed when it is created, and Pro waits for that.
+  final bool emailVerified;
+
   @override
   bool operator ==(Object other) =>
       other is AccountUser &&
       other.uid == uid &&
       other.provider == provider &&
       other.email == email &&
-      other.displayName == displayName;
+      other.displayName == displayName &&
+      other.emailVerified == emailVerified;
 
   @override
-  int get hashCode => Object.hash(uid, provider, email, displayName);
+  int get hashCode =>
+      Object.hash(uid, provider, email, displayName, emailVerified);
 }
 
 /// Why signing in, signing up or deleting did not happen, in terms the
@@ -82,6 +90,13 @@ abstract interface class AccountBackend {
   Future<void> createWithEmail(String email, String password);
 
   Future<void> sendPasswordReset(String email);
+
+  /// Mails the signed-in user a link that confirms their address.
+  Future<void> sendEmailVerification();
+
+  /// Fetches the signed-in user again, to see a confirmation made in a
+  /// browser meanwhile.
+  Future<void> reload();
 
   Future<void> signOut();
 
@@ -175,6 +190,12 @@ class AccountService {
 
   Future<void> sendPasswordReset(String email) =>
       _run((b) => b.sendPasswordReset(email.trim()));
+
+  Future<void> sendEmailVerification() =>
+      _run((b) => b.sendEmailVerification());
+
+  /// Checks again whether the address has been confirmed.
+  Future<void> refresh() => _run((b) => b.reload());
 
   Future<void> signOut() => _run((b) => b.signOut());
 

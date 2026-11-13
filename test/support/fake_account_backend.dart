@@ -64,9 +64,35 @@ class FakeAccountBackend implements AccountBackend {
   Future<void> createWithEmail(String email, String password) => _call(
     'create:$email',
     () => _set(
-      AccountUser(uid: 'p2', provider: AccountProvider.password, email: email),
+      AccountUser(
+        uid: 'p2',
+        provider: AccountProvider.password,
+        email: email,
+        emailVerified: false,
+      ),
     ),
   );
+
+  /// Stands for the user following the link in their mail.
+  void confirmEmail() => _confirmed = true;
+  bool _confirmed = false;
+
+  @override
+  Future<void> sendEmailVerification() => _call('verify', () {});
+
+  @override
+  Future<void> reload() => _call('reload', () {
+    final user = _user;
+    if (user == null || !_confirmed) return;
+    _set(
+      AccountUser(
+        uid: user.uid,
+        provider: user.provider,
+        email: user.email,
+        emailVerified: true,
+      ),
+    );
+  });
 
   @override
   Future<void> sendPasswordReset(String email) => _call('reset:$email', () {});

@@ -106,7 +106,27 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   Future<void> _signOut() async {
     final t = Translations.of(context);
     if (await _attempt(AccountService.instance.signOut) && mounted) {
+      _password.clear();
       AppNotifications.info(context, t.account.signedOut);
+    }
+  }
+
+  Future<void> _resendVerification(String email) async {
+    final t = Translations.of(context);
+    final sent = await _attempt(AccountService.instance.sendEmailVerification);
+    if (sent && mounted) {
+      AppNotifications.info(context, t.account.verifySent(email: email));
+    }
+  }
+
+  Future<void> _checkVerification() async {
+    final t = Translations.of(context);
+    if (!await _attempt(AccountService.instance.refresh) || !mounted) return;
+    final verified = AccountService.instance.user?.emailVerified ?? false;
+    if (verified) {
+      AppNotifications.success(context, t.account.verifyDone);
+    } else {
+      AppNotifications.info(context, t.account.verifyNotYet);
     }
   }
 
@@ -133,7 +153,10 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     final deleted = await _attempt(
       () => AccountService.instance.deleteAccount(password: password),
     );
-    if (deleted && mounted) AppNotifications.info(context, t.account.deleted);
+    if (deleted && mounted) {
+      _password.clear();
+      AppNotifications.info(context, t.account.deleted);
+    }
   }
 
   @override
@@ -260,6 +283,53 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     ];
   }
 
+  /// Asks a password account to confirm its address, with the two things
+  /// to do about it: have the link sent again, or say it has been followed.
+  Widget _verificationCard(
+    BuildContext context,
+    AccountUser user,
+    String name,
+  ) {
+    final t = Translations.of(context);
+    final text = Theme.of(context).textTheme;
+    return AppCard(
+      padding: const EdgeInsets.all(AppTheme.space14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(t.account.verifyTitle, style: text.titleMedium),
+          const SizedBox(height: AppTheme.space6),
+          Text(
+            t.account.verifyBody(email: name),
+            style: text.bodyMedium?.copyWith(
+              color: context.colors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: AppTheme.space12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _busy
+                      ? null
+                      : () => _resendVerification(user.email ?? ''),
+                  child: Text(t.account.verifyResend),
+                ),
+              ),
+              const SizedBox(width: AppTheme.space10),
+              Expanded(
+                child: FilledButton(
+                  onPressed: _busy ? null : _checkVerification,
+                  child: Text(t.account.verifyCheck),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   List<Widget> _signedIn(BuildContext context, AccountUser user) {
     final t = Translations.of(context);
     final anonymize = ref.watch(anonymizeProvider);
@@ -272,6 +342,10 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
       AccountProvider.password => t.account.providerPassword,
     };
     return [
+      if (!user.emailVerified) ...[
+        _verificationCard(context, user, name),
+        const SizedBox(height: AppTheme.space16),
+      ],
       AppCard(
         child: Column(
           children: [

@@ -1260,6 +1260,13 @@
     "passwordToDelete": "Enter your password to delete the account",
     "deleted": "Account deleted",
     "signedOut": "Signed out",
+    "verifyTitle": "Confirm your email",
+    "verifyBody": "We sent a link to {email}. Open it to confirm the address; Pro needs a confirmed one.",
+    "verifyResend": "Send again",
+    "verifySent": "Sent again to {email}.",
+    "verifyCheck": "I have confirmed it",
+    "verifyNotYet": "Not confirmed yet. Open the link in the email first.",
+    "verifyDone": "Email confirmed",
     "unavailable": "Accounts are not available in this build.",
     "failure": {
       "invalidEmail": "That is not an email address.",

@@ -89,6 +89,48 @@ void main() {
     expect(find.text(t.account.failure.unknown), findsNothing);
   });
 
+  testWidgets('a new email account is asked to confirm its address until it '
+      'has', (tester) async {
+    await open(tester);
+
+    await tester.enterText(find.byType(TextField).first, 'new@example.com');
+    await tester.enterText(find.byType(TextField).last, 'secret1');
+    await tester.tap(find.text(t.account.createAccount));
+    await tester.pumpAndSettle();
+
+    expect(find.text(t.account.verifyTitle), findsOneWidget);
+    expect(
+      find.text(t.account.verifyBody(email: 'new@example.com')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text(t.account.verifyCheck));
+    await tester.pumpAndSettle();
+    expect(find.text(t.account.verifyNotYet), findsOneWidget);
+    expect(find.text(t.account.verifyTitle), findsOneWidget);
+
+    await tester.tap(find.text(t.account.verifyResend));
+    await tester.pumpAndSettle();
+    expect(backend.calls, contains('verify'));
+
+    backend.confirmEmail();
+    await tester.tap(find.text(t.account.verifyCheck));
+    await tester.pumpAndSettle();
+    expect(find.text(t.account.verifyTitle), findsNothing);
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('Google vouches for its address: nothing to confirm', (
+    tester,
+  ) async {
+    await AccountService.instance.signInWithGoogle();
+
+    await open(tester);
+
+    expect(find.text(t.account.verifyTitle), findsNothing);
+  });
+
   testWidgets('deleting asks first, and a password account for its password', (
     tester,
   ) async {

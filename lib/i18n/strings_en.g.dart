@@ -3687,6 +3687,27 @@ class Translations$account$en {
 	/// en: 'Signed out'
 	String get signedOut => 'Signed out';
 
+	/// en: 'Confirm your email'
+	String get verifyTitle => 'Confirm your email';
+
+	/// en: 'We sent a link to {email}. Open it to confirm the address; Pro needs a confirmed one.'
+	String verifyBody({required Object email}) => 'We sent a link to ${email}. Open it to confirm the address; Pro needs a confirmed one.';
+
+	/// en: 'Send again'
+	String get verifyResend => 'Send again';
+
+	/// en: 'Sent again to {email}.'
+	String verifySent({required Object email}) => 'Sent again to ${email}.';
+
+	/// en: 'I have confirmed it'
+	String get verifyCheck => 'I have confirmed it';
+
+	/// en: 'Not confirmed yet. Open the link in the email first.'
+	String get verifyNotYet => 'Not confirmed yet. Open the link in the email first.';
+
+	/// en: 'Email confirmed'
+	String get verifyDone => 'Email confirmed';
+
 	/// en: 'Accounts are not available in this build.'
 	String get unavailable => 'Accounts are not available in this build.';
 
@@ -5024,6 +5045,13 @@ extension on Translations {
 			'account.passwordToDelete' => 'Enter your password to delete the account',
 			'account.deleted' => 'Account deleted',
 			'account.signedOut' => 'Signed out',
+			'account.verifyTitle' => 'Confirm your email',
+			'account.verifyBody' => ({required Object email}) => 'We sent a link to ${email}. Open it to confirm the address; Pro needs a confirmed one.',
+			'account.verifyResend' => 'Send again',
+			'account.verifySent' => ({required Object email}) => 'Sent again to ${email}.',
+			'account.verifyCheck' => 'I have confirmed it',
+			'account.verifyNotYet' => 'Not confirmed yet. Open the link in the email first.',
+			'account.verifyDone' => 'Email confirmed',
 			'account.unavailable' => 'Accounts are not available in this build.',
 			'account.failure.invalidEmail' => 'That is not an email address.',
 			'account.failure.wrongCredentials' => 'Wrong email or password.',

@@ -40,6 +40,7 @@ class FirebaseAccountBackend implements AccountBackend {
       uid: user.uid,
       email: user.email,
       displayName: user.displayName,
+      emailVerified: user.emailVerified,
       provider: providers.contains('google.com')
           ? AccountProvider.google
           : providers.contains('apple.com')
@@ -117,11 +118,23 @@ class FirebaseAccountBackend implements AccountBackend {
     () => _auth.signInWithEmailAndPassword(email: email, password: password),
   );
 
+  /// Creates the account and mails the link that confirms the address.
   @override
-  Future<void> createWithEmail(String email, String password) => _guard(
-    () =>
-        _auth.createUserWithEmailAndPassword(email: email, password: password),
-  );
+  Future<void> createWithEmail(String email, String password) =>
+      _guard(() async {
+        final created = await _auth.createUserWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+        await created.user?.sendEmailVerification();
+      });
+
+  @override
+  Future<void> sendEmailVerification() =>
+      _guard(() async => _auth.currentUser?.sendEmailVerification());
+
+  @override
+  Future<void> reload() => _guard(() async => _auth.currentUser?.reload());
 
   @override
   Future<void> sendPasswordReset(String email) =>
