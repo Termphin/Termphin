@@ -8,7 +8,9 @@ import '../../i18n/strings.g.dart';
 import '../../providers/account_provider.dart';
 import '../../providers/anonymize_provider.dart';
 import '../../services/account/account_service.dart';
+import '../../services/pro/pro_service.dart';
 import '../../theme/theme.dart';
+import '../../widgets/account/pro_card.dart';
 import '../../widgets/account/push_card.dart';
 import '../../widgets/account/sync_card.dart';
 import '../../widgets/ui/app_card.dart';
@@ -108,6 +110,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   Future<void> _signOut() async {
     final t = Translations.of(context);
     if (await _attempt(AccountService.instance.signOut) && mounted) {
+      unawaited(ProService.instance.signedOut());
       _password.clear();
       AppNotifications.info(context, t.account.signedOut);
     }
@@ -349,6 +352,8 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
         const SizedBox(height: AppTheme.space16),
       ],
       if (user.emailVerified) ...[
+        const ProCard(),
+        const SizedBox(height: AppTheme.space16),
         const PushCard(),
         const SizedBox(height: AppTheme.space16),
       ],

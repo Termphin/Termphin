@@ -3711,6 +3711,7 @@ class Translations$account$en {
 	/// en: 'Accounts are not available in this build.'
 	String get unavailable => 'Accounts are not available in this build.';
 
+	late final Translations$account$pro$en pro = Translations$account$pro$en.internal(_root);
 	late final Translations$account$push$en push = Translations$account$push$en.internal(_root);
 	late final Translations$account$sync$en sync = Translations$account$sync$en.internal(_root);
 	late final Translations$account$failure$en failure = Translations$account$failure$en.internal(_root);
@@ -3888,6 +3889,45 @@ class Translations$connection$errors$en {
 
 	/// en: 'This profile's jump host is not set up right.'
 	String get jumpHostConfig => 'This profile\'s jump host is not set up right.';
+}
+
+// Path: account.pro
+class Translations$account$pro$en {
+	Translations$account$pro$en.internal(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'Termphin Pro'
+	String get title => 'Termphin Pro';
+
+	/// en: 'Pro is on for this account. Thank you.'
+	String get active => 'Pro is on for this account. Thank you.';
+
+	/// en: 'Notifications from your servers on every device, even with the app closed, and end-to-end encrypted sync.'
+	String get pitch => 'Notifications from your servers on every device, even with the app closed, and end-to-end encrypted sync.';
+
+	/// en: '{price} a month'
+	String monthly({required Object price}) => '${price} a month';
+
+	/// en: '{price} a year'
+	String annual({required Object price}) => '${price} a year';
+
+	/// en: '{price} once'
+	String lifetime({required Object price}) => '${price} once';
+
+	/// en: 'Restore purchases'
+	String get restore => 'Restore purchases';
+
+	/// en: 'Pro cannot be bought in this build.'
+	String get unavailable => 'Pro cannot be bought in this build.';
+
+	/// en: 'The purchase did not go through.'
+	String get failed => 'The purchase did not go through.';
+
+	/// en: 'Pro is on. Thank you.'
+	String get thanks => 'Pro is on. Thank you.';
 }
 
 // Path: account.push
@@ -5186,6 +5226,16 @@ extension on Translations {
 			'account.verifyNotYet' => 'Not confirmed yet. Open the link in the email first.',
 			'account.verifyDone' => 'Email confirmed',
 			'account.unavailable' => 'Accounts are not available in this build.',
+			'account.pro.title' => 'Termphin Pro',
+			'account.pro.active' => 'Pro is on for this account. Thank you.',
+			'account.pro.pitch' => 'Notifications from your servers on every device, even with the app closed, and end-to-end encrypted sync.',
+			'account.pro.monthly' => ({required Object price}) => '${price} a month',
+			'account.pro.annual' => ({required Object price}) => '${price} a year',
+			'account.pro.lifetime' => ({required Object price}) => '${price} once',
+			'account.pro.restore' => 'Restore purchases',
+			'account.pro.unavailable' => 'Pro cannot be bought in this build.',
+			'account.pro.failed' => 'The purchase did not go through.',
+			'account.pro.thanks' => 'Pro is on. Thank you.',
 			'account.push.title' => 'Notifications from your servers',
 			'account.push.body' => 'When a program on a server asks for a notification and no phone is connected, it still reaches you. Part of Pro.',
 			'account.push.thisPhone' => 'On this phone',

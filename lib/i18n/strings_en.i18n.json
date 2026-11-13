@@ -1268,6 +1268,18 @@
     "verifyNotYet": "Not confirmed yet. Open the link in the email first.",
     "verifyDone": "Email confirmed",
     "unavailable": "Accounts are not available in this build.",
+    "pro": {
+      "title": "Termphin Pro",
+      "active": "Pro is on for this account. Thank you.",
+      "pitch": "Notifications from your servers on every device, even with the app closed, and end-to-end encrypted sync.",
+      "monthly": "{price} a month",
+      "annual": "{price} a year",
+      "lifetime": "{price} once",
+      "restore": "Restore purchases",
+      "unavailable": "Pro cannot be bought in this build.",
+      "failed": "The purchase did not go through.",
+      "thanks": "Pro is on. Thank you."
+    },
     "push": {
       "title": "Notifications from your servers",
       "body": "When a program on a server asks for a notification and no phone is connected, it still reaches you. Part of Pro.",
