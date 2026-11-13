@@ -168,9 +168,7 @@ class _TransferBarState extends State<TransferBar>
                         onTap: _collapse,
                         child: FadeTransition(
                           opacity: _openCurve,
-                          child: const ColoredBox(
-                            color: AppTheme.shadowColor,
-                          ),
+                          child: const ColoredBox(color: AppTheme.shadowColor),
                         ),
                       ),
                     ),

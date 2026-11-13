@@ -730,21 +730,18 @@ class SshSessionManager extends ChangeNotifier {
         }
         _handleCwdMarker(session, payload);
       });
-      session.serviceOutputSubscription = service.output.listen(
-        (bytes) {
-          replayWaiter.onOutput();
-          service.quality.heard();
-          markerTracker.consume(bytes);
-          offsetCounter.onChunk(bytes.length);
-          if (staging) {
-            staged.add(bytes);
-            return;
-          }
-          session.outputPosition = offsetCounter.position;
-          session.deliverOutput(bytes);
-        },
-        onError: (_) => markSessionDropped(id),
-      );
+      session.serviceOutputSubscription = service.output.listen((bytes) {
+        replayWaiter.onOutput();
+        service.quality.heard();
+        markerTracker.consume(bytes);
+        offsetCounter.onChunk(bytes.length);
+        if (staging) {
+          staged.add(bytes);
+          return;
+        }
+        session.outputPosition = offsetCounter.position;
+        session.deliverOutput(bytes);
+      }, onError: (_) => markSessionDropped(id));
 
       onConnectionLog?.call(t.connectionLog.openingSession);
       final sshSession = await service.startShell(

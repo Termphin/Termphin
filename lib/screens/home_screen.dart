@@ -1077,4 +1077,3 @@ class _SessionRow extends ConsumerWidget {
     );
   }
 }
-
