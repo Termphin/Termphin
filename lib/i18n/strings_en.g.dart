@@ -1202,6 +1202,12 @@ class Translations$settings$en {
 	/// en: 'Show typing instantly on slow connections'
 	String get predictiveEchoSubtitle => 'Show typing instantly on slow connections';
 
+	/// en: 'Notifications from programs'
+	String get programNotifications => 'Notifications from programs';
+
+	/// en: 'When a program in another session asks for one, like Claude Code finishing'
+	String get programNotificationsSubtitle => 'When a program in another session asks for one, like Claude Code finishing';
+
 	/// en: 'Fast upload'
 	String get fastUpload => 'Fast upload';
 
@@ -2389,6 +2395,12 @@ class Translations$notifications$en {
 
 	/// en: 'When a session loses its connection and cannot get it back.'
 	String get sessionChannelDescription => 'When a session loses its connection and cannot get it back.';
+
+	/// en: 'From the terminal'
+	String get terminalChannelName => 'From the terminal';
+
+	/// en: 'What programs in your sessions ask to announce, such as a finished build or an agent waiting for you.'
+	String get terminalChannelDescription => 'What programs in your sessions ask to announce, such as a finished build or an agent waiting for you.';
 
 	/// en: 'Download progress'
 	String get downloadProgressChannelName => 'Download progress';
@@ -4133,6 +4145,8 @@ extension on Translations {
 			'settings.cursorBlink' => 'Blink',
 			'settings.predictiveEcho' => 'Predictive echo',
 			'settings.predictiveEchoSubtitle' => 'Show typing instantly on slow connections',
+			'settings.programNotifications' => 'Notifications from programs',
+			'settings.programNotificationsSubtitle' => 'When a program in another session asks for one, like Claude Code finishing',
 			'settings.fastUpload' => 'Fast upload',
 			'settings.fastUploadNavSubtitleTmp' => 'Uploads land in the server\'s temporary directory',
 			'settings.fastUploadNavSubtitleCurrentDir' => 'Uploads land in the shell\'s current directory',
@@ -4277,10 +4291,10 @@ extension on Translations {
 			'settings.rateAppSubtitleIos' => 'Leave a review on the App Store',
 			'settings.rateAppFailed' => 'Could not open Google Play.',
 			'settings.rateAppFailedIos' => 'Could not open the App Store.',
-			'settings.downloadFolderIos' => 'Files app (On My iPhone / Termphin)',
-			'settings.licenses' => 'Open source licenses',
 			_ => null,
 		} ?? switch (path) {
+			'settings.downloadFolderIos' => 'Files app (On My iPhone / Termphin)',
+			'settings.licenses' => 'Open source licenses',
 			'settings.licensesSubtitle' => 'The packages Termphin is built on, and their terms',
 			'settings.privacyPolicy' => 'Privacy policy',
 			'settings.privacyPolicySubtitle' => 'What is collected, and what never leaves this device',
@@ -4521,6 +4535,8 @@ extension on Translations {
 			'notifications.sessionDroppedBody' => ({required Object name}) => '${name} lost its connection.',
 			'notifications.sessionChannelName' => 'Session alerts',
 			'notifications.sessionChannelDescription' => 'When a session loses its connection and cannot get it back.',
+			'notifications.terminalChannelName' => 'From the terminal',
+			'notifications.terminalChannelDescription' => 'What programs in your sessions ask to announce, such as a finished build or an agent waiting for you.',
 			'notifications.downloadProgressChannelName' => 'Download progress',
 			'notifications.downloadProgressChannelDescription' => 'Shown while a file is being downloaded.',
 			'notifications.downloadCompleteChannelName' => 'Download complete',
@@ -4789,12 +4805,12 @@ extension on Translations {
 			'hostKey.accept' => 'Accept and remember',
 			'hostKey.acceptChanged' => 'Accept new key',
 			'hostKey.reject' => 'Do not connect',
+			_ => null,
+		} ?? switch (path) {
 			'keyboardInteractive.title' => 'The server is asking',
 			'keyboardInteractive.fallbackPrompt' => 'Response',
 			'keyboardInteractive.submit' => 'Send',
 			'manual.title' => 'Manual',
-			_ => null,
-		} ?? switch (path) {
 			'manual.loadFailed' => 'Could not load the manual.',
 			'manual.loadFailedBody' => 'Check your connection and try again.',
 			'manual.retry' => 'Try again',

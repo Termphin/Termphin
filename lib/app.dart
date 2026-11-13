@@ -11,6 +11,7 @@ import 'models/ssh_profile.dart';
 import 'providers/groups_provider.dart';
 import 'providers/profiles_provider.dart';
 import 'providers/snippets_provider.dart';
+import 'providers/ssh_session_manager_provider.dart';
 import 'providers/terminal_overlay_provider.dart';
 import 'providers/theme_provider.dart';
 import 'screens/lock_screen.dart';
@@ -21,6 +22,7 @@ import 'services/app/onboarding_service.dart';
 import 'services/app/review_prompt_service.dart';
 import 'services/app/tag_migration_service.dart';
 import 'services/app/whats_new_service.dart';
+import 'services/platform/local_notifications_service.dart';
 import 'services/platform/quick_actions_service.dart';
 import 'services/security/lock_service.dart';
 import 'services/security/relock_guard.dart';
@@ -380,9 +382,36 @@ class _AppShellState extends ConsumerState<_AppShell> {
     service.iconIds = ProfileAvatarData.icons.map((icon) => icon.id).toList();
     service.normalizeColorHex = (hex) => ProfileAvatarColor.forHex(hex).hex;
     service.init();
+    LocalNotificationsService.instance.onOpenSession = _openNotifiedSession;
     WidgetsBinding.instance.addPostFrameCallback(
       (_) => _runStartupInterstitials(),
     );
+  }
+
+  @override
+  void dispose() {
+    LocalNotificationsService.instance.onOpenSession = null;
+    super.dispose();
+  }
+
+  /// What tapping a notification from the terminal does: the session it was
+  /// about, in front, with the rest of the tabs behind it. Like a shortcut it
+  /// waits behind the PIN when one is due; a session gone since does nothing.
+  void _openNotifiedSession(String sessionId) {
+    if (RelockGuard.instance.holding) {
+      RelockGuard.instance.whenUnlocked(() => _openNotifiedSession(sessionId));
+      return;
+    }
+    final context = navigatorKey.currentContext;
+    if (context == null || !context.mounted) return;
+    final container = ProviderScope.containerOf(context);
+    final session = container
+        .read(sshSessionManagerProvider)
+        .getSession(sessionId);
+    if (session == null) return;
+    container
+        .read(terminalOverlayProvider.notifier)
+        .show(sessionId, session.profile);
   }
 
   /// What a quick-action shortcut does once it is allowed through: the same

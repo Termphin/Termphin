@@ -5,6 +5,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:terminal_view/terminal_view.dart';
 
+import 'terminal_notification.dart';
+
 /// Lines of scrollback a session keeps.
 const kTerminalScrollbackLines = 10000;
 
@@ -33,13 +35,15 @@ class SessionTerminal {
     int rows = 24,
     Uint8List? replay,
     this.onReply,
+    this.onNotification,
   }) : terminal = _SessionTerminalCore(
          maxLines: kTerminalScrollbackLines,
          platform: _terminalPlatform(defaultTargetPlatform),
        ) {
     terminal
       ..resize(columns, rows)
-      ..onOutput = _reply;
+      ..onOutput = _reply
+      ..onPrivateOSC = _privateOsc;
     _utf8Sink = const Utf8Decoder(
       allowMalformed: true,
     ).startChunkedConversion(_StringChunkSink(_decoded));
@@ -53,6 +57,15 @@ class SessionTerminal {
 
   /// Takes what the terminal answers the program with while no pane is bound.
   void Function(String data)? onReply;
+
+  /// Takes the notifications programs ask the terminal to show
+  /// ([TerminalNotification]), bound pane or not - a session nobody is
+  /// looking at is exactly the one whose news matters. Never called for a
+  /// replay: that notification was shown, or missed, when it happened.
+  void Function(TerminalNotification notification)? onNotification;
+
+  /// The bound pane's handler for the private OSCs it acts on itself.
+  void Function(String code, List<String> args)? _paneOsc;
 
   /// Output arrives from SSH in whatever sized pieces the network hands
   /// over, often many per frame. Feeding each one straight to the terminal
@@ -108,8 +121,8 @@ class SessionTerminal {
     terminal
       ..onOutput = onOutput
       ..onResize = ((columns, rows, _, _) => onResize(columns, rows))
-      ..onBell = onBell
-      ..onPrivateOSC = onPrivateOsc;
+      ..onBell = onBell;
+    _paneOsc = onPrivateOsc;
   }
 
   void release(Object owner) {
@@ -118,8 +131,16 @@ class SessionTerminal {
     terminal
       ..onOutput = _reply
       ..onResize = null
-      ..onBell = null
-      ..onPrivateOSC = null;
+      ..onBell = null;
+    _paneOsc = null;
+  }
+
+  void _privateOsc(String code, List<String> args) {
+    if (!replaying) {
+      final notification = TerminalNotification.fromOsc(code, args);
+      if (notification != null) onNotification?.call(notification);
+    }
+    _paneOsc?.call(code, args);
   }
 
   /// Parses everything queued, now, however long it takes.

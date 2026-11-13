@@ -238,7 +238,10 @@ class _MainShellState extends ConsumerState<MainShell>
   /// landscape, where the strip has moved into a side rail, or with the
   /// strip moved to the bottom, which leaves nothing up top to hang off. Never called from build - the overlay listening on
   /// it is outside this element tree and would be marked dirty mid-build.
+  /// Also tells the session manager whether the terminal is what is on
+  /// screen, which is what decides if a program's notification is news.
   void _syncNotificationAnchor() {
+    _manager.terminalOnScreen = _terminalVisible;
     appNotificationAnchor.value = _terminalVisible
         ? (isWideLayout(context) ||
                   tabBarPositionSetting.value == TabBarPosition.bottom

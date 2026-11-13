@@ -7,11 +7,16 @@ import 'app.dart';
 import 'screens/share/share_screen.dart';
 import 'services/analytics/analytics_service.dart';
 import 'services/app/error_reports.dart';
+import 'services/app/identity_anonymizer.dart';
 import 'services/platform/foreground_notification_service.dart';
+import 'services/platform/local_notifications_service.dart';
+import 'services/settings/anonymize_setting.dart';
 import 'services/settings/app_settings.dart';
+import 'services/settings/terminal_settings.dart';
 import 'services/ssh/network_monitor.dart';
 import 'services/ssh/ssh_prompts.dart';
 import 'services/ssh/ssh_session_manager.dart';
+import 'services/terminal/terminal_alerts.dart';
 import 'widgets/ssh/host_key_dialog.dart';
 import 'widgets/ssh/keyboard_interactive_dialog.dart';
 
@@ -45,6 +50,7 @@ Future<void> main() async {
 
   await SshSessionManager.instance.init();
   _bindConnectionPrompts();
+  _bindTerminalAlerts();
   await ForegroundNotificationService.instance.init();
   _bindForegroundService();
   await NetworkMonitor.instance.init();
@@ -60,6 +66,36 @@ Future<void> main() async {
   AnalyticsService.instance.installErrorHandlers();
   unawaited(AnalyticsService.instance.capture(AnalyticsEvent.appOpened));
   runApp(const SshClientApp());
+}
+
+/// Posts what programs ask the terminal to announce, for sessions other than
+/// the one on screen; see [TerminalAlerts]. The notifications service is
+/// started here rather than on first use so a tap that launched the app is
+/// still there to be read.
+void _bindTerminalAlerts() {
+  final manager = SshSessionManager.instance;
+  final notifications = LocalNotificationsService.instance;
+  unawaited(notifications.init());
+  final alerts = TerminalAlerts(
+    post: (alert) => unawaited(
+      notifications.showTerminalAlert(
+        sessionId: alert.sessionId,
+        title: alert.title,
+        body: alert.body,
+      ),
+    ),
+    enabled: () => terminalSettings.programNotifications.value,
+    isForeground: () => manager.foreground,
+    activeSessionId: () =>
+        manager.terminalOnScreen ? manager.activeSessionId : null,
+  );
+  manager.onTerminalNotification = (session, notification) => alerts.handle(
+    sessionId: session.id,
+    sessionName: anonymizeSetting.value
+        ? IdentityAnonymizer.name(session.profile.id)
+        : session.profile.name,
+    notification: notification,
+  );
 }
 
 /// What `ShareActivity` runs instead of [main]: an engine of its own that

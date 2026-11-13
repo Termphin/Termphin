@@ -7,6 +7,7 @@ import 'package:dartssh2/dartssh2.dart';
 import '../services/ssh/ssh_service.dart';
 import '../services/terminal/osc_markers.dart';
 import '../services/terminal/session_terminal.dart';
+import '../services/terminal/terminal_notification.dart';
 import 'remote_shell.dart';
 import 'session_tab.dart';
 import 'ssh_profile.dart';
@@ -132,6 +133,7 @@ class ActiveSessionView {
     columns: _columns,
     rows: _rows,
     onReply: _replyFromTerminal,
+    onNotification: _notify,
   );
   SessionTerminal? _terminal;
   int _columns;
@@ -187,8 +189,20 @@ class ActiveSessionView {
       rows: previous?.terminal.viewHeight ?? _rows,
       replay: replay,
       onReply: _replyFromTerminal,
+      onNotification: _notify,
     );
     previous?.retire();
+  }
+
+  final _notifications = StreamController<TerminalNotification>.broadcast();
+
+  /// What programs in this session asked the terminal to announce: a build
+  /// that finished, Claude Code waiting for an answer.
+  Stream<TerminalNotification> get notifications => _notifications.stream;
+
+  void _notify(TerminalNotification notification) {
+    if (_disposed || _notifications.isClosed) return;
+    _notifications.add(notification);
   }
 
   /// What the terminal answers the program with while no pane is mounted to
@@ -218,6 +232,7 @@ class ActiveSessionView {
     unawaited(sessionDoneSubscription?.cancel());
     sessionDoneSubscription = null;
     _terminal?.retire();
+    if (!_notifications.isClosed) unawaited(_notifications.close());
     if (!_outputController.isClosed) {
       unawaited(_outputController.close());
     }
