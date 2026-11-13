@@ -32,7 +32,7 @@ on:
         required: true
       APPSTORE_API_PRIVATE_KEY:
         required: true
-      POSTHOG_API_KEY:
+      FIREBASE_CONFIG_BASE64:
         required: false
 
 permissions:
@@ -169,7 +169,7 @@ jobs:
       - name: Build iOS IPA
         env:
           APP_STORE_ID: ${{ vars.APP_STORE_ID }}
-          POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
+          FIREBASE_CONFIG_BASE64: ${{ secrets.FIREBASE_CONFIG_BASE64 }}
           EXPORT_OPTIONS_PLIST: 'ios/ExportOptions.plist'
         run: |
           scripts/build_release.sh ios

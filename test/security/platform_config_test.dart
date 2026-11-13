@@ -72,14 +72,42 @@ void main() {
       expect(_attribute(application, 'debuggable'), isNull);
     });
 
+    /// An element marked `tools:node="remove"` takes a library's component
+    /// out of the merged manifest; it is not one of ours.
     test('only the launcher activity is reachable from other apps', () {
       final exported = [
         for (final tag in ['activity', 'service', 'receiver', 'provider'])
           for (final element in _elements(tag))
-            if (_attribute(element, 'exported') != 'false')
+            if (_attribute(element, 'exported') != 'false' &&
+                !element.contains('tools:node="remove"'))
               _attribute(element, 'name'),
       ];
       expect(exported, ['.MainActivity', '.ShareActivity']);
+    });
+
+    test('Firebase does not start with the process', () {
+      final provider = _elements('provider').singleWhere(
+        (element) =>
+            _attribute(element, 'name') ==
+            'com.google.firebase.provider.FirebaseInitProvider',
+      );
+      expect(provider, contains('tools:node="remove"'));
+    });
+
+    test('Firebase collects nothing until it is switched on', () {
+      String? value(String name) => RegExp(
+        'android:name="$name"\\s+android:value="([^"]*)"',
+      ).firstMatch(_manifest)?.group(1);
+      for (final flag in [
+        'firebase_analytics_collection_enabled',
+        'google_analytics_adid_collection_enabled',
+        'google_analytics_default_allow_ad_personalization_signals',
+        'google_analytics_automatic_screen_reporting_enabled',
+        'firebase_crashlytics_collection_enabled',
+        'firebase_messaging_auto_init_enabled',
+      ]) {
+        expect(value(flag), 'false', reason: flag);
+      }
     });
 
     test('the share entry accepts shares and nothing else', () {

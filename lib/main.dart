@@ -27,8 +27,9 @@ bool _mainInitialized = false;
 /// so the UI has live sessions and connectivity state on first render. A
 /// socket bound to an interface that left goes silent rather than erroring,
 /// so a handover re-probes sessions instead of waiting out the keepalive.
-/// Analytics capture is a no-op until consent is answered, so the
-/// `appOpened` event can be fired right after `init`.
+/// Firebase is not started here: `AnalyticsService.init` starts it only when
+/// consent is on record. Analytics capture and crash reports are no-ops until
+/// then, so the `appOpened` event can be fired right after `init`.
 Future<void> main() async {
   if (_mainInitialized) {
     runApp(const SshClientApp());
@@ -56,6 +57,7 @@ Future<void> main() async {
   );
 
   await AnalyticsService.instance.init();
+  AnalyticsService.instance.installErrorHandlers();
   unawaited(AnalyticsService.instance.capture(AnalyticsEvent.appOpened));
   runApp(const SshClientApp());
 }

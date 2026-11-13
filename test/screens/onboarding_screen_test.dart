@@ -1,4 +1,3 @@
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -10,18 +9,10 @@ import 'package:termphin/services/app/onboarding_service.dart';
 import '../support/test_app.dart';
 
 void main() {
-  const analyticsChannel = MethodChannel('posthog_flutter');
   final t = AppLocale.en.buildSync();
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(analyticsChannel, (call) async => null);
-  });
-
-  tearDown(() {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(analyticsChannel, null);
   });
 
   Future<void> pumpOnboarding(

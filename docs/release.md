@@ -9,13 +9,19 @@ Use `scripts/build_release.sh` (`android` default, or `ios`). Android builds
 both the AAB for Google Play and a universal APK. The iOS target refuses to run
 off macOS and reads `APP_STORE_ID` from the environment; it only warns when it
 is missing, and `ReviewPromptService.canOpenStoreListing` then hides the "Rate
-Termphin" row. Both targets read `POSTHOG_API_KEY` the same way and warn
-without it: such a build has analytics off.
+Termphin" row. Both targets take the Firebase config from
+`~/.config/termphin/firebase` (`TERMPHIN_FIREBASE_DIR` overrides it; in CI the
+`FIREBASE_CONFIG_BASE64` secret, a base64 `tar.gz` of that directory) and warn
+without it: such a build has no analytics, crash reports, accounts or push.
+The directory holds `dart-defines.json` (passed as `--dart-define-from-file`),
+`google-services.json` and `GoogleService-Info.plist`;
+`scripts/firebase_config.sh` copies the last two into the tree, where they are
+git-ignored. **None of it is ever committed.**
 
 **Builds are not obfuscated.** The source is public, so obfuscation would hide
 nothing, and an unobfuscated build keeps readable Dart stack traces: a crash
-from `captureFlutterErrors` names its functions and lines in PostHog as it
-is, with no symbol files to keep or `flutter symbolize` to run.
+reported to Crashlytics names its functions and lines as it is, with no
+symbol files to keep or `flutter symbolize` to run.
 
 ## What a release ships
 
@@ -95,7 +101,7 @@ before touching `android/`:
   configuration phase fails outright.
 - **Built-in Kotlin is not on yet.** `android.builtInKotlin=false` in
   `gradle.properties`, and the app still applies `kotlin-android`. Migrating is
-  blocked from outside: `in_app_review` and `posthog_flutter` apply KGP
+  blocked from outside: `in_app_review` applies KGP
   themselves. That is on those plugins to fix first.
 
 Gradle's own output is gitignored (`/android/build/`,

@@ -3,7 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:termphin/i18n/strings.g.dart';
 import 'package:termphin/screens/settings/fast_upload_settings_screen.dart';
-import 'package:termphin/services/analytics/analytics_config.dart';
+import 'package:termphin/services/firebase/firebase_config.dart';
 import 'package:termphin/services/settings/app_settings.dart';
 import 'package:termphin/services/settings/upload_settings.dart';
 import 'package:termphin/widgets/ui/large_title_scaffold.dart';
@@ -155,18 +155,11 @@ void main() {
     });
   });
 
-  group('AnalyticsConfig', () {
-    test('a build without a key sends nothing', () {
-      final override = AnalyticsConfig.apiKeyOverride;
-      addTearDown(() => AnalyticsConfig.apiKeyOverride = override);
-      AnalyticsConfig.apiKeyOverride = null;
-      expect(AnalyticsConfig.projectApiKey, isEmpty);
-      expect(AnalyticsConfig.isConfigured, isFalse);
-    });
-
-    test('points at the EU host', () {
-      expect(AnalyticsConfig.host, contains('eu.i.posthog.com'));
-      expect(Uri.parse(AnalyticsConfig.host).scheme, 'https');
+  group('FirebaseConfig', () {
+    test('a build without a project talks to no Firebase', () {
+      for (final platform in TargetPlatform.values) {
+        expect(FirebaseConfig.optionsFor(platform, debug: false), isNull);
+      }
     });
   });
 }
