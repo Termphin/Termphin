@@ -42,8 +42,10 @@ void main() {
     expect(parseCandidates(await complete('cd ~/Proj')), ['~/Projects/']);
   }, skip: !hasBash);
 
+  /// Bash lists what it found in an order of its own - directories first on
+  /// some versions, plain sorted on others - so only what was found counts.
   test('an escaped or quoted blank stays inside the word', () async {
-    const inside = ['My Docs/a.txt', 'My Docs/sub/'];
+    final inside = unorderedEquals(['My Docs/a.txt', 'My Docs/sub/']);
     expect(parseCandidates(await complete(r'cat My\ Docs/')), inside);
     expect(parseCandidates(await complete("cat 'My Docs/")), inside);
   }, skip: !hasBash);
