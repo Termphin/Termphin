@@ -1,10 +1,13 @@
 import 'dart:math' as math;
 
 import 'package:dropdown_button2/dropdown_button2.dart';
-import 'package:flutter/material.dart';
+// ignore: deprecated_member_use
+import 'package:flutter/material.dart' as legacy show ScrollbarThemeData;
+import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../theme/theme.dart';
+import 'legacy_material.dart';
 
 /// Callers build the entries, so they need these; nothing else about the
 /// package should have to leak into a screen.
@@ -20,6 +23,10 @@ export 'package:dropdown_button2/dropdown_button2.dart'
 /// interval is not zero-width because the reveal divides by its own length.
 /// The scrollbar's thumb is always visible, as the only sign there is more
 /// to the menu below.
+///
+/// The scrollbar theme is the framework's own Material one, not
+/// `material_ui`'s: `dropdown_button2` is still built on the former, and the
+/// two are different types however alike they read.
 DropdownStyleData appDropdownStyle(
   BuildContext context, {
   double? width,
@@ -42,7 +49,7 @@ DropdownStyleData appDropdownStyle(
     border: Border.all(color: context.colors.surfaceBorderStrong),
   ),
   elevation: 0,
-  scrollbarTheme: ScrollbarThemeData(
+  scrollbarTheme: legacy.ScrollbarThemeData(
     thumbVisibility: const WidgetStatePropertyAll(true),
     thumbColor: WidgetStatePropertyAll(context.colors.textTertiary),
     thickness: const WidgetStatePropertyAll(3),
@@ -215,22 +222,24 @@ class _AppActionDropdownState<T> extends State<AppActionDropdown<T>> {
         );
     return Listener(
       onPointerDown: (_) => _fitToScreen(),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton2<T>(
-          customButton: tooltip == null
-              ? button
-              : Tooltip(message: tooltip, child: button),
-          items: widget.items,
-          onChanged: _handleChanged,
-          openDropdownListenable: widget.openDropdownListenable,
-          dropdownStyleData: appDropdownStyle(
-            context,
-            width: widget.width,
-            maxHeight: _maxHeight,
-            direction: widget.direction,
-            offset: widget.offset + Offset(_nudge, 0),
+      child: LegacyMaterial(
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton2<T>(
+            customButton: tooltip == null
+                ? button
+                : Tooltip(message: tooltip, child: button),
+            items: widget.items,
+            onChanged: _handleChanged,
+            openDropdownListenable: widget.openDropdownListenable,
+            dropdownStyleData: appDropdownStyle(
+              context,
+              width: widget.width,
+              maxHeight: _maxHeight,
+              direction: widget.direction,
+              offset: widget.offset + Offset(_nudge, 0),
+            ),
+            menuItemStyleData: appDropdownItemStyle(),
           ),
-          menuItemStyleData: appDropdownItemStyle(),
         ),
       ),
     );

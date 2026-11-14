@@ -1,9 +1,10 @@
 import 'package:dropdown_button2/dropdown_button2.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../theme/theme.dart';
 import 'app_dropdown.dart';
+import 'legacy_material.dart';
 
 /// The controls the appearance screens are built from - the terminal's and
 /// the text editor's - so the two read as one set of settings.
@@ -105,60 +106,62 @@ class _SettingsDropdown<T> extends StatelessWidget {
       fontSize: AppTheme.font14,
       fontWeight: FontWeight.w500,
     );
-    return DropdownButton2<T>(
-      valueListenable: ValueNotifier(value),
-      isExpanded: !compact,
-      underline: const SizedBox.shrink(),
-      selectedItemBuilder: (context) => labels.values
-          .map(
-            (v) => compact
-                ? Text(v, style: selectedStyle)
-                : Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(v, style: selectedStyle),
-                  ),
-          )
-          .toList(),
-      onChanged: (v) {
-        if (v != null) onChanged(v);
-      },
-      buttonStyleData: ButtonStyleData(
-        height: compact ? 40 : 48,
-        padding: EdgeInsets.symmetric(
-          horizontal: AppTheme.space12,
-          vertical: compact ? AppTheme.space8 : AppTheme.space12,
+    return LegacyMaterial(
+      child: DropdownButton2<T>(
+        valueListenable: ValueNotifier(value),
+        isExpanded: !compact,
+        underline: const SizedBox.shrink(),
+        selectedItemBuilder: (context) => labels.values
+            .map(
+              (v) => compact
+                  ? Text(v, style: selectedStyle)
+                  : Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(v, style: selectedStyle),
+                    ),
+            )
+            .toList(),
+        onChanged: (v) {
+          if (v != null) onChanged(v);
+        },
+        buttonStyleData: ButtonStyleData(
+          height: compact ? 40 : 48,
+          padding: EdgeInsets.symmetric(
+            horizontal: AppTheme.space12,
+            vertical: compact ? AppTheme.space8 : AppTheme.space12,
+          ),
+          decoration: context.colors.fieldDecoration,
+          elevation: 0,
         ),
-        decoration: context.colors.fieldDecoration,
-        elevation: 0,
-      ),
-      iconStyleData: IconStyleData(
-        icon: Icon(
-          PhosphorIconsFill.caretDown,
-          size: caret,
-          color: context.colors.textTertiary,
+        iconStyleData: IconStyleData(
+          icon: Icon(
+            PhosphorIconsFill.caretDown,
+            size: caret,
+            color: context.colors.textTertiary,
+          ),
+          iconSize: caret,
         ),
-        iconSize: caret,
-      ),
-      dropdownStyleData: appDropdownStyle(
-        context,
-        maxHeight: compact ? null : 300,
-      ),
-      menuItemStyleData: appDropdownItemStyle(
-        padding: const EdgeInsets.symmetric(horizontal: AppTheme.space10),
-      ),
-      items: labels.entries
-          .map(
-            (e) => DropdownItem<T>(
-              value: e.key,
-              intrinsicHeight: true,
-              child: AppDropdownItem(
-                label: e.value,
-                fontFamily: itemFontFamily?.call(e.key),
-                selected: e.key == value,
+        dropdownStyleData: appDropdownStyle(
+          context,
+          maxHeight: compact ? null : 300,
+        ),
+        menuItemStyleData: appDropdownItemStyle(
+          padding: const EdgeInsets.symmetric(horizontal: AppTheme.space10),
+        ),
+        items: labels.entries
+            .map(
+              (e) => DropdownItem<T>(
+                value: e.key,
+                intrinsicHeight: true,
+                child: AppDropdownItem(
+                  label: e.value,
+                  fontFamily: itemFontFamily?.call(e.key),
+                  selected: e.key == value,
+                ),
               ),
-            ),
-          )
-          .toList(),
+            )
+            .toList(),
+      ),
     );
   }
 }

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../screens/settings/manual_screen.dart';
 import '../../services/app/manual_urls.dart';

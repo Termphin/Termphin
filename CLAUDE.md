@@ -46,6 +46,19 @@ Termphin is a Flutter SSH client (package `termphin`).
 | `docs/` | Developer documentation and the source of the legal pages (`docs/legal/`). |
 | `branding/` | The logo and the store graphics built from it, covered by `TRADEMARKS.md`. |
 | `repos/` | Sibling repositories as git submodules (`terminal_view`, `termphin-agent`, `tray_kit`), for working on them alongside the app. The app builds without them. |
+| `memories/` | Daily work log, one `YYYY-MM-DD.md` per day. Ignored by git, never committed. |
+
+## Work log
+
+`memories/` holds one Markdown file per working day, named `YYYY-MM-DD.md`.
+It is in `.gitignore` and never gets committed.
+
+- **At the start of a session** read the newest file or two to pick up open
+  threads.
+- **During and at the end of a session** append to today's file (create it
+  if missing) under `## Done`, `## Blocked / open` and `## Next`: what changed
+  and why, what failed and the exact error, decisions made, what is left.
+  Facts only, short lines, no restating the git log.
 
 ## Documentation index
 
@@ -138,6 +151,10 @@ after editing the JSON.
   `showConfirmDialog` (`destructive: true` for anything that loses data),
   `showTextInputDialog`, `SettingsTile`/`SettingsSwitchTile`,
   `copyToClipboard`, `openExternalUrl`.
+- **Material comes from `package:material_ui`**, never
+  `package:flutter/material.dart` (deprecated since Flutter 3.50). A widget
+  from a package still on the framework's Material library (`dropdown_button2`)
+  goes inside `LegacyMaterial`, or it finds no `Material` ancestor and throws.
 - **Transient feedback is `AppNotifications`, sheets are `showAppSheet`.** Do not
   use `ScaffoldMessenger`/`SnackBar` or `showModalBottomSheet`.
 - **No sliders.** Numeric settings use `StepperRow`/`ValueStepperRow`.

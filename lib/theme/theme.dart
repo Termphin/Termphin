@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../utils/platform_info.dart';
 import 'terminal_color_scheme.dart';
@@ -517,6 +517,7 @@ class AppTheme {
   static const Duration motionSlow = Duration(milliseconds: 200);
   static const Duration motionPage = Duration(milliseconds: 320);
   static const Duration motionPageReverse = Duration(milliseconds: 220);
+
   /// The wrong-PIN shake: long enough to read as a shake, not a flinch.
   static const Duration motionShake = Duration(milliseconds: 420);
   static const Curve interactiveCurve = Cubic(0.16, 1, 0.3, 1);

@@ -1,11 +1,10 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:terminal_view/terminal_view.dart';
-
 import 'package:termphin/services/settings/terminal_settings.dart';
 import 'package:termphin/theme/theme.dart';
 import 'package:termphin/widgets/terminal/action_dock_menu.dart';

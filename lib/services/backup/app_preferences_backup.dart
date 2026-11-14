@@ -58,12 +58,10 @@ Future<Map<String, dynamic>> exportAppPreferences() async {
     'toolbarActiveProfile': profiles.activeId,
     'toolbarEnabled': await toolbarSettings.enabled.load(),
     'dockOrder': [
-      for (final action in await actionDockSettings.order.load())
-        action.name,
+      for (final action in await actionDockSettings.order.load()) action.name,
     ],
     'dockHidden': [
-      for (final action in await actionDockSettings.hidden.load())
-        action.name,
+      for (final action in await actionDockSettings.hidden.load()) action.name,
     ],
     'dockEnabled': await floatingDockSettings.enabled.load(),
     'themeMode': (await themeModeSetting.load()).name,

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
@@ -30,8 +30,7 @@ Future<(SftpSortField, bool)?> showSftpSortSheet(
                 Text(t.sftp.sortBy, style: Theme.of(ctx).textTheme.titleMedium),
                 const Spacer(),
                 TextButton.icon(
-                  onPressed: () =>
-                      Navigator.pop(ctx, (field, !descending)),
+                  onPressed: () => Navigator.pop(ctx, (field, !descending)),
                   icon: Icon(
                     descending
                         ? PhosphorIconsFill.sortDescending

@@ -67,3 +67,5 @@ app.*.map.json
 # Local dependency overrides (e.g. patched plugins for an older Xcode)
 /pubspec_overrides.yaml
 
+# Daily work log, local only (see CLAUDE.md)
+/memories/

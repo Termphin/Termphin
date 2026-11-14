@@ -18,6 +18,7 @@ import 'package:termphin/services/ssh/keepalive_pinger.dart';
 import 'package:termphin/services/ssh/network_monitor.dart';
 import 'package:termphin/services/ssh/ssh_service.dart';
 import 'package:termphin/services/ssh/ssh_session_manager.dart';
+import 'package:termphin/services/terminal/terminal_text.dart';
 
 import '../support/fakes.dart';
 import '../support/fixtures.dart';
@@ -125,7 +126,8 @@ void main() {
         (shellCall.arguments as Map)['command'],
         contains('attach --replay'),
       );
-      expect(manager.getSession('session-1')?.pendingReplay, isNotEmpty);
+      final terminal = manager.getSession('session-1')!.terminal.terminal;
+      expect((terminal.viewWidth, terminal.viewHeight), (120, 40));
       expect(capturedEvents, contains('connection_success'));
       expect(capturedEvents, isNot(contains('session_resumed')));
     },
@@ -263,8 +265,9 @@ void main() {
   test('attaches to an existing session without connecting again', () async {
     final profile = profileFixture();
     await manager.startSession(profile, sessionId: 'existing');
-    backend.latestService.emit([1, 2, 3]);
+    backend.latestService.emit(utf8.encode('abc'));
     await Future<void>.delayed(Duration.zero);
+    final terminal = manager.getSession('existing')!.terminal;
     backend.calls.clear();
     final container = createContainer();
     final provider = sshConnectionProvider(('existing', profile));
@@ -273,7 +276,9 @@ void main() {
 
     expect(container.read(provider).status, ConnectionStatus.connected);
     expect(backend.calls.where((call) => call.method == 'connect'), isEmpty);
-    expect(manager.getSession('existing')?.pendingReplay, [1, 2, 3]);
+    expect(manager.getSession('existing')!.terminal, same(terminal));
+    terminal.flush();
+    expect(terminalBufferText(terminal.terminal.buffer), 'abc');
     expect(capturedEvents, contains('session_resumed'));
     expect(capturedEvents, isNot(contains('connection_success')));
   });

@@ -622,7 +622,8 @@ class SshSessionManager extends ChangeNotifier {
         ..sshService = service
         ..dropped = false
         ..connecting = true
-        ..resumedInPlace = false;
+        ..resumedInPlace = false
+        ..ptyOpensAt(initialWidth, initialHeight);
     } else {
       session = ActiveSessionView(
         id: id,
@@ -633,6 +634,8 @@ class SshSessionManager extends ChangeNotifier {
         sshService: service,
         isRun: isRun,
         connecting: true,
+        columns: initialWidth,
+        rows: initialHeight,
       );
     }
     _sessions[id] = session;
@@ -730,21 +733,18 @@ class SshSessionManager extends ChangeNotifier {
         }
         _handleCwdMarker(session, payload);
       });
-      session.serviceOutputSubscription = service.output.listen(
-        (bytes) {
-          replayWaiter.onOutput();
-          service.quality.heard();
-          markerTracker.consume(bytes);
-          offsetCounter.onChunk(bytes.length);
-          if (staging) {
-            staged.add(bytes);
-            return;
-          }
-          session.outputPosition = offsetCounter.position;
-          session.deliverOutput(bytes);
-        },
-        onError: (_) => markSessionDropped(id),
-      );
+      session.serviceOutputSubscription = service.output.listen((bytes) {
+        replayWaiter.onOutput();
+        service.quality.heard();
+        markerTracker.consume(bytes);
+        offsetCounter.onChunk(bytes.length);
+        if (staging) {
+          staged.add(bytes);
+          return;
+        }
+        session.outputPosition = offsetCounter.position;
+        session.deliverOutput(bytes);
+      }, onError: (_) => markSessionDropped(id));
 
       onConnectionLog?.call(t.connectionLog.openingSession);
       final sshSession = await service.startShell(
@@ -768,7 +768,7 @@ class SshSessionManager extends ChangeNotifier {
           staged.forEach(session.deliverOutput);
           session.resumedInPlace = true;
         } else {
-          session.replaceHistory(
+          session.restartTerminal(
             Uint8List.fromList([for (final chunk in staged) ...chunk]),
           );
         }
@@ -792,7 +792,6 @@ class SshSessionManager extends ChangeNotifier {
       );
       if (!_sessionOrder.contains(id)) _sessionOrder.add(id);
       await _saveSessionUiState();
-      session.pendingReplay = session.rawHistorySnapshot;
       session.connecting = false;
       notifyListeners();
       onConnectionLog?.call(t.connectionLog.sessionReady);
@@ -1267,13 +1266,6 @@ class SshSessionManager extends ChangeNotifier {
       math.max(1, width),
       math.max(1, height),
     );
-  }
-
-  Future<Uint8List> requestReplay(String sessionId) async {
-    final session = _sessions[sessionId];
-    final replay = session?.rawHistorySnapshot ?? Uint8List(0);
-    if (session != null) session.pendingReplay = replay;
-    return replay;
   }
 
   Future<Uint8List> exec(String sessionId, String command) async {

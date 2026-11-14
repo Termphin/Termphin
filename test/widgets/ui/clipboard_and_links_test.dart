@@ -1,7 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-
+import 'package:material_ui/material_ui.dart';
 import 'package:termphin/widgets/ui/clipboard_and_links.dart';
 
 import '../../support/platform_mocks.dart';

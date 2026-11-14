@@ -1,11 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dartssh2/dartssh2.dart';
 
 import '../services/ssh/ssh_service.dart';
 import '../services/terminal/osc_markers.dart';
-import '../services/terminal/terminal_modes.dart';
+import '../services/terminal/session_terminal.dart';
 import 'remote_shell.dart';
 import 'session_tab.dart';
 import 'ssh_profile.dart';
@@ -25,7 +26,11 @@ class ActiveSessionView {
     this.sshService,
     this.isRun = false,
     this.connecting = false,
-  }) : _outputController = StreamController<Uint8List>.broadcast();
+    int columns = 80,
+    int rows = 24,
+  }) : _columns = columns,
+       _rows = rows,
+       _outputController = StreamController<Uint8List>.broadcast();
 
   final String id;
   SshProfile profile;
@@ -118,11 +123,28 @@ class ActiveSessionView {
     }
   }
 
-  final List<Uint8List> _rawHistory = [];
-  int _rawHistorySize = 0;
-  static const _maxRawHistoryBytes = 512 * 1024;
+  /// The terminal every byte of output is parsed into as it arrives, whether
+  /// or not a pane is showing it. Replaced by [restartTerminal].
+  ///
+  /// Made on first use: the tabs restored at launch are sessions too, each
+  /// would hold a scrollback ring it may never write to.
+  SessionTerminal get terminal => _terminal ??= SessionTerminal(
+    columns: _columns,
+    rows: _rows,
+    onReply: _replyFromTerminal,
+  );
+  SessionTerminal? _terminal;
+  int _columns;
+  int _rows;
 
-  final TerminalModeTracker _trimmedModes = TerminalModeTracker();
+  /// The size the pty is about to be opened with, for a session that has no
+  /// terminal yet - a tab restored at launch, connecting for the first time.
+  /// One that has a terminal keeps its size: a pane laid it out.
+  void ptyOpensAt(int columns, int rows) {
+    if (_terminal != null) return;
+    _columns = columns;
+    _rows = rows;
+  }
 
   StreamSubscription<Uint8List>? serviceOutputSubscription;
   StreamSubscription<void>? sessionDoneSubscription;
@@ -135,9 +157,6 @@ class ActiveSessionView {
   /// from a live one - which is what made a machine's list read "Connected, 0m"
   /// for the whole of a slow connect.
   bool connecting;
-
-  /// Raw replay stored for a terminal widget that is about to mount.
-  Uint8List? pendingReplay;
 
   Future<SSHClient> get sftpClient async {
     final client = sshService?.client;
@@ -152,39 +171,31 @@ class ActiveSessionView {
   void deliverOutput(Uint8List bytes) {
     if (_outputController.isClosed) return;
     final copy = Uint8List.fromList(bytes);
-    _rawHistory.add(copy);
-    _rawHistorySize += copy.length;
-    while (_rawHistorySize > _maxRawHistoryBytes && _rawHistory.isNotEmpty) {
-      final dropped = _rawHistory.removeAt(0);
-      _rawHistorySize -= dropped.length;
-      _trimmedModes.consume(dropped);
-    }
+    terminal.add(copy);
     _outputController.add(copy);
   }
 
-  /// Starts the history over from [bytes] - a replay that replaced it.
-  void replaceHistory(Uint8List bytes) {
-    _rawHistory.clear();
-    _rawHistorySize = 0;
-    _trimmedModes.reset();
-    if (bytes.isEmpty) return;
-    final cut = bytes.length - _maxRawHistoryBytes;
-    if (cut > 0) _trimmedModes.consume(Uint8List.sublistView(bytes, 0, cut));
-    final kept = cut > 0 ? Uint8List.sublistView(bytes, cut) : bytes;
-    _rawHistory.add(Uint8List.fromList(kept));
-    _rawHistorySize = kept.length;
+  /// Starts the terminal over from [replay] - the agent's own picture of the
+  /// session, sent when it could not just continue from where this one
+  /// stopped. A new terminal rather than a cleared one: the pane showing the
+  /// old one keeps it on screen until the pane for this one is ready.
+  void restartTerminal(Uint8List replay) {
+    if (_disposed) return;
+    final previous = _terminal;
+    _terminal = SessionTerminal(
+      columns: previous?.terminal.viewWidth ?? _columns,
+      rows: previous?.terminal.viewHeight ?? _rows,
+      replay: replay,
+      onReply: _replyFromTerminal,
+    );
+    previous?.retire();
   }
 
-  Uint8List get rawHistorySnapshot {
-    final prefix = _trimmedModes.restoreSequence;
-    final result = Uint8List(prefix.length + _rawHistorySize)
-      ..setRange(0, prefix.length, prefix);
-    var offset = prefix.length;
-    for (final chunk in _rawHistory) {
-      result.setRange(offset, offset + chunk.length, chunk);
-      offset += chunk.length;
-    }
-    return result;
+  /// What the terminal answers the program with while no pane is mounted to
+  /// send it. Not noted as input: nobody typed it.
+  void _replyFromTerminal(String data) {
+    if (dropped || _disposed) return;
+    sshService?.write(Uint8List.fromList(utf8.encode(data)));
   }
 
   String get uptimeFormatted {
@@ -206,9 +217,7 @@ class ActiveSessionView {
     serviceOutputSubscription = null;
     unawaited(sessionDoneSubscription?.cancel());
     sessionDoneSubscription = null;
-    _rawHistory.clear();
-    _rawHistorySize = 0;
-    _trimmedModes.reset();
+    _terminal?.retire();
     if (!_outputController.isClosed) {
       unawaited(_outputController.close());
     }

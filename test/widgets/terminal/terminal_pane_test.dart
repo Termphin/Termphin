@@ -2,19 +2,70 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:terminal_view/terminal_view.dart';
-
 import 'package:termphin/i18n/strings.g.dart';
+import 'package:termphin/services/terminal/session_terminal.dart';
+import 'package:termphin/services/terminal/terminal_text.dart';
 import 'package:termphin/widgets/terminal/terminal_pane.dart';
 import 'package:termphin/widgets/terminal/terminal_search_bar.dart';
 
+import '../../support/session_terminal.dart';
 import '../../support/test_app.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  testWidgets('a pane that comes back finds the session as it now stands, '
+      'scrolled to its end', (tester) async {
+    final terminal = SessionTerminal();
+    final sent = <String>[];
+    Uint8List bytes(String text) => Uint8List.fromList(utf8.encode(text));
+    Future<void> mount() async {
+      await pumpTestApp(
+        tester,
+        Scaffold(
+          body: TerminalPane(
+            terminal: terminal,
+            onInput: (input) => sent.add(utf8.decode(input)),
+            onResize: (_, _) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    await mount();
+    terminal.add(bytes('seen before leaving\r\n'));
+    await tester.pumpAndSettle();
+
+    await tester.pumpWidget(const SizedBox());
+    final awayReplies = <String>[];
+    terminal.onReply = awayReplies.add;
+    terminal.add(
+      bytes([for (var i = 0; i < 200; i++) 'while away $i\r\n'].join()),
+    );
+    terminal.add(bytes('\x1b[5n'));
+    await tester.pumpAndSettle();
+
+    await mount();
+    terminal.add(bytes('\x1b[5n'));
+    await tester.pumpAndSettle();
+
+    final shown = terminalBufferText(terminal.terminal.buffer).split('\n');
+    expect(shown.first, 'seen before leaving');
+    expect(shown.last, 'while away 199');
+    final position = tester
+        .widget<TerminalView>(find.byType(TerminalView))
+        .scrollController!
+        .position;
+    expect(position.pixels, position.maxScrollExtent);
+    expect(position.maxScrollExtent, greaterThan(0));
+    expect(awayReplies, ['\x1b[0n']);
+    expect(sent, ['\x1b[0n']);
+  });
 
   testWidgets('pinch zoom resizes the terminal only when the gesture ends', (
     tester,
@@ -29,7 +80,7 @@ void main() {
           width: 400,
           height: 600,
           child: TerminalPane(
-            outputStream: output.stream,
+            terminal: terminalFedBy(output.stream),
             onInput: (_) {},
             onResize: (cols, rows) => sizes.add((cols, rows)),
           ),
@@ -77,7 +128,7 @@ void main() {
             width: 400,
             height: 600,
             child: TerminalPane(
-              outputStream: output.stream,
+              terminal: terminalFedBy(output.stream),
               onInput: (_) {},
               onResize: (_, _) {},
             ),
@@ -134,10 +185,9 @@ void main() {
         tester,
         Scaffold(
           body: TerminalPane(
-            outputStream: output.stream,
+            terminal: terminalFedBy(output.stream, replay: history),
             onInput: (_) {},
             onResize: (_, _) {},
-            initialHistory: history,
           ),
         ),
       );
@@ -231,7 +281,7 @@ void main() {
         tester,
         Scaffold(
           body: TerminalPane(
-            outputStream: output.stream,
+            terminal: terminalFedBy(output.stream),
             onInput: (_) {},
             onResize: (_, _) {},
           ),
@@ -274,7 +324,7 @@ void main() {
           tester,
           Scaffold(
             body: TerminalPane(
-              outputStream: output.stream,
+              terminal: terminalFedBy(output.stream),
               onInput: (_) {},
               onResize: (_, _) {},
             ),
@@ -321,7 +371,7 @@ void main() {
         tester,
         Scaffold(
           body: TerminalPane(
-            outputStream: output.stream,
+            terminal: terminalFedBy(output.stream),
             onInput: (_) {},
             onResize: (_, _) {},
             onLinkDetected: (url, _) => links.add(url),
@@ -475,7 +525,7 @@ void main() {
         tester,
         Scaffold(
           body: TerminalPane(
-            outputStream: output.stream,
+            terminal: terminalFedBy(output.stream),
             onInput: (_) {},
             onResize: (_, _) {},
             controller: controller,

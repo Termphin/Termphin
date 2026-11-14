@@ -1,9 +1,8 @@
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:termphin/i18n/strings.g.dart';
 import 'package:termphin/screens/settings/toolbar_settings_screen.dart';
 import 'package:termphin/services/settings/app_settings.dart';

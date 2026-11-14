@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:re_editor/re_editor.dart' as re;
 
 /// The menu over a selection in the editor. re_editor draws none of its own -

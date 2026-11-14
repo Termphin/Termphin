@@ -148,8 +148,17 @@ come back:
   leftover reservation. `android:windowSoftInputMode="adjustResize|stateAlwaysHidden"`
   is what closes it - `stateHidden` alone only applies when the activity is
   first entered.
-- **The debounce moved to the packet.** The pane follows the keyboard frame by
-  frame, and every intermediate height would otherwise be a window-change the
+- **The grid waits for the keyboard to stop.** The pane's box follows the
+  keyboard frame by frame, but its terminal is resized once, when the height
+  has held for `kTerminalResizeSettleDelay` (`TerminalView.resizeSettleDelay`).
+  Until then the view is a shorter window on the same rows, resting where the
+  resize will leave it (`RenderTerminal.restingScrollOffset`) so nothing jumps
+  when it lands - which is also where "scroll to the bottom" and the follow
+  mode have to aim, not `maxScrollExtent`. Resizing on every frame cost two
+  buffers a frame and, on the alternate screen, rows dropped for good at each
+  step. A change of width is never held back.
+- **The debounce moved to the packet.** Every intermediate height would
+  otherwise be a window-change the
   remote shell acts on. `PtyResizeReporter` holds the last size for 120ms and
   sends once. Throttling the layout to protect the pty was the wrong layer.
   Settling back on the size the server already has (the layout passing
@@ -157,6 +166,26 @@ come back:
   one-row nudge first: the local buffer was resized twice, the pty never, so
   without it no SIGWINCH comes and the program never repaints over what the
   resizes left - until the keyboard changes the size for real.
+
+### Drawing the terminal
+
+Two switches in `lib/widgets/terminal/terminal_rendering.dart` and
+`frame_stats_overlay.dart`, both compile-time:
+
+- `terminal_view`'s glyph atlas is on: printable ASCII is stamped from an
+  image of the font, one draw a line, instead of laid out as a paragraph per
+  run of one style. `--dart-define=TERMINAL_GLYPH_ATLAS=false` turns it off.
+  `test/widgets/terminal/glyph_atlas_real_font_test.dart` holds it to the same
+  ink as the laid-out text in the font the app ships.
+- `--dart-define=FRAME_STATS=true` puts `FrameStatsOverlay` in the corner of
+  every pane: frames drawn in the last second, mean UI and raster time, and
+  how many overran the display's frame. A tap flips the atlas, so the two
+  ways of drawing can be compared on the same session. A measuring build,
+  never a release.
+
+`repos/terminal_view/benchmark/render_benchmark_test.dart` measures the UI
+thread's side of a frame on the host, for comparing one build of the view
+with another.
 
 ### Tab strip position
 

@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:termphin/i18n/strings.g.dart';
 import 'package:termphin/utils/link_metadata.dart';
 import 'package:termphin/widgets/terminal/link_preview_popup.dart';

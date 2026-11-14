@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
@@ -168,9 +168,7 @@ class _TransferBarState extends State<TransferBar>
                         onTap: _collapse,
                         child: FadeTransition(
                           opacity: _openCurve,
-                          child: const ColoredBox(
-                            color: AppTheme.shadowColor,
-                          ),
+                          child: const ColoredBox(color: AppTheme.shadowColor),
                         ),
                       ),
                     ),

@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:termphin/i18n/strings.g.dart';
 import 'package:termphin/services/app/project_urls.dart';
 import 'package:termphin/widgets/settings/open_source_settings_section.dart';

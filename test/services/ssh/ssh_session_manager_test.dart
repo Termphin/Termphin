@@ -10,6 +10,7 @@ import 'package:termphin/models/session_tab.dart';
 import 'package:termphin/models/ssh_profile.dart';
 import 'package:termphin/services/settings/terminal_settings.dart';
 import 'package:termphin/services/ssh/ssh_session_manager.dart';
+import 'package:termphin/services/terminal/terminal_text.dart';
 
 import '../../support/fixtures.dart';
 import '../../support/secure_storage_channel.dart';
@@ -21,6 +22,11 @@ void main() {
   late FakeSshBackend backend;
   late FakeRemoteAgentService remoteAgentService;
   late SshSessionManager manager;
+
+  String shownBy(ActiveSessionView session) {
+    session.terminal.flush();
+    return terminalBufferText(session.terminal.terminal.buffer);
+  }
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
@@ -157,22 +163,21 @@ void main() {
     expect(manager.tabs, isEmpty);
   });
 
-  test('starts, reuses, replays, and disconnects a Dart session', () async {
+  test('starts, reuses, and disconnects a Dart session, parsing its output '
+      'with no pane mounted', () async {
     final profile = profileFixture();
 
     final first = await manager.startSession(profile, sessionId: 'session');
     final reused = await manager.startSession(profile, sessionId: 'session');
-    backend.latestService.emit([4, 5, 6]);
+    backend.latestService.emit(utf8.encode('abc'));
     await Future<void>.delayed(Duration.zero);
-    final replay = await manager.requestReplay('session');
 
     expect(reused, same(first));
     expect(
       backend.calls.where((call) => call.method == 'connect'),
       hasLength(1),
     );
-    expect(replay, [4, 5, 6]);
-    expect(first.pendingReplay, [4, 5, 6]);
+    expect(shownBy(first), 'abc');
 
     await manager.disconnectSession('session');
     expect(manager.hasSession('session'), isFalse);
@@ -327,9 +332,9 @@ void main() {
       expect(delivered.join(), startsWith('missed'));
       expect(resumed.outputPosition, (epoch: '5', offset: 109));
       expect(
-        utf8.decode(resumed.rawHistorySnapshot),
+        shownBy(resumed),
         allOf(startsWith('history'), contains('abcmissed')),
-        reason: 'a terminal mounted later replays all of it',
+        reason: 'a pane mounted later finds all of it',
       );
     });
 
@@ -352,12 +357,13 @@ void main() {
       expect(attached, isNot(same(detached)));
       final attach = backend.calls.lastWhere((c) => c.method == 'startShell');
       expect((attach.arguments as Map)['command'], isNot(contains('--resume')));
-      expect(utf8.decode(attached.pendingReplay!), startsWith('history'));
+      expect(shownBy(attached), startsWith('history'));
       expect(delivered.join(), 'live');
     });
 
     test('a replay instead of a resume starts the history over', () async {
       final session = await connected();
+      final replaced = session.terminal;
       manager.markSessionDropped('kept');
       backend.attachOutput = (_) =>
           utf8.encode('fresh$replayEnd${offset(900, epoch: 6)}');
@@ -377,7 +383,8 @@ void main() {
         isEmpty,
         reason: 'the terminal on screen must not take a replay on top',
       );
-      expect(utf8.decode(resumed.rawHistorySnapshot), startsWith('fresh'));
+      expect(resumed.terminal, isNot(same(replaced)));
+      expect(shownBy(resumed), startsWith('fresh'));
       expect(resumed.outputPosition, (epoch: '6', offset: 900));
     });
 

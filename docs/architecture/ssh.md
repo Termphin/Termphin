@@ -14,7 +14,42 @@ None touches a tab or a session, which is what makes the Windows quoting - the
 part that actually goes wrong - testable alone.
 
 Protocol via `dartssh2`; rendering is native Flutter via the `terminal_view`
-package, wrapped by the `TerminalPane` widget. `SftpService` is the SFTP file
+package, wrapped by the `TerminalPane` widget.
+
+**The terminal belongs to the session, not to the pane.**
+`ActiveSessionView.terminal` is a `SessionTerminal`: the `Terminal`, its
+10 000 lines of scrollback and the queue that feeds its parser, parsing every
+byte as it arrives whether or not a pane is mounted. `TerminalPane` binds to it
+on the way in and releases it on the way out. The pane used to own the
+terminal and was rebuilt on every return to the session from the last 512 KiB
+of raw output; a program that redraws constantly (a spinner) filled that with
+redraws, and everything said before it was gone. Three things follow:
+
+- **No replay on mount, so nothing happens twice.** A query the program sent
+  is answered once, when it arrives - by the pane if one is bound, otherwise
+  through `SessionTerminal.onReply` straight to the transport, not noted as
+  input. Only an agent replay is still parsed as a replay
+  (`SessionTerminal.replaying`), which is what keeps an OSC 52 copy or a query
+  inside it from firing again.
+- **A replay starts a new terminal** (`ActiveSessionView.restartTerminal`)
+  rather than clearing the old one, because the held pane is still drawing the
+  old one while the next gets ready. `bind` is last-wins and `release` only
+  lets go for the current owner, for the same overlap.
+- **A resize to the size it already has is not a resize.** `Terminal.resize`
+  resets the scroll margins whatever the size; a pane mounting on a terminal
+  some program is drawing would take its scroll region away with no
+  window-change to make it set one again. `SessionTerminal`'s terminal only
+  reports such a call.
+- **One budget for parsing, shared.** `TerminalParseScheduler` gives every
+  turn of the event loop one slice - a third of a frame at the display's
+  refresh rate, so 2.5 ms at 120 Hz - to the terminals a pane is bound to
+  first, the rest in what is left; when nothing on screen is waiting, the
+  others get half a slice once a frame. Each terminal pacing itself was right
+  while only the one on screen parsed; with every session parsing, three
+  busy ones in the background each took their own slice between two frames.
+  A terminal a megabyte behind is treated as on screen.
+
+`SftpService` is the SFTP file
 operations, `LockService` the PIN/biometric lock over `local_auth`. The PIN hash is
 PBKDF2 at 20k rounds, chosen for how long an unlock takes rather than against
 an attacker - a 4-digit keyspace is not protected by rounds, and 100k held a
@@ -133,7 +168,8 @@ a wrong call kills the shell.
   the pane keeps listening and gets only what it missed, and `attachId` is not
   bumped. Output is staged until the end marker says which happened: a
   `resume-end` is delivered, a `replay-end` (offset gone, or a master older than
-  the flag) replaces the history and remounts as before. Unix only -
+  the flag) restarts the session's terminal from the replay and remounts as
+  before. Unix only -
   `SshSessionManager.canResume` refuses PowerShell, whose ConPTY re-renders
   output so the counts cannot match. A failed resume leaves the session dropped
   but resumable from the same position, since the position only moves once

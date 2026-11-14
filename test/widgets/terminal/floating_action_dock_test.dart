@@ -1,7 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:termphin/services/settings/floating_dock_settings.dart';
 import 'package:termphin/widgets/terminal/floating_action_dock.dart';
 

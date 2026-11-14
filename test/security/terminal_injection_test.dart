@@ -5,10 +5,10 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:termphin/models/ssh_profile.dart';
 import 'package:termphin/providers/ssh_connection_provider.dart';
@@ -20,6 +20,7 @@ import 'package:termphin/widgets/terminal/terminal_pane.dart';
 
 import '../support/fixtures.dart';
 import '../support/platform_mocks.dart';
+import '../support/session_terminal.dart';
 import '../support/ssh_fakes.dart';
 import '../support/test_app.dart';
 
@@ -48,7 +49,7 @@ void main() {
         tester,
         Scaffold(
           body: TerminalPane(
-            outputStream: output.stream,
+            terminal: terminalFedBy(output.stream),
             onInput: (bytes) => sent.add(utf8.decode(bytes)),
             onResize: (_, _) {},
           ),
@@ -112,7 +113,7 @@ void main() {
         tester,
         Scaffold(
           body: TerminalPane(
-            outputStream: output.stream,
+            terminal: terminalFedBy(output.stream),
             onInput: (_) {},
             onResize: (_, _) {},
             onLinkDetected: (url, _) => opened.add(url),
@@ -184,6 +185,8 @@ void main() {
     ].join();
 
     /// Mounts the session, lets the shell say what it supports, and pastes.
+    /// The session was started in `setUp`, outside the fake clock the test
+    /// body runs on, so its terminal is told to parse rather than waited for.
     Future<String> paste(
       WidgetTester tester, {
       required String clipboardText,
@@ -212,6 +215,7 @@ void main() {
       for (var i = 0; i < 12; i++) {
         await tester.pump(const Duration(milliseconds: 20));
       }
+      manager.getSession('session-1')!.terminal.flush();
       backend.calls.clear();
       clipboard.text = clipboardText;
       await viewKey.currentState!.handlePaste();
