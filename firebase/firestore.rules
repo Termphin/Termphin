@@ -17,11 +17,14 @@ service cloud.firestore {
     }
 
     /**
-     * Pro, with an address the user has shown is theirs: Google and Apple
-     * vouch for it, a password account confirms it by the mailed link.
+     * Pro, until the expiry the token carries, with an address the user has
+     * shown is theirs: Google and Apple vouch for it, a password account
+     * confirms it by the mailed link.
      */
     function pro() {
       return signedIn() && request.auth.token.pro == true
+        && (!('proUntil' in request.auth.token)
+          || request.time.toMillis() < request.auth.token.proUntil)
         && (request.auth.token.email_verified == true
           || request.auth.token.firebase.sign_in_provider != 'password');
     }
@@ -45,6 +48,20 @@ service cloud.firestore {
           && request.resource.data.token.size() < 4096
           && request.resource.data.platform in ['android', 'ios']
           && request.resource.data.updatedAt == request.time;
+      }
+
+      /**
+       * Which of the agent's own notifications the relay sends - a long
+       * command finished, a program went quiet - and whether they quote the
+       * last line. The owner writes it from the app; the relay reads it.
+       */
+      match /settings/notices {
+        allow read, delete: if owner(uid);
+        allow create, update: if owner(uid)
+          && request.resource.data.keys().hasOnly(['finished', 'quiet', 'lines'])
+          && request.resource.data.finished is bool
+          && request.resource.data.quiet is bool
+          && request.resource.data.lines is bool;
       }
 
       /**
@@ -87,7 +104,10 @@ service cloud.firestore {
     match /relayKeys/{keyId} {
       allow read, delete: if signedIn() && resource.data.uid == request.auth.uid;
       allow create: if signedIn()
-        && request.resource.data.keys().hasOnly(['uid', 'secretHash', 'label', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['uid', 'secretHash', 'label', 'createdAt', 'profileId'])
+        && (!('profileId' in request.resource.data)
+          || (request.resource.data.profileId is string
+            && request.resource.data.profileId.size() <= 64))
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.secretHash is string
         && request.resource.data.secretHash.size() == 64
