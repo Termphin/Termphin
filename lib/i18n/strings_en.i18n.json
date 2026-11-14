@@ -399,6 +399,7 @@
     "cursorBlink": "Blink",
     "predictiveEcho": "Predictive echo",
     "predictiveEchoSubtitle": "Show typing instantly on slow connections",
+    "notificationsRowSubtitle": "Finished commands, agents that need you, and your servers",
     "programNotifications": "Notifications from programs",
     "programNotificationsSubtitle": "When a program in another session asks for one, like Claude Code finishing",
     "finishedNotifications": "When a long command finishes",

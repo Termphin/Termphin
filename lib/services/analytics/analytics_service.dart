@@ -120,6 +120,7 @@ enum AnalyticsScreen {
   export('export'),
   sftpEditor('sftp_editor'),
   editorSettings('editor_settings'),
+  notificationsSettings('notifications_settings'),
   sftpImagePreview('sftp_image_preview'),
   manual('manual'),
 
