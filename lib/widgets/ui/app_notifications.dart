@@ -67,7 +67,9 @@ class AppNotifications {
       show(context, message, kind: AppNotificationKind.warning);
 
   /// [context] may also be the root overlay's own, from [anchorOf] - for a
-  /// result that arrives after the widget that asked for it is gone.
+  /// result that arrives after the widget that asked for it is gone - or a
+  /// navigator's own, from a navigator key: what sits above the app's routes
+  /// has no overlay above it, only the navigator's beneath.
   static void show(
     BuildContext context,
     String message, {
@@ -80,6 +82,7 @@ class AppNotifications {
         Overlay.maybeOf(context, rootOverlay: true) ??
         switch (context) {
           StatefulElement(:final OverlayState state) => state,
+          StatefulElement(:final NavigatorState state) => state.overlay,
           _ => null,
         };
     if (overlay == null) return;
