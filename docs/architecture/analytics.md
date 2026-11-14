@@ -2,7 +2,8 @@
 
 Google Analytics and Crashlytics, both from the Firebase project
 `termphin-hexeosoft`: what is sent, when, and the consent rules behind it. The
-privacy policy's tables are written from the enums described here.
+privacy policy describes this by category and links to `analytics_service.dart`
+as the complete list of events and fields.
 
 `AnalyticsService` is the only thing that talks to them, through
 `AnalyticsBackend` (`FirebaseAnalyticsBackend` in the app, a recorder in
@@ -37,11 +38,11 @@ names the machine - is never sent to Crashlytics.
 
 - **Events and property names are closed enums** (`AnalyticsEvent`,
   `AnalyticsProperty`): what is sent has to be readable off one list, both to
-  keep the privacy policy's table honest and to stop a hostname reaching
-  `capture()` under an ad-hoc key. A debug-only shape check rejects any string
-  value carrying `@`, a slash or a newline - a tripwire, not a proof. **The
-  policy's §4 tables are written from these two enums**; a name added to either
-  without being added there makes the policy wrong.
+  keep the privacy policy honest and to stop a hostname reaching `capture()`
+  under an ad-hoc key. A debug-only shape check rejects any string value
+  carrying `@`, a slash or a newline - a tripwire, not a proof. **The policy
+  links to this file as the complete list** (§8), so a new name needs no
+  policy edit; a new kind of data, or a new provider, does.
 - **Screen views are sent by hand.** The four main destinations are tabs in one
   `Stack` inside `MainShell`, not routes, so a `NavigatorObserver` would miss
   them and an `initState` hook would report all four on the first frame.

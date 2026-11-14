@@ -162,8 +162,10 @@ after editing the JSON.
   `DesktopContentWidth`, which boxes the scroll view.
 - **Anything that shows a machine name, host or username honours
   `anonymizeProvider`.**
-- **Analytics names are closed enums** (`AnalyticsEvent`, `AnalyticsProperty`);
-  a name added to either must also be added to the privacy policy's §4 tables
+- **Analytics names are closed enums** (`AnalyticsEvent`, `AnalyticsProperty`).
+  The privacy policy describes them by category and links to that file as the
+  complete list, so a new name needs no policy edit - but a new *kind* of data,
+  or a new provider the app sends anything to, does
   (`docs/architecture/analytics.md`). The Firebase config comes in at build
   time from outside the repository (`docs/release.md`); a build without it
   sends nothing, and **no Firebase config file is ever committed**.
