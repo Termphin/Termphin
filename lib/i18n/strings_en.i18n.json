@@ -1119,7 +1119,12 @@
     "continueAction": "Continue",
     "finish": "Finish",
     "skip": "Skip",
-    "back": "Back"
+    "back": "Back",
+    "signInLink": "Already use Termphin? Sign in",
+    "unlockTitle": "Unlock your machines",
+    "unlockBody": "Your account syncs your machines, keys and snippets. Enter your sync passphrase to bring them to this device.",
+    "unlockAction": "Unlock",
+    "notNow": "Not now"
   },
   "serverGuide": {
     "title": "Where to get a server",
@@ -1301,6 +1306,8 @@
       "activeSummary": "Thank you for supporting Termphin.",
       "see": "See Pro",
       "manage": "Manage subscription",
+      "tips": "Pro tips",
+      "tipsSubtitle": "A rare note about what Pro would do, where it would have helped",
       "paywall": {
         "titleLead": "Termphin",
         "titlePro": "Pro",
@@ -1311,6 +1318,7 @@
         "syncBody": "Machines, keys, snippets and groups everywhere, end-to-end encrypted with a passphrase only you know.",
         "supportTitle": "Keep Termphin going",
         "supportBody": "Everything else stays free and open source. Pro pays for the servers and the work.",
+        "supporter": "Pro pays for the servers behind push and sync, and keeps Termphin free and open source.",
         "yearly": "Yearly",
         "monthly": "Monthly",
         "lifetime": "Lifetime",
@@ -1423,9 +1431,13 @@
     "newSession": "Open a new session"
   },
   "proHints": {
-    "longCommand": "That notification came while Termphin was open. With Pro it reaches you even when the app is closed.",
-    "droppedSession": "Your session kept running while you were away. With Pro, a program in it can reach you then.",
-    "machines": "With Pro, your machines, keys and snippets are on all your devices, end-to-end encrypted.",
-    "action": "See Pro"
+    "longCommand": "Know when a command finishes, even with Termphin closed",
+    "action": "See Pro",
+    "dismiss": "Not now"
+  },
+  "proFeature": {
+    "notificationsTitle": "Notifications with Termphin closed",
+    "notificationsBody": "Termphin tells you when a command finishes or a program needs you. With Pro this reaches you even when the app is closed, through a relay that keeps nothing.",
+    "seePro": "See Pro"
   }
 }

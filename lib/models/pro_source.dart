@@ -5,9 +5,7 @@ enum ProSource {
   account('account'),
   settingsNotifications('settings_notifications'),
   syncCard('sync_card'),
-  longCommandHint('long_command_hint'),
-  droppedSessionHint('dropped_session_hint'),
-  machinesHint('machines_hint');
+  longCommandHint('long_command_hint');
 
   const ProSource(this.id);
 

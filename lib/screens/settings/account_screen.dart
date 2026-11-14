@@ -14,17 +14,15 @@ import '../../theme/theme.dart';
 import '../../widgets/account/account_avatar.dart';
 import '../../widgets/account/account_failure_text.dart';
 import '../../widgets/account/pro_card.dart';
-import '../../widgets/account/sign_in_buttons.dart';
+import '../../widgets/account/sign_in_panel.dart';
 import '../../widgets/account/sync_card.dart';
 import '../../widgets/ui/app_badge.dart';
 import '../../widgets/ui/app_card.dart';
-import '../../widgets/ui/app_form_field.dart';
 import '../../widgets/ui/app_notifications.dart';
 import '../../widgets/ui/confirm_dialog.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
 import '../../widgets/ui/settings_tile.dart';
 import '../../widgets/ui/text_input_dialog.dart';
-import 'forgot_password_screen.dart';
 
 /// Signing in, and once signed in, who you are and the ways out: signing out
 /// and deleting the account, which the stores require be reachable from the
@@ -33,35 +31,19 @@ import 'forgot_password_screen.dart';
 /// The account is only for Pro, and the screen says so before anything
 /// else, so nobody signs in thinking the app needs it.
 class AccountScreen extends ConsumerStatefulWidget {
-  const AccountScreen({super.key});
+  const AccountScreen({super.key, this.closeOnSignIn = false});
+
+  /// Closes the screen once someone has signed in, for a caller that only
+  /// wanted the sign-in and goes on from there - onboarding, which then
+  /// looks at the account's sync.
+  final bool closeOnSignIn;
 
   @override
   ConsumerState<AccountScreen> createState() => _AccountScreenState();
 }
 
 class _AccountScreenState extends ConsumerState<AccountScreen> {
-  final _email = TextEditingController();
-  final _password = TextEditingController();
   bool _busy = false;
-  bool _supportsApple = false;
-
-  @override
-  void initState() {
-    super.initState();
-    unawaited(_loadProviders());
-  }
-
-  Future<void> _loadProviders() async {
-    final supportsApple = await AccountService.instance.supportsApple;
-    if (mounted) setState(() => _supportsApple = supportsApple);
-  }
-
-  @override
-  void dispose() {
-    _email.dispose();
-    _password.dispose();
-    super.dispose();
-  }
 
   /// Runs [action] with the buttons held, and says what went wrong in the
   /// screen's own words. A cancelled sheet is not an error. Success closes
@@ -92,17 +74,10 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   String _failureText(AccountFailure failure) =>
       accountFailureText(Translations.of(context), failure);
 
-  Future<void> _resetPassword() => Navigator.of(context).push(
-    MaterialPageRoute<void>(
-      builder: (_) => ForgotPasswordScreen(email: _email.text.trim()),
-    ),
-  );
-
   Future<void> _signOut() async {
     final t = Translations.of(context);
     if (await _attempt(AccountService.instance.signOut) && mounted) {
       unawaited(ProService.instance.signedOut());
-      _password.clear();
       AppNotifications.info(context, t.account.signedOut);
     }
   }
@@ -150,7 +125,6 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
       () => AccountService.instance.deleteAccount(password: password),
     );
     if (deleted && mounted) {
-      _password.clear();
       AppNotifications.info(context, t.account.deleted);
     }
   }
@@ -159,6 +133,13 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   Widget build(BuildContext context) {
     final t = Translations.of(context);
     final user = ref.watch(accountProvider);
+    if (widget.closeOnSignIn) {
+      ref.listen(accountProvider, (previous, next) {
+        if (previous == null && next != null && mounted) {
+          Navigator.of(context).pop();
+        }
+      });
+    }
     return LargeTitleScaffold(
       title: t.account.title,
       bodyBuilder: (context, scrollController, gutter) => ListView(
@@ -187,102 +168,12 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
               ),
             )
           else if (user == null)
-            ..._signInOptions(context)
+            const SignInPanel()
           else
             ..._signedIn(context, user),
         ],
       ),
     );
-  }
-
-  List<Widget> _signInOptions(BuildContext context) {
-    final t = Translations.of(context);
-    return [
-      GoogleSignInButton(
-        label: t.account.continueWithGoogle,
-        onPressed: _busy
-            ? null
-            : () => _attempt(AccountService.instance.signInWithGoogle),
-      ),
-      if (_supportsApple) ...[
-        const SizedBox(height: AppTheme.space10),
-        AppleSignInButton(
-          label: t.account.continueWithApple,
-          onPressed: _busy
-              ? null
-              : () => _attempt(AccountService.instance.signInWithApple),
-        ),
-      ],
-      const SizedBox(height: AppTheme.space24),
-      Text(
-        t.account.orEmail,
-        style: Theme.of(
-          context,
-        ).textTheme.bodyMedium?.copyWith(color: context.colors.textSecondary),
-      ),
-      const SizedBox(height: AppTheme.space10),
-      AutofillGroup(
-        child: Column(
-          children: [
-            AppFormField(
-              controller: _email,
-              label: t.account.email,
-              icon: PhosphorIconsRegular.envelopeSimple,
-              keyboardType: TextInputType.emailAddress,
-              autofillHints: const [AutofillHints.email],
-            ),
-            const SizedBox(height: AppTheme.space10),
-            AppFormField(
-              controller: _password,
-              label: t.account.password,
-              icon: PhosphorIconsRegular.lockKey,
-              obscure: true,
-              action: TextInputAction.done,
-              autofillHints: const [AutofillHints.password],
-            ),
-          ],
-        ),
-      ),
-      const SizedBox(height: AppTheme.space14),
-      Row(
-        children: [
-          Expanded(
-            child: OutlinedButton(
-              onPressed: _busy
-                  ? null
-                  : () => _attempt(
-                      () => AccountService.instance.createWithEmail(
-                        _email.text,
-                        _password.text,
-                      ),
-                    ),
-              child: Text(t.account.createAccount),
-            ),
-          ),
-          const SizedBox(width: AppTheme.space10),
-          Expanded(
-            child: FilledButton(
-              onPressed: _busy
-                  ? null
-                  : () => _attempt(
-                      () => AccountService.instance.signInWithEmail(
-                        _email.text,
-                        _password.text,
-                      ),
-                    ),
-              child: Text(t.account.signInWithEmail),
-            ),
-          ),
-        ],
-      ),
-      Align(
-        alignment: Alignment.centerRight,
-        child: TextButton(
-          onPressed: _busy ? null : _resetPassword,
-          child: Text(t.account.forgotPassword),
-        ),
-      ),
-    ];
   }
 
   /// Asks a password account to confirm its address, with the two things

@@ -1,75 +1,94 @@
 import 'dart:async';
 
+import 'package:clock/clock.dart';
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/pro_source.dart';
 import '../account/account_service.dart';
 import '../analytics/analytics_service.dart';
+import '../settings/setting.dart';
 import 'pro_service.dart';
+
+/// Whether Pro tips are shown at all. Off, no hint is offered or shown.
+final Setting<bool> proTipsSetting = Setting.boolean(
+  'pro_tips_enabled',
+  fallback: true,
+);
 
 /// A moment when Pro would have helped, worth one quiet mention.
 enum ProHint {
   /// A program's notification went out while Termphin was open in the
   /// background; with Pro it would also have reached a closed app.
-  longCommand(ProSource.longCommandHint),
-
-  /// A session was picked up again after its connection dropped; with Pro
-  /// a program in it could have called for the user meanwhile.
-  droppedSession(ProSource.droppedSessionHint),
-
-  /// Enough machines that having them on another device starts to matter.
-  machines(ProSource.machinesHint);
+  longCommand(ProSource.longCommandHint);
 
   const ProHint(this.source);
 
   final ProSource source;
 }
 
-/// Mentions Pro at the moments it would have helped, each one once ever.
+/// Mentions Pro at the moments it would have helped, as one card on the
+/// machine list at a time.
 ///
-/// Never at launch, never twice, never to someone who has Pro or a build
+/// A hint is that card until the user closes it or opens Pro; it counts as
+/// shown then, once ever, not when it appears. At most one card appears per
+/// [minGap], never at launch, never to someone who has Pro or a build
 /// without accounts, and never over a screen the user is not looking at: a
 /// hint that comes up while the app is in the background waits for it to
-/// come back. [present] is what shows it - the app gate, which has a
-/// navigator - and stays null in tests and before the app is up.
+/// come back. [current] is the card on screen, null when none is up.
 class ProHints {
   ProHints._() {
     ProService.instance.settled.addListener(flush);
+    ProService.instance.active.addListener(_onActiveChanged);
+    proTipsSetting.addListener(_onTipsChanged);
   }
 
   static final instance = ProHints._();
 
   static const _prefsPrefix = 'pro_hint_shown_';
+  static const _lastShownKey = 'pro_hint_last_shown_at';
 
-  /// Shows [hint] and resolves true once it is on screen; false leaves it
-  /// waiting for the next [flush]. Set once the app has a navigator to show
-  /// it on.
-  Future<bool> Function(ProHint hint)? present;
+  /// The least time between two cards, so a second hint waits until the
+  /// first has been out of the way for a day.
+  static const minGap = Duration(days: 1);
+
+  /// The hint on screen now, null when no card is up.
+  final current = ValueNotifier<ProHint?>(null);
 
   final _pending = <ProHint>{};
-  bool _presenting = false;
+  DateTime? _lastShownAt;
 
-  /// How many machines make [ProHint.machines] worth saying.
-  static const machinesThreshold = 5;
+  /// Forgets which hints were shown and when the last card came, so each can
+  /// come again at its moment. For the debug panel.
+  Future<void> forgetShown() async {
+    _lastShownAt = null;
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.remove(_lastShownKey);
+    for (final hint in ProHint.values) {
+      await preferences.remove('$_prefsPrefix${hint.name}');
+    }
+  }
 
-  /// Notes that [hint]'s moment came. Shown now if the app is in front,
-  /// else on the next [flush].
+  /// Notes that [hint]'s moment came. Shown as the card now if the app is in
+  /// front and the gap allows, else on the next [flush].
   Future<void> offer(ProHint hint) async {
+    if (!proTipsSetting.value) return;
     if (!AccountService.instance.available) return;
     if (ProService.instance.active.value) return;
     final preferences = await SharedPreferences.getInstance();
+    _lastShownAt ??= _readLastShown(preferences);
     if (preferences.getBool('$_prefsPrefix${hint.name}') ?? false) return;
     _pending.add(hint);
     flush();
   }
 
-  /// Shows the oldest waiting hint, if the app is in front to show it and
-  /// the account's Pro state is known. Nothing waits for a hint once the
-  /// account has Pro.
+  /// Puts the oldest waiting hint on screen as the card, if no card is up,
+  /// the app is in front to show it, the account's Pro state is known and
+  /// [minGap] has passed since the last card. Nothing waits for a hint once
+  /// the account has Pro.
   void flush() {
-    final present = this.present;
-    if (present == null || _pending.isEmpty || _presenting) return;
+    if (current.value != null || _pending.isEmpty) return;
+    if (!proTipsSetting.value) return;
     if (ProService.instance.active.value) {
       _pending.clear();
       return;
@@ -77,29 +96,18 @@ class ProHints {
     if (!ProService.instance.settled.value) return;
     final state = WidgetsBinding.instance.lifecycleState;
     if (state != null && state != AppLifecycleState.resumed) return;
-    _presenting = true;
-    unawaited(_show(present, _pending.first));
-  }
-
-  /// Presents [hint]: marked shown and logged only once it is on screen, so
-  /// a hint that found no place to show stays pending.
-  Future<void> _show(
-    Future<bool> Function(ProHint hint) present,
-    ProHint hint,
-  ) async {
-    var shown = false;
-    try {
-      shown = await present(hint);
-    } finally {
-      _presenting = false;
-    }
-    if (!shown) return;
-    _pending.remove(hint);
+    final now = clock.now();
+    final lastShownAt = _lastShownAt;
+    if (lastShownAt != null && now.isBefore(lastShownAt.add(minGap))) return;
+    _lastShownAt = now;
     unawaited(
       SharedPreferences.getInstance().then(
-        (preferences) => preferences.setBool('$_prefsPrefix${hint.name}', true),
+        (preferences) =>
+            preferences.setInt(_lastShownKey, now.millisecondsSinceEpoch),
       ),
     );
+    final hint = _pending.first;
+    current.value = hint;
     unawaited(
       AnalyticsService.instance.capture(
         AnalyticsEvent.proPromptShown,
@@ -108,10 +116,49 @@ class ProHints {
     );
   }
 
-  /// Forgets what is waiting, so one test's hints do not show in the next.
+  /// Closes the card: its hint counts as shown, once ever. The next waiting
+  /// hint may follow on a later [flush], once [minGap] has passed.
+  void dismiss() {
+    final hint = current.value;
+    if (hint == null) return;
+    _pending.remove(hint);
+    current.value = null;
+    unawaited(
+      SharedPreferences.getInstance().then(
+        (preferences) => preferences.setBool('$_prefsPrefix${hint.name}', true),
+      ),
+    );
+    flush();
+  }
+
+  /// Puts [hint] on screen as the card at once, ignoring once-ever, the gap
+  /// and Pro. For the debug panel.
+  void showNow(ProHint hint) => current.value = hint;
+
+  void _onActiveChanged() {
+    if (!ProService.instance.active.value) return;
+    _pending.clear();
+    current.value = null;
+  }
+
+  void _onTipsChanged() {
+    if (proTipsSetting.value) return;
+    _pending.clear();
+    current.value = null;
+  }
+
+  DateTime? _readLastShown(SharedPreferences preferences) {
+    final milliseconds = preferences.getInt(_lastShownKey);
+    if (milliseconds == null) return null;
+    return DateTime.fromMillisecondsSinceEpoch(milliseconds);
+  }
+
+  /// Forgets what is waiting and on screen, so one test's hints do not show
+  /// in the next.
   @visibleForTesting
   void reset() {
     _pending.clear();
-    _presenting = false;
+    current.value = null;
+    _lastShownAt = null;
   }
 }

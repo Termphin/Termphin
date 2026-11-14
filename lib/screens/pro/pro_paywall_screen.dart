@@ -602,6 +602,12 @@ class _Footer extends StatelessWidget {
                 ),
               ],
             ),
+            const SizedBox(height: AppTheme.space8),
+            Text(
+              p.supporter,
+              style: text.bodySmall?.copyWith(color: colors.textTertiary),
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       ),

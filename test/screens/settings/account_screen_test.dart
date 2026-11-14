@@ -73,6 +73,32 @@ void main() {
     expect(find.text(t.account.deleteAccount), findsOneWidget);
   });
 
+  testWidgets('opened only to sign in, it closes once someone has', (
+    tester,
+  ) async {
+    await pumpTestApp(
+      tester,
+      Builder(
+        builder: (context) => TextButton(
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const AccountScreen(closeOnSignIn: true),
+            ),
+          ),
+          child: const Text('open'),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text(t.account.continueWithGoogle));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AccountScreen), findsNothing);
+    expect(find.text('open'), findsOneWidget);
+  });
+
   testWidgets('a wrong password is explained, not thrown', (tester) async {
     await open(tester);
     backend.failNext = AccountFailure.wrongCredentials;

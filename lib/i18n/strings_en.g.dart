@@ -82,6 +82,7 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 	late final Translations$relayServers$en relayServers = Translations$relayServers$en.internal(_root);
 	late final Translations$agentFeatures$en agentFeatures = Translations$agentFeatures$en.internal(_root);
 	late final Translations$proHints$en proHints = Translations$proHints$en.internal(_root);
+	late final Translations$proFeature$en proFeature = Translations$proFeature$en.internal(_root);
 }
 
 // Path: nav
@@ -3299,6 +3300,21 @@ class Translations$onboarding$en {
 
 	/// en: 'Back'
 	String get back => 'Back';
+
+	/// en: 'Already use Termphin? Sign in'
+	String get signInLink => 'Already use Termphin? Sign in';
+
+	/// en: 'Unlock your machines'
+	String get unlockTitle => 'Unlock your machines';
+
+	/// en: 'Your account syncs your machines, keys and snippets. Enter your sync passphrase to bring them to this device.'
+	String get unlockBody => 'Your account syncs your machines, keys and snippets. Enter your sync passphrase to bring them to this device.';
+
+	/// en: 'Unlock'
+	String get unlockAction => 'Unlock';
+
+	/// en: 'Not now'
+	String get notNow => 'Not now';
 }
 
 // Path: serverGuide
@@ -3848,17 +3864,32 @@ class Translations$proHints$en {
 
 	// Translations
 
-	/// en: 'That notification came while Termphin was open. With Pro it reaches you even when the app is closed.'
-	String get longCommand => 'That notification came while Termphin was open. With Pro it reaches you even when the app is closed.';
-
-	/// en: 'Your session kept running while you were away. With Pro, a program in it can reach you then.'
-	String get droppedSession => 'Your session kept running while you were away. With Pro, a program in it can reach you then.';
-
-	/// en: 'With Pro, your machines, keys and snippets are on all your devices, end-to-end encrypted.'
-	String get machines => 'With Pro, your machines, keys and snippets are on all your devices, end-to-end encrypted.';
+	/// en: 'Know when a command finishes, even with Termphin closed'
+	String get longCommand => 'Know when a command finishes, even with Termphin closed';
 
 	/// en: 'See Pro'
 	String get action => 'See Pro';
+
+	/// en: 'Not now'
+	String get dismiss => 'Not now';
+}
+
+// Path: proFeature
+class Translations$proFeature$en {
+	Translations$proFeature$en.internal(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'Notifications with Termphin closed'
+	String get notificationsTitle => 'Notifications with Termphin closed';
+
+	/// en: 'Termphin tells you when a command finishes or a program needs you. With Pro this reaches you even when the app is closed, through a relay that keeps nothing.'
+	String get notificationsBody => 'Termphin tells you when a command finishes or a program needs you. With Pro this reaches you even when the app is closed, through a relay that keeps nothing.';
+
+	/// en: 'See Pro'
+	String get seePro => 'See Pro';
 }
 
 // Path: sftp.errors
@@ -4088,6 +4119,12 @@ class Translations$account$pro$en {
 	/// en: 'Manage subscription'
 	String get manage => 'Manage subscription';
 
+	/// en: 'Pro tips'
+	String get tips => 'Pro tips';
+
+	/// en: 'A rare note about what Pro would do, where it would have helped'
+	String get tipsSubtitle => 'A rare note about what Pro would do, where it would have helped';
+
 	late final Translations$account$pro$paywall$en paywall = Translations$account$pro$paywall$en.internal(_root);
 
 	/// en: 'You already have Pro.'
@@ -4313,6 +4350,9 @@ class Translations$account$pro$paywall$en {
 
 	/// en: 'Everything else stays free and open source. Pro pays for the servers and the work.'
 	String get supportBody => 'Everything else stays free and open source. Pro pays for the servers and the work.';
+
+	/// en: 'Pro pays for the servers behind push and sync, and keeps Termphin free and open source.'
+	String get supporter => 'Pro pays for the servers behind push and sync, and keeps Termphin free and open source.';
 
 	/// en: 'Yearly'
 	String get yearly => 'Yearly';
@@ -5431,13 +5471,18 @@ extension on Translations {
 			'onboarding.finish' => 'Finish',
 			'onboarding.skip' => 'Skip',
 			'onboarding.back' => 'Back',
+			'onboarding.signInLink' => 'Already use Termphin? Sign in',
+			'onboarding.unlockTitle' => 'Unlock your machines',
+			'onboarding.unlockBody' => 'Your account syncs your machines, keys and snippets. Enter your sync passphrase to bring them to this device.',
+			'onboarding.unlockAction' => 'Unlock',
+			'onboarding.notNow' => 'Not now',
+			_ => null,
+		} ?? switch (path) {
 			'serverGuide.title' => 'Where to get a server',
 			'serverGuide.computerTitle' => 'Your own computer',
 			'serverGuide.computerBody' => 'Turn on SSH: Remote Login on a Mac, OpenSSH Server on Windows or Linux. Then add its address here.',
 			'serverGuide.cloudTitle' => 'A cloud server',
 			'serverGuide.cloudBody' => 'Any Linux VPS works. The provider gives you an address, a username and a password or key.',
-			_ => null,
-		} ?? switch (path) {
 			'whatsNew.title' => 'What\'s new',
 			'whatsNew.gotIt' => 'Got it',
 			'whatsNew.nowAvailable' => 'Now available',
@@ -5563,6 +5608,8 @@ extension on Translations {
 			'account.pro.activeSummary' => 'Thank you for supporting Termphin.',
 			'account.pro.see' => 'See Pro',
 			'account.pro.manage' => 'Manage subscription',
+			'account.pro.tips' => 'Pro tips',
+			'account.pro.tipsSubtitle' => 'A rare note about what Pro would do, where it would have helped',
 			'account.pro.paywall.titleLead' => 'Termphin',
 			'account.pro.paywall.titlePro' => 'Pro',
 			'account.pro.paywall.tagline' => 'More from the servers you already use.',
@@ -5572,6 +5619,7 @@ extension on Translations {
 			'account.pro.paywall.syncBody' => 'Machines, keys, snippets and groups everywhere, end-to-end encrypted with a passphrase only you know.',
 			'account.pro.paywall.supportTitle' => 'Keep Termphin going',
 			'account.pro.paywall.supportBody' => 'Everything else stays free and open source. Pro pays for the servers and the work.',
+			'account.pro.paywall.supporter' => 'Pro pays for the servers behind push and sync, and keeps Termphin free and open source.',
 			'account.pro.paywall.yearly' => 'Yearly',
 			'account.pro.paywall.monthly' => 'Monthly',
 			'account.pro.paywall.lifetime' => 'Lifetime',
@@ -5668,10 +5716,12 @@ extension on Translations {
 			'agentFeatures.wentQuietNotice' => 'A notification when an agent or program stops and may need you',
 			'agentFeatures.hint' => 'A new session has all of them. Programs running here keep running until you close it.',
 			'agentFeatures.newSession' => 'Open a new session',
-			'proHints.longCommand' => 'That notification came while Termphin was open. With Pro it reaches you even when the app is closed.',
-			'proHints.droppedSession' => 'Your session kept running while you were away. With Pro, a program in it can reach you then.',
-			'proHints.machines' => 'With Pro, your machines, keys and snippets are on all your devices, end-to-end encrypted.',
+			'proHints.longCommand' => 'Know when a command finishes, even with Termphin closed',
 			'proHints.action' => 'See Pro',
+			'proHints.dismiss' => 'Not now',
+			'proFeature.notificationsTitle' => 'Notifications with Termphin closed',
+			'proFeature.notificationsBody' => 'Termphin tells you when a command finishes or a program needs you. With Pro this reaches you even when the app is closed, through a relay that keeps nothing.',
+			'proFeature.seePro' => 'See Pro',
 			_ => null,
 		};
 	}

@@ -14,6 +14,7 @@ import '../../services/push/push_service.dart';
 import '../../services/settings/setting.dart';
 import '../../services/settings/terminal_settings.dart';
 import '../../theme/theme.dart';
+import '../account/pro_feature_sheet.dart';
 import '../ui/app_badge.dart';
 import '../ui/app_card.dart';
 import '../ui/app_divider.dart';
@@ -177,9 +178,8 @@ class _NotificationsSettingsSectionState
                                   appVersion: widget.appVersion,
                                   until: _newUntil,
                                 )
-                              : AppBadge(
-                                  t.account.pro.badge,
-                                  tone: BadgeTone.pro,
+                              : const ProFeatureChip(
+                                  feature: ProFeature.notifications,
                                 ),
                         ),
                         value: enabled && signedIn,

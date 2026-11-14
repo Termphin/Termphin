@@ -1,3 +1,4 @@
+import 'package:clock/clock.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:termphin/services/account/account_service.dart';
@@ -9,26 +10,19 @@ import '../../support/fake_account_backend.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  late List<ProHint> shown;
-  late bool answer;
+  final start = DateTime(2026, 11, 14, 9);
 
-  setUp(() {
+  setUp(() async {
     SharedPreferences.setMockInitialValues({});
+    await proTipsSetting.load();
     AccountService.backendOverride = () => FakeAccountBackend();
     ProHints.instance.reset();
     ProService.instance.active.value = false;
     ProService.instance.settled.value = true;
-    shown = [];
-    answer = true;
-    ProHints.instance.present = (hint) async {
-      shown.add(hint);
-      return answer;
-    };
   });
 
   tearDown(() {
     AccountService.backendOverride = null;
-    ProHints.instance.present = null;
     ProHints.instance.reset();
     ProService.instance.active.value = false;
     ProService.instance.settled.value = false;
@@ -40,62 +34,140 @@ void main() {
       );
 
   test(
-    'a hint the app could not show stays pending and is not marked shown',
+    'a hint waiting for the Pro state becomes the card once it is known',
     () async {
-      answer = false;
+      ProService.instance.settled.value = false;
       await ProHints.instance.offer(ProHint.longCommand);
       await pumpEventQueue();
 
-      expect(shown, [ProHint.longCommand]);
-      expect(await markedShown(ProHint.longCommand), isNull);
+      expect(ProHints.instance.current.value, isNull);
 
-      answer = true;
-      ProHints.instance.flush();
+      await ProService.instance.refresh();
       await pumpEventQueue();
 
-      expect(shown, [ProHint.longCommand, ProHint.longCommand]);
-      expect(await markedShown(ProHint.longCommand), isTrue);
+      expect(ProService.instance.settled.value, isTrue);
+      expect(ProHints.instance.current.value, ProHint.longCommand);
     },
   );
 
-  test('a hint offered before the Pro state is known waits for it', () async {
-    ProService.instance.settled.value = false;
-    await ProHints.instance.offer(ProHint.machines);
-    await pumpEventQueue();
-
-    expect(shown, isEmpty);
-
-    await ProService.instance.refresh();
-    await pumpEventQueue();
-
-    expect(ProService.instance.settled.value, isTrue);
-    expect(shown, [ProHint.machines]);
-    expect(await markedShown(ProHint.machines), isTrue);
-  });
-
-  test('a hint is never shown to someone who has Pro', () async {
+  test('no card is ever shown to someone who has Pro', () async {
     ProService.instance.active.value = true;
     await ProHints.instance.offer(ProHint.longCommand);
     await pumpEventQueue();
 
-    expect(shown, isEmpty);
+    expect(ProHints.instance.current.value, isNull);
     expect(await markedShown(ProHint.longCommand), isNull);
   });
 
   test('a hint waiting when Pro turns on is dropped, not shown', () async {
-    ProHints.instance.present = null;
-    await ProHints.instance.offer(ProHint.droppedSession);
+    await withClock(Clock.fixed(start), () async {
+      ProService.instance.settled.value = false;
+      await ProHints.instance.offer(ProHint.longCommand);
+    });
+    ProService.instance.active.value = true;
     await pumpEventQueue();
+
+    expect(ProHints.instance.current.value, isNull);
+    expect(await markedShown(ProHint.longCommand), isNull);
+  });
+
+  test('Pro turning on takes the card off the screen', () async {
+    await ProHints.instance.offer(ProHint.longCommand);
+    expect(ProHints.instance.current.value, ProHint.longCommand);
 
     ProService.instance.active.value = true;
-    ProHints.instance.present = (hint) async {
-      shown.add(hint);
-      return true;
-    };
+
+    expect(ProHints.instance.current.value, isNull);
+  });
+
+  test('with Pro tips off no hint is offered or shown', () async {
+    await proTipsSetting.set(false);
+
+    await ProHints.instance.offer(ProHint.longCommand);
+    await pumpEventQueue();
     ProHints.instance.flush();
+
+    expect(ProHints.instance.current.value, isNull);
+    expect(await markedShown(ProHint.longCommand), isNull);
+  });
+
+  test('turning Pro tips off takes the card off the screen', () async {
+    await ProHints.instance.offer(ProHint.longCommand);
+    expect(ProHints.instance.current.value, ProHint.longCommand);
+
+    await proTipsSetting.set(false);
+
+    expect(ProHints.instance.current.value, isNull);
+    expect(await markedShown(ProHint.longCommand), isNull);
+  });
+
+  test('a hint not dismissed is not marked shown', () async {
+    await ProHints.instance.offer(ProHint.longCommand);
     await pumpEventQueue();
 
-    expect(shown, isEmpty);
-    expect(await markedShown(ProHint.droppedSession), isNull);
+    expect(ProHints.instance.current.value, ProHint.longCommand);
+    expect(await markedShown(ProHint.longCommand), isNull);
   });
+
+  test('dismissing the card marks its hint shown, once ever', () async {
+    await withClock(Clock.fixed(start), () async {
+      await ProHints.instance.offer(ProHint.longCommand);
+    });
+    expect(ProHints.instance.current.value, ProHint.longCommand);
+
+    ProHints.instance.dismiss();
+    await pumpEventQueue();
+
+    expect(ProHints.instance.current.value, isNull);
+    expect(await markedShown(ProHint.longCommand), isTrue);
+
+    await withClock(Clock.fixed(start.add(const Duration(days: 2))), () async {
+      await ProHints.instance.offer(ProHint.longCommand);
+    });
+    await pumpEventQueue();
+
+    expect(ProHints.instance.current.value, isNull);
+  });
+
+  test('the gap is kept across a restart of the app', () async {
+    await withClock(Clock.fixed(start), () async {
+      await ProHints.instance.offer(ProHint.longCommand);
+    });
+    expect(ProHints.instance.current.value, ProHint.longCommand);
+
+    ProHints.instance.reset();
+    await withClock(Clock.fixed(start.add(const Duration(hours: 2))), () async {
+      await ProHints.instance.offer(ProHint.longCommand);
+    });
+
+    expect(ProHints.instance.current.value, isNull);
+    expect(await markedShown(ProHint.longCommand), isNull);
+  });
+
+  test('forgetting shown hints clears the gap', () async {
+    await withClock(Clock.fixed(start), () async {
+      await ProHints.instance.offer(ProHint.longCommand);
+    });
+    ProHints.instance.dismiss();
+    await pumpEventQueue();
+
+    await ProHints.instance.forgetShown();
+    await withClock(
+      Clock.fixed(start.add(const Duration(minutes: 5))),
+      () async {
+        await ProHints.instance.offer(ProHint.longCommand);
+      },
+    );
+
+    expect(ProHints.instance.current.value, ProHint.longCommand);
+  });
+
+  test(
+    'showNow puts the card up regardless of once-ever and the gap',
+    () async {
+      ProHints.instance.showNow(ProHint.longCommand);
+
+      expect(ProHints.instance.current.value, ProHint.longCommand);
+    },
+  );
 }

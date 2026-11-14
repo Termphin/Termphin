@@ -10,6 +10,15 @@ fresh install. Four pages: welcome, "do you have a server?", permissions,
 analytics consent. The permissions page re-reads on resume because the system
 dialogs report nothing back.
 
+- **Returning users sign in from the welcome page.** "Already use Termphin?
+  Sign in" shows only where accounts exist and nobody is signed in, and opens
+  `SignInPanel` on its own screen. Once signed in, `SyncService.state()` decides:
+  a locked account (it syncs, this device has no key) swaps the server question
+  for the sync passphrase page, "Not now" brings the server question back; an
+  unlocked one skips it. Either way `_finish` reports `ServerAnswer.synced`,
+  which opens nothing - the machine list is the destination. Permissions and
+  analytics are asked in every mode.
+
 - **The server question is the point of it.** In September 2026 about 70% of
   new users never added a machine: most had nothing to connect to, or expected
   a terminal on the phone itself, and the old flow ended on an empty list with

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import 'debug/debug_panel.dart';
 import 'i18n/strings.g.dart';
 import 'models/ssh_profile.dart';
 import 'providers/account_provider.dart';
@@ -19,7 +20,6 @@ import 'providers/theme_provider.dart';
 import 'screens/lock_screen.dart';
 import 'screens/main_shell.dart';
 import 'screens/onboarding_screen.dart';
-import 'screens/pro/pro_paywall_screen.dart';
 import 'services/analytics/analytics_service.dart';
 import 'services/app/onboarding_service.dart';
 import 'services/app/review_prompt_service.dart';
@@ -90,7 +90,14 @@ class _AppRoot extends ConsumerWidget {
         child: AnnotatedRegion<SystemUiOverlayStyle>(
           value: AppTheme.systemOverlayStyleFor(context.colors),
           child: _ScaledMediaQuery(
-            child: home == null
+            child: debugPanelEnabled
+                ? DebugPanel(
+                    navigatorKey: navigatorKey,
+                    child: home == null
+                        ? _RelockLayer(child: child ?? const SizedBox.shrink())
+                        : child ?? const SizedBox.shrink(),
+                  )
+                : home == null
                 ? _RelockLayer(child: child ?? const SizedBox.shrink())
                 : child ?? const SizedBox.shrink(),
           ),
@@ -208,7 +215,6 @@ class _AppGateState extends ConsumerState<_AppGate> {
         ProHints.instance.flush();
       },
     );
-    ProHints.instance.present = _presentProHint;
     ref.listenManual(accountProvider, (previous, user) {
       if (user == null) {
         if (previous != null) unawaited(ProService.instance.signedOut());
@@ -217,37 +223,8 @@ class _AppGateState extends ConsumerState<_AppGate> {
         unawaited(ProService.instance.refresh());
       }
     }, fireImmediately: true);
-    ref.listenManual(profilesProvider, (_, profiles) {
-      if (profiles.length >= ProHints.machinesThreshold) {
-        unawaited(ProHints.instance.offer(ProHint.machines));
-      }
-    });
     _initLinkHandling();
     _checkGate();
-  }
-
-  /// Shows a Pro hint over whatever is on screen, with the paywall one tap
-  /// away. False when there is no screen to show it on yet.
-  Future<bool> _presentProHint(ProHint hint) async {
-    final context = navigatorKey.currentContext;
-    if (context == null || !context.mounted) return false;
-    final t = Translations.of(context);
-    AppNotifications.show(
-      context,
-      switch (hint) {
-        ProHint.longCommand => t.proHints.longCommand,
-        ProHint.droppedSession => t.proHints.droppedSession,
-        ProHint.machines => t.proHints.machines,
-      },
-      kind: AppNotificationKind.info,
-      actionLabel: t.proHints.action,
-      onAction: () {
-        final navigator = navigatorKey.currentContext;
-        if (navigator == null || !navigator.mounted) return;
-        unawaited(ProPaywallScreen.show(navigator, source: hint.source));
-      },
-    );
-    return true;
   }
 
   void _initLinkHandling() {
