@@ -128,6 +128,16 @@ class OscMarkerTracker {
 
 enum _OscState { text, escape, osc, oscEscape }
 
+/// The agent master's version from its `5384;termphin-master;<version>`
+/// marker, sent first on every attach since 0.16.0; null for any other
+/// payload.
+String? masterVersionFrom(String payload) {
+  const prefix = '5384;termphin-master;';
+  if (!payload.startsWith(prefix)) return null;
+  final version = payload.substring(prefix.length);
+  return RegExp(r'^\d+\.\d+\.\d+$').hasMatch(version) ? version : null;
+}
+
 /// A place in one agent master's output: its epoch, which tells one master's
 /// numbering from another's under the same session name, and the offset.
 typedef OutputPosition = ({String epoch, int offset});

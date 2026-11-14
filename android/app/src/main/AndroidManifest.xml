@@ -16,6 +16,13 @@
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
+    <!-- Firebase Analytics merges in the advertising ID permissions, Google
+         Play services' and Android's own ad services. The app never reads
+         an advertising ID (collection is off below, and Play's declaration
+         says so), so they are taken back out. -->
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove"/>
+    <uses-permission android:name="android.permission.ACCESS_ADSERVICES_AD_ID" tools:node="remove"/>
+    <uses-permission android:name="android.permission.ACCESS_ADSERVICES_ATTRIBUTION" tools:node="remove"/>
     <application
         android:label="@string/app_name"
         android:name="${applicationName}"
@@ -129,6 +136,12 @@
              the system throws its colours away. -->
         <meta-data
             android:name="dev.termphin.notification_icon"
+            android:resource="@drawable/ic_stat_termphin" />
+        <!-- The same icon for a push the system draws while the app is
+             closed, which otherwise takes the launcher icon too and shows
+             the dolphin tiny inside its adaptive margin. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
             android:resource="@drawable/ic_stat_termphin" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

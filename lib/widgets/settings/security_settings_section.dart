@@ -133,7 +133,7 @@ class _SecuritySettingsSectionState extends State<SecuritySettingsSection> {
                 child: ValueListenableBuilder<LockTimeout>(
                   valueListenable: lockTimeoutSetting,
                   builder: (context, timeout, _) =>
-                      SettingsDropdownField<LockTimeout>(
+                      SettingsDropdownRow<LockTimeout>(
                         key: const ValueKey('lockTimeoutRow'),
                         label: t.settings.lockAfter,
                         value: timeout,

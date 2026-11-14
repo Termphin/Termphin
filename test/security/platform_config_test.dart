@@ -154,7 +154,8 @@ void main() {
     test('permissions are the reviewed set', () {
       final permissions = {
         for (final element in _elements('uses-permission'))
-          _attribute(element, 'name'),
+          if (!element.contains('tools:node="remove"'))
+            _attribute(element, 'name'),
       };
       expect(permissions, {
         'android.permission.INTERNET',
@@ -169,6 +170,35 @@ void main() {
         'android.permission.ACCESS_WIFI_STATE',
         'android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS',
       });
+    });
+
+    test('a push the system draws uses the status bar icon', () {
+      final icons = {
+        for (final element in _elements('meta-data'))
+          _attribute(element, 'name'): _attribute(element, 'resource'),
+      };
+      expect(
+        icons['com.google.firebase.messaging.default_notification_icon'],
+        '@drawable/ic_stat_termphin',
+      );
+      expect(
+        icons['dev.termphin.notification_icon'],
+        '@drawable/ic_stat_termphin',
+      );
+    });
+
+    test('the advertising ID permissions a library brings are taken out', () {
+      for (final name in [
+        'com.google.android.gms.permission.AD_ID',
+        'android.permission.ACCESS_ADSERVICES_AD_ID',
+        'android.permission.ACCESS_ADSERVICES_ATTRIBUTION',
+      ]) {
+        final element = _elements(
+          'uses-permission',
+        ).where((element) => _attribute(element, 'name') == name);
+        expect(element, hasLength(1), reason: name);
+        expect(element.single, contains('tools:node="remove"'), reason: name);
+      }
     });
   });
 
@@ -188,7 +218,8 @@ void main() {
       );
     });
 
-    test('the only links it answers are ssh:// and termphin://', () {
+    test('the only links it answers are ssh://, termphin:// and Google '
+        'sign-in\'s return', () {
       final schemes =
           RegExp(
                 r'<key>CFBundleURLSchemes</key>\s*<array>(.*?)</array>',
@@ -200,7 +231,11 @@ void main() {
                   r'<string>([^<]*)</string>',
                 ).allMatches(m.group(1)!).map((s) => s.group(1)),
               );
-      expect(schemes.toList(), ['ssh', 'termphin']);
+      expect(schemes.toList(), [
+        'ssh',
+        'termphin',
+        r'$(GOOGLE_REVERSED_CLIENT_ID)',
+      ]);
     });
   });
 }

@@ -213,15 +213,6 @@ class _TerminalAppearanceScreenState extends State<TerminalAppearanceScreen> {
                               onChanged: (v) =>
                                   _write(_settings.predictiveEcho, v),
                             ),
-                            SettingsSwitchTile(
-                              dense: true,
-                              contentPadding: EdgeInsets.zero,
-                              title: t.settings.programNotifications,
-                              subtitle: t.settings.programNotificationsSubtitle,
-                              value: _settings.programNotifications.value,
-                              onChanged: (v) =>
-                                  _write(_settings.programNotifications, v),
-                            ),
                           ],
                         ),
                       ),

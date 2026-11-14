@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io' show gzip;
 
 import 'package:dartssh2/dartssh2.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:pointycastle/export.dart';
 
@@ -277,14 +278,10 @@ if (Test-Path \$meta) {
         'No Termphin helper is bundled for $operatingSystem on $architecture.',
       );
     }
-    final data = await rootBundle.load('$_assetDirectory/${bundle.fileName}');
-    final packed = data.buffer.asUint8List(
-      data.offsetInBytes,
-      data.lengthInBytes,
+    final bytes = await loadBundledHelper(
+      rootBundle,
+      '$_assetDirectory/${bundle.fileName}',
     );
-    final bytes = bundle.fileName.endsWith('.gz')
-        ? Uint8List.fromList(gzip.decode(packed))
-        : packed;
     if (_sha256(bytes) != bundle.sha256) {
       throw Exception('Bundled Termphin helper failed its SHA-256 check.');
     }
@@ -515,3 +512,25 @@ String _sha256(Uint8List bytes) => SHA256Digest()
     .process(bytes)
     .map((byte) => byte.toRadixString(16).padLeft(2, '0'))
     .join();
+
+/// The helper at [path] in [assets], unpacked.
+///
+/// On iOS and the desktops the asset is the `.gz` the repository ships. An
+/// Android build does not have it: the Android asset packager unpacks any
+/// `.gz` asset and drops the extension, so the APK holds the helper itself
+/// under the name without `.gz`. Read as `.gz` there, the asset is missing,
+/// and every upload of the helper failed on Android from 1.12.0 on.
+@visibleForTesting
+Future<Uint8List> loadBundledHelper(AssetBundle assets, String path) async {
+  ByteData data;
+  var packed = path.endsWith('.gz');
+  try {
+    data = await assets.load(path);
+  } catch (_) {
+    if (!packed) rethrow;
+    data = await assets.load(path.substring(0, path.length - '.gz'.length));
+    packed = false;
+  }
+  final raw = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+  return packed ? Uint8List.fromList(gzip.decode(raw)) : raw;
+}

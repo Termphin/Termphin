@@ -81,11 +81,13 @@ class SettingsTile extends StatelessWidget {
           trailingWidget ??
           switch (trailing) {
             SettingsTileTrailing.chevron => Icon(
-              PhosphorIconsFill.caretRight,
+              PhosphorIconsRegular.caretRight,
+              size: AppTheme.icon18,
               color: context.colors.textTertiary,
             ),
             SettingsTileTrailing.external => Icon(
-              PhosphorIconsFill.arrowSquareOut,
+              PhosphorIconsRegular.arrowSquareOut,
+              size: AppTheme.icon18,
               color: context.colors.textTertiary,
             ),
             SettingsTileTrailing.none => null,

@@ -16,17 +16,23 @@ typedef TerminalAlert = ({String sessionId, String title, String body});
 ///
 /// A notification with only a title says what happened but not where, so
 /// the machine's name becomes the title and the program's words the body.
+///
+/// [allows] decides per notification: the agent's own come in two kinds with
+/// their own switches, a program's own have one. [quoteLines] decides
+/// whether the agent's notifications keep the line of output they quote.
 class TerminalAlerts {
   TerminalAlerts({
     required this.post,
-    required this.enabled,
+    required this.allows,
+    required this.quoteLines,
     required this.isForeground,
     required this.activeSessionId,
     this.quietPeriod = const Duration(seconds: 3),
   });
 
   final void Function(TerminalAlert alert) post;
-  final bool Function() enabled;
+  final bool Function(TerminalNotification notification) allows;
+  final bool Function() quoteLines;
   final bool Function() isForeground;
   final String? Function() activeSessionId;
   final Duration quietPeriod;
@@ -38,20 +44,23 @@ class TerminalAlerts {
     required String sessionName,
     required TerminalNotification notification,
   }) {
-    if (!enabled()) return;
+    if (!allows(notification)) return;
     if (isForeground() && activeSessionId() == sessionId) return;
     final now = clock.now();
     final last = _lastPosted[sessionId];
     if (last != null && now.difference(last) < quietPeriod) return;
     _lastPosted[sessionId] = now;
 
-    final hasBody = notification.body.isNotEmpty;
+    final body = notification.kind != null && !quoteLines()
+        ? notification.plain
+        : notification.body;
+    final hasBody = body.isNotEmpty;
     post((
       sessionId: sessionId,
       title: hasBody && notification.title.isNotEmpty
           ? notification.title
           : sessionName,
-      body: hasBody ? notification.body : notification.title,
+      body: hasBody ? body : notification.title,
     ));
   }
 

@@ -73,4 +73,38 @@ void main() {
     expect(title.length, TerminalNotification.maxLength);
     expect(title, endsWith('…'));
   });
+
+  test('the agent announces finished or quiet, with its line and without', () {
+    final finished = parse(
+      '5385;termphin-notice;finished;Complete!;Build ok · 35s;after 35s',
+    );
+    final quiet = parse(
+      '5385;termphin-notice;quiet;Waiting;Proceed? [y/N];after 35s',
+    );
+
+    expect(
+      finished,
+      const TerminalNotification(
+        title: 'Complete!',
+        body: 'Build ok · 35s',
+        kind: TerminalNoticeKind.finished,
+        plain: 'after 35s',
+      ),
+    );
+    expect(quiet?.kind, TerminalNoticeKind.quiet);
+    expect(quiet?.body, 'Proceed? [y/N]');
+    expect(quiet?.plain, 'after 35s');
+  });
+
+  test('a program notification has no kind', () {
+    expect(parse('9;Done')?.kind, isNull);
+    expect(parse('9;Done')?.plain, '');
+  });
+
+  test('the agent notice needs its own prefix, a known kind and a title', () {
+    expect(parse('5385;other;finished;Complete!;;'), isNull);
+    expect(parse('5385;termphin-notice;started;Complete!;;'), isNull);
+    expect(parse('5385;termphin-notice;finished;;Build ok;after'), isNull);
+    expect(parse('5385;termphin-notice;finished;Complete!;Build ok'), isNull);
+  });
 }

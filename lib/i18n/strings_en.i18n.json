@@ -150,7 +150,10 @@
     "passwordHint": "The account's password on the server. The simplest way to start; it is stored encrypted on this device.",
     "sshKeyHint": "A key pair: the private half stays on this device, the public half goes into ~/.ssh/authorized_keys on the server. Safer than a password, and nothing to type.",
     "createKey": "Create a new key",
-    "chooseAuth": "Choose how to sign in to this machine."
+    "chooseAuth": "Choose how to sign in to this machine.",
+    "notifications": "Notifications",
+    "serverNotifications": "Reach me when I am not connected",
+    "serverNotificationsHint": "With Pro, a long command or a program asking for you here sends a push even with Termphin closed."
   },
   "keys": {
     "title": "SSH Keys",
@@ -376,7 +379,7 @@
     "subtitle": "Configure app behavior and terminal preferences",
     "appearance": "Appearance",
     "themeMode": "Theme",
-    "themeModeSystem": "Follow device",
+    "themeModeSystem": "System",
     "themeModeLight": "Light",
     "themeModeDark": "Dark",
     "terminal": "Terminal",
@@ -398,6 +401,12 @@
     "predictiveEchoSubtitle": "Show typing instantly on slow connections",
     "programNotifications": "Notifications from programs",
     "programNotificationsSubtitle": "When a program in another session asks for one, like Claude Code finishing",
+    "finishedNotifications": "When a long command finishes",
+    "finishedNotificationsSubtitle": "A command that ran 30 seconds or more, named with its last line",
+    "quietNotifications": "When a program may need you",
+    "quietNotificationsSubtitle": "An AI agent or installer that stopped to ask something",
+    "noticeLines": "Quote the last line",
+    "noticeLinesSubtitle": "Shows what the command printed last. Off sends only its name and time",
     "fastUpload": "Fast upload",
     "fastUploadNavSubtitleTmp": "Uploads land in the server's temporary directory",
     "fastUploadNavSubtitleCurrentDir": "Uploads land in the shell's current directory",
@@ -584,7 +593,14 @@
     "sftpShowHidden": "Show hidden files",
     "sftpShowHiddenSubtitle": "Names that start with a dot, like .ssh and .bashrc.",
     "sftpFollowTerminal": "Follow the terminal",
-    "sftpFollowTerminalSubtitle": "Open in the shell's current folder"
+    "sftpFollowTerminalSubtitle": "Open in the shell's current folder",
+    "notificationsSection": "Notifications",
+    "notifyWhenClosed": "Also when Termphin is closed",
+    "notifyWhenClosedSubtitle": "Servers reach this phone through Termphin’s relay while nothing is connected.",
+    "notifyServers": "Servers",
+    "notifyDenied": "Notifications are turned off for Termphin in the system settings.",
+    "notifyFailed": "That did not work. Try again.",
+    "notifyPaused": "Paused because Pro has ended. Your servers keep their keys; renew Pro and notifications come back."
   },
   "exportScreen": {
     "title": "Export & Import",
@@ -841,6 +857,7 @@
     "noPreview": "No preview available"
   },
   "session": {
+    "untitled": "Session",
     "rebootRestored": "The remote shell was restarted - reattached in the same directory, previous shell state is gone.",
     "offlineTitle": "Session detached",
     "offlineBody": "The session is still running on the server. Re-attach to pick up where you left off.",
@@ -1246,9 +1263,9 @@
     "signInWithEmail": "Sign in",
     "createAccount": "Create account",
     "forgotPassword": "Forgot password?",
-    "resetSent": "A link to set a new password is on its way to {email}.",
-    "signedInAs": "Signed in as {name}",
     "signedInWith": "Signed in with {provider}",
+    "planPro": "Termphin Pro",
+    "planFree": "Free plan",
     "providerGoogle": "Google",
     "providerApple": "Apple",
     "providerPassword": "email and password",
@@ -1271,25 +1288,50 @@
     "pro": {
       "title": "Termphin Pro",
       "active": "Pro is on for this account. Thank you.",
-      "pitch": "Notifications from your servers on every device, even with the app closed, and end-to-end encrypted sync.",
       "monthly": "{price} a month",
       "annual": "{price} a year",
       "lifetime": "{price} once",
       "restore": "Restore purchases",
       "unavailable": "Pro cannot be bought in this build.",
+      "badge": "Pro",
+      "activeBadge": "Active",
       "failed": "The purchase did not go through.",
-      "thanks": "Pro is on. Thank you."
-    },
-    "push": {
-      "title": "Notifications from your servers",
-      "body": "When a program on a server asks for a notification and no phone is connected, it still reaches you. Part of Pro.",
-      "thisPhone": "On this phone",
-      "denied": "Notifications are turned off for Termphin in the system settings.",
-      "servers": "Send from these servers",
-      "serverRow": "Set up {name}",
-      "installed": "{name} will now send notifications through Termphin.",
-      "noServers": "Connect to a server to set it up.",
-      "failed": "That did not work. Try again."
+      "thanks": "Pro is on. Thank you.",
+      "summary": "Notifications from your servers and end-to-end encrypted sync.",
+      "activeSummary": "Thank you for supporting Termphin.",
+      "see": "See Pro",
+      "manage": "Manage subscription",
+      "paywall": {
+        "titleLead": "Termphin",
+        "titlePro": "Pro",
+        "tagline": "More from the servers you already use.",
+        "pushTitle": "Notifications from your servers",
+        "pushBody": "A long job finished or an agent needs you: it reaches you even with Termphin closed.",
+        "syncTitle": "Sync across your devices",
+        "syncBody": "Machines, keys, snippets and groups everywhere, end-to-end encrypted with a passphrase only you know.",
+        "supportTitle": "Keep Termphin going",
+        "supportBody": "Everything else stays free and open source. Pro pays for the servers and the work.",
+        "yearly": "Yearly",
+        "monthly": "Monthly",
+        "lifetime": "Lifetime",
+        "perYear": "{price} a year",
+        "perMonth": "{price} a month",
+        "yearlyPerMonth": "{price} a month, billed yearly",
+        "save": "Save {percent}%",
+        "subscribe": "Continue",
+        "signInFirst": "Sign in to continue",
+        "noOffers": "Prices could not be loaded.",
+        "retry": "Try again",
+        "legal": "Renews automatically until cancelled. Cancel any time in your store account.",
+        "terms": "Terms",
+        "privacy": "Privacy",
+        "close": "Close",
+        "trialBadge": "{days} days free",
+        "startTrial": "Try free for {days} days",
+        "trialTerms": "Free for {days} days, then {price}. Cancel before it ends and you pay nothing.",
+        "nothingToRestore": "No purchase to restore on this account"
+      },
+      "already": "You already have Pro."
     },
     "sync": {
       "title": "Sync",
@@ -1305,8 +1347,10 @@
       "passphrase": "Sync passphrase",
       "syncNow": "Sync now",
       "syncing": "Syncing…",
-      "lastSynced": "Last synced {time}",
-      "neverSynced": "Not synced yet on this device",
+      "onBadge": "On",
+      "auto": "Changes sync on their own, on every device.",
+      "autoLast": "Changes sync on their own. Last synced {time}.",
+      "failedRetry": "The last sync did not go through. It will try again.",
       "done": "Synced: {pulled} in, {pushed} out",
       "turnOff": "Stop syncing on this device",
       "turnOffTitle": "Stop syncing on this device?",
@@ -1317,8 +1361,24 @@
         "notPro": "Sync is part of Pro.",
         "network": "No connection. Try again when you are online.",
         "alreadySetUp": "Sync was turned on from another device meanwhile. Enter its passphrase.",
-        "unknown": "Sync did not work. Try again."
-      }
+        "unknown": "Sync did not work. Try again.",
+        "turnedOff": "Sync was turned off from another device.",
+        "passphraseChanged": "Sync has a new passphrase now."
+      },
+      "confirming": "Confirming your Pro with the server…",
+      "lagging": "Your Pro is on, but the server has not confirmed it yet. It usually takes a few seconds.",
+      "retry": "Try again",
+      "pausedBadge": "Paused",
+      "paused": "Sync is paused because Pro has ended. Everything stays on your devices, and the synced copy waits for you: renew Pro and it picks up where it stopped.",
+      "renew": "Renew Pro",
+      "deleteAll": "Delete the synced copy",
+      "deleteAllTitle": "Turn sync off everywhere?",
+      "deleteAllMessage": "This deletes the encrypted copy from the server and turns sync off on all your devices. What is on your devices stays.",
+      "deleteAllConfirm": "Delete and turn off",
+      "deleted": "Sync is off everywhere, and the synced copy is deleted.",
+      "turnedOffElsewhere": "Sync was turned off from another device. Turn it on again to sync this one.",
+      "rekeyedElsewhere": "Sync was started again with a new passphrase on another device. Enter it to bring this device in.",
+      "forgot": "Forgot the passphrase? Start over"
     },
     "failure": {
       "invalidEmail": "That is not an email address.",
@@ -1330,6 +1390,42 @@
       "tooManyRequests": "Too many attempts. Wait a moment and try again.",
       "unavailable": "This way of signing in is not available yet.",
       "unknown": "That did not work. Try again."
+    },
+    "reset": {
+      "title": "Reset your password",
+      "body": "Enter the email address you signed up with, and we will send you a link to set a new password.",
+      "send": "Send link",
+      "sentTitle": "Check your inbox",
+      "sentBody": "If an account uses {email}, a link to set a new password is on its way. It can take a minute - look in spam too.",
+      "resend": "Send again",
+      "back": "Back to sign in"
     }
+  },
+  "relayServers": {
+    "title": "Servers",
+    "intro": "Machines that can reach this account while no phone is connected. Each gets its key on its own the first time you connect with push on.",
+    "empty": "No server can reach you yet",
+    "emptyHint": "Connect to a machine with push on and it is set up on its own.",
+    "lastSent": "Last notification {time}",
+    "setUp": "Set up {time}",
+    "revoke": "Revoke",
+    "revokeTitle": "Revoke {name}?",
+    "revokeMessage": "It can no longer reach you. Connecting to it again with its notifications on gives it a new key."
+  },
+  "agentFeatures": {
+    "title": "Started with an older helper",
+    "body": "This session keeps the helper it started with, so it does without:",
+    "longCommandNotice": "A notification when a long command finishes",
+    "pushOpensSession": "Opening this session from a push",
+    "inPlaceUpdates": "Updating on its own without restarting",
+    "wentQuietNotice": "A notification when an agent or program stops and may need you",
+    "hint": "A new session has all of them. Programs running here keep running until you close it.",
+    "newSession": "Open a new session"
+  },
+  "proHints": {
+    "longCommand": "That notification came while Termphin was open. With Pro it reaches you even when the app is closed.",
+    "droppedSession": "Your session kept running while you were away. With Pro, a program in it can reach you then.",
+    "machines": "With Pro, your machines, keys and snippets are on all your devices, end-to-end encrypted.",
+    "action": "See Pro"
   }
 }

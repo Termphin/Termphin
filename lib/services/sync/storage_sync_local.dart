@@ -10,6 +10,7 @@ import '../storage/known_hosts_store.dart';
 import '../storage/profile_storage.dart';
 import '../storage/snippet_storage.dart';
 import '../storage/ssh_key_storage.dart';
+import 'settings_sync.dart';
 import 'sync_engine.dart';
 
 /// Kinds of record synced, as named in the payload.
@@ -21,8 +22,8 @@ abstract final class SyncKind {
   static const knownHost = 'knownHost';
 }
 
-/// This device's machines, keys, snippets, groups and pinned host keys, as
-/// [SyncRecord]s.
+/// This device's machines, keys, snippets, groups, pinned host keys and the
+/// preferences that follow the account ([SettingsSync]), as [SyncRecord]s.
 ///
 /// A record carries what the device itself stores - a machine with its
 /// password and inline key, a key with its private half. That is safe to
@@ -38,7 +39,9 @@ class StorageSyncLocal implements SyncLocal {
     SnippetStorage? snippets,
     GroupStorage? groups,
     KnownHostsStore? knownHosts,
-  }) : _profiles = profiles ?? ProfileStorage(),
+    SettingsSync? settings,
+  }) : _settings = settings ?? SettingsSync(),
+       _profiles = profiles ?? ProfileStorage(),
        _keys = keys ?? SshKeyStorage(),
        _snippets = snippets ?? SnippetStorage(),
        _groups = groups ?? GroupStorage(),
@@ -49,6 +52,7 @@ class StorageSyncLocal implements SyncLocal {
   final SnippetStorage _snippets;
   final GroupStorage _groups;
   final KnownHostsStore _knownHosts;
+  final SettingsSync _settings;
 
   /// The id of the one group-list record.
   static const groupsId = 'all';
@@ -100,6 +104,7 @@ class StorageSyncLocal implements SyncLocal {
           data: host.toJson(),
           updatedAt: host.addedAt,
         ),
+      ...await _settings.readAll(),
     ];
   }
 
@@ -142,6 +147,8 @@ class StorageSyncLocal implements SyncLocal {
         groupsChangedAt = clock.now().toUtc();
       case SyncKind.knownHost:
         await _knownHosts.trust(KnownHost.fromJson(record.data));
+      case kSettingKind:
+        await _settings.upsert(record);
     }
   }
 
@@ -156,7 +163,7 @@ class StorageSyncLocal implements SyncLocal {
         await _snippets.deleteSnippet(id);
       case SyncKind.knownHost:
         await _knownHosts.forgetSlot(id);
-      case SyncKind.groups:
+      case SyncKind.groups || kSettingKind:
         return;
     }
   }

@@ -65,6 +65,17 @@ class ActiveSessionView {
   /// Multiplexer actually used by the last successful attach.
   Multiplexer multiplexer;
 
+  /// The version of the agent master serving this session, as it said on
+  /// the last attach. Null from a master older than 0.16.0, which says
+  /// nothing - and stays the version it started with until it ends.
+  String? masterVersion;
+
+  /// Whether the master has said anything since this connection began. It
+  /// names its version in the very first bytes it sends a client, so once
+  /// output has arrived a [masterVersion] still null means an old master
+  /// rather than one that has not spoken yet - with or without a replay.
+  bool masterChecked = false;
+
   /// The agent binary the last attach ran, and whether it runs on Windows.
   /// What ending the session reuses instead of probing the host again.
   ({String path, bool isWindows})? agentBinary;

@@ -35,6 +35,9 @@ Future<Map<String, dynamic>> exportTerminalSettings() async {
     'cursorBlink': settings.cursorBlink.value,
     'predictiveEcho': settings.predictiveEcho.value,
     'programNotifications': settings.programNotifications.value,
+    'finishedNotifications': settings.finishedNotifications.value,
+    'quietNotifications': settings.quietNotifications.value,
+    'noticeLines': settings.noticeLines.value,
   };
 }
 
@@ -120,6 +123,12 @@ Future<void> importTerminalSettings(Map<String, dynamic> ts) async {
     settings.programNotifications,
     ts['programNotifications'],
   );
+  await restore<bool>(
+    settings.finishedNotifications,
+    ts['finishedNotifications'],
+  );
+  await restore<bool>(settings.quietNotifications, ts['quietNotifications']);
+  await restore<bool>(settings.noticeLines, ts['noticeLines']);
   await settings.load();
 }
 

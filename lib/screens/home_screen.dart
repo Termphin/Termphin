@@ -9,6 +9,7 @@ import 'package:uuid/uuid.dart';
 import '../i18n/strings.g.dart';
 import '../models/active_session.dart';
 import '../models/profile_group.dart';
+import '../models/session_tab.dart';
 import '../models/ssh_profile.dart';
 import '../providers/anonymize_provider.dart';
 import '../providers/groups_provider.dart';
@@ -35,6 +36,7 @@ import '../widgets/profiles/server_guide.dart';
 import '../widgets/ssh/session_status.dart';
 import '../widgets/terminal/new_session_row.dart';
 import '../widgets/terminal/rename_session_dialog.dart';
+import '../widgets/ui/app_badge.dart';
 import '../widgets/ui/app_card.dart';
 import '../widgets/ui/app_dropdown.dart';
 import '../widgets/ui/app_form_field.dart';
@@ -955,6 +957,43 @@ class _SessionRow extends ConsumerWidget {
   final VoidCallback? onDetach;
   final VoidCallback? onEnd;
 
+  /// The session's own name, or for one nobody named, "Session" with the
+  /// six digits that tell it apart from its neighbours set small after it.
+  Widget _sessionName(BuildContext context, bool anonymize, bool live) {
+    final colors = context.colors;
+    final style = colors.uiStyle.copyWith(
+      fontSize: AppTheme.font14,
+      fontWeight: FontWeight.w500,
+      color: live ? colors.textPrimary : colors.textSecondary,
+    );
+    final muxName = session.muxName;
+    if (muxName == null || !SessionTab.isGeneratedName(muxName) || anonymize) {
+      return Text(
+        sessionDisplayName(session, anonymize: anonymize),
+        style: style,
+        overflow: TextOverflow.ellipsis,
+      );
+    }
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(text: Translations.of(context).session.untitled),
+          TextSpan(
+            text: '  ${SessionTab.displayName(muxName)}',
+            style: TextStyle(
+              fontFamily: AppTheme.monoFamily,
+              fontSize: AppTheme.font12,
+              fontWeight: FontWeight.w400,
+              color: colors.textTertiary,
+            ),
+          ),
+        ],
+      ),
+      style: style,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Translations.of(context);
@@ -990,30 +1029,23 @@ class _SessionRow extends ConsumerWidget {
               connected
                   ? PhosphorIconsFill.circle
                   : PhosphorIconsRegular.circle,
-              size: AppTheme.icon8,
+              size: AppTheme.icon10,
               color: accentColor,
             ),
-          SizedBox(width: connecting ? AppTheme.space10 : AppTheme.space12),
+          const SizedBox(width: AppTheme.space12),
           Expanded(
-            child: Text(
-              sessionDisplayName(session, anonymize: anonymize),
-              style: context.colors.uiStyle.copyWith(
-                fontSize: AppTheme.font13,
-                color: connected || connecting
-                    ? context.colors.textPrimary
-                    : context.colors.textSecondary,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
+            child: _sessionName(context, anonymize, connected || connecting),
           ),
           const SizedBox(width: AppTheme.space8),
-          Text(
+          AppBadge(
             status.label,
-            style: TextStyle(
-              fontSize: AppTheme.font12,
-              fontWeight: connected ? FontWeight.w400 : FontWeight.w600,
-              color: accentColor,
-            ),
+            tone: connecting
+                ? BadgeTone.highlight
+                : connected
+                ? BadgeTone.success
+                : status.resumable
+                ? BadgeTone.warning
+                : BadgeTone.neutral,
           ),
           if (hasMenu)
             Builder(
@@ -1068,7 +1100,7 @@ class _SessionRow extends ConsumerWidget {
           else
             const SizedBox(width: AppTheme.space6),
           Icon(
-            PhosphorIconsFill.caretRight,
+            PhosphorIconsRegular.caretRight,
             size: AppTheme.icon16,
             color: connected || connecting
                 ? context.colors.textTertiary

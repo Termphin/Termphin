@@ -53,6 +53,7 @@ class ProfilesNotifier extends Notifier<List<SshProfile>> {
     List<String>? fallbackHosts,
     bool? mainHostFirst,
     String? jumpHostProfileId,
+    bool? serverNotifications,
   }) async {
     final profile = SshProfile(
       id: _uuid.v4(),
@@ -75,6 +76,7 @@ class ProfilesNotifier extends Notifier<List<SshProfile>> {
       fallbackHosts: fallbackHosts ?? [],
       mainHostFirst: mainHostFirst ?? true,
       jumpHostProfileId: jumpHostProfileId,
+      serverNotifications: serverNotifications ?? true,
     );
 
     await _storage.addProfile(profile);
@@ -105,6 +107,7 @@ class ProfilesNotifier extends Notifier<List<SshProfile>> {
     List<String>? fallbackHosts,
     bool? mainHostFirst,
     String? jumpHostProfileId,
+    bool? serverNotifications,
   }) async {
     final updated = existingProfile.copyWith(
       name: name.trim(),
@@ -131,6 +134,7 @@ class ProfilesNotifier extends Notifier<List<SshProfile>> {
       mainHostFirst: mainHostFirst,
       jumpHostProfileId: jumpHostProfileId,
       clearJumpHost: jumpHostProfileId == null,
+      serverNotifications: serverNotifications,
     );
 
     await _storage.updateProfile(updated);

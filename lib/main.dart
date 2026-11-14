@@ -11,6 +11,8 @@ import 'services/app/error_reports.dart';
 import 'services/app/identity_anonymizer.dart';
 import 'services/platform/foreground_notification_service.dart';
 import 'services/platform/local_notifications_service.dart';
+import 'services/pro/pro_hints.dart';
+import 'services/pro/pro_service.dart';
 import 'services/push/push_service.dart';
 import 'services/settings/anonymize_setting.dart';
 import 'services/settings/app_settings.dart';
@@ -19,6 +21,7 @@ import 'services/ssh/network_monitor.dart';
 import 'services/ssh/ssh_prompts.dart';
 import 'services/ssh/ssh_session_manager.dart';
 import 'services/terminal/terminal_alerts.dart';
+import 'services/terminal/terminal_notification.dart';
 import 'widgets/ssh/host_key_dialog.dart';
 import 'widgets/ssh/keyboard_interactive_dialog.dart';
 
@@ -68,6 +71,7 @@ Future<void> main() async {
   AnalyticsService.instance.installErrorHandlers();
   await AccountService.instance.init();
   unawaited(PushService.instance.init());
+  _bindPushEnrollment();
   unawaited(AnalyticsService.instance.capture(AnalyticsEvent.appOpened));
   runApp(const SshClientApp());
 }
@@ -81,14 +85,23 @@ void _bindTerminalAlerts() {
   final notifications = LocalNotificationsService.instance;
   unawaited(notifications.init());
   final alerts = TerminalAlerts(
-    post: (alert) => unawaited(
-      notifications.showTerminalAlert(
-        sessionId: alert.sessionId,
-        title: alert.title,
-        body: alert.body,
-      ),
-    ),
-    enabled: () => terminalSettings.programNotifications.value,
+    post: (alert) {
+      unawaited(
+        notifications.showTerminalAlert(
+          sessionId: alert.sessionId,
+          title: alert.title,
+          body: alert.body,
+        ),
+      );
+      unawaited(ProHints.instance.offer(ProHint.longCommand));
+    },
+    allows: (notification) => switch (notification.kind) {
+      null => terminalSettings.programNotifications.value,
+      TerminalNoticeKind.finished =>
+        terminalSettings.finishedNotifications.value,
+      TerminalNoticeKind.quiet => terminalSettings.quietNotifications.value,
+    },
+    quoteLines: () => terminalSettings.noticeLines.value,
     isForeground: () => manager.foreground,
     activeSessionId: () =>
         manager.terminalOnScreen ? manager.activeSessionId : null,
@@ -100,6 +113,41 @@ void _bindTerminalAlerts() {
         : session.profile.name,
     notification: notification,
   );
+}
+
+/// Hands every machine that finishes connecting to [PushService], which
+/// gives it a relay key, or takes one away, as the machine's settings say.
+/// The service remembers what it set up, so this can fire on every change -
+/// and it fires on Pro being confirmed and push being switched on too, since
+/// a machine met before either is set up only then.
+void _bindPushEnrollment() {
+  final manager = SshSessionManager.instance;
+  void enroll() {
+    for (final session in manager.activeSessions) {
+      if (session.isRun ||
+          session.dropped ||
+          session.connecting ||
+          session.sshService == null) {
+        continue;
+      }
+      unawaited(
+        PushService.instance.ensureOnServer(
+          manager: manager,
+          sessionId: session.id,
+          profile: session.profile,
+        ),
+      );
+    }
+  }
+
+  manager.addListener(enroll);
+  ProService.instance.confirmed.addListener(enroll);
+  PushService.instance.enabledNotifier.addListener(enroll);
+  void syncNotices() => unawaited(PushService.instance.syncNoticePrefs());
+  terminalSettings.finishedNotifications.addListener(syncNotices);
+  terminalSettings.quietNotifications.addListener(syncNotices);
+  terminalSettings.noticeLines.addListener(syncNotices);
+  ProService.instance.confirmed.addListener(syncNotices);
 }
 
 /// What `ShareActivity` runs instead of [main]: an engine of its own that

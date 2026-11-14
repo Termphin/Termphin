@@ -102,6 +102,7 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
 
   List<String> _fallbackHosts = [];
   bool _mainHostFirst = true;
+  bool _serverNotifications = true;
   final _fallbackHostInputCtrl = TextEditingController();
 
   String? _jumpHostProfileId;
@@ -140,6 +141,7 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
     _group = p?.group ?? widget.initialGroup ?? GroupStorage.defaultGroup;
     _fallbackHosts = List.from(p?.fallbackHosts ?? []);
     _mainHostFirst = p?.mainHostFirst ?? true;
+    _serverNotifications = p?.serverNotifications ?? true;
     _jumpHostProfileId = p?.jumpHostProfileId;
     _iconName = p?.iconName;
     _colorHex = p?.colorHex;
@@ -222,6 +224,7 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
       fallbackHosts: _fallbackHosts,
       mainHostFirst: _mainHostFirst,
       jumpHostProfileId: _jumpHostProfileId,
+      serverNotifications: _serverNotifications,
     );
   }
 
@@ -312,6 +315,7 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
           fallbackHosts: _fallbackHosts,
           mainHostFirst: _mainHostFirst,
           jumpHostProfileId: _jumpHostProfileId,
+          serverNotifications: _serverNotifications,
         );
       } else {
         await notifier.updateProfile(
@@ -336,6 +340,7 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
           fallbackHosts: _fallbackHosts,
           mainHostFirst: _mainHostFirst,
           jumpHostProfileId: _jumpHostProfileId,
+          serverNotifications: _serverNotifications,
         );
       }
       if (!mounted) return;
@@ -595,6 +600,19 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
 
                 const SizedBox(height: AppTheme.space24),
                 _buildPortForwardingSection(t),
+
+                const SizedBox(height: AppTheme.space24),
+                SectionHeader(t.profileForm.notifications),
+                const SizedBox(height: AppTheme.space10),
+                AppCard(
+                  child: SettingsSwitchTile(
+                    title: t.profileForm.serverNotifications,
+                    subtitle: t.profileForm.serverNotificationsHint,
+                    value: _serverNotifications,
+                    onChanged: (value) =>
+                        setState(() => _serverNotifications = value),
+                  ),
+                ),
               ],
             ),
           ),

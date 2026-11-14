@@ -747,6 +747,9 @@ class SshSessionManager extends ChangeNotifier {
             ? null
             : (path: binary, isWindows: agentOperatingSystem == 'Windows');
 
+      session
+        ..masterVersion = null
+        ..masterChecked = false;
       final replayWaiter = ReplayWaiter(
         enabled: replayRemoteHistory && backend == Multiplexer.termphin,
       );
@@ -761,12 +764,17 @@ class SshSessionManager extends ChangeNotifier {
         if (payload == '5381;termphin-reboot-restored') {
           session.notifyRebootRestored();
         }
+        final master = masterVersionFrom(payload);
+        if (master != null) session.masterVersion = master;
         _handleCwdMarker(session, payload);
       });
       session.serviceOutputSubscription = service.output.listen((bytes) {
         replayWaiter.onOutput();
         service.quality.heard();
         markerTracker.consume(bytes);
+        if (!session.masterChecked && backend == Multiplexer.termphin) {
+          session.masterChecked = true;
+        }
         offsetCounter.onChunk(bytes.length);
         if (staging) {
           staged.add(bytes);

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:termphin/services/sync/sync_engine.dart';
@@ -8,8 +9,15 @@ class FakeSyncCloud implements SyncCloud {
   SyncMeta? meta;
   final docs = <String, RemoteEntry>{};
 
+  /// Thrown by [readMeta] when set, as the cloud refusing the account.
+  Object? refusal;
+
   @override
-  Future<SyncMeta?> readMeta(String uid) async => meta;
+  Future<SyncMeta?> readMeta(String uid) async {
+    final refusal = this.refusal;
+    if (refusal != null) throw refusal;
+    return meta;
+  }
 
   @override
   Future<bool> createMeta(String uid, SyncMeta value) async {
@@ -17,8 +25,29 @@ class FakeSyncCloud implements SyncCloud {
     return identical(meta, value);
   }
 
+  /// How many syncs have reached the records.
+  int fetches = 0;
+
   @override
-  SyncRemote records(String uid) => FakeSyncRecords(docs);
+  SyncRemote records(String uid) {
+    fetches++;
+    final refusal = this.refusal;
+    if (refusal != null) throw refusal;
+    return FakeSyncRecords(docs);
+  }
+
+  /// Add to it to play another device changing the records.
+  // ignore: close_sinks
+  final remoteChanges = StreamController<void>.broadcast();
+
+  @override
+  Stream<void> watch(String uid) => remoteChanges.stream;
+
+  @override
+  Future<void> deleteAll(String uid) async {
+    meta = null;
+    docs.clear();
+  }
 }
 
 /// Records of [FakeSyncCloud].
@@ -49,14 +78,24 @@ class FakeSyncVault implements SyncKeyVault {
   Future<void> delete(String uid) async => keys.remove(uid);
 }
 
-/// A device with nothing on it.
+/// A device's records in memory, empty unless given some.
 class FakeSyncLocal implements SyncLocal {
-  @override
-  Future<List<SyncRecord>> readAll() async => const [];
+  FakeSyncLocal([Iterable<SyncRecord> records = const []]) {
+    for (final record in records) {
+      this.records['${record.kind}/${record.id}'] = record;
+    }
+  }
+
+  final records = <String, SyncRecord>{};
 
   @override
-  Future<void> upsert(SyncRecord record) async {}
+  Future<List<SyncRecord>> readAll() async => records.values.toList();
 
   @override
-  Future<void> delete(String kind, String id) async {}
+  Future<void> upsert(SyncRecord record) async =>
+      records['${record.kind}/${record.id}'] = record;
+
+  @override
+  Future<void> delete(String kind, String id) async =>
+      records.remove('$kind/$id');
 }

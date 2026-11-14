@@ -13,6 +13,7 @@ import '../services/analytics/analytics_service.dart';
 import '../services/app/identity_anonymizer.dart';
 import '../services/app/review_prompt_service.dart';
 import '../services/platform/local_notifications_service.dart';
+import '../services/pro/pro_hints.dart';
 import '../services/ssh/keepalive_pinger.dart';
 import '../services/ssh/network_monitor.dart';
 import '../services/ssh/ssh_service.dart';
@@ -510,6 +511,9 @@ class SshConnectionNotifier extends Notifier<SshConnectionState> {
       attachId: inPlace ? state.attachId : state.attachId + 1,
     );
     if (inPlace) flushQueuedInput();
+    if (resumed && _droppedAt != null) {
+      unawaited(ProHints.instance.offer(ProHint.droppedSession));
+    }
     final reachedHost = attached.sshService?.connectedHost;
     unawaited(
       AnalyticsService.instance.capture(

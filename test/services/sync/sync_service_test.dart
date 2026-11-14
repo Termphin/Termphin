@@ -21,6 +21,15 @@ class _Cloud implements SyncCloud {
 
   @override
   SyncRemote records(String uid) => _Records(docs);
+
+  @override
+  Stream<void> watch(String uid) => const Stream.empty();
+
+  @override
+  Future<void> deleteAll(String uid) async {
+    meta = null;
+    docs.clear();
+  }
 }
 
 class _Records implements SyncRemote {
@@ -147,6 +156,21 @@ void main() {
     expect(await phone.state(), SyncState.locked);
     expect(cloud.meta, isNotNull);
   });
+
+  test(
+    'stopping on this device forgets when each group last changed',
+    () async {
+      SharedPreferences.setMockInitialValues({
+        'sync_setting_times': '{"terminal.scheme":["abc",1000]}',
+      });
+      final phone = device(_Vault(), _Local());
+
+      await phone.forgetOnThisDevice();
+
+      final preferences = await SharedPreferences.getInstance();
+      expect(preferences.getString('sync_setting_times'), isNull);
+    },
+  );
 
   test('the cloud holds a salt and a check, never the passphrase', () async {
     await device(_Vault(), _Local()).setUp('correct horse');

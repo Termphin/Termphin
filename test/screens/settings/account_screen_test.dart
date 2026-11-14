@@ -66,7 +66,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text(t.account.signedInAs(name: 'me@example.com')),
+      find.text('me@example.com'),
       findsOneWidget,
     );
     expect(find.text(t.account.signOut), findsOneWidget);

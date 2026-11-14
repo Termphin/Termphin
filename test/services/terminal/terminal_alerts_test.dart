@@ -6,6 +6,8 @@ import 'package:termphin/services/terminal/terminal_notification.dart';
 void main() {
   late List<TerminalAlert> posted;
   late bool enabled;
+  late bool quiet;
+  late bool lines;
   late bool foreground;
   late String? active;
   late DateTime now;
@@ -14,12 +16,19 @@ void main() {
   setUp(() {
     posted = [];
     enabled = true;
+    quiet = true;
+    lines = true;
     foreground = true;
     active = 'front';
     now = DateTime(2026, 11, 13, 20);
     alerts = TerminalAlerts(
       post: posted.add,
-      enabled: () => enabled,
+      allows: (notification) => switch (notification.kind) {
+        null => enabled,
+        TerminalNoticeKind.quiet => quiet,
+        TerminalNoticeKind.finished => true,
+      },
+      quoteLines: () => lines,
       isForeground: () => foreground,
       activeSessionId: () => active,
     );
@@ -78,6 +87,63 @@ void main() {
     handle('back', done);
 
     expect(posted, isEmpty);
+  });
+
+  test(
+    'a quiet notice is dropped when its switch is off, a program one is not',
+    () {
+      quiet = false;
+      const notice = TerminalNotification(
+        title: 'Waiting',
+        body: 'Do you want to proceed? [y/N]',
+        kind: TerminalNoticeKind.quiet,
+        plain: 'after 35s',
+      );
+
+      handle('back', notice);
+      handle('other', done);
+
+      expect(posted.map((alert) => alert.sessionId), ['other']);
+    },
+  );
+
+  test('with lines on, a notice quotes the line it was given', () {
+    handle(
+      'back',
+      const TerminalNotification(
+        title: 'Complete!',
+        body: 'Build ok',
+        kind: TerminalNoticeKind.finished,
+        plain: 'after 35s',
+      ),
+    );
+
+    expect(posted.single.body, 'Build ok');
+  });
+
+  test('with lines off, a notice is announced without the line it quotes', () {
+    lines = false;
+
+    handle(
+      'back',
+      const TerminalNotification(
+        title: 'Complete!',
+        body: 'Build ok',
+        kind: TerminalNoticeKind.finished,
+        plain: 'after 35s',
+      ),
+    );
+
+    expect(posted.single.title, 'Complete!');
+    expect(posted.single.body, 'after 35s');
+  });
+
+  test('with lines off, a program notification keeps its body', () {
+    lines = false;
+
+    handle('back', const TerminalNotification(title: 'Build', body: 'failed'));
+
+    expect(posted.single.body, 'failed');
   });
 
   test('a program asking in a loop gets one per quiet period', () {

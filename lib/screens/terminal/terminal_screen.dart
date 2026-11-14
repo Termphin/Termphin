@@ -8,6 +8,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
 import '../../models/active_session.dart';
+import '../../models/agent_feature.dart';
 import '../../models/port_forwarding_rule.dart';
 import '../../models/remote_shell.dart';
 import '../../models/session_tab.dart';
@@ -39,6 +40,7 @@ import '../../widgets/ssh/connection_log_sheet.dart';
 import '../../widgets/terminal/action_dock_menu.dart';
 import '../../widgets/terminal/add_session_sheet.dart';
 import '../../widgets/terminal/floating_action_dock.dart';
+import '../../widgets/terminal/older_session_sheet.dart';
 import '../../widgets/terminal/rename_session_dialog.dart';
 import '../../widgets/terminal/session_quick_sheet.dart';
 import '../../widgets/terminal/session_view.dart';
@@ -94,6 +96,7 @@ double terminalTabBarHeight(BuildContext context) {
 
 enum _TabConnectionAction {
   updateAgent,
+  olderSession,
   manageTunnels,
   viewLog,
   splitWith,
@@ -893,6 +896,20 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
     _persistSplits();
   }
 
+  /// What a session started with an older agent master does without, and
+  /// a new session beside it that has everything. The old one is left as it
+  /// is: whatever runs in it is the user's to finish.
+  Future<void> _showOlderSession(String sessionId, SshProfile profile) async {
+    final missing = AgentFeature.missingFor(
+      _manager.getSession(sessionId)?.masterVersion,
+    );
+    final openNew = await showAppSheet<bool>(
+      context: context,
+      builder: (context) => OlderSessionSheet(missing: missing),
+    );
+    if (openNew == true && mounted) _addSession(profile);
+  }
+
   void _addSession(SshProfile profile, {String? sessionId, String? splitWith}) {
     final id = _controller.add(
       profile,
@@ -1408,6 +1425,8 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
         _showTunnelsSheet(session.$1);
       case _TabConnectionAction.viewLog:
         unawaited(showConnectionLogSheet(context, session));
+      case _TabConnectionAction.olderSession:
+        unawaited(_showOlderSession(session.$1, session.$2));
       case _TabConnectionAction.splitWith:
         unawaited(_showSplitPicker(session.$1));
       case _TabConnectionAction.unsplit:
@@ -1498,6 +1517,11 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
       ),
     );
 
+    final view = _manager.getSession(session.$1);
+    final missing =
+        connected && persistent && view != null && view.masterChecked
+        ? AgentFeature.missingFor(view.masterVersion)
+        : const <AgentFeature>[];
     final updateAvailable =
         _manager.agentStatusFor(profile.id)?.updateAvailable == true;
     final updating = _updatingAgentProfiles.contains(profile.id);
@@ -1510,6 +1534,14 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
               .length
         : 0;
     final actions = [
+      if (missing.isNotEmpty)
+        entry(
+          _TabConnectionAction.olderSession,
+          PhosphorIconsRegular.clockCounterClockwise,
+          t.agentFeatures.title,
+          color: colors.warning,
+          trailing: AppBadge.count(missing.length, tone: BadgeTone.warning),
+        ),
       if (updateAvailable)
         entry(
           _TabConnectionAction.updateAgent,

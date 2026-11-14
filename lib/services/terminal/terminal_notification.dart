@@ -15,11 +15,27 @@ import 'dart:convert';
 ///   `p=title` or `p=body` (the default is the title), `e=1` for a base64
 ///   payload. A notification sent in several parts (`d=0`) is taken from the
 ///   part that has it all.
+/// - `OSC 5385 ; termphin-notice ; kind ; title ; body ; plain` - the
+///   agent's own, on the remote machine: `kind` is `finished` or `quiet`,
+///   `body` quotes the last line the command printed and `plain` is the same
+///   without it. Fields never contain `;`.
 class TerminalNotification {
-  const TerminalNotification({required this.title, this.body = ''});
+  const TerminalNotification({
+    required this.title,
+    this.body = '',
+    this.kind,
+    this.plain = '',
+  });
 
   final String title;
   final String body;
+
+  /// What the agent announced, or null for a program's own notification.
+  final TerminalNoticeKind? kind;
+
+  /// The agent's notification without the line it quotes, empty for a
+  /// program's own.
+  final String plain;
 
   /// Longest title or body kept. A program writing a novel into a banner
   /// gets the start of it.
@@ -32,13 +48,22 @@ class TerminalNotification {
       '9' => _iterm(args),
       '777' => _rxvt(args),
       '99' => _kitty(args),
+      '5385' => _notice(args),
       _ => null,
     };
     if (notification == null) return null;
     final title = _clean(notification.title);
     final body = _clean(notification.body);
-    if (title.isEmpty && body.isEmpty) return null;
-    return TerminalNotification(title: title, body: body);
+    final kind = notification.kind;
+    if (kind == null ? title.isEmpty && body.isEmpty : title.isEmpty) {
+      return null;
+    }
+    return TerminalNotification(
+      title: title,
+      body: body,
+      kind: kind,
+      plain: _clean(notification.plain),
+    );
   }
 
   static TerminalNotification? _iterm(List<String> args) {
@@ -76,6 +101,22 @@ class TerminalNotification {
     };
   }
 
+  static TerminalNotification? _notice(List<String> args) {
+    if (args.length != 5 || args.first != 'termphin-notice') return null;
+    final kind = switch (args[1]) {
+      'finished' => TerminalNoticeKind.finished,
+      'quiet' => TerminalNoticeKind.quiet,
+      _ => null,
+    };
+    if (kind == null) return null;
+    return TerminalNotification(
+      title: args[2],
+      body: args[3],
+      kind: kind,
+      plain: args[4],
+    );
+  }
+
   /// One line, no control characters, at most [maxLength] characters: what
   /// reaches a banner is text, not whatever escape a program left in it.
   static String _clean(String text) {
@@ -92,11 +133,18 @@ class TerminalNotification {
   bool operator ==(Object other) =>
       other is TerminalNotification &&
       other.title == title &&
-      other.body == body;
+      other.body == body &&
+      other.kind == kind &&
+      other.plain == plain;
 
   @override
-  int get hashCode => Object.hash(title, body);
+  int get hashCode => Object.hash(title, body, kind, plain);
 
   @override
-  String toString() => 'TerminalNotification($title, $body)';
+  String toString() => 'TerminalNotification($title, $body, $kind, $plain)';
 }
+
+/// The two things the agent announces by itself: a command that ran long
+/// enough to be worth a look, and a program that stopped and may need the
+/// user.
+enum TerminalNoticeKind { finished, quiet }

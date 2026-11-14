@@ -135,6 +135,20 @@ void main() {
     expect(b.get('s1'), {'name': 'from b'});
   });
 
+  test(
+    'a device joining with its own untimed copy takes the account\'s',
+    () async {
+      final untimed = DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+      a.set('s1', {'name': 'account'}, untimed);
+      await sync(a);
+
+      b.set('s1', {'name': 'defaults'}, untimed);
+      await sync(b);
+
+      expect(b.get('s1'), {'name': 'account'});
+    },
+  );
+
   test('a deletion reaches the other device', () async {
     a.set('s1', {'name': 'v1'}, t0);
     await sync(a);

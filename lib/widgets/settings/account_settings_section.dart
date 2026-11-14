@@ -1,19 +1,21 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
 import '../../providers/account_provider.dart';
 import '../../providers/anonymize_provider.dart';
 import '../../screens/settings/account_screen.dart';
 import '../../services/account/account_service.dart';
+import '../../services/pro/pro_service.dart';
 import '../../theme/theme.dart';
+import '../account/account_avatar.dart';
 import '../ui/app_card.dart';
 import '../ui/section_header.dart';
 import '../ui/settings_tile.dart';
 
-/// Account section: who is signed in, or the way in. Absent from a build
-/// that cannot have accounts, so a fork shows nothing it cannot do.
+/// Account section: who is signed in, with their avatar and plan, or the
+/// way in. Absent from a build that cannot have accounts, so a fork shows
+/// nothing it cannot do.
 class AccountSettingsSection extends ConsumerWidget {
   const AccountSettingsSection({super.key});
 
@@ -29,15 +31,24 @@ class AccountSettingsSection extends ConsumerWidget {
         SectionHeader(t.account.section),
         const SizedBox(height: AppTheme.space10),
         AppCard(
-          child: SettingsTile(
-            icon: PhosphorIconsFill.user,
-            title: user == null
-                ? t.account.signIn
-                : t.account.signedInAs(
-                    name: anonymize ? '•••' : (user.email ?? user.uid),
-                  ),
-            subtitle: user == null ? t.account.signInSubtitle : null,
-            destination: () => const AccountScreen(),
+          child: ValueListenableBuilder<bool>(
+            valueListenable: ProService.instance.active,
+            builder: (context, pro, _) => SettingsTile(
+              leading: AccountAvatar(
+                user: user,
+                size: AppTheme.icon40,
+                anonymize: anonymize,
+              ),
+              title: user == null
+                  ? t.account.signIn
+                  : anonymize
+                  ? '•••'
+                  : (user.email ?? user.displayName ?? user.uid),
+              subtitle: user == null
+                  ? t.account.signInSubtitle
+                  : (pro ? t.account.planPro : t.account.planFree),
+              destination: () => const AccountScreen(),
+            ),
           ),
         ),
         const SizedBox(height: AppTheme.space20),

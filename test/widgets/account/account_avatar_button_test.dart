@@ -4,6 +4,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:termphin/i18n/strings.g.dart';
 import 'package:termphin/services/account/account_service.dart';
+import 'package:termphin/widgets/account/account_avatar.dart';
 import 'package:termphin/widgets/account/account_avatar_button.dart';
 
 import '../../support/fake_account_backend.dart';
@@ -67,7 +68,7 @@ void main() {
 
   test('the letter is the name first, then the address', () {
     expect(
-      AccountAvatarButton.initialOf(
+      AccountAvatar.initialOf(
         const AccountUser(
           uid: 'u',
           provider: AccountProvider.google,
@@ -78,7 +79,7 @@ void main() {
       'Z',
     );
     expect(
-      AccountAvatarButton.initialOf(
+      AccountAvatar.initialOf(
         const AccountUser(uid: 'u', provider: AccountProvider.apple),
       ),
       '?',

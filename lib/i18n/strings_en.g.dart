@@ -79,6 +79,9 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 	late final Translations$globalSearch$en globalSearch = Translations$globalSearch$en.internal(_root);
 	late final Translations$frameStats$en frameStats = Translations$frameStats$en.internal(_root);
 	late final Translations$account$en account = Translations$account$en.internal(_root);
+	late final Translations$relayServers$en relayServers = Translations$relayServers$en.internal(_root);
+	late final Translations$agentFeatures$en agentFeatures = Translations$agentFeatures$en.internal(_root);
+	late final Translations$proHints$en proHints = Translations$proHints$en.internal(_root);
 }
 
 // Path: nav
@@ -550,6 +553,15 @@ class Translations$profileForm$en {
 
 	/// en: 'Choose how to sign in to this machine.'
 	String get chooseAuth => 'Choose how to sign in to this machine.';
+
+	/// en: 'Notifications'
+	String get notifications => 'Notifications';
+
+	/// en: 'Reach me when I am not connected'
+	String get serverNotifications => 'Reach me when I am not connected';
+
+	/// en: 'With Pro, a long command or a program asking for you here sends a push even with Termphin closed.'
+	String get serverNotificationsHint => 'With Pro, a long command or a program asking for you here sends a push even with Termphin closed.';
 }
 
 // Path: keys
@@ -1143,8 +1155,8 @@ class Translations$settings$en {
 	/// en: 'Theme'
 	String get themeMode => 'Theme';
 
-	/// en: 'Follow device'
-	String get themeModeSystem => 'Follow device';
+	/// en: 'System'
+	String get themeModeSystem => 'System';
 
 	/// en: 'Light'
 	String get themeModeLight => 'Light';
@@ -1208,6 +1220,24 @@ class Translations$settings$en {
 
 	/// en: 'When a program in another session asks for one, like Claude Code finishing'
 	String get programNotificationsSubtitle => 'When a program in another session asks for one, like Claude Code finishing';
+
+	/// en: 'When a long command finishes'
+	String get finishedNotifications => 'When a long command finishes';
+
+	/// en: 'A command that ran 30 seconds or more, named with its last line'
+	String get finishedNotificationsSubtitle => 'A command that ran 30 seconds or more, named with its last line';
+
+	/// en: 'When a program may need you'
+	String get quietNotifications => 'When a program may need you';
+
+	/// en: 'An AI agent or installer that stopped to ask something'
+	String get quietNotificationsSubtitle => 'An AI agent or installer that stopped to ask something';
+
+	/// en: 'Quote the last line'
+	String get noticeLines => 'Quote the last line';
+
+	/// en: 'Shows what the command printed last. Off sends only its name and time'
+	String get noticeLinesSubtitle => 'Shows what the command printed last. Off sends only its name and time';
 
 	/// en: 'Fast upload'
 	String get fastUpload => 'Fast upload';
@@ -1769,6 +1799,27 @@ class Translations$settings$en {
 
 	/// en: 'Open in the shell's current folder'
 	String get sftpFollowTerminalSubtitle => 'Open in the shell\'s current folder';
+
+	/// en: 'Notifications'
+	String get notificationsSection => 'Notifications';
+
+	/// en: 'Also when Termphin is closed'
+	String get notifyWhenClosed => 'Also when Termphin is closed';
+
+	/// en: 'Servers reach this phone through Termphin’s relay while nothing is connected.'
+	String get notifyWhenClosedSubtitle => 'Servers reach this phone through Termphin’s relay while nothing is connected.';
+
+	/// en: 'Servers'
+	String get notifyServers => 'Servers';
+
+	/// en: 'Notifications are turned off for Termphin in the system settings.'
+	String get notifyDenied => 'Notifications are turned off for Termphin in the system settings.';
+
+	/// en: 'That did not work. Try again.'
+	String get notifyFailed => 'That did not work. Try again.';
+
+	/// en: 'Paused because Pro has ended. Your servers keep their keys; renew Pro and notifications come back.'
+	String get notifyPaused => 'Paused because Pro has ended. Your servers keep their keys; renew Pro and notifications come back.';
 }
 
 // Path: exportScreen
@@ -2444,6 +2495,9 @@ class Translations$session$en {
 	final Translations _root; // ignore: unused_field
 
 	// Translations
+
+	/// en: 'Session'
+	String get untitled => 'Session';
 
 	/// en: 'The remote shell was restarted - reattached in the same directory, previous shell state is gone.'
 	String get rebootRestored => 'The remote shell was restarted - reattached in the same directory, previous shell state is gone.';
@@ -3645,14 +3699,14 @@ class Translations$account$en {
 	/// en: 'Forgot password?'
 	String get forgotPassword => 'Forgot password?';
 
-	/// en: 'A link to set a new password is on its way to {email}.'
-	String resetSent({required Object email}) => 'A link to set a new password is on its way to ${email}.';
-
-	/// en: 'Signed in as {name}'
-	String signedInAs({required Object name}) => 'Signed in as ${name}';
-
 	/// en: 'Signed in with {provider}'
 	String signedInWith({required Object provider}) => 'Signed in with ${provider}';
+
+	/// en: 'Termphin Pro'
+	String get planPro => 'Termphin Pro';
+
+	/// en: 'Free plan'
+	String get planFree => 'Free plan';
 
 	/// en: 'Google'
 	String get providerGoogle => 'Google';
@@ -3712,9 +3766,99 @@ class Translations$account$en {
 	String get unavailable => 'Accounts are not available in this build.';
 
 	late final Translations$account$pro$en pro = Translations$account$pro$en.internal(_root);
-	late final Translations$account$push$en push = Translations$account$push$en.internal(_root);
 	late final Translations$account$sync$en sync = Translations$account$sync$en.internal(_root);
 	late final Translations$account$failure$en failure = Translations$account$failure$en.internal(_root);
+	late final Translations$account$reset$en reset = Translations$account$reset$en.internal(_root);
+}
+
+// Path: relayServers
+class Translations$relayServers$en {
+	Translations$relayServers$en.internal(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'Servers'
+	String get title => 'Servers';
+
+	/// en: 'Machines that can reach this account while no phone is connected. Each gets its key on its own the first time you connect with push on.'
+	String get intro => 'Machines that can reach this account while no phone is connected. Each gets its key on its own the first time you connect with push on.';
+
+	/// en: 'No server can reach you yet'
+	String get empty => 'No server can reach you yet';
+
+	/// en: 'Connect to a machine with push on and it is set up on its own.'
+	String get emptyHint => 'Connect to a machine with push on and it is set up on its own.';
+
+	/// en: 'Last notification {time}'
+	String lastSent({required Object time}) => 'Last notification ${time}';
+
+	/// en: 'Set up {time}'
+	String setUp({required Object time}) => 'Set up ${time}';
+
+	/// en: 'Revoke'
+	String get revoke => 'Revoke';
+
+	/// en: 'Revoke {name}?'
+	String revokeTitle({required Object name}) => 'Revoke ${name}?';
+
+	/// en: 'It can no longer reach you. Connecting to it again with its notifications on gives it a new key.'
+	String get revokeMessage => 'It can no longer reach you. Connecting to it again with its notifications on gives it a new key.';
+}
+
+// Path: agentFeatures
+class Translations$agentFeatures$en {
+	Translations$agentFeatures$en.internal(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'Started with an older helper'
+	String get title => 'Started with an older helper';
+
+	/// en: 'This session keeps the helper it started with, so it does without:'
+	String get body => 'This session keeps the helper it started with, so it does without:';
+
+	/// en: 'A notification when a long command finishes'
+	String get longCommandNotice => 'A notification when a long command finishes';
+
+	/// en: 'Opening this session from a push'
+	String get pushOpensSession => 'Opening this session from a push';
+
+	/// en: 'Updating on its own without restarting'
+	String get inPlaceUpdates => 'Updating on its own without restarting';
+
+	/// en: 'A notification when an agent or program stops and may need you'
+	String get wentQuietNotice => 'A notification when an agent or program stops and may need you';
+
+	/// en: 'A new session has all of them. Programs running here keep running until you close it.'
+	String get hint => 'A new session has all of them. Programs running here keep running until you close it.';
+
+	/// en: 'Open a new session'
+	String get newSession => 'Open a new session';
+}
+
+// Path: proHints
+class Translations$proHints$en {
+	Translations$proHints$en.internal(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'That notification came while Termphin was open. With Pro it reaches you even when the app is closed.'
+	String get longCommand => 'That notification came while Termphin was open. With Pro it reaches you even when the app is closed.';
+
+	/// en: 'Your session kept running while you were away. With Pro, a program in it can reach you then.'
+	String get droppedSession => 'Your session kept running while you were away. With Pro, a program in it can reach you then.';
+
+	/// en: 'With Pro, your machines, keys and snippets are on all your devices, end-to-end encrypted.'
+	String get machines => 'With Pro, your machines, keys and snippets are on all your devices, end-to-end encrypted.';
+
+	/// en: 'See Pro'
+	String get action => 'See Pro';
 }
 
 // Path: sftp.errors
@@ -3905,9 +4049,6 @@ class Translations$account$pro$en {
 	/// en: 'Pro is on for this account. Thank you.'
 	String get active => 'Pro is on for this account. Thank you.';
 
-	/// en: 'Notifications from your servers on every device, even with the app closed, and end-to-end encrypted sync.'
-	String get pitch => 'Notifications from your servers on every device, even with the app closed, and end-to-end encrypted sync.';
-
 	/// en: '{price} a month'
 	String monthly({required Object price}) => '${price} a month';
 
@@ -3923,47 +4064,34 @@ class Translations$account$pro$en {
 	/// en: 'Pro cannot be bought in this build.'
 	String get unavailable => 'Pro cannot be bought in this build.';
 
+	/// en: 'Pro'
+	String get badge => 'Pro';
+
+	/// en: 'Active'
+	String get activeBadge => 'Active';
+
 	/// en: 'The purchase did not go through.'
 	String get failed => 'The purchase did not go through.';
 
 	/// en: 'Pro is on. Thank you.'
 	String get thanks => 'Pro is on. Thank you.';
-}
 
-// Path: account.push
-class Translations$account$push$en {
-	Translations$account$push$en.internal(this._root);
+	/// en: 'Notifications from your servers and end-to-end encrypted sync.'
+	String get summary => 'Notifications from your servers and end-to-end encrypted sync.';
 
-	final Translations _root; // ignore: unused_field
+	/// en: 'Thank you for supporting Termphin.'
+	String get activeSummary => 'Thank you for supporting Termphin.';
 
-	// Translations
+	/// en: 'See Pro'
+	String get see => 'See Pro';
 
-	/// en: 'Notifications from your servers'
-	String get title => 'Notifications from your servers';
+	/// en: 'Manage subscription'
+	String get manage => 'Manage subscription';
 
-	/// en: 'When a program on a server asks for a notification and no phone is connected, it still reaches you. Part of Pro.'
-	String get body => 'When a program on a server asks for a notification and no phone is connected, it still reaches you. Part of Pro.';
+	late final Translations$account$pro$paywall$en paywall = Translations$account$pro$paywall$en.internal(_root);
 
-	/// en: 'On this phone'
-	String get thisPhone => 'On this phone';
-
-	/// en: 'Notifications are turned off for Termphin in the system settings.'
-	String get denied => 'Notifications are turned off for Termphin in the system settings.';
-
-	/// en: 'Send from these servers'
-	String get servers => 'Send from these servers';
-
-	/// en: 'Set up {name}'
-	String serverRow({required Object name}) => 'Set up ${name}';
-
-	/// en: '{name} will now send notifications through Termphin.'
-	String installed({required Object name}) => '${name} will now send notifications through Termphin.';
-
-	/// en: 'Connect to a server to set it up.'
-	String get noServers => 'Connect to a server to set it up.';
-
-	/// en: 'That did not work. Try again.'
-	String get failed => 'That did not work. Try again.';
+	/// en: 'You already have Pro.'
+	String get already => 'You already have Pro.';
 }
 
 // Path: account.sync
@@ -4013,11 +4141,17 @@ class Translations$account$sync$en {
 	/// en: 'Syncing…'
 	String get syncing => 'Syncing…';
 
-	/// en: 'Last synced {time}'
-	String lastSynced({required Object time}) => 'Last synced ${time}';
+	/// en: 'On'
+	String get onBadge => 'On';
 
-	/// en: 'Not synced yet on this device'
-	String get neverSynced => 'Not synced yet on this device';
+	/// en: 'Changes sync on their own, on every device.'
+	String get auto => 'Changes sync on their own, on every device.';
+
+	/// en: 'Changes sync on their own. Last synced {time}.'
+	String autoLast({required Object time}) => 'Changes sync on their own. Last synced ${time}.';
+
+	/// en: 'The last sync did not go through. It will try again.'
+	String get failedRetry => 'The last sync did not go through. It will try again.';
 
 	/// en: 'Synced: {pulled} in, {pushed} out'
 	String done({required Object pulled, required Object pushed}) => 'Synced: ${pulled} in, ${pushed} out';
@@ -4035,6 +4169,48 @@ class Translations$account$sync$en {
 	String get verifyFirst => 'Confirm your email first, then sync can be turned on.';
 
 	late final Translations$account$sync$failure$en failure = Translations$account$sync$failure$en.internal(_root);
+
+	/// en: 'Confirming your Pro with the server…'
+	String get confirming => 'Confirming your Pro with the server…';
+
+	/// en: 'Your Pro is on, but the server has not confirmed it yet. It usually takes a few seconds.'
+	String get lagging => 'Your Pro is on, but the server has not confirmed it yet. It usually takes a few seconds.';
+
+	/// en: 'Try again'
+	String get retry => 'Try again';
+
+	/// en: 'Paused'
+	String get pausedBadge => 'Paused';
+
+	/// en: 'Sync is paused because Pro has ended. Everything stays on your devices, and the synced copy waits for you: renew Pro and it picks up where it stopped.'
+	String get paused => 'Sync is paused because Pro has ended. Everything stays on your devices, and the synced copy waits for you: renew Pro and it picks up where it stopped.';
+
+	/// en: 'Renew Pro'
+	String get renew => 'Renew Pro';
+
+	/// en: 'Delete the synced copy'
+	String get deleteAll => 'Delete the synced copy';
+
+	/// en: 'Turn sync off everywhere?'
+	String get deleteAllTitle => 'Turn sync off everywhere?';
+
+	/// en: 'This deletes the encrypted copy from the server and turns sync off on all your devices. What is on your devices stays.'
+	String get deleteAllMessage => 'This deletes the encrypted copy from the server and turns sync off on all your devices. What is on your devices stays.';
+
+	/// en: 'Delete and turn off'
+	String get deleteAllConfirm => 'Delete and turn off';
+
+	/// en: 'Sync is off everywhere, and the synced copy is deleted.'
+	String get deleted => 'Sync is off everywhere, and the synced copy is deleted.';
+
+	/// en: 'Sync was turned off from another device. Turn it on again to sync this one.'
+	String get turnedOffElsewhere => 'Sync was turned off from another device. Turn it on again to sync this one.';
+
+	/// en: 'Sync was started again with a new passphrase on another device. Enter it to bring this device in.'
+	String get rekeyedElsewhere => 'Sync was started again with a new passphrase on another device. Enter it to bring this device in.';
+
+	/// en: 'Forgot the passphrase? Start over'
+	String get forgot => 'Forgot the passphrase? Start over';
 }
 
 // Path: account.failure
@@ -4073,6 +4249,129 @@ class Translations$account$failure$en {
 	String get unknown => 'That did not work. Try again.';
 }
 
+// Path: account.reset
+class Translations$account$reset$en {
+	Translations$account$reset$en.internal(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'Reset your password'
+	String get title => 'Reset your password';
+
+	/// en: 'Enter the email address you signed up with, and we will send you a link to set a new password.'
+	String get body => 'Enter the email address you signed up with, and we will send you a link to set a new password.';
+
+	/// en: 'Send link'
+	String get send => 'Send link';
+
+	/// en: 'Check your inbox'
+	String get sentTitle => 'Check your inbox';
+
+	/// en: 'If an account uses {email}, a link to set a new password is on its way. It can take a minute - look in spam too.'
+	String sentBody({required Object email}) => 'If an account uses ${email}, a link to set a new password is on its way. It can take a minute - look in spam too.';
+
+	/// en: 'Send again'
+	String get resend => 'Send again';
+
+	/// en: 'Back to sign in'
+	String get back => 'Back to sign in';
+}
+
+// Path: account.pro.paywall
+class Translations$account$pro$paywall$en {
+	Translations$account$pro$paywall$en.internal(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'Termphin'
+	String get titleLead => 'Termphin';
+
+	/// en: 'Pro'
+	String get titlePro => 'Pro';
+
+	/// en: 'More from the servers you already use.'
+	String get tagline => 'More from the servers you already use.';
+
+	/// en: 'Notifications from your servers'
+	String get pushTitle => 'Notifications from your servers';
+
+	/// en: 'A long job finished or an agent needs you: it reaches you even with Termphin closed.'
+	String get pushBody => 'A long job finished or an agent needs you: it reaches you even with Termphin closed.';
+
+	/// en: 'Sync across your devices'
+	String get syncTitle => 'Sync across your devices';
+
+	/// en: 'Machines, keys, snippets and groups everywhere, end-to-end encrypted with a passphrase only you know.'
+	String get syncBody => 'Machines, keys, snippets and groups everywhere, end-to-end encrypted with a passphrase only you know.';
+
+	/// en: 'Keep Termphin going'
+	String get supportTitle => 'Keep Termphin going';
+
+	/// en: 'Everything else stays free and open source. Pro pays for the servers and the work.'
+	String get supportBody => 'Everything else stays free and open source. Pro pays for the servers and the work.';
+
+	/// en: 'Yearly'
+	String get yearly => 'Yearly';
+
+	/// en: 'Monthly'
+	String get monthly => 'Monthly';
+
+	/// en: 'Lifetime'
+	String get lifetime => 'Lifetime';
+
+	/// en: '{price} a year'
+	String perYear({required Object price}) => '${price} a year';
+
+	/// en: '{price} a month'
+	String perMonth({required Object price}) => '${price} a month';
+
+	/// en: '{price} a month, billed yearly'
+	String yearlyPerMonth({required Object price}) => '${price} a month, billed yearly';
+
+	/// en: 'Save {percent}%'
+	String save({required Object percent}) => 'Save ${percent}%';
+
+	/// en: 'Continue'
+	String get subscribe => 'Continue';
+
+	/// en: 'Sign in to continue'
+	String get signInFirst => 'Sign in to continue';
+
+	/// en: 'Prices could not be loaded.'
+	String get noOffers => 'Prices could not be loaded.';
+
+	/// en: 'Try again'
+	String get retry => 'Try again';
+
+	/// en: 'Renews automatically until cancelled. Cancel any time in your store account.'
+	String get legal => 'Renews automatically until cancelled. Cancel any time in your store account.';
+
+	/// en: 'Terms'
+	String get terms => 'Terms';
+
+	/// en: 'Privacy'
+	String get privacy => 'Privacy';
+
+	/// en: 'Close'
+	String get close => 'Close';
+
+	/// en: '{days} days free'
+	String trialBadge({required Object days}) => '${days} days free';
+
+	/// en: 'Try free for {days} days'
+	String startTrial({required Object days}) => 'Try free for ${days} days';
+
+	/// en: 'Free for {days} days, then {price}. Cancel before it ends and you pay nothing.'
+	String trialTerms({required Object days, required Object price}) => 'Free for ${days} days, then ${price}. Cancel before it ends and you pay nothing.';
+
+	/// en: 'No purchase to restore on this account'
+	String get nothingToRestore => 'No purchase to restore on this account';
+}
+
 // Path: account.sync.failure
 class Translations$account$sync$failure$en {
 	Translations$account$sync$failure$en.internal(this._root);
@@ -4095,6 +4394,12 @@ class Translations$account$sync$failure$en {
 
 	/// en: 'Sync did not work. Try again.'
 	String get unknown => 'Sync did not work. Try again.';
+
+	/// en: 'Sync was turned off from another device.'
+	String get turnedOff => 'Sync was turned off from another device.';
+
+	/// en: 'Sync has a new passphrase now.'
+	String get passphraseChanged => 'Sync has a new passphrase now.';
 }
 
 /// The flat map containing all translations for locale <en>.
@@ -4243,6 +4548,9 @@ extension on Translations {
 			'profileForm.sshKeyHint' => 'A key pair: the private half stays on this device, the public half goes into ~/.ssh/authorized_keys on the server. Safer than a password, and nothing to type.',
 			'profileForm.createKey' => 'Create a new key',
 			'profileForm.chooseAuth' => 'Choose how to sign in to this machine.',
+			'profileForm.notifications' => 'Notifications',
+			'profileForm.serverNotifications' => 'Reach me when I am not connected',
+			'profileForm.serverNotificationsHint' => 'With Pro, a long command or a program asking for you here sends a push even with Termphin closed.',
 			'keys.title' => 'SSH Keys',
 			'keys.subtitle' => 'Generate, import and manage your SSH keys',
 			'keys.allKeys' => 'All keys',
@@ -4451,7 +4759,7 @@ extension on Translations {
 			'settings.subtitle' => 'Configure app behavior and terminal preferences',
 			'settings.appearance' => 'Appearance',
 			'settings.themeMode' => 'Theme',
-			'settings.themeModeSystem' => 'Follow device',
+			'settings.themeModeSystem' => 'System',
 			'settings.themeModeLight' => 'Light',
 			'settings.themeModeDark' => 'Dark',
 			'settings.terminal' => 'Terminal',
@@ -4473,6 +4781,12 @@ extension on Translations {
 			'settings.predictiveEchoSubtitle' => 'Show typing instantly on slow connections',
 			'settings.programNotifications' => 'Notifications from programs',
 			'settings.programNotificationsSubtitle' => 'When a program in another session asks for one, like Claude Code finishing',
+			'settings.finishedNotifications' => 'When a long command finishes',
+			'settings.finishedNotificationsSubtitle' => 'A command that ran 30 seconds or more, named with its last line',
+			'settings.quietNotifications' => 'When a program may need you',
+			'settings.quietNotificationsSubtitle' => 'An AI agent or installer that stopped to ask something',
+			'settings.noticeLines' => 'Quote the last line',
+			'settings.noticeLinesSubtitle' => 'Shows what the command printed last. Off sends only its name and time',
 			'settings.fastUpload' => 'Fast upload',
 			'settings.fastUploadNavSubtitleTmp' => 'Uploads land in the server\'s temporary directory',
 			'settings.fastUploadNavSubtitleCurrentDir' => 'Uploads land in the shell\'s current directory',
@@ -4608,6 +4922,8 @@ extension on Translations {
 			'settings.errorReportsSubtitle' => 'Errors Termphin ran into, to send with a bug report',
 			'settings.feedbackEmailFailed' => 'Could not open your mail app.',
 			'settings.about' => 'About',
+			_ => null,
+		} ?? switch (path) {
 			'settings.aboutTagline' => 'SSH client',
 			'settings.aboutVersion' => ({required Object version}) => 'Version ${version}',
 			'settings.releaseNotes' => 'Release notes',
@@ -4617,8 +4933,6 @@ extension on Translations {
 			'settings.rateAppSubtitleIos' => 'Leave a review on the App Store',
 			'settings.rateAppFailed' => 'Could not open Google Play.',
 			'settings.rateAppFailedIos' => 'Could not open the App Store.',
-			_ => null,
-		} ?? switch (path) {
 			'settings.downloadFolderIos' => 'Files app (On My iPhone / Termphin)',
 			'settings.licenses' => 'Open source licenses',
 			'settings.licensesSubtitle' => 'The packages Termphin is built on, and their terms',
@@ -4662,6 +4976,13 @@ extension on Translations {
 			'settings.sftpShowHiddenSubtitle' => 'Names that start with a dot, like .ssh and .bashrc.',
 			'settings.sftpFollowTerminal' => 'Follow the terminal',
 			'settings.sftpFollowTerminalSubtitle' => 'Open in the shell\'s current folder',
+			'settings.notificationsSection' => 'Notifications',
+			'settings.notifyWhenClosed' => 'Also when Termphin is closed',
+			'settings.notifyWhenClosedSubtitle' => 'Servers reach this phone through Termphin’s relay while nothing is connected.',
+			'settings.notifyServers' => 'Servers',
+			'settings.notifyDenied' => 'Notifications are turned off for Termphin in the system settings.',
+			'settings.notifyFailed' => 'That did not work. Try again.',
+			'settings.notifyPaused' => 'Paused because Pro has ended. Your servers keep their keys; renew Pro and notifications come back.',
 			'exportScreen.title' => 'Export & Import',
 			'exportScreen.exportInstructions' => 'Choose what to include in the backup file.',
 			'exportScreen.saveDialogTitle' => 'Save backup',
@@ -4871,6 +5192,7 @@ extension on Translations {
 			'linkPreview.loading' => 'Loading preview…',
 			'linkPreview.copyLink' => 'Copy Link',
 			'linkPreview.noPreview' => 'No preview available',
+			'session.untitled' => 'Session',
 			'session.rebootRestored' => 'The remote shell was restarted - reattached in the same directory, previous shell state is gone.',
 			'session.offlineTitle' => 'Session detached',
 			'session.offlineBody' => 'The session is still running on the server. Re-attach to pick up where you left off.',
@@ -5114,6 +5436,8 @@ extension on Translations {
 			'serverGuide.computerBody' => 'Turn on SSH: Remote Login on a Mac, OpenSSH Server on Windows or Linux. Then add its address here.',
 			'serverGuide.cloudTitle' => 'A cloud server',
 			'serverGuide.cloudBody' => 'Any Linux VPS works. The provider gives you an address, a username and a password or key.',
+			_ => null,
+		} ?? switch (path) {
 			'whatsNew.title' => 'What\'s new',
 			'whatsNew.gotIt' => 'Got it',
 			'whatsNew.nowAvailable' => 'Now available',
@@ -5131,8 +5455,6 @@ extension on Translations {
 			'hostKey.accept' => 'Accept and remember',
 			'hostKey.acceptChanged' => 'Accept new key',
 			'hostKey.reject' => 'Do not connect',
-			_ => null,
-		} ?? switch (path) {
 			'keyboardInteractive.title' => 'The server is asking',
 			'keyboardInteractive.fallbackPrompt' => 'Response',
 			'keyboardInteractive.submit' => 'Send',
@@ -5204,9 +5526,9 @@ extension on Translations {
 			'account.signInWithEmail' => 'Sign in',
 			'account.createAccount' => 'Create account',
 			'account.forgotPassword' => 'Forgot password?',
-			'account.resetSent' => ({required Object email}) => 'A link to set a new password is on its way to ${email}.',
-			'account.signedInAs' => ({required Object name}) => 'Signed in as ${name}',
 			'account.signedInWith' => ({required Object provider}) => 'Signed in with ${provider}',
+			'account.planPro' => 'Termphin Pro',
+			'account.planFree' => 'Free plan',
 			'account.providerGoogle' => 'Google',
 			'account.providerApple' => 'Apple',
 			'account.providerPassword' => 'email and password',
@@ -5228,23 +5550,48 @@ extension on Translations {
 			'account.unavailable' => 'Accounts are not available in this build.',
 			'account.pro.title' => 'Termphin Pro',
 			'account.pro.active' => 'Pro is on for this account. Thank you.',
-			'account.pro.pitch' => 'Notifications from your servers on every device, even with the app closed, and end-to-end encrypted sync.',
 			'account.pro.monthly' => ({required Object price}) => '${price} a month',
 			'account.pro.annual' => ({required Object price}) => '${price} a year',
 			'account.pro.lifetime' => ({required Object price}) => '${price} once',
 			'account.pro.restore' => 'Restore purchases',
 			'account.pro.unavailable' => 'Pro cannot be bought in this build.',
+			'account.pro.badge' => 'Pro',
+			'account.pro.activeBadge' => 'Active',
 			'account.pro.failed' => 'The purchase did not go through.',
 			'account.pro.thanks' => 'Pro is on. Thank you.',
-			'account.push.title' => 'Notifications from your servers',
-			'account.push.body' => 'When a program on a server asks for a notification and no phone is connected, it still reaches you. Part of Pro.',
-			'account.push.thisPhone' => 'On this phone',
-			'account.push.denied' => 'Notifications are turned off for Termphin in the system settings.',
-			'account.push.servers' => 'Send from these servers',
-			'account.push.serverRow' => ({required Object name}) => 'Set up ${name}',
-			'account.push.installed' => ({required Object name}) => '${name} will now send notifications through Termphin.',
-			'account.push.noServers' => 'Connect to a server to set it up.',
-			'account.push.failed' => 'That did not work. Try again.',
+			'account.pro.summary' => 'Notifications from your servers and end-to-end encrypted sync.',
+			'account.pro.activeSummary' => 'Thank you for supporting Termphin.',
+			'account.pro.see' => 'See Pro',
+			'account.pro.manage' => 'Manage subscription',
+			'account.pro.paywall.titleLead' => 'Termphin',
+			'account.pro.paywall.titlePro' => 'Pro',
+			'account.pro.paywall.tagline' => 'More from the servers you already use.',
+			'account.pro.paywall.pushTitle' => 'Notifications from your servers',
+			'account.pro.paywall.pushBody' => 'A long job finished or an agent needs you: it reaches you even with Termphin closed.',
+			'account.pro.paywall.syncTitle' => 'Sync across your devices',
+			'account.pro.paywall.syncBody' => 'Machines, keys, snippets and groups everywhere, end-to-end encrypted with a passphrase only you know.',
+			'account.pro.paywall.supportTitle' => 'Keep Termphin going',
+			'account.pro.paywall.supportBody' => 'Everything else stays free and open source. Pro pays for the servers and the work.',
+			'account.pro.paywall.yearly' => 'Yearly',
+			'account.pro.paywall.monthly' => 'Monthly',
+			'account.pro.paywall.lifetime' => 'Lifetime',
+			'account.pro.paywall.perYear' => ({required Object price}) => '${price} a year',
+			'account.pro.paywall.perMonth' => ({required Object price}) => '${price} a month',
+			'account.pro.paywall.yearlyPerMonth' => ({required Object price}) => '${price} a month, billed yearly',
+			'account.pro.paywall.save' => ({required Object percent}) => 'Save ${percent}%',
+			'account.pro.paywall.subscribe' => 'Continue',
+			'account.pro.paywall.signInFirst' => 'Sign in to continue',
+			'account.pro.paywall.noOffers' => 'Prices could not be loaded.',
+			'account.pro.paywall.retry' => 'Try again',
+			'account.pro.paywall.legal' => 'Renews automatically until cancelled. Cancel any time in your store account.',
+			'account.pro.paywall.terms' => 'Terms',
+			'account.pro.paywall.privacy' => 'Privacy',
+			'account.pro.paywall.close' => 'Close',
+			'account.pro.paywall.trialBadge' => ({required Object days}) => '${days} days free',
+			'account.pro.paywall.startTrial' => ({required Object days}) => 'Try free for ${days} days',
+			'account.pro.paywall.trialTerms' => ({required Object days, required Object price}) => 'Free for ${days} days, then ${price}. Cancel before it ends and you pay nothing.',
+			'account.pro.paywall.nothingToRestore' => 'No purchase to restore on this account',
+			'account.pro.already' => 'You already have Pro.',
 			'account.sync.title' => 'Sync',
 			'account.sync.off' => 'Keep machines, keys, snippets and groups the same on every device. End-to-end encrypted with a passphrase only you know.',
 			'account.sync.turnOn' => 'Turn on sync',
@@ -5258,8 +5605,10 @@ extension on Translations {
 			'account.sync.passphrase' => 'Sync passphrase',
 			'account.sync.syncNow' => 'Sync now',
 			'account.sync.syncing' => 'Syncing…',
-			'account.sync.lastSynced' => ({required Object time}) => 'Last synced ${time}',
-			'account.sync.neverSynced' => 'Not synced yet on this device',
+			'account.sync.onBadge' => 'On',
+			'account.sync.auto' => 'Changes sync on their own, on every device.',
+			'account.sync.autoLast' => ({required Object time}) => 'Changes sync on their own. Last synced ${time}.',
+			'account.sync.failedRetry' => 'The last sync did not go through. It will try again.',
 			'account.sync.done' => ({required Object pulled, required Object pushed}) => 'Synced: ${pulled} in, ${pushed} out',
 			'account.sync.turnOff' => 'Stop syncing on this device',
 			'account.sync.turnOffTitle' => 'Stop syncing on this device?',
@@ -5270,6 +5619,22 @@ extension on Translations {
 			'account.sync.failure.network' => 'No connection. Try again when you are online.',
 			'account.sync.failure.alreadySetUp' => 'Sync was turned on from another device meanwhile. Enter its passphrase.',
 			'account.sync.failure.unknown' => 'Sync did not work. Try again.',
+			'account.sync.failure.turnedOff' => 'Sync was turned off from another device.',
+			'account.sync.failure.passphraseChanged' => 'Sync has a new passphrase now.',
+			'account.sync.confirming' => 'Confirming your Pro with the server…',
+			'account.sync.lagging' => 'Your Pro is on, but the server has not confirmed it yet. It usually takes a few seconds.',
+			'account.sync.retry' => 'Try again',
+			'account.sync.pausedBadge' => 'Paused',
+			'account.sync.paused' => 'Sync is paused because Pro has ended. Everything stays on your devices, and the synced copy waits for you: renew Pro and it picks up where it stopped.',
+			'account.sync.renew' => 'Renew Pro',
+			'account.sync.deleteAll' => 'Delete the synced copy',
+			'account.sync.deleteAllTitle' => 'Turn sync off everywhere?',
+			'account.sync.deleteAllMessage' => 'This deletes the encrypted copy from the server and turns sync off on all your devices. What is on your devices stays.',
+			'account.sync.deleteAllConfirm' => 'Delete and turn off',
+			'account.sync.deleted' => 'Sync is off everywhere, and the synced copy is deleted.',
+			'account.sync.turnedOffElsewhere' => 'Sync was turned off from another device. Turn it on again to sync this one.',
+			'account.sync.rekeyedElsewhere' => 'Sync was started again with a new passphrase on another device. Enter it to bring this device in.',
+			'account.sync.forgot' => 'Forgot the passphrase? Start over',
 			'account.failure.invalidEmail' => 'That is not an email address.',
 			'account.failure.wrongCredentials' => 'Wrong email or password.',
 			'account.failure.emailInUse' => 'There is already an account with this email. Sign in the way you did before.',
@@ -5279,6 +5644,34 @@ extension on Translations {
 			'account.failure.tooManyRequests' => 'Too many attempts. Wait a moment and try again.',
 			'account.failure.unavailable' => 'This way of signing in is not available yet.',
 			'account.failure.unknown' => 'That did not work. Try again.',
+			'account.reset.title' => 'Reset your password',
+			'account.reset.body' => 'Enter the email address you signed up with, and we will send you a link to set a new password.',
+			'account.reset.send' => 'Send link',
+			'account.reset.sentTitle' => 'Check your inbox',
+			'account.reset.sentBody' => ({required Object email}) => 'If an account uses ${email}, a link to set a new password is on its way. It can take a minute - look in spam too.',
+			'account.reset.resend' => 'Send again',
+			'account.reset.back' => 'Back to sign in',
+			'relayServers.title' => 'Servers',
+			'relayServers.intro' => 'Machines that can reach this account while no phone is connected. Each gets its key on its own the first time you connect with push on.',
+			'relayServers.empty' => 'No server can reach you yet',
+			'relayServers.emptyHint' => 'Connect to a machine with push on and it is set up on its own.',
+			'relayServers.lastSent' => ({required Object time}) => 'Last notification ${time}',
+			'relayServers.setUp' => ({required Object time}) => 'Set up ${time}',
+			'relayServers.revoke' => 'Revoke',
+			'relayServers.revokeTitle' => ({required Object name}) => 'Revoke ${name}?',
+			'relayServers.revokeMessage' => 'It can no longer reach you. Connecting to it again with its notifications on gives it a new key.',
+			'agentFeatures.title' => 'Started with an older helper',
+			'agentFeatures.body' => 'This session keeps the helper it started with, so it does without:',
+			'agentFeatures.longCommandNotice' => 'A notification when a long command finishes',
+			'agentFeatures.pushOpensSession' => 'Opening this session from a push',
+			'agentFeatures.inPlaceUpdates' => 'Updating on its own without restarting',
+			'agentFeatures.wentQuietNotice' => 'A notification when an agent or program stops and may need you',
+			'agentFeatures.hint' => 'A new session has all of them. Programs running here keep running until you close it.',
+			'agentFeatures.newSession' => 'Open a new session',
+			'proHints.longCommand' => 'That notification came while Termphin was open. With Pro it reaches you even when the app is closed.',
+			'proHints.droppedSession' => 'Your session kept running while you were away. With Pro, a program in it can reach you then.',
+			'proHints.machines' => 'With Pro, your machines, keys and snippets are on all your devices, end-to-end encrypted.',
+			'proHints.action' => 'See Pro',
 			_ => null,
 		};
 	}

@@ -84,6 +84,8 @@ class ProfileAvatarColor {
   }
 }
 
+/// A machine's icon in its colour, on a plain neutral disc: the colour is
+/// carried by the glyph alone, with no tint of the same hue behind it.
 class ProfileAvatar extends StatelessWidget {
   const ProfileAvatar({
     super.key,
@@ -109,19 +111,11 @@ class ProfileAvatar extends StatelessWidget {
           width: size,
           height: size,
           decoration: BoxDecoration(
-            color: avatarColor.background,
-            gradient: LinearGradient(
-              begin: Alignment.bottomLeft,
-              end: Alignment.topRight,
-              colors: [
-                avatarColor.color.withValues(alpha: 0.08),
-                avatarColor.color.withValues(alpha: 0.28),
-              ],
-            ),
+            color: context.colors.surfaceOffset,
             shape: BoxShape.circle,
             border: isActive
                 ? Border.all(color: context.colors.success, width: 1.5)
-                : Border.all(color: avatarColor.color.withValues(alpha: 0.28)),
+                : null,
           ),
           alignment: Alignment.center,
           child: ProfileAvatarGlyph(

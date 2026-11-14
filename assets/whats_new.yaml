@@ -34,6 +34,20 @@
 #            announced as new. Its version then means nothing.
 #
 # Newest version first.
+- version: "1.15.0"
+  highlights:
+    - id: "long-command-notifications"
+      title: "Know when a command finishes"
+      body: "A command that runs for half a minute or more tells you when it
+        is done, with no setup on the server. Programs like Claude Code can
+        call for you the same way."
+    - id: "termphin-pro"
+      title: "Termphin Pro"
+      body: "Pro brings those notifications to your phone even when Termphin
+        is closed, and keeps your machines, keys and snippets on all your
+        devices, end-to-end encrypted. Everything you use today stays free.
+        Find it under Settings, Account."
+
 - version: "1.9.0"
   highlights:
     - id: "command-suggestions"

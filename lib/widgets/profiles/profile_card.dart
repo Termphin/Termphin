@@ -5,6 +5,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../i18n/strings.g.dart';
 import '../../models/ssh_profile.dart';
 import '../../providers/anonymize_provider.dart';
+import '../../providers/groups_provider.dart';
 import '../../services/app/identity_anonymizer.dart';
 import '../../theme/theme.dart';
 import '../ui/app_card.dart';
@@ -69,6 +70,11 @@ class ProfileCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final anonymize = ref.watch(anonymizeProvider);
+    final groupColor = ref
+        .watch(profileGroupsProvider)
+        .where((group) => group.name == profile.group)
+        .firstOrNull
+        ?.colorHex;
     final displayName = anonymize
         ? IdentityAnonymizer.name(profile.id)
         : profile.name;
@@ -97,7 +103,7 @@ class ProfileCard extends ConsumerWidget {
             size: 42,
             child: ProfileAvatar(
               iconName: profile.iconName,
-              colorHex: profile.colorHex,
+              colorHex: profile.colorHex ?? groupColor,
               isActive: isActive,
               size: 42,
             ),

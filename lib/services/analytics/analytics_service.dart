@@ -43,7 +43,14 @@ enum AnalyticsEvent {
   /// Play never reports whether its dialog appeared, let alone what was
   /// rated - that the ask was made is the only measurable part.
   reviewPromptRequested('review_prompt_requested'),
-  reviewStoreOpened('review_store_opened');
+  reviewStoreOpened('review_store_opened'),
+
+  /// The Pro funnel: a hint offered Pro, the paywall opened (and from
+  /// where), a plan was tapped, the store said it went through.
+  proPromptShown('pro_prompt_shown'),
+  paywallViewed('paywall_viewed'),
+  purchaseStarted('purchase_started'),
+  purchaseCompleted('purchase_completed');
 
   const AnalyticsEvent(this.eventName);
   final String eventName;
@@ -81,7 +88,14 @@ enum AnalyticsProperty {
 
   /// Whether a reconnect continued the terminal on screen instead of replaying
   /// the session's history into a new one.
-  inPlace('in_place');
+  inPlace('in_place'),
+
+  /// Where the paywall was opened from, or which hint was shown: a fixed
+  /// name from [ProSource], never anything the user typed.
+  source('source'),
+
+  /// `annual`, `monthly` or `lifetime`.
+  plan('plan');
 
   const AnalyticsProperty(this.propertyName);
   final String propertyName;

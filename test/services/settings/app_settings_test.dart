@@ -201,6 +201,9 @@ final Map<Setting<Object?>, Object?> _alternatives = {
   terminalSettings.cursorBlink: false,
   terminalSettings.predictiveEcho: false,
   terminalSettings.programNotifications: false,
+  terminalSettings.finishedNotifications: false,
+  terminalSettings.quietNotifications: false,
+  terminalSettings.noticeLines: false,
   terminalSettings.fontFamily: kTerminalFontLabels.keys.firstWhere(
     (name) => name != terminalSettings.fontFamily.fallback,
   ),

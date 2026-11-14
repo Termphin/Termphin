@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:termphin/i18n/strings.g.dart';
+import 'package:termphin/services/pro/pro_service.dart';
+import 'package:termphin/services/sync/sync_coordinator.dart';
 import 'package:termphin/services/sync/sync_service.dart';
 import 'package:termphin/widgets/account/sync_card.dart';
 
@@ -26,8 +28,18 @@ void main() {
     );
   });
 
-  Future<void> show(WidgetTester tester) async {
-    await pumpTestApp(tester, SyncCard(service: service));
+  Future<void> show(
+    WidgetTester tester, {
+    Future<bool> Function()? confirmPro,
+  }) async {
+    await pumpTestApp(
+      tester,
+      SyncCard(
+        service: service,
+        coordinator: SyncCoordinator(service: service, reload: () async {}),
+        confirmPro: confirmPro,
+      ),
+    );
     await tester.pumpAndSettle();
   }
 
@@ -48,6 +60,92 @@ void main() {
     await show(tester);
 
     expect(find.text(t.account.sync.off), findsOneWidget);
+    expect(find.text(t.account.sync.turnOn), findsOneWidget);
+  });
+
+  testWidgets('an account without Pro is told by a pill, not an error', (
+    tester,
+  ) async {
+    cloud.refusal = const SyncException(SyncFailure.notPro);
+    await show(tester);
+
+    expect(find.text(t.account.sync.failure.notPro), findsNothing);
+    expect(find.text(t.account.pro.badge), findsOneWidget);
+    expect(find.text(t.account.sync.turnOn), findsOneWidget);
+  });
+
+  group('Pro the server has not heard of yet', () {
+    setUp(() => ProService.instance.active.value = true);
+    tearDown(() => ProService.instance.active.value = false);
+
+    testWidgets('is waited for, and then sync can be turned on', (
+      tester,
+    ) async {
+      cloud.refusal = const SyncException(SyncFailure.notPro);
+      await show(
+        tester,
+        confirmPro: () async {
+          cloud.refusal = null;
+          return true;
+        },
+      );
+
+      expect(find.text(t.account.pro.badge), findsNothing);
+      expect(find.text(t.account.sync.lagging), findsNothing);
+      expect(find.text(t.account.sync.turnOn), findsOneWidget);
+    });
+
+    testWidgets('is said plainly when it does not come, with a way to ask '
+        'again instead of the paywall', (tester) async {
+      cloud.refusal = const SyncException(SyncFailure.notPro);
+      await show(tester, confirmPro: () async => false);
+
+      expect(find.text(t.account.sync.lagging), findsOneWidget);
+      expect(find.text(t.account.sync.retry), findsOneWidget);
+      expect(find.text(t.account.sync.turnOn), findsNothing);
+    });
+  });
+
+  testWidgets('sync that lost Pro says it is paused and offers to renew', (
+    tester,
+  ) async {
+    final coordinator = SyncCoordinator(service: service, reload: () async {});
+    await tester.runAsync(() => service.setUp('correct horse'));
+    cloud.refusal = const SyncException(SyncFailure.notPro);
+    await tester.runAsync(() => coordinator.syncNow());
+    await pumpTestApp(
+      tester,
+      SyncCard(service: service, coordinator: coordinator),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(t.account.sync.pausedBadge), findsOneWidget);
+    expect(find.text(t.account.sync.renew), findsOneWidget);
+    expect(find.text(t.account.sync.syncNow), findsNothing);
+  });
+
+  testWidgets('a forgotten passphrase can be got out of by starting over', (
+    tester,
+  ) async {
+    final other = SyncService(
+      cloud: cloud,
+      vault: FakeSyncVault(),
+      local: FakeSyncLocal(),
+      uid: () => 'u1',
+    );
+    await tester.runAsync(() => other.setUp('correct horse'));
+    await show(tester);
+
+    await tester.tap(find.text(t.account.sync.forgot));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(t.account.sync.deleteAllConfirm));
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 200)),
+    );
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+
+    expect(cloud.meta, isNull);
     expect(find.text(t.account.sync.turnOn), findsOneWidget);
   });
 
@@ -87,7 +185,7 @@ void main() {
       local: FakeSyncLocal(),
       uid: () => 'u1',
     );
-    await other.setUp('correct horse');
+    await tester.runAsync(() => other.setUp('correct horse'));
 
     await show(tester);
 

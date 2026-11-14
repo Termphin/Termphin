@@ -590,7 +590,7 @@ class _KeyTile extends StatelessWidget {
               children: [
                 IconButton(
                   icon: const Icon(
-                    PhosphorIconsFill.copy,
+                    PhosphorIconsRegular.copy,
                     size: AppTheme.icon20,
                   ),
                   color: context.colors.primary,

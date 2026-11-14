@@ -81,7 +81,10 @@ class SyncReport {
 ///
 /// A three-way merge against the last agreed state ([SyncBaseStore]): a
 /// record only one side changed takes that side; one both changed takes the
-/// newer `updatedAt`; one a side deleted is deleted on the other unless the
+/// newer `updatedAt`, and on a tie the account's copy - a device joining
+/// sync, whose untouched settings carry no time, adopts the account's
+/// rather than overwriting them with its defaults; one a side deleted is
+/// deleted on the other unless the
 /// other changed it meanwhile, which brings it back. A deletion is kept in
 /// the store as a tombstone so a device that has been away learns of it.
 class SyncEngine {
@@ -206,7 +209,7 @@ class SyncEngine {
       final theyChanged = last != theirs.hash;
       final takeTheirs =
           !iChanged ||
-          (theyChanged && theirs.updatedAt.isAfter(mine.updatedAt));
+          (theyChanged && !theirs.updatedAt.isBefore(mine.updatedAt));
       if (takeTheirs) {
         await local.upsert(theirs);
         next[documentId] = theirs.hash;

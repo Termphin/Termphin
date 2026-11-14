@@ -28,6 +28,7 @@ class SshProfile {
     this.lastGoodHost,
     this.mainHostFirst = true,
     this.jumpHostProfileId,
+    this.serverNotifications = true,
   }) : updatedAt = updatedAt ?? createdAt;
 
   final String id;
@@ -76,6 +77,12 @@ class SshProfile {
   /// not get to read them.
   final String? jumpHostProfileId;
 
+  /// Whether this machine may reach the phone while nothing is connected to
+  /// it: with push on, connecting gives it a relay key; off, connecting
+  /// takes the key away again. Notifications while connected do not depend
+  /// on it.
+  final bool serverNotifications;
+
   /// [host] followed by [fallbackHosts], with [lastGoodHost] (if still one of
   /// them) first among the fallbacks. This is the order [SshService.connect]
   /// tries candidates in. [host] leads unless [mainHostFirst] is off: a
@@ -116,6 +123,7 @@ class SshProfile {
     String? lastGoodHost,
     bool? mainHostFirst,
     String? jumpHostProfileId,
+    bool? serverNotifications,
     bool clearJumpHost = false,
     bool clearPassword = false,
     bool clearPassphrase = false,
@@ -154,6 +162,7 @@ class SshProfile {
       jumpHostProfileId: clearJumpHost
           ? null
           : (jumpHostProfileId ?? this.jumpHostProfileId),
+      serverNotifications: serverNotifications ?? this.serverNotifications,
     );
   }
 
@@ -180,6 +189,7 @@ class SshProfile {
       'lastGoodHost': lastGoodHost,
       'mainHostFirst': mainHostFirst,
       'jumpHostProfileId': jumpHostProfileId,
+      'serverNotifications': serverNotifications,
     };
   }
 
@@ -226,6 +236,7 @@ class SshProfile {
       lastGoodHost: json['lastGoodHost'] as String?,
       mainHostFirst: json['mainHostFirst'] as bool? ?? true,
       jumpHostProfileId: json['jumpHostProfileId'] as String?,
+      serverNotifications: json['serverNotifications'] as bool? ?? true,
     );
   }
 

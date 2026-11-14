@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../account/account_service.dart';
 import '../security/aead.dart';
 import '../security/secret_cipher.dart';
+import 'settings_sync.dart';
 import 'storage_sync_local.dart';
 import 'sync_crypto.dart';
 import 'sync_engine.dart';
@@ -28,7 +32,19 @@ enum SyncState {
 }
 
 /// Why setting up, unlocking or syncing did not happen.
-enum SyncFailure { wrongPassphrase, notPro, network, alreadySetUp, unknown }
+enum SyncFailure {
+  wrongPassphrase,
+  notPro,
+  network,
+  alreadySetUp,
+
+  /// Sync was turned off for the whole account, from another device.
+  turnedOff,
+
+  /// Sync was turned off and on again with another passphrase elsewhere.
+  passphraseChanged,
+  unknown,
+}
 
 class SyncException implements Exception {
   const SyncException(this.failure);
@@ -61,7 +77,23 @@ abstract interface class SyncCloud {
   Future<bool> createMeta(String uid, SyncMeta meta);
 
   SyncRemote records(String uid);
+
+  /// Deletes the account's synced copy and its sync settings, for every
+  /// device at once.
+  Future<void> deleteAll(String uid);
+
+  /// Fires when another device changes the account's records, so this one
+  /// can pull them while it is open. Changes this device is still writing
+  /// do not fire.
+  Stream<void> watch(String uid);
 }
+
+/// The function that turns sync off for an account and deletes its copy.
+const kDeleteSyncDataUrl = String.fromEnvironment(
+  'TERMPHIN_DELETE_SYNC_URL',
+  defaultValue:
+      'https://europe-central2-termphin-hexeosoft.cloudfunctions.net/deleteSyncData',
+);
 
 /// Where this device keeps the key once unlocked: the platform keystore.
 abstract interface class SyncKeyVault {
@@ -105,6 +137,12 @@ class SyncService {
 
   /// When this device last synced, if it has.
   final lastSynced = ValueNotifier<DateTime?>(null);
+
+  /// The account being synced, if anyone is signed in.
+  String? get uid => _uid();
+
+  /// Fires when another device changes [uid]'s records.
+  Stream<void> watchRemote(String uid) => _cloud.watch(uid);
 
   Future<SyncState> state() async {
     final uid = _uid();
@@ -152,10 +190,21 @@ class SyncService {
     return syncNow();
   }
 
+  /// Syncs, after checking the account still syncs under this device's key:
+  /// one small read, which is what stops a device that missed sync being
+  /// turned off from quietly uploading everything again under a key nobody
+  /// has any more.
   Future<SyncReport> syncNow() async {
     final uid = _requireUid();
     final bytes = await _vault.read(uid);
     if (bytes == null) throw const SyncException(SyncFailure.unknown);
+    final meta = await _guard(() => _cloud.readMeta(uid));
+    if (meta == null || !SyncKey(bytes).opensCheck(uid, meta.check)) {
+      await forgetOnThisDevice();
+      throw SyncException(
+        meta == null ? SyncFailure.turnedOff : SyncFailure.passphraseChanged,
+      );
+    }
     final report = await _guard(
       () => SyncEngine(
         key: SyncKey(bytes),
@@ -169,6 +218,15 @@ class SyncService {
     return report;
   }
 
+  /// Turns sync off for the whole account: the synced copy is deleted and
+  /// every device forgets its key on its next sync. Data on the devices is
+  /// not touched. Works without Pro.
+  Future<void> deleteEverywhere() async {
+    final uid = _requireUid();
+    await _guard(() => _cloud.deleteAll(uid));
+    await forgetOnThisDevice();
+  }
+
   /// Stops syncing on this device: forgets the key and what was agreed.
   /// The cloud copy and the other devices are left as they are.
   Future<void> forgetOnThisDevice() async {
@@ -176,6 +234,7 @@ class SyncService {
     if (uid == null) return;
     await _vault.delete(uid);
     await PreferencesSyncBase(uid).write(const {});
+    await SettingsSync.forgetTimes();
     lastSynced.value = null;
   }
 
@@ -286,6 +345,52 @@ class FirestoreSyncCloud implements SyncCloud {
   @override
   SyncRemote records(String uid) =>
       _FirestoreRecords(_db.collection('users').doc(uid).collection('records'));
+
+  /// Through the `deleteSyncData` function rather than the database: the
+  /// rules let no client delete the sync settings, and the function works
+  /// without Pro.
+  @override
+  Future<void> deleteAll(String uid) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || user.uid != uid) {
+      throw const SyncException(SyncFailure.unknown);
+    }
+    final token = await user.getIdToken();
+    final client = HttpClient()
+      ..connectionTimeout = const Duration(seconds: 10);
+    try {
+      final request = await client.postUrl(Uri.parse(kDeleteSyncDataUrl));
+      request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $token');
+      final response = await request.close().timeout(
+        const Duration(seconds: 30),
+      );
+      await response.drain<void>();
+      if (response.statusCode != HttpStatus.ok) {
+        throw const SyncException(SyncFailure.network);
+      }
+    } on IOException {
+      throw const SyncException(SyncFailure.network);
+    } on TimeoutException {
+      throw const SyncException(SyncFailure.network);
+    } finally {
+      client.close();
+    }
+  }
+
+  /// The first snapshot is what is already there, which the sync that
+  /// starts the watch has just read; only later ones are news.
+  @override
+  Stream<void> watch(String uid) => _db
+      .collection('users')
+      .doc(uid)
+      .collection('records')
+      .snapshots()
+      .skip(1)
+      .where(
+        (snapshot) =>
+            !snapshot.metadata.hasPendingWrites &&
+            snapshot.docChanges.isNotEmpty,
+      );
 }
 
 class _FirestoreRecords implements SyncRemote {

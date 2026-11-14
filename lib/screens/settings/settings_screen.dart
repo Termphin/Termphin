@@ -10,6 +10,7 @@ import '../../widgets/settings/appearance_settings_section.dart';
 import '../../widgets/settings/connection_settings_section.dart';
 import '../../widgets/settings/data_backup_settings_section.dart';
 import '../../widgets/settings/feedback_settings_section.dart';
+import '../../widgets/settings/notifications_settings_section.dart';
 import '../../widgets/settings/open_source_settings_section.dart';
 import '../../widgets/settings/organization_settings_section.dart';
 import '../../widgets/settings/privacy_settings_section.dart';
@@ -86,6 +87,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const AccountSettingsSection(),
                   const AppearanceSettingsSection(),
                   const SizedBox(height: AppTheme.space20),
+                  NotificationsSettingsSection(appVersion: _appVersion),
                   const OrganizationSettingsSection(),
                   const SizedBox(height: AppTheme.space20),
                   const TerminalSettingsSection(),

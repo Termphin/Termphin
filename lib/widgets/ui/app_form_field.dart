@@ -33,6 +33,7 @@ class AppFormField extends StatelessWidget {
     this.readOnly = false,
     this.onChanged,
     this.onSubmitted,
+    this.autofillHints,
   });
 
   final TextEditingController controller;
@@ -53,12 +54,18 @@ class AppFormField extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
 
+  /// What a password manager should fill in here - `AutofillHints.email`,
+  /// `AutofillHints.password` - so one offers itself when the field is
+  /// tapped. Null keeps it out of autofill.
+  final Iterable<String>? autofillHints;
+
   @override
   Widget build(BuildContext context) {
     return Container(
       decoration: context.colors.fieldDecoration,
       child: TextFormField(
         controller: controller,
+        autofillHints: autofillHints,
         readOnly: readOnly,
         textInputAction: action,
         keyboardType: keyboardType,

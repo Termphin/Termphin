@@ -101,6 +101,19 @@ class AppColors extends ThemeExtension<AppColors> {
 
   bool get isDark => brightness == Brightness.dark;
 
+  /// Pro's colour, and only Pro's: the pill, the paywall's marks and its
+  /// button. A champagne gold on dark and a deep ochre on light, both well
+  /// clear of AA on a card. The same in every palette, terminal-derived ones
+  /// included, since it marks the product rather than the scheme.
+  Color get gold => isDark ? const Color(0xFFF0C674) : const Color(0xFF8A6100);
+
+  /// Text and icons drawn on [gold].
+  Color get onGold =>
+      isDark ? const Color(0xFF1A1200) : const Color(0xFFFFFFFF);
+
+  /// [gold] faded into the card, behind a Pro pill or a chosen plan.
+  Color get goldHighlight => Color.lerp(surfaceCard, gold, 0.14)!;
+
   /// Fill for the controls a form is made of - fields, dropdowns, pickers.
   /// Dark steps them up off whatever they sit on, since a card and a field
   /// painted the same colour only differ by their hairline. Light keeps them
@@ -120,20 +133,20 @@ class AppColors extends ThemeExtension<AppColors> {
     primary: Color(0xFF4A9BF0),
     primaryHover: Color(0xFF7FBCF8),
     primaryActive: Color(0xFF2E86DE),
-    primaryHighlight: Color(0xFF12243A),
+    primaryHighlight: Color(0xFF132B45),
     primaryMuted: Color(0xFF2E6296),
-    backgroundPrimary: Color(0xFF080C10),
-    surfaceCard: Color(0xFF131C23),
-    surfaceElevated: Color(0xFF1A242C),
-    surfaceOffset: Color(0xFF202C35),
-    surfaceOffset2: Color(0xFF27353F),
-    surfaceDynamic: Color(0xFF33434F),
-    surfaceDivider: Color(0xFF1B252D),
-    surfaceBorder: Color(0xFF24323C),
-    surfaceBorderStrong: Color(0xFF31404B),
-    textPrimary: Color(0xFFE4EBF0),
-    textSecondary: Color(0xFF9FACB6),
-    textTertiary: Color(0xFF7A8791),
+    backgroundPrimary: Color(0xFF070B0F),
+    surfaceCard: Color(0xFF152029),
+    surfaceElevated: Color(0xFF1C2833),
+    surfaceOffset: Color(0xFF233140),
+    surfaceOffset2: Color(0xFF2A3946),
+    surfaceDynamic: Color(0xFF364857),
+    surfaceDivider: Color(0xFF1F2B35),
+    surfaceBorder: Color(0xFF263541),
+    surfaceBorderStrong: Color(0xFF344552),
+    textPrimary: Color(0xFFEDF2F6),
+    textSecondary: Color(0xFFB0BCC6),
+    textTertiary: Color(0xFF8593A0),
     textInverse: Color(0xFF071016),
     onPrimary: Color(0xFF06121C),
     success: Color(0xFF5CCB93),
@@ -464,6 +477,9 @@ class AppTheme {
   /// Hairline: the smallest stroke.
   static const double hairline = 1;
 
+  /// The thicker stroke: a selected outline and a spinner.
+  static const double strokeWide = 2;
+
   /// Spacing scale. Values not on this scale snap to the nearest step;
   /// ties snap toward the smaller value.
   static const double space2 = 2;
@@ -507,6 +523,7 @@ class AppTheme {
   static const double icon26 = 26;
   static const double icon28 = 28;
   static const double icon32 = 32;
+  static const double icon36 = 36;
   static const double icon40 = 40;
   static const double icon48 = 48;
   static const double icon56 = 56;
@@ -530,6 +547,9 @@ class AppTheme {
   static const List<BoxShadow> floatingShadow = [
     BoxShadow(color: shadowColor, blurRadius: 10, offset: Offset(0, 3)),
   ];
+
+  /// The bottom navigation bar's height.
+  static const double bottomBarHeight = 60;
 
   /// Docks and bars.
   static const List<BoxShadow> raisedShadow = [

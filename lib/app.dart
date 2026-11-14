@@ -8,15 +8,18 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import 'i18n/strings.g.dart';
 import 'models/ssh_profile.dart';
+import 'providers/account_provider.dart';
 import 'providers/groups_provider.dart';
 import 'providers/profiles_provider.dart';
 import 'providers/snippets_provider.dart';
 import 'providers/ssh_session_manager_provider.dart';
+import 'providers/sync_provider.dart';
 import 'providers/terminal_overlay_provider.dart';
 import 'providers/theme_provider.dart';
 import 'screens/lock_screen.dart';
 import 'screens/main_shell.dart';
 import 'screens/onboarding_screen.dart';
+import 'screens/pro/pro_paywall_screen.dart';
 import 'services/analytics/analytics_service.dart';
 import 'services/app/onboarding_service.dart';
 import 'services/app/review_prompt_service.dart';
@@ -24,6 +27,9 @@ import 'services/app/tag_migration_service.dart';
 import 'services/app/whats_new_service.dart';
 import 'services/platform/local_notifications_service.dart';
 import 'services/platform/quick_actions_service.dart';
+import 'services/pro/pro_hints.dart';
+import 'services/pro/pro_service.dart';
+import 'services/push/push_service.dart';
 import 'services/security/lock_service.dart';
 import 'services/security/relock_guard.dart';
 import 'services/settings/toolbar_share_link.dart';
@@ -192,12 +198,56 @@ class _AppGateState extends ConsumerState<_AppGate> {
   @override
   void initState() {
     super.initState();
+    final sync = ref.read(syncCoordinatorProvider);
     _lifecycle = AppLifecycleListener(
       onHide: RelockGuard.instance.appHidden,
-      onShow: RelockGuard.instance.appShown,
+      onShow: () {
+        RelockGuard.instance.appShown();
+        sync.resumed();
+        unawaited(ProService.instance.resumed());
+        ProHints.instance.flush();
+      },
     );
+    ProHints.instance.present = _presentProHint;
+    ref.listenManual(accountProvider, (previous, user) {
+      if (user == null) {
+        if (previous != null) unawaited(ProService.instance.signedOut());
+        unawaited(ProService.instance.refresh());
+      } else if (previous?.uid != user.uid) {
+        unawaited(ProService.instance.refresh());
+      }
+    }, fireImmediately: true);
+    ref.listenManual(profilesProvider, (_, profiles) {
+      if (profiles.length >= ProHints.machinesThreshold) {
+        unawaited(ProHints.instance.offer(ProHint.machines));
+      }
+    });
     _initLinkHandling();
     _checkGate();
+  }
+
+  /// Shows a Pro hint over whatever is on screen, with the paywall one tap
+  /// away. False when there is no screen to show it on yet.
+  Future<bool> _presentProHint(ProHint hint) async {
+    final context = navigatorKey.currentContext;
+    if (context == null || !context.mounted) return false;
+    final t = Translations.of(context);
+    AppNotifications.show(
+      context,
+      switch (hint) {
+        ProHint.longCommand => t.proHints.longCommand,
+        ProHint.droppedSession => t.proHints.droppedSession,
+        ProHint.machines => t.proHints.machines,
+      },
+      kind: AppNotificationKind.info,
+      actionLabel: t.proHints.action,
+      onAction: () {
+        final navigator = navigatorKey.currentContext;
+        if (navigator == null || !navigator.mounted) return;
+        unawaited(ProPaywallScreen.show(navigator, source: hint.source));
+      },
+    );
+    return true;
   }
 
   void _initLinkHandling() {
@@ -383,6 +433,7 @@ class _AppShellState extends ConsumerState<_AppShell> {
     service.normalizeColorHex = (hex) => ProfileAvatarColor.forHex(hex).hex;
     service.init();
     LocalNotificationsService.instance.onOpenSession = _openNotifiedSession;
+    PushService.instance.onOpenRelayed = _openRelayedSession;
     WidgetsBinding.instance.addPostFrameCallback(
       (_) => _runStartupInterstitials(),
     );
@@ -391,6 +442,7 @@ class _AppShellState extends ConsumerState<_AppShell> {
   @override
   void dispose() {
     LocalNotificationsService.instance.onOpenSession = null;
+    PushService.instance.onOpenRelayed = null;
     super.dispose();
   }
 
@@ -398,6 +450,11 @@ class _AppShellState extends ConsumerState<_AppShell> {
   /// about, in front, with the rest of the tabs behind it. Like a shortcut it
   /// waits behind the PIN when one is due; a session gone since does nothing.
   void _openNotifiedSession(String sessionId) {
+    final relayed = relayTargetFromPayload(sessionId);
+    if (relayed != null) {
+      _openRelayedSession(relayed.$1, relayed.$2);
+      return;
+    }
     if (RelockGuard.instance.holding) {
       RelockGuard.instance.whenUnlocked(() => _openNotifiedSession(sessionId));
       return;
@@ -412,6 +469,37 @@ class _AppShellState extends ConsumerState<_AppShell> {
     container
         .read(terminalOverlayProvider.notifier)
         .show(sessionId, session.profile);
+  }
+
+  /// What tapping a push from a server does: that machine's session [session]
+  /// - picked up from the server if this phone had not seen it - or, when
+  /// the server named none, the machine as if tapped on the home screen.
+  /// Waits behind the PIN like any other way in; a machine deleted since
+  /// does nothing.
+  void _openRelayedSession(String profileId, String session) {
+    if (RelockGuard.instance.holding) {
+      RelockGuard.instance.whenUnlocked(
+        () => _openRelayedSession(profileId, session),
+      );
+      return;
+    }
+    final context = navigatorKey.currentContext;
+    if (context == null || !context.mounted) return;
+    final container = ProviderScope.containerOf(context);
+    final profile = container
+        .read(profilesProvider)
+        .where((profile) => profile.id == profileId)
+        .firstOrNull;
+    if (profile == null) return;
+    final overlay = container.read(terminalOverlayProvider.notifier);
+    if (session.isEmpty) {
+      overlay.openProfile(profile);
+      return;
+    }
+    final tabId = container
+        .read(sshSessionManagerProvider)
+        .adoptRemoteSession(profile, session);
+    overlay.show(tabId, profile, scope: SiblingScope.none);
   }
 
   /// What a quick-action shortcut does once it is allowed through: the same
