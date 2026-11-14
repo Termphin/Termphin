@@ -35,6 +35,7 @@
     - "Bold text no longer loses letters"
     - "A machine deleted on another device disappears right away"
     - "The Termphin icon in notifications is no longer tiny"
+    - "No notification about a command you just watched finish"
 - version: "1.14.1"
   date: "2026-11-01"
   fixed:
