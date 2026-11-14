@@ -71,7 +71,7 @@ It is in `.gitignore` and never gets committed.
 | `docs/architecture/data.md` | Storage, groups, `Setting<T>`, backup and restore |
 | `docs/architecture/transfers.md` | SFTP transfers, copy and move, download location |
 | `docs/architecture/ui.md` | Screens, terminal widgets, toolbar, dock, notifications, sheets, layout, theme |
-| `docs/architecture/analytics.md` | Anything that reaches PostHog |
+| `docs/architecture/analytics.md` | Anything that reaches Firebase Analytics or Crashlytics |
 | `docs/architecture/onboarding.md` | First run, review prompt, changelog and what's new |
 | `docs/release.md` | Building, what a release ships, signing, export compliance, the Android toolchain |
 
@@ -162,10 +162,13 @@ after editing the JSON.
   `DesktopContentWidth`, which boxes the scroll view.
 - **Anything that shows a machine name, host or username honours
   `anonymizeProvider`.**
-- **Analytics names are closed enums** (`AnalyticsEvent`, `AnalyticsProperty`);
-  a name added to either must also be added to the privacy policy's §4 tables
-  (`docs/architecture/analytics.md`). The PostHog key comes in at build time
-  (`--dart-define=POSTHOG_API_KEY`); a build without it sends nothing.
+- **Analytics names are closed enums** (`AnalyticsEvent`, `AnalyticsProperty`).
+  The privacy policy describes them by category and links to that file as the
+  complete list, so a new name needs no policy edit - but a new *kind* of data,
+  or a new provider the app sends anything to, does
+  (`docs/architecture/analytics.md`). The Firebase config comes in at build
+  time from outside the repository (`docs/release.md`); a build without it
+  sends nothing, and **no Firebase config file is ever committed**.
 - **`ITSAppUsesNonExemptEncryption` stays absent** from `Info.plist`; neither
   `true` nor `false` is right (`docs/release.md`).
 

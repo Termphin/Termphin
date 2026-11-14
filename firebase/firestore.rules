@@ -1,0 +1,120 @@
+rules_version = '2';
+
+/**
+ * Termphin's Firestore. Everything a client may touch hangs off its own user
+ * document; what decides Pro (the `pro` fields and the `pro` custom claim) is
+ * written by the functions alone, from RevenueCat's webhook.
+ */
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function owner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    /**
+     * Pro, until the expiry the token carries, with an address the user has
+     * shown is theirs: Google and Apple vouch for it, a password account
+     * confirms it by the mailed link.
+     */
+    function pro() {
+      return signedIn() && request.auth.token.pro == true
+        && (!('proUntil' in request.auth.token)
+          || request.time.toMillis() < request.auth.token.proUntil)
+        && (request.auth.token.email_verified == true
+          || request.auth.token.firebase.sign_in_provider != 'password');
+    }
+
+    /**
+     * The user document: readable by its owner, written by the functions.
+     */
+    match /users/{uid} {
+      allow read: if owner(uid);
+      allow write: if false;
+
+      /**
+       * Where push notifications go: one document per installation, holding
+       * its FCM token. The owner registers and removes them.
+       */
+      match /devices/{deviceId} {
+        allow read, delete: if owner(uid);
+        allow create, update: if owner(uid)
+          && request.resource.data.keys().hasOnly(['token', 'platform', 'updatedAt'])
+          && request.resource.data.token is string
+          && request.resource.data.token.size() < 4096
+          && request.resource.data.platform in ['android', 'ios']
+          && request.resource.data.updatedAt == request.time;
+      }
+
+      /**
+       * Which of the agent's own notifications the relay sends - a long
+       * command finished, a program went quiet - and whether they quote the
+       * last line. The owner writes it from the app; the relay reads it.
+       */
+      match /settings/notices {
+        allow read, delete: if owner(uid);
+        allow create, update: if owner(uid)
+          && request.resource.data.keys().hasOnly(['finished', 'quiet', 'lines'])
+          && request.resource.data.finished is bool
+          && request.resource.data.quiet is bool
+          && request.resource.data.lines is bool;
+      }
+
+      /**
+       * The salt the sync passphrase is stretched with and a check sealed
+       * with the key, so a second device can tell a wrong passphrase. Made
+       * once; never changed.
+       */
+      match /syncMeta/{doc} {
+        allow read: if owner(uid) && pro();
+        allow create: if owner(uid) && pro() && doc == 'key'
+          && request.resource.data.keys().hasOnly(['salt', 'iterations', 'check', 'createdAt'])
+          && request.resource.data.salt is string
+          && request.resource.data.iterations is int
+          && request.resource.data.iterations >= 100000
+          && request.resource.data.check is string
+          && request.resource.data.createdAt == request.time;
+        allow update, delete: if false;
+      }
+
+      /**
+       * Synced records, encrypted on the device before they leave it: the
+       * server holds ciphertext it cannot read. Pro only.
+       */
+      match /records/{recordId} {
+        allow read, delete: if owner(uid) && pro();
+        allow create, update: if owner(uid) && pro()
+          && request.resource.data.keys().hasOnly(['ciphertext', 'updatedAt', 'deleted'])
+          && request.resource.data.ciphertext is string
+          && request.resource.data.ciphertext.size() < 262144
+          && request.resource.data.deleted is bool
+          && request.resource.data.updatedAt == request.time;
+      }
+    }
+
+    /**
+     * Keys a server sends push notifications with. A key is made on the phone,
+     * which keeps the secret and stores only its hash here; the relay looks
+     * the hash up. Its owner can see and revoke its keys, never read a secret.
+     */
+    match /relayKeys/{keyId} {
+      allow read, delete: if signedIn() && resource.data.uid == request.auth.uid;
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['uid', 'secretHash', 'label', 'createdAt', 'profileId'])
+        && (!('profileId' in request.resource.data)
+          || (request.resource.data.profileId is string
+            && request.resource.data.profileId.size() <= 64))
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.secretHash is string
+        && request.resource.data.secretHash.size() == 64
+        && request.resource.data.label is string
+        && request.resource.data.label.size() <= 100
+        && request.resource.data.createdAt == request.time;
+      allow update: if false;
+    }
+  }
+}

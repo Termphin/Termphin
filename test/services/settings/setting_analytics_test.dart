@@ -1,40 +1,27 @@
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:termphin/services/analytics/analytics_service.dart';
 import 'package:termphin/services/settings/setting.dart';
+import '../../support/analytics_recorder.dart';
 
 enum _Mode { compact, roomy }
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-
-  const analyticsChannel = MethodChannel('posthog_flutter');
   final captured = <Map<String, Object?>>[];
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(analyticsChannel, (call) async {
-          if (call.method == 'capture') {
-            final arguments = call.arguments as Map;
-            captured.add({
-              'event': arguments['eventName'],
-              ...?(arguments['properties'] as Map?)?.cast<String, Object?>(),
-            });
-          }
-          return null;
-        });
+    analyticsRecorder.clear();
+    analyticsRecorder.onEvent = (name, parameters) =>
+        captured.add({'event': name, ...parameters});
     AnalyticsService.instance.resetForTest();
     await AnalyticsService.instance.setConsent(true);
     captured.clear();
   });
 
-  tearDown(() {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(analyticsChannel, null);
-  });
+  tearDown(() {});
 
   test('scalars report their value', () {
     expect(Setting.boolean('a', fallback: false).analyticsValue, isFalse);

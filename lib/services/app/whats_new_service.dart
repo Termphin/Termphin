@@ -99,6 +99,9 @@ class WhatsNewService {
     _cache = highlights;
   }
 
+  /// Every highlight in the bundled file, seen or not. For the debug panel.
+  Future<List<ReleaseHighlight>> everyHighlight() => _loadHighlights();
+
   Future<List<ReleaseHighlight>> _loadHighlights() async {
     final cached = _cache;
     if (cached != null) return cached;

@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:termphin/services/backup/export_service.dart';
 import 'package:termphin/services/completion/command_completion.dart';
+import 'package:termphin/services/pro/pro_hints.dart';
 import 'package:termphin/services/settings/action_dock_settings.dart';
 import 'package:termphin/services/settings/anonymize_setting.dart';
 import 'package:termphin/services/settings/app_settings.dart';
@@ -38,6 +39,7 @@ List<Setting<Object?>> get _loaded => [
   lastBackupAtSetting,
   sidebarCollapsedSetting,
   commandSuggestionsSetting,
+  proTipsSetting,
   sftpShowHiddenSetting,
   sftpFollowTerminalSetting,
   sftpSortFieldSetting,
@@ -200,6 +202,10 @@ final Map<Setting<Object?>, Object?> _alternatives = {
   ),
   terminalSettings.cursorBlink: false,
   terminalSettings.predictiveEcho: false,
+  terminalSettings.programNotifications: false,
+  terminalSettings.finishedNotifications: false,
+  terminalSettings.quietNotifications: false,
+  terminalSettings.noticeLines: false,
   terminalSettings.fontFamily: kTerminalFontLabels.keys.firstWhere(
     (name) => name != terminalSettings.fontFamily.fallback,
   ),
@@ -250,6 +256,7 @@ final Map<Setting<Object?>, Object?> _alternatives = {
   lastBackupAtSetting: '2026-05-06T07:08:09.000Z',
   sidebarCollapsedSetting: !sidebarCollapsedSetting.fallback,
   commandSuggestionsSetting: !commandSuggestionsSetting.fallback,
+  proTipsSetting: !proTipsSetting.fallback,
   tabBarPositionSetting: TabBarPosition.bottom,
   lockTimeoutSetting: LockTimeout.minutes5,
 };

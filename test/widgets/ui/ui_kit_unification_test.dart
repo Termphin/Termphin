@@ -290,7 +290,7 @@ void main() {
       expect(
         find.byWidgetPredicate(
           (widget) =>
-              widget is Icon && widget.icon == PhosphorIconsFill.caretRight,
+              widget is Icon && widget.icon == PhosphorIconsRegular.caretRight,
         ),
         findsNothing,
       );

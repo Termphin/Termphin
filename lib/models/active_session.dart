@@ -7,6 +7,7 @@ import 'package:dartssh2/dartssh2.dart';
 import '../services/ssh/ssh_service.dart';
 import '../services/terminal/osc_markers.dart';
 import '../services/terminal/session_terminal.dart';
+import '../services/terminal/terminal_notification.dart';
 import 'remote_shell.dart';
 import 'session_tab.dart';
 import 'ssh_profile.dart';
@@ -63,6 +64,17 @@ class ActiveSessionView {
 
   /// Multiplexer actually used by the last successful attach.
   Multiplexer multiplexer;
+
+  /// The version of the agent master serving this session, as it said on
+  /// the last attach. Null from a master older than 0.16.0, which says
+  /// nothing - and stays the version it started with until it ends.
+  String? masterVersion;
+
+  /// Whether the master has said anything since this connection began. It
+  /// names its version in the very first bytes it sends a client, so once
+  /// output has arrived a [masterVersion] still null means an old master
+  /// rather than one that has not spoken yet - with or without a replay.
+  bool masterChecked = false;
 
   /// The agent binary the last attach ran, and whether it runs on Windows.
   /// What ending the session reuses instead of probing the host again.
@@ -132,6 +144,7 @@ class ActiveSessionView {
     columns: _columns,
     rows: _rows,
     onReply: _replyFromTerminal,
+    onNotification: _notify,
   );
   SessionTerminal? _terminal;
   int _columns;
@@ -187,8 +200,20 @@ class ActiveSessionView {
       rows: previous?.terminal.viewHeight ?? _rows,
       replay: replay,
       onReply: _replyFromTerminal,
+      onNotification: _notify,
     );
     previous?.retire();
+  }
+
+  final _notifications = StreamController<TerminalNotification>.broadcast();
+
+  /// What programs in this session asked the terminal to announce: a build
+  /// that finished, Claude Code waiting for an answer.
+  Stream<TerminalNotification> get notifications => _notifications.stream;
+
+  void _notify(TerminalNotification notification) {
+    if (_disposed || _notifications.isClosed) return;
+    _notifications.add(notification);
   }
 
   /// What the terminal answers the program with while no pane is mounted to
@@ -218,6 +243,7 @@ class ActiveSessionView {
     unawaited(sessionDoneSubscription?.cancel());
     sessionDoneSubscription = null;
     _terminal?.retire();
+    if (!_notifications.isClosed) unawaited(_notifications.close());
     if (!_outputController.isClosed) {
       unawaited(_outputController.close());
     }

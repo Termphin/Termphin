@@ -5,7 +5,6 @@ import 'dart:async';
 
 import 'package:dartssh2/dartssh2.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -18,6 +17,7 @@ import 'package:termphin/services/ssh/ssh_service.dart';
 import 'package:termphin/services/ssh/ssh_session_manager.dart';
 import 'package:termphin/services/storage/known_hosts_store.dart';
 
+import '../support/analytics_recorder.dart';
 import '../support/fake_master_key_store.dart';
 import '../support/fakes.dart';
 import '../support/fixtures.dart';
@@ -55,8 +55,6 @@ class _HangUpSocket implements SSHSocket {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-
-  const analyticsChannel = MethodChannel('posthog_flutter');
   final written = <String>[];
   late DebugPrintCallback originalDebugPrint;
   late SshSessionManager manager;
@@ -66,11 +64,9 @@ void main() {
     written.clear();
     originalDebugPrint = debugPrint;
     debugPrint = (message, {wrapWidth}) => written.add('debug: $message');
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(analyticsChannel, (call) async {
-          written.add('analytics: ${call.arguments}');
-          return null;
-        });
+    analyticsRecorder.clear();
+    analyticsRecorder.onEvent = (name, parameters) =>
+        written.add('analytics: $name $parameters');
     AnalyticsService.instance.resetForTest();
     await AnalyticsService.instance.setConsent(true);
     final knownHosts = KnownHostsStore(cipher: cipherFixture());
@@ -86,8 +82,6 @@ void main() {
   tearDown(() {
     debugPrint = originalDebugPrint;
     manager.dispose();
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(analyticsChannel, null);
   });
 
   /// Connects [profile] until it fails, and returns everything written.

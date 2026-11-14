@@ -167,6 +167,29 @@ come back:
   without it no SIGWINCH comes and the program never repaints over what the
   resizes left - until the keyboard changes the size for real.
 
+### Notifications from programs
+
+A program asks the terminal for a notification with an OSC sequence that
+prints nothing: `OSC 9` (iTerm2's; Claude Code sends it with
+`preferredNotifChannel` set to `iterm2`), `OSC 777;notify` (rxvt's, and what
+`termphin notify` in the agent writes) or kitty's one-shot `OSC 99`.
+`TerminalNotification.fromOsc` reads all three into one line of text each.
+
+- **The session hears it, not the pane.** `SessionTerminal` parses every
+  session whether a pane is bound or not, so it hands notifications to
+  `ActiveSessionView.notifications` itself and forwards the OSC to the pane
+  after. A replay never raises one again.
+- **News is what the user is not looking at.** `TerminalAlerts` posts unless
+  the app is in front with the terminal shown (`MainShell` keeps
+  `SshSessionManager.terminalOnScreen`) on that very session. One per session
+  every 3 s, the newest replacing the last (`terminalAlertId`), and a
+  notification with only a title takes the machine's name as its title
+  (anonymised when `anonymizeSetting` is on).
+- Tapping one opens its session through `terminalOverlayProvider`, behind the
+  PIN when one is due; a tap that launched the app waits in
+  `LocalNotificationsService` until the shell sets `onOpenSession`.
+- `terminalSettings.programNotifications` turns it off; it is in the backup.
+
 ### Drawing the terminal
 
 Two switches in `lib/widgets/terminal/terminal_rendering.dart` and

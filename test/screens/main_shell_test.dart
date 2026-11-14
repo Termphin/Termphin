@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:termphin/i18n/strings.g.dart';
 import 'package:termphin/providers/profiles_provider.dart';
 import 'package:termphin/providers/ssh_session_manager_provider.dart';
 import 'package:termphin/providers/terminal_overlay_provider.dart';
@@ -38,6 +39,7 @@ import '../support/test_app.dart';
 }
 
 void main() {
+  final t = AppLocale.en.buildSync();
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() => SharedPreferences.setMockInitialValues({}));
@@ -295,7 +297,7 @@ void main() {
     expect(terminalOpacity(tester), 0);
   });
 
-  testWidgets('an unselected nav item fades out its own colour, not black', (
+  testWidgets('the open tab sits on the bar\'s one lighter segment', (
     tester,
   ) async {
     final (container, fakeManager) = _containerWithFakeConnect();
@@ -304,26 +306,22 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
 
-    final fills = tester
-        .widgetList<AnimatedContainer>(
-          find.descendant(
-            of: find.byKey(const ValueKey('bottomNavBar')),
-            matching: find.byType(AnimatedContainer),
-          ),
-        )
-        .map((c) => (c.decoration! as BoxDecoration).color!)
-        .toList();
-
-    final highlight = AppColors.dark.primaryHighlight;
-    expect(fills, contains(highlight));
-    final unselected = fills.where((c) => c != highlight);
-    expect(unselected, isNotEmpty);
-    for (final fill in unselected) {
-      expect(fill.a, 0);
-      expect(fill.r, highlight.r);
-      expect(fill.g, highlight.g);
-      expect(fill.b, highlight.b);
-    }
+    final bar = find.byKey(const ValueKey('bottomNavBar'));
+    final segments = find.descendant(
+      of: bar,
+      matching: find.byWidgetPredicate(
+        (widget) =>
+            widget is DecoratedBox &&
+            (widget.decoration as BoxDecoration).color ==
+                AppColors.dark.surfaceOffset2,
+      ),
+    );
+    expect(segments, findsOneWidget);
+    final segment = tester.getRect(segments);
+    final home = tester.getCenter(
+      find.descendant(of: bar, matching: find.text(t.nav.home)),
+    );
+    expect(segment.contains(home), isTrue);
   });
 
   group('the wide-layout sidebar collapses', () {

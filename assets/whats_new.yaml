@@ -34,6 +34,23 @@
 #            announced as new. Its version then means nothing.
 #
 # Newest version first.
+- version: "1.15.0"
+  highlights:
+    - id: "long-command-notifications"
+      title: "Know when a command finishes"
+      image: "assets/whats_new/notifications.png"
+      body: "A command that runs for half a minute or more tells you when it
+        is done, with the last line it printed. An AI agent or an installer
+        that stops to ask you something says so too. Nothing to set up on the
+        server."
+    - id: "termphin-pro"
+      title: "Termphin Pro"
+      image: "assets/whats_new/pro-sync.png"
+      body: "Pro brings those notifications to your phone even when Termphin
+        is closed, and keeps your machines, keys and snippets on all your
+        devices, end-to-end encrypted. Everything you use today stays free.
+        Find it under Settings, Account."
+
 - version: "1.9.0"
   highlights:
     - id: "command-suggestions"

@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:termphin/services/terminal/session_terminal.dart';
+import 'package:termphin/services/terminal/terminal_notification.dart';
 import 'package:termphin/services/terminal/terminal_text.dart';
 
 void main() {
@@ -281,6 +282,49 @@ void main() {
       expect(shownBy(other).split('\n'), hasLength(4000));
     },
   );
+
+  group('notifications', () {
+    const ask = '\x1b]9;Claude is waiting for your input\x07';
+
+    test('reach the session with no pane bound', () {
+      final notified = <TerminalNotification>[];
+      SessionTerminal(onNotification: notified.add)
+        ..add(bytes('working$ask'))
+        ..flush();
+
+      expect(notified, [
+        const TerminalNotification(title: 'Claude is waiting for your input'),
+      ]);
+    });
+
+    test('reach the session and the bound pane alike', () {
+      final notified = <TerminalNotification>[];
+      final paneOsc = <String>[];
+      SessionTerminal(onNotification: notified.add)
+        ..bind(
+          Object(),
+          onOutput: (_) {},
+          onResize: (_, _) {},
+          onPrivateOsc: (code, args) => paneOsc.add(code),
+        )
+        ..add(bytes(ask))
+        ..flush();
+
+      expect(notified, hasLength(1));
+      expect(paneOsc, ['9']);
+    });
+
+    test('are not raised again by a replay of what already happened', () {
+      final notified = <TerminalNotification>[];
+      SessionTerminal(replay: bytes(ask), onNotification: notified.add)
+        ..add(bytes('\x1b]777;notify;Build;done\x07'))
+        ..flush();
+
+      expect(notified, [
+        const TerminalNotification(title: 'Build', body: 'done'),
+      ]);
+    });
+  });
 
   test('a retired terminal takes nothing more', () {
     final session = SessionTerminal()

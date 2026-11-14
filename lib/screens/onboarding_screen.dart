@@ -1,27 +1,49 @@
+import 'dart:async';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../i18n/strings.g.dart';
+import '../providers/groups_provider.dart';
+import '../providers/profiles_provider.dart';
+import '../providers/snippets_provider.dart';
+import '../providers/ssh_keys_provider.dart';
+import '../providers/sync_provider.dart';
+import '../services/account/account_service.dart';
 import '../services/analytics/analytics_service.dart';
 import '../services/app/legal_urls.dart';
 import '../services/app/onboarding_service.dart';
 import '../services/platform/foreground_notification_service.dart';
 import '../services/ssh/local_network_permission.dart';
+import '../services/sync/sync_engine.dart';
+import '../services/sync/sync_service.dart';
 import '../theme/theme.dart';
 import '../utils/platform_info.dart';
 import '../widgets/profiles/server_guide.dart';
 import '../widgets/ui/app_card.dart';
 import '../widgets/ui/app_divider.dart';
+import '../widgets/ui/app_form_field.dart';
 import '../widgets/ui/clipboard_and_links.dart';
 import '../widgets/ui/permission_tile.dart';
 import '../widgets/ui/settings_tile.dart';
-
-const _pageCount = 4;
-const _serverPage = 1;
+import 'settings/account_screen.dart';
 
 /// What onboarding was told about having a server, which decides where the
 /// app goes once it closes.
-enum ServerAnswer { hasServer, notYet }
+///
+/// [synced] is a returning user whose account already syncs and whose
+/// machines have just arrived: the machine list is the destination, and the
+/// server question was not asked.
+enum ServerAnswer { hasServer, notYet, synced }
+
+/// The pages onboarding can show, in the order they come.
+enum _Step { welcome, server, unlock, permissions, analytics }
+
+/// How a returning user came in: not at all, to a synced account whose
+/// passphrase is still to be entered, or to a synced account already unlocked
+/// on this device.
+enum _Returning { none, locked, unlocked }
 
 /// First-launch flow: what Termphin is, whether there is a server to connect
 /// to, permissions, then analytics consent.
@@ -29,22 +51,49 @@ enum ServerAnswer { hasServer, notYet }
 /// The server question is the point of it. Most people who installed and never
 /// connected had no machine to connect to, and the old flow never asked - it
 /// ended on an empty list with a single add button.
+///
+/// A returning user signs in from the welcome page. If their account already
+/// syncs, the server question is replaced by the sync passphrase, or skipped
+/// when this device already holds it.
 class OnboardingScreen extends StatefulWidget {
-  const OnboardingScreen({super.key, required this.onComplete});
+  const OnboardingScreen({
+    super.key,
+    required this.onComplete,
+    @visibleForTesting this.accountsAvailable,
+    @visibleForTesting this.signIn,
+    @visibleForTesting this.syncState,
+    @visibleForTesting this.unlock,
+  });
 
   final ValueChanged<ServerAnswer> onComplete;
+
+  /// Stands in for [AccountService.available] in tests.
+  final bool? accountsAvailable;
+
+  /// Stands in for pushing the sign-in screen in tests. Completes with whether
+  /// someone is signed in afterwards.
+  final Future<bool> Function(BuildContext context)? signIn;
+
+  /// Stands in for [SyncService.state] in tests.
+  final Future<SyncState> Function()? syncState;
+
+  /// Stands in for [SyncService.unlock] in tests.
+  final Future<SyncReport> Function(String passphrase)? unlock;
 
   @override
   State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
 /// The server page is the one question that has to be answered to go on;
-/// every other page can be swiped past.
+/// every other page can be swiped past. The unlock page is passed through only
+/// by unlocking it or by saying "not now".
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final _pageController = PageController();
   int _page = 0;
   bool _analyticsChecked = true;
   ServerAnswer? _answer;
+  bool _signedIn = AccountService.instance.user != null;
+  _Returning _returning = _Returning.none;
 
   @override
   void dispose() {
@@ -52,11 +101,85 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     super.dispose();
   }
 
+  bool get _accountsAvailable =>
+      widget.accountsAvailable ?? AccountService.instance.available;
+
+  List<_Step> get _steps => [
+    _Step.welcome,
+    if (_returning == _Returning.none) _Step.server,
+    if (_returning == _Returning.locked) _Step.unlock,
+    _Step.permissions,
+    _Step.analytics,
+  ];
+
   Future<void> _finish() async {
     await AnalyticsService.instance.setConsent(_analyticsChecked);
     await OnboardingService.instance.markCompleted();
-    widget.onComplete(_answer ?? ServerAnswer.notYet);
+    widget.onComplete(
+      _returning == _Returning.unlocked
+          ? ServerAnswer.synced
+          : _answer ?? ServerAnswer.notYet,
+    );
   }
+
+  Future<void> _signIn() async {
+    final signedIn = await (widget.signIn ?? _pushSignIn)(context);
+    if (!signedIn || !mounted) return;
+    final state = await _readSyncState();
+    if (!mounted) return;
+    setState(() {
+      _signedIn = true;
+      _returning = switch (state) {
+        SyncState.locked => _Returning.locked,
+        SyncState.ready => _Returning.unlocked,
+        _ => _Returning.none,
+      };
+    });
+  }
+
+  Future<bool> _pushSignIn(BuildContext context) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const AccountScreen(closeOnSignIn: true),
+      ),
+    );
+    return AccountService.instance.user != null;
+  }
+
+  /// A failed read is treated as no sync, so the normal flow goes on.
+  Future<SyncState> _readSyncState() async {
+    try {
+      return await (widget.syncState ?? SyncService.instance.state)();
+    } catch (_) {
+      return SyncState.signedOut;
+    }
+  }
+
+  Widget _pageFor(_Step step) => switch (step) {
+    _Step.welcome => _WelcomePage(
+      onSignIn: _accountsAvailable && !_signedIn ? _signIn : null,
+    ),
+    _Step.server => _ServerPage(
+      answer: _answer,
+      onChanged: (a) => setState(() => _answer = a),
+    ),
+    _Step.unlock => _UnlockSyncPage(
+      unlock: widget.unlock ?? SyncService.instance.unlock,
+      onUnlocked: () => setState(() => _returning = _Returning.unlocked),
+      onNotNow: () => setState(() => _returning = _Returning.none),
+    ),
+    _Step.permissions => const _PermissionsPage(),
+    _Step.analytics => _AnalyticsPage(
+      checked: _analyticsChecked,
+      onChanged: (v) => setState(() => _analyticsChecked = v),
+    ),
+  };
+
+  bool _canContinue(_Step step) => switch (step) {
+    _Step.server => _answer != null,
+    _Step.unlock => false,
+    _ => true,
+  };
 
   void _next() {
     _pageController.nextPage(
@@ -74,6 +197,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final steps = _steps;
     return Scaffold(
       backgroundColor: context.colors.backgroundPrimary,
       body: SafeArea(
@@ -84,18 +208,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 controller: _pageController,
                 physics: const NeverScrollableScrollPhysics(),
                 onPageChanged: (page) => setState(() => _page = page),
-                children: [
-                  const _WelcomePage(),
-                  _ServerPage(
-                    answer: _answer,
-                    onChanged: (a) => setState(() => _answer = a),
-                  ),
-                  const _PermissionsPage(),
-                  _AnalyticsPage(
-                    checked: _analyticsChecked,
-                    onChanged: (v) => setState(() => _analyticsChecked = v),
-                  ),
-                ],
+                children: [for (final step in steps) _pageFor(step)],
               ),
             ),
             Padding(
@@ -110,7 +223,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(
-                      _pageCount,
+                      steps.length,
                       (index) => AnimatedContainer(
                         duration: AppTheme.motionSlow,
                         margin: const EdgeInsets.symmetric(
@@ -132,7 +245,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   const SizedBox(height: AppTheme.space20),
                   _OnboardingActions(
                     page: _page,
-                    canContinue: _page != _serverPage || _answer != null,
+                    pageCount: steps.length,
+                    canContinue: _canContinue(steps[_page]),
                     onBack: _back,
                     onContinue: _next,
                     onFinish: _finish,
@@ -150,6 +264,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 class _OnboardingActions extends StatelessWidget {
   const _OnboardingActions({
     required this.page,
+    required this.pageCount,
     required this.canContinue,
     required this.onBack,
     required this.onContinue,
@@ -157,6 +272,7 @@ class _OnboardingActions extends StatelessWidget {
   });
 
   final int page;
+  final int pageCount;
   final bool canContinue;
   final VoidCallback onBack;
   final VoidCallback onContinue;
@@ -165,7 +281,7 @@ class _OnboardingActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Translations.of(context);
-    final isLast = page == _pageCount - 1;
+    final isLast = page == pageCount - 1;
     return Row(
       children: [
         if (page > 0)
@@ -186,7 +302,10 @@ class _OnboardingActions extends StatelessWidget {
 
 /// The real logo and one sentence about what the app is for.
 class _WelcomePage extends StatelessWidget {
-  const _WelcomePage();
+  const _WelcomePage({required this.onSignIn});
+
+  /// Null hides the link: no accounts in this build, or someone is signed in.
+  final VoidCallback? onSignIn;
 
   @override
   Widget build(BuildContext context) {
@@ -215,6 +334,161 @@ class _WelcomePage extends StatelessWidget {
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: context.colors.textSecondary,
             ),
+          ),
+          if (onSignIn != null) ...[
+            const SizedBox(height: AppTheme.space20),
+            TextButton(
+              onPressed: onSignIn,
+              child: Text(t.onboarding.signInLink),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// The returning user's synced account is locked on this device: the passphrase
+/// brings the machines, keys and snippets in. "Not now" goes back to the
+/// server question.
+class _UnlockSyncPage extends ConsumerStatefulWidget {
+  const _UnlockSyncPage({
+    required this.unlock,
+    required this.onUnlocked,
+    required this.onNotNow,
+  });
+
+  final Future<SyncReport> Function(String passphrase) unlock;
+  final VoidCallback onUnlocked;
+  final VoidCallback onNotNow;
+
+  @override
+  ConsumerState<_UnlockSyncPage> createState() => _UnlockSyncPageState();
+}
+
+class _UnlockSyncPageState extends ConsumerState<_UnlockSyncPage> {
+  final _passphrase = TextEditingController();
+  bool _busy = false;
+  SyncFailure? _failure;
+
+  @override
+  void dispose() {
+    _passphrase.dispose();
+    super.dispose();
+  }
+
+  /// Unlocks, then reloads what came in and starts automatic sync, the same
+  /// way the sync card does once it has unlocked.
+  Future<void> _unlock() async {
+    if (_busy) return;
+    setState(() {
+      _busy = true;
+      _failure = null;
+    });
+    try {
+      await widget.unlock(_passphrase.text);
+      await ref.read(profilesProvider.notifier).loadProfiles();
+      await ref.read(profileGroupsProvider.notifier).loadGroups();
+      await ref.read(snippetsProvider.notifier).loadSnippets();
+      ref.read(sshKeysRevisionProvider.notifier).bump();
+      unawaited(ref.read(syncCoordinatorProvider).start());
+    } on SyncException catch (error) {
+      _fail(error.failure);
+      return;
+    } catch (_) {
+      _fail(SyncFailure.unknown);
+      return;
+    }
+    if (mounted) widget.onUnlocked();
+  }
+
+  void _fail(SyncFailure failure) {
+    if (mounted) {
+      setState(() {
+        _failure = failure;
+        _busy = false;
+      });
+    }
+  }
+
+  String _failureText(Translations t, SyncFailure failure) {
+    final f = t.account.sync.failure;
+    return switch (failure) {
+      SyncFailure.wrongPassphrase => f.wrongPassphrase,
+      SyncFailure.notPro => f.notPro,
+      SyncFailure.network => f.network,
+      SyncFailure.alreadySetUp => f.alreadySetUp,
+      SyncFailure.turnedOff => f.turnedOff,
+      SyncFailure.passphraseChanged => f.passphraseChanged,
+      SyncFailure.unknown => f.unknown,
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Translations.of(context);
+    final failure = _failure;
+    return _CenteredScroll(
+      padding: const EdgeInsets.symmetric(horizontal: AppTheme.space24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const _DuotoneIcon(
+            fill: PhosphorIconsFill.lockKey,
+            regular: PhosphorIconsRegular.lockKey,
+          ),
+          const SizedBox(height: AppTheme.space16),
+          Text(
+            t.onboarding.unlockTitle,
+            textAlign: TextAlign.center,
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: AppTheme.space12),
+          Text(
+            t.onboarding.unlockBody,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: context.colors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: AppTheme.space24),
+          AutofillGroup(
+            child: AppFormField(
+              controller: _passphrase,
+              label: t.account.sync.passphrase,
+              icon: PhosphorIconsRegular.key,
+              obscure: true,
+              action: TextInputAction.done,
+              autofillHints: const [AutofillHints.password],
+              onSubmitted: (_) => _unlock(),
+            ),
+          ),
+          if (failure != null) ...[
+            const SizedBox(height: AppTheme.space12),
+            Text(
+              _failureText(t, failure),
+              textAlign: TextAlign.center,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: context.colors.error),
+            ),
+          ],
+          const SizedBox(height: AppTheme.space20),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: _busy ? null : _unlock,
+              child: Text(
+                _busy ? t.account.sync.syncing : t.onboarding.unlockAction,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppTheme.space8),
+          TextButton(
+            onPressed: _busy ? null : widget.onNotNow,
+            child: Text(t.onboarding.notNow),
           ),
         ],
       ),

@@ -642,7 +642,7 @@ class _ResumableSessionRow extends StatelessWidget {
           ),
           const SizedBox(width: AppTheme.space6),
           Icon(
-            PhosphorIconsFill.caretRight,
+            PhosphorIconsRegular.caretRight,
             size: AppTheme.icon16,
             color: context.colors.textTertiary,
           ),

@@ -69,7 +69,10 @@ MenuItemStyleData appDropdownItemStyle({
 ///
 /// Uses [DropdownButton2] like the value dropdowns in settings so both open
 /// the same way, and hides the underline the package draws under every button
-/// by default (a stray hairline under an icon-only button).
+/// by default (a stray hairline under an icon-only button). It is hidden
+/// with an empty `underline`, not `DropdownButtonHideUnderline`: the package
+/// reads the framework Material library's one, which the `material_ui`
+/// widget of the same name does not set.
 class AppActionDropdown<T> extends StatefulWidget {
   const AppActionDropdown({
     super.key,
@@ -223,23 +226,22 @@ class _AppActionDropdownState<T> extends State<AppActionDropdown<T>> {
     return Listener(
       onPointerDown: (_) => _fitToScreen(),
       child: LegacyMaterial(
-        child: DropdownButtonHideUnderline(
-          child: DropdownButton2<T>(
-            customButton: tooltip == null
-                ? button
-                : Tooltip(message: tooltip, child: button),
-            items: widget.items,
-            onChanged: _handleChanged,
-            openDropdownListenable: widget.openDropdownListenable,
-            dropdownStyleData: appDropdownStyle(
-              context,
-              width: widget.width,
-              maxHeight: _maxHeight,
-              direction: widget.direction,
-              offset: widget.offset + Offset(_nudge, 0),
-            ),
-            menuItemStyleData: appDropdownItemStyle(),
+        child: DropdownButton2<T>(
+          customButton: tooltip == null
+              ? button
+              : Tooltip(message: tooltip, child: button),
+          underline: const SizedBox.shrink(),
+          items: widget.items,
+          onChanged: _handleChanged,
+          openDropdownListenable: widget.openDropdownListenable,
+          dropdownStyleData: appDropdownStyle(
+            context,
+            width: widget.width,
+            maxHeight: _maxHeight,
+            direction: widget.direction,
+            offset: widget.offset + Offset(_nudge, 0),
           ),
+          menuItemStyleData: appDropdownItemStyle(),
         ),
       ),
     );

@@ -39,7 +39,8 @@ file is found by asking what it is about, not what kind of class it holds.
 | `services/app/` | Onboarding, what's new, release notes, review prompt, tag migration, URLs, anonymizer |
 | `services/snippets/` | Running a snippet in a session |
 | `services/search/` | The global search's matching: every word against machines, sessions, groups, snippets and keys |
-| `services/analytics/` | PostHog wrapper and its closed enums |
+| `services/analytics/` | Analytics and crash reports (Firebase), consent, closed enums |
+| `services/firebase/` | Firebase config and its lazy start |
 | `widgets/terminal/` | The session pane, key toolbar, action dock, tunnels, add-tab sheet |
 | `widgets/ssh/` | Connecting view, connection log, quality pill, host key and keyboard-interactive dialogs |
 | `widgets/sftp/` | File browser, folder picker, transfer bar and dialogs, editor pieces |
@@ -64,6 +65,6 @@ reason to look at the folders, not to add a flat file beside them.
 | [`data.md`](data.md) | Storage, groups, the `Setting<T>` system, backup and restore |
 | [`transfers.md`](transfers.md) | SFTP downloads, uploads, copy and move |
 | [`ui.md`](ui.md) | Screens, shared widgets, layout rules, theme and terminal schemes |
-| [`analytics.md`](analytics.md) | PostHog, consent, what is sent |
+| [`analytics.md`](analytics.md) | Firebase Analytics, Crashlytics, consent, what is sent |
 | [`onboarding.md`](onboarding.md) | First run, review prompt, changelog versus what's new |
 | [`../release.md`](../release.md) | Release builds, what a release ships, signing, export compliance, Android toolchain |

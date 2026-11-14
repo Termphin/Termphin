@@ -16,6 +16,26 @@
 # before anyone has decided what version ships it. Nothing renders it: the app
 # and the landing changelog both drop any entry whose version is not a dotted
 # number. Give it the real number at release time and it appears in both.
+- version: "Unreleased"
+  date: "2026-11-14"
+  added:
+    - "Termphin Pro: notifications from your servers even with Termphin closed, and end-to-end encrypted sync"
+    - "Sync your machines, keys, snippets and settings across your devices, with a passphrase only you know"
+    - "Sign in with Google, Apple or email, only needed for Pro"
+    - "A long command tells you when it finishes, with the last line it printed"
+    - "An AI agent or installer that stops to ask you something lets you know"
+    - "Choose which notifications you get, and whether they quote the last line"
+    - "Sign in while setting up Termphin to bring your synced machines to a new device"
+    - "Notifications also work on Windows and macOS servers"
+  changed:
+    - "Notifications name the command you ran, like dnf update instead of sudo"
+    - "Running sessions move to a newer helper on their own, without restarting"
+  fixed:
+    - "Text no longer disappears from the terminal when the keyboard opens or closes"
+    - "Bold text no longer loses letters"
+    - "A machine deleted on another device disappears right away"
+    - "The Termphin icon in notifications is no longer tiny"
+    - "No notification about a command you just watched finish"
 - version: "1.14.1"
   date: "2026-11-01"
   fixed:

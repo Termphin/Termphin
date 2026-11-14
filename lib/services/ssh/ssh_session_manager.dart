@@ -20,6 +20,7 @@ import '../storage/profile_storage.dart';
 import '../terminal/agent_probe_cache.dart';
 import '../terminal/osc_markers.dart';
 import '../terminal/remote_mux_commands.dart';
+import '../terminal/terminal_notification.dart';
 import 'remote_agent_service.dart';
 import 'ssh_prompts.dart';
 import 'ssh_service.dart';
@@ -311,6 +312,42 @@ class SshSessionManager extends ChangeNotifier {
   /// Whether the app is on screen. Sessions are pinged more often while it
   /// is, so a stall shows up while someone is there to see it.
   bool _foreground = true;
+
+  bool get foreground => _foreground;
+
+  /// The tab last brought to the front.
+  String? get activeSessionId => _lastActiveSessionId;
+
+  /// Whether the terminal is what is on screen rather than the machine list
+  /// or settings - with [activeSessionId], which session its user is looking
+  /// at. Kept by `MainShell`. A change is announced to listeners, so what
+  /// remembers which session was last looked at sees the user leave the
+  /// terminal for the machine list too.
+  bool get terminalOnScreen => _terminalOnScreen;
+  bool _terminalOnScreen = false;
+  set terminalOnScreen(bool value) {
+    if (value == _terminalOnScreen) return;
+    _terminalOnScreen = value;
+    notifyListeners();
+  }
+
+  /// Takes what programs in any session ask the terminal to announce. Set by
+  /// `main`, which decides what of it reaches the system.
+  void Function(ActiveSessionView session, TerminalNotification notification)?
+  onTerminalNotification;
+
+  final _notificationWatches =
+      Expando<StreamSubscription<TerminalNotification>>();
+
+  /// Hands [session]'s notifications to [onTerminalNotification], once per
+  /// session object - a resumed session is the same object and keeps its
+  /// subscription.
+  void _watchNotifications(ActiveSessionView session) {
+    if (_notificationWatches[session] != null) return;
+    _notificationWatches[session] = session.notifications.listen(
+      (notification) => onTerminalNotification?.call(session, notification),
+    );
+  }
 
   void setForeground(bool foreground) {
     if (foreground == _foreground) return;
@@ -639,6 +676,7 @@ class SshSessionManager extends ChangeNotifier {
       );
     }
     _sessions[id] = session;
+    _watchNotifications(session);
     notifyListeners();
 
     try {
@@ -717,6 +755,9 @@ class SshSessionManager extends ChangeNotifier {
             ? null
             : (path: binary, isWindows: agentOperatingSystem == 'Windows');
 
+      session
+        ..masterVersion = null
+        ..masterChecked = false;
       final replayWaiter = ReplayWaiter(
         enabled: replayRemoteHistory && backend == Multiplexer.termphin,
       );
@@ -731,12 +772,17 @@ class SshSessionManager extends ChangeNotifier {
         if (payload == '5381;termphin-reboot-restored') {
           session.notifyRebootRestored();
         }
+        final master = masterVersionFrom(payload);
+        if (master != null) session.masterVersion = master;
         _handleCwdMarker(session, payload);
       });
       session.serviceOutputSubscription = service.output.listen((bytes) {
         replayWaiter.onOutput();
         service.quality.heard();
         markerTracker.consume(bytes);
+        if (!session.masterChecked && backend == Multiplexer.termphin) {
+          session.masterChecked = true;
+        }
         offsetCounter.onChunk(bytes.length);
         if (staging) {
           staged.add(bytes);

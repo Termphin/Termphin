@@ -72,14 +72,42 @@ void main() {
       expect(_attribute(application, 'debuggable'), isNull);
     });
 
+    /// An element marked `tools:node="remove"` takes a library's component
+    /// out of the merged manifest; it is not one of ours.
     test('only the launcher activity is reachable from other apps', () {
       final exported = [
         for (final tag in ['activity', 'service', 'receiver', 'provider'])
           for (final element in _elements(tag))
-            if (_attribute(element, 'exported') != 'false')
+            if (_attribute(element, 'exported') != 'false' &&
+                !element.contains('tools:node="remove"'))
               _attribute(element, 'name'),
       ];
       expect(exported, ['.MainActivity', '.ShareActivity']);
+    });
+
+    test('Firebase does not start with the process', () {
+      final provider = _elements('provider').singleWhere(
+        (element) =>
+            _attribute(element, 'name') ==
+            'com.google.firebase.provider.FirebaseInitProvider',
+      );
+      expect(provider, contains('tools:node="remove"'));
+    });
+
+    test('Firebase collects nothing until it is switched on', () {
+      String? value(String name) => RegExp(
+        'android:name="$name"\\s+android:value="([^"]*)"',
+      ).firstMatch(_manifest)?.group(1);
+      for (final flag in [
+        'firebase_analytics_collection_enabled',
+        'google_analytics_adid_collection_enabled',
+        'google_analytics_default_allow_ad_personalization_signals',
+        'google_analytics_automatic_screen_reporting_enabled',
+        'firebase_crashlytics_collection_enabled',
+        'firebase_messaging_auto_init_enabled',
+      ]) {
+        expect(value(flag), 'false', reason: flag);
+      }
     });
 
     test('the share entry accepts shares and nothing else', () {
@@ -126,7 +154,8 @@ void main() {
     test('permissions are the reviewed set', () {
       final permissions = {
         for (final element in _elements('uses-permission'))
-          _attribute(element, 'name'),
+          if (!element.contains('tools:node="remove"'))
+            _attribute(element, 'name'),
       };
       expect(permissions, {
         'android.permission.INTERNET',
@@ -141,6 +170,35 @@ void main() {
         'android.permission.ACCESS_WIFI_STATE',
         'android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS',
       });
+    });
+
+    test('a push the system draws uses the status bar icon', () {
+      final icons = {
+        for (final element in _elements('meta-data'))
+          _attribute(element, 'name'): _attribute(element, 'resource'),
+      };
+      expect(
+        icons['com.google.firebase.messaging.default_notification_icon'],
+        '@drawable/ic_stat_termphin',
+      );
+      expect(
+        icons['dev.termphin.notification_icon'],
+        '@drawable/ic_stat_termphin',
+      );
+    });
+
+    test('the advertising ID permissions a library brings are taken out', () {
+      for (final name in [
+        'com.google.android.gms.permission.AD_ID',
+        'android.permission.ACCESS_ADSERVICES_AD_ID',
+        'android.permission.ACCESS_ADSERVICES_ATTRIBUTION',
+      ]) {
+        final element = _elements(
+          'uses-permission',
+        ).where((element) => _attribute(element, 'name') == name);
+        expect(element, hasLength(1), reason: name);
+        expect(element.single, contains('tools:node="remove"'), reason: name);
+      }
     });
   });
 
@@ -160,7 +218,8 @@ void main() {
       );
     });
 
-    test('the only links it answers are ssh:// and termphin://', () {
+    test('the only links it answers are ssh://, termphin:// and Google '
+        'sign-in\'s return', () {
       final schemes =
           RegExp(
                 r'<key>CFBundleURLSchemes</key>\s*<array>(.*?)</array>',
@@ -172,7 +231,11 @@ void main() {
                   r'<string>([^<]*)</string>',
                 ).allMatches(m.group(1)!).map((s) => s.group(1)),
               );
-      expect(schemes.toList(), ['ssh', 'termphin']);
+      expect(schemes.toList(), [
+        'ssh',
+        'termphin',
+        r'$(GOOGLE_REVERSED_CLIENT_ID)',
+      ]);
     });
   });
 }

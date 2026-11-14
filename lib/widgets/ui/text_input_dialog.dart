@@ -18,6 +18,7 @@ Future<String?> showTextInputDialog(
   String? labelText,
   String? hintText,
   FormFieldValidator<String>? validator,
+  bool obscure = false,
 }) async {
   final t = Translations.of(context);
   final controller = TextEditingController(text: initialValue);
@@ -25,7 +26,7 @@ Future<String?> showTextInputDialog(
 
   void submit(BuildContext ctx) {
     if (formKey.currentState?.validate() ?? false) {
-      Navigator.of(ctx).pop(controller.text.trim());
+      Navigator.of(ctx).pop(obscure ? controller.text : controller.text.trim());
     }
   }
 
@@ -38,6 +39,9 @@ Future<String?> showTextInputDialog(
         child: TextFormField(
           controller: controller,
           autofocus: true,
+          obscureText: obscure,
+          autocorrect: !obscure,
+          enableSuggestions: !obscure,
           onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
           decoration: InputDecoration(labelText: labelText, hintText: hintText),
           validator: validator,

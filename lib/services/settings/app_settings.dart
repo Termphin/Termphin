@@ -1,5 +1,6 @@
 import '../backup/export_service.dart';
 import '../completion/command_completion.dart';
+import '../pro/pro_hints.dart';
 import '../ssh/ssh_session_manager.dart';
 import 'action_dock_settings.dart';
 import 'anonymize_setting.dart';
@@ -39,6 +40,7 @@ Future<void> loadAppSettings() async {
     lastBackupAtSetting.load(),
     sidebarCollapsedSetting.load(),
     commandSuggestionsSetting.load(),
+    proTipsSetting.load(),
     sftpShowHiddenSetting.load(),
     sftpFollowTerminalSetting.load(),
     sftpSortFieldSetting.load(),

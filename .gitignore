@@ -69,3 +69,8 @@ app.*.map.json
 
 # Daily work log, local only (see CLAUDE.md)
 /memories/
+
+# Firebase config, copied in from ~/.config/termphin/firebase by scripts/firebase_config.sh
+/android/app/google-services.json
+/ios/Runner/GoogleService-Info.plist
+/ios/Flutter/Firebase.xcconfig

@@ -1,4 +1,5 @@
 import '../completion/command_completion.dart';
+import '../pro/pro_hints.dart';
 import '../settings/action_dock_settings.dart';
 import '../settings/editor_settings.dart';
 import '../settings/floating_dock_settings.dart';
@@ -34,6 +35,10 @@ Future<Map<String, dynamic>> exportTerminalSettings() async {
     'cursorStyle': settings.cursorStyle.value,
     'cursorBlink': settings.cursorBlink.value,
     'predictiveEcho': settings.predictiveEcho.value,
+    'programNotifications': settings.programNotifications.value,
+    'finishedNotifications': settings.finishedNotifications.value,
+    'quietNotifications': settings.quietNotifications.value,
+    'noticeLines': settings.noticeLines.value,
   };
 }
 
@@ -74,6 +79,7 @@ Future<Map<String, dynamic>> exportAppPreferences() async {
     'sftpSortField': (await sftpSortFieldSetting.load()).name,
     'sftpSortDescending': await sftpSortDescendingSetting.load(),
     'commandSuggestions': await commandSuggestionsSetting.load(),
+    'proTips': await proTipsSetting.load(),
     'tabBarPosition': (await tabBarPositionSetting.load()).name,
     'lockTimeout': (await lockTimeoutSetting.load()).name,
     'editorWordWrap': await editorSettings.wordWrap.load(),
@@ -115,6 +121,16 @@ Future<void> importTerminalSettings(Map<String, dynamic> ts) async {
   await restore<String>(settings.cursorStyle, ts['cursorStyle']);
   await restore<bool>(settings.cursorBlink, ts['cursorBlink']);
   await restore<bool>(settings.predictiveEcho, ts['predictiveEcho']);
+  await restore<bool>(
+    settings.programNotifications,
+    ts['programNotifications'],
+  );
+  await restore<bool>(
+    settings.finishedNotifications,
+    ts['finishedNotifications'],
+  );
+  await restore<bool>(settings.quietNotifications, ts['quietNotifications']);
+  await restore<bool>(settings.noticeLines, ts['noticeLines']);
   await settings.load();
 }
 
@@ -244,6 +260,9 @@ Future<void> importAppPreferences(Map<String, dynamic> appPrefs) async {
   if (commandSuggestions is bool) {
     await commandSuggestionsSetting.set(commandSuggestions);
   }
+
+  final proTips = appPrefs['proTips'];
+  if (proTips is bool) await proTipsSetting.set(proTips);
 
   final tabBarPosition = _byName(
     TabBarPosition.values,

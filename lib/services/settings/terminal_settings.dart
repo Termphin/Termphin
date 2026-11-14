@@ -10,6 +10,11 @@ const kTerminalCursorStylePrefsKey = 'terminal_cursor_style';
 const kTerminalCursorBlinkPrefsKey = 'terminal_cursor_blink';
 const kTerminalFontFamilyPrefsKey = 'terminal_font_family';
 const kTerminalPredictiveEchoPrefsKey = 'terminal_predictive_echo';
+const kTerminalProgramNotificationsPrefsKey = 'terminal_program_notifications';
+const kTerminalFinishedNotificationsPrefsKey =
+    'terminal_finished_notifications';
+const kTerminalQuietNotificationsPrefsKey = 'terminal_quiet_notifications';
+const kTerminalNoticeLinesPrefsKey = 'terminal_notice_lines';
 
 /// Dark first, then the light ones - several are the light flavour of a dark
 /// scheme above (Tokyo Night Day, Alucard, Latte), which is why they are
@@ -104,6 +109,35 @@ class TerminalSettings {
     fallback: true,
   );
 
+  /// Shows what a program asks the terminal to announce - Claude Code done
+  /// or waiting, `termphin notify` at the end of a build - as a system
+  /// notification, when its session is not the one on screen.
+  final programNotifications = Setting.boolean(
+    kTerminalProgramNotificationsPrefsKey,
+    fallback: true,
+  );
+
+  /// Shows a command the agent saw run for a long time as finished, when its
+  /// session is not the one on screen.
+  final finishedNotifications = Setting.boolean(
+    kTerminalFinishedNotificationsPrefsKey,
+    fallback: true,
+  );
+
+  /// Shows a program the agent saw stop and wait as possibly needing the
+  /// user, when its session is not the one on screen.
+  final quietNotifications = Setting.boolean(
+    kTerminalQuietNotificationsPrefsKey,
+    fallback: true,
+  );
+
+  /// Whether the agent's notifications quote the last line a command printed,
+  /// which then passes through the relay and shows on the lock screen.
+  final noticeLines = Setting.boolean(
+    kTerminalNoticeLinesPrefsKey,
+    fallback: true,
+  );
+
   final fontFamily = Setting.text(
     kTerminalFontFamilyPrefsKey,
     fallback: 'HackNerdFontMono',
@@ -118,6 +152,10 @@ class TerminalSettings {
     cursorStyle,
     cursorBlink,
     predictiveEcho,
+    programNotifications,
+    finishedNotifications,
+    quietNotifications,
+    noticeLines,
     fontFamily,
   ];
 

@@ -132,7 +132,33 @@
 				<string>termphin</string>
 			</array>
 		</dict>
+		<!-- Google sign-in returns through the iOS client's reversed id. It
+		     comes from ios/Flutter/Firebase.xcconfig, which
+		     scripts/firebase_config.sh writes from the config outside the
+		     repository; a build without it has no Google sign-in. -->
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>dev.termphin.termphin.google</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>$(GOOGLE_REVERSED_CLIENT_ID)</string>
+			</array>
+		</dict>
 	</array>
+	<key>FIREBASE_ANALYTICS_COLLECTION_ENABLED</key>
+	<false/>
+	<key>GOOGLE_ANALYTICS_DEFAULT_ALLOW_AD_PERSONALIZATION_SIGNALS</key>
+	<false/>
+	<key>GOOGLE_ANALYTICS_IDFV_COLLECTION_ENABLED</key>
+	<false/>
+	<key>FirebaseAutomaticScreenReportingEnabled</key>
+	<false/>
+	<key>FirebaseCrashlyticsCollectionEnabled</key>
+	<false/>
+	<key>FirebaseMessagingAutoInitEnabled</key>
+	<false/>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>https</string>

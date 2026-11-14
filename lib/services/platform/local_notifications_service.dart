@@ -27,6 +27,27 @@ class LocalNotificationsService {
   static const _sessionDroppedId = 4103;
 
   static const _sessionChannelId = 'session_alerts';
+  static const _terminalChannelId = 'terminal_alerts';
+
+  /// Notification ids for terminal alerts start here, one per session, so a
+  /// session's newest replaces its last instead of stacking up.
+  static const _terminalAlertBaseId = 5000;
+  static const _sessionPayloadPrefix = 'session:';
+
+  /// Opens the session a tapped notification was about. Set by the app shell
+  /// once it can navigate; a tap that launched the app waits for it.
+  void Function(String sessionId)? get onOpenSession => _onOpenSession;
+  set onOpenSession(void Function(String sessionId)? handler) {
+    _onOpenSession = handler;
+    final pending = _pendingSessionId;
+    if (handler != null && pending != null) {
+      _pendingSessionId = null;
+      handler(pending);
+    }
+  }
+
+  void Function(String sessionId)? _onOpenSession;
+  String? _pendingSessionId;
 
   final _plugin = FlutterLocalNotificationsPlugin();
 
@@ -46,22 +67,73 @@ class LocalNotificationsService {
 
   /// Nothing is requested here. Every `request*Permission` is off, so the
   /// prompt is raised by the row the user tapped rather than by a launch they
-  /// did not ask a question of.
+  /// did not ask a question of. Called at startup, so a plugin that cannot
+  /// start leaves the app without notifications rather than failing it.
   Future<void> init() async {
     if (!isAndroidPlatform && !isIOSPlatform) return;
     if (_initialized) return;
     _initialized = true;
-    await _plugin.initialize(
-      settings: const InitializationSettings(
-        android: AndroidInitializationSettings('ic_stat_termphin'),
-        iOS: DarwinInitializationSettings(
-          requestAlertPermission: false,
-          requestSoundPermission: false,
-          requestBadgePermission: false,
+    try {
+      await _plugin.initialize(
+        settings: const InitializationSettings(
+          android: AndroidInitializationSettings('ic_stat_termphin'),
+          iOS: DarwinInitializationSettings(
+            requestAlertPermission: false,
+            requestSoundPermission: false,
+            requestBadgePermission: false,
+          ),
         ),
+        onDidReceiveNotificationResponse: (response) =>
+            _openFromPayload(response.payload),
+      );
+      final launch = await _plugin.getNotificationAppLaunchDetails();
+      if (launch?.didNotificationLaunchApp ?? false) {
+        _openFromPayload(launch!.notificationResponse?.payload);
+      }
+    } catch (_) {}
+  }
+
+  void _openFromPayload(String? payload) {
+    if (payload == null || !payload.startsWith(_sessionPayloadPrefix)) return;
+    final sessionId = payload.substring(_sessionPayloadPrefix.length);
+    final handler = _onOpenSession;
+    if (handler == null) {
+      _pendingSessionId = sessionId;
+    } else {
+      handler(sessionId);
+    }
+  }
+
+  /// Posts what a program in [sessionId] asked the terminal to announce.
+  /// Tapping it opens that session.
+  Future<void> showTerminalAlert({
+    required String sessionId,
+    required String title,
+    required String body,
+  }) async {
+    if (!isAndroidPlatform && !isIOSPlatform) return;
+    await _show(
+      id: terminalAlertId(sessionId),
+      title: title,
+      body: body,
+      payload: '$_sessionPayloadPrefix$sessionId',
+      details: NotificationDetails(
+        android: AndroidNotificationDetails(
+          _terminalChannelId,
+          t.notifications.terminalChannelName,
+          channelDescription: t.notifications.terminalChannelDescription,
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: const DarwinNotificationDetails(presentBadge: false),
       ),
     );
   }
+
+  /// The notification id of [sessionId]'s alerts: the same id every time,
+  /// so the newest replaces the last.
+  static int terminalAlertId(String sessionId) =>
+      _terminalAlertBaseId + (sessionId.hashCode & 0xfff);
 
   Future<bool> hasPermission() async {
     if (isIOSPlatform) {
@@ -147,6 +219,7 @@ class LocalNotificationsService {
     required int id,
     required String title,
     required String body,
+    String? payload,
     NotificationDetails? details,
   }) async {
     await init();
@@ -156,6 +229,7 @@ class LocalNotificationsService {
         id: id,
         title: title,
         body: body,
+        payload: payload,
         notificationDetails:
             details ??
             const NotificationDetails(

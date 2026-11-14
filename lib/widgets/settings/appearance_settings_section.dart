@@ -7,9 +7,11 @@ import '../../services/settings/theme_settings.dart';
 import '../../theme/theme.dart';
 import '../ui/app_card.dart';
 import '../ui/section_header.dart';
-import '../ui/settings_controls.dart';
+import '../ui/segmented_switch.dart';
 
-/// Appearance section: the app's light/dark/system theme mode.
+/// Appearance section: the app's light/dark/system theme mode, as a
+/// segmented switch - three short choices read at a glance, where a
+/// dropdown hid two of them behind a tap.
 class AppearanceSettingsSection extends ConsumerWidget {
   const AppearanceSettingsSection({super.key});
 
@@ -29,11 +31,24 @@ class AppearanceSettingsSection extends ConsumerWidget {
         const SizedBox(height: AppTheme.space10),
         AppCard(
           padding: const EdgeInsets.all(AppTheme.space14),
-          child: SettingsDropdownField<AppThemeMode>(
-            label: t.settings.themeMode,
-            value: mode,
-            labels: themeModeLabels,
-            onChanged: (v) => ref.read(themeModeProvider.notifier).setMode(v),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                t.settings.themeMode,
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+              const SizedBox(height: AppTheme.space10),
+              SegmentedSwitch<AppThemeMode>(
+                segments: [
+                  for (final entry in themeModeLabels.entries)
+                    SwitchSegment(value: entry.key, label: entry.value),
+                ],
+                selected: mode,
+                onChanged: (v) =>
+                    ref.read(themeModeProvider.notifier).setMode(v),
+              ),
+            ],
           ),
         ),
       ],

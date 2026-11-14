@@ -28,6 +28,9 @@ enum BadgeTone {
 
   /// A state that failed, tinted in the error colour.
   error,
+
+  /// Pro, in gold: the plan pill and anything that needs Pro.
+  pro,
 }
 
 /// The small pill beside a title: "New", "Default", a count, a status.
@@ -80,6 +83,7 @@ class AppBadge extends StatelessWidget {
       BadgeTone.success => (colors.successHighlight, colors.success),
       BadgeTone.warning => (colors.warningHighlight, colors.warning),
       BadgeTone.error => (colors.errorHighlight, colors.error),
+      BadgeTone.pro => (colors.goldHighlight, colors.gold),
     };
     final text = Text(
       label,

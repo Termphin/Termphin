@@ -238,7 +238,10 @@ class _MainShellState extends ConsumerState<MainShell>
   /// landscape, where the strip has moved into a side rail, or with the
   /// strip moved to the bottom, which leaves nothing up top to hang off. Never called from build - the overlay listening on
   /// it is outside this element tree and would be marked dirty mid-build.
+  /// Also tells the session manager whether the terminal is what is on
+  /// screen, which is what decides if a program's notification is news.
   void _syncNotificationAnchor() {
+    _manager.terminalOnScreen = _terminalVisible;
     appNotificationAnchor.value = _terminalVisible
         ? (isWideLayout(context) ||
                   tabBarPositionSetting.value == TabBarPosition.bottom
@@ -552,7 +555,7 @@ class _SessionDock extends ConsumerWidget {
                       ),
                       const SizedBox(width: AppTheme.space4),
                       Icon(
-                        PhosphorIconsFill.caretRight,
+                        PhosphorIconsRegular.caretRight,
                         size: AppTheme.icon14,
                         color: context.colors.textTertiary,
                       ),
@@ -591,6 +594,13 @@ class _AnimatedNavBody extends StatelessWidget {
   }
 }
 
+/// The tab bar on a phone: a capsule floating clear of the screen edges,
+/// with the open tab as a lighter segment that slides to whichever tab is
+/// picked - the same recessed-track-and-thumb look as the app's segmented
+/// switches, so the two read as one family.
+///
+/// It sits in the scaffold's bottom slot rather than over the content, so no
+/// list has to leave room under its last row for it.
 class _BottomNavBar extends StatelessWidget {
   const _BottomNavBar({
     super.key,
@@ -603,52 +613,76 @@ class _BottomNavBar extends StatelessWidget {
   final ValueChanged<int> onSelected;
   final List<_NavItemData> items;
 
+  static const _inset = AppTheme.space4;
+
   @override
   Widget build(BuildContext context) {
-    const itemGap = AppTheme.space8;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: context.colors.backgroundPrimary,
-        border: Border(top: BorderSide(color: context.colors.surfaceBorder)),
-      ),
+    final colors = context.colors;
+    return ColoredBox(
+      color: colors.backgroundPrimary,
       child: SafeArea(
         top: false,
+        minimum: const EdgeInsets.only(bottom: AppTheme.space8),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(
-            AppTheme.space10,
-            AppTheme.space8,
-            AppTheme.space10,
-            AppTheme.space10,
+            AppTheme.space16,
+            AppTheme.space6,
+            AppTheme.space16,
+            AppTheme.space4,
           ),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final totalGap = itemGap * (items.length - 1);
-              final itemWidth =
-                  (constraints.maxWidth - totalGap) / items.length;
-
-              return SizedBox(
-                height: 62,
-                child: Row(
+          child: Container(
+            height: AppTheme.bottomBarHeight,
+            padding: const EdgeInsets.all(_inset),
+            decoration: BoxDecoration(
+              color: colors.surfaceCard,
+              borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+              border: Border.all(
+                color: colors.surfaceBorder,
+                width: AppTheme.hairline,
+              ),
+              boxShadow: AppTheme.floatingShadow,
+            ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final itemWidth = constraints.maxWidth / items.length;
+                return Stack(
                   children: [
-                    for (int i = 0; i < items.length; i++) ...[
-                      if (i > 0) const SizedBox(width: itemGap),
-                      SizedBox(
-                        width: itemWidth,
-                        child: _BottomNavItem(
-                          data: items[i],
-                          selected: currentIndex == i,
-                          onTap: () {
-                            HapticFeedback.selectionClick();
-                            onSelected(i);
-                          },
+                    AnimatedPositioned(
+                      duration: AppTheme.interactiveDuration,
+                      curve: AppTheme.interactiveCurve,
+                      left: itemWidth * currentIndex,
+                      top: 0,
+                      bottom: 0,
+                      width: itemWidth,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: colors.surfaceOffset2,
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.radiusPill,
+                          ),
                         ),
                       ),
-                    ],
+                    ),
+                    Row(
+                      children: [
+                        for (int i = 0; i < items.length; i++)
+                          SizedBox(
+                            width: itemWidth,
+                            child: _BottomNavItem(
+                              data: items[i],
+                              selected: currentIndex == i,
+                              onTap: () {
+                                HapticFeedback.selectionClick();
+                                onSelected(i);
+                              },
+                            ),
+                          ),
+                      ],
+                    ),
                   ],
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -668,6 +702,8 @@ class _NavItemData {
   final IconData selectedIcon;
 }
 
+/// One tab: its icon over its label, in the accent and bolder when open.
+/// The segment behind the open one is the bar's, so it can slide.
 class _BottomNavItem extends StatelessWidget {
   const _BottomNavItem({
     required this.data,
@@ -681,48 +717,34 @@ class _BottomNavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: context.colors.backgroundPrimary.invisible,
-      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-      child: InkWell(
+    final colors = context.colors;
+    final color = selected ? colors.primary : colors.textSecondary;
+    return Semantics(
+      selected: selected,
+      button: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-        splashFactory: NoSplash.splashFactory,
-        splashColor: context.colors.primary.invisible,
-        highlightColor: context.colors.primary.invisible,
-        hoverColor: context.colors.primary.invisible,
-        child: AnimatedContainer(
-          duration: AppTheme.interactiveDuration,
-          curve: AppTheme.interactiveCurve,
-          padding: const EdgeInsets.symmetric(vertical: AppTheme.space8),
-          decoration: BoxDecoration(
-            color: selected
-                ? context.colors.primaryHighlight
-                : context.colors.primaryHighlight.invisible,
-            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                selected ? data.selectedIcon : data.icon,
-                size: AppTheme.icon22,
-                color: selected
-                    ? context.colors.primary
-                    : context.colors.textSecondary,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              selected ? data.selectedIcon : data.icon,
+              size: AppTheme.icon22,
+              color: color,
+            ),
+            const SizedBox(height: AppTheme.space2),
+            Text(
+              data.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: colors.uiSmall.copyWith(
+                fontSize: AppTheme.font11,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                color: selected ? colors.textPrimary : colors.textSecondary,
               ),
-              const SizedBox(height: AppTheme.space4),
-              Text(
-                data.label,
-                style: context.colors.uiSmall.copyWith(
-                  fontSize: AppTheme.font11,
-                  color: selected
-                      ? context.colors.primary
-                      : context.colors.textSecondary,
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

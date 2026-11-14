@@ -218,6 +218,33 @@ void main() {
     expect(manager.activeCount, 0);
   });
 
+  test(
+    'a master that has not spoken yet is not taken for an old one',
+    () async {
+      await manager.startSession(profileFixture(), sessionId: 'quiet');
+      await Future<void>.delayed(Duration.zero);
+
+      final session = manager.getSession('quiet')!;
+      expect(session.masterChecked, isFalse);
+      expect(session.masterVersion, isNull);
+    },
+  );
+
+  test(
+    'without a replay the version still comes from the first output',
+    () async {
+      backend
+        ..markerWithoutReplay = true
+        ..masterVersion = '0.17.0';
+      await manager.startSession(profileFixture(), sessionId: 'plain-attach');
+      await Future<void>.delayed(Duration.zero);
+
+      final session = manager.getSession('plain-attach')!;
+      expect(session.masterChecked, isTrue);
+      expect(session.masterVersion, '0.17.0');
+    },
+  );
+
   test('a session the agent keeps is watched as resumable', () async {
     await manager.startSession(profileFixture(), sessionId: 'kept');
 

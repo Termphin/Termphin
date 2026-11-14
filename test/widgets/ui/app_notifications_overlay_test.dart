@@ -78,4 +78,25 @@ void main() {
     expect(find.text('failed'), findsOneWidget);
     expect(find.text('details'), findsOneWidget);
   });
+
+  testWidgets('raised from a navigator key it shows on that navigator', (
+    tester,
+  ) async {
+    final navigatorKey = GlobalKey<NavigatorState>();
+    await tester.pumpWidget(
+      MaterialApp(
+        navigatorKey: navigatorKey,
+        home: const Scaffold(body: SizedBox.shrink()),
+      ),
+    );
+
+    AppNotifications.show(
+      navigatorKey.currentContext!,
+      'from outside any route',
+      kind: AppNotificationKind.info,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('from outside any route'), findsOneWidget);
+  });
 }

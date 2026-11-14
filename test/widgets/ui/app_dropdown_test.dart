@@ -73,6 +73,39 @@ void main() {
     });
   });
 
+  testWidgets('the menu button draws no underline', (tester) async {
+    await pumpTestApp(
+      tester,
+      Scaffold(
+        body: Center(
+          child: AppActionDropdown<int>(
+            items: const [
+              DropdownItem(
+                value: 1,
+                intrinsicHeight: true,
+                child: AppDropdownItem(label: 'First'),
+              ),
+            ],
+            onSelected: (_) {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final hairlines = find.byWidgetPredicate(
+      (widget) =>
+          widget is Container &&
+          widget.decoration is BoxDecoration &&
+          (widget.decoration! as BoxDecoration).border is Border &&
+          ((widget.decoration! as BoxDecoration).border! as Border)
+                  .bottom
+                  .style !=
+              BorderStyle.none,
+    );
+    expect(hairlines, findsNothing);
+  });
+
   testWidgets('a menu opened by the left edge keeps clear of it', (
     tester,
   ) async {
