@@ -38,14 +38,9 @@
 
 | Platform | Status |
 |---|---|
-| Android | [Google Play](https://play.google.com/store/apps/details?id=dev.termphin.termphin), or the APK from [Releases](../../releases/latest) |
+| Android | [Google Play](https://play.google.com/store/apps/details?id=dev.termphin.termphin) |
 | iOS | [App Store](https://apps.apple.com/app/id6813191168) |
 | macOS, Windows, Linux | Work in progress |
-
-The APK on Releases is signed with a different key than the Google Play build,
-so one does not update the other - uninstall first to switch. Each APK comes
-with a SHA-256 checksum and a build provenance attestation:
-`gh attestation verify termphin-<version>.apk -R Termphin/Termphin`.
 
 ## Built for productivity
 

@@ -35,17 +35,21 @@ symbol files to keep or `flutter symbolize` to run.
 
 ## What a release ships
 
-A GitHub release carries `termphin-<version>.apk` and `termphin-<version>.aab`,
-each with a `.sha256` file and a build provenance attestation
-(`gh attestation verify <file> -R Termphin/Termphin` proves it was built by
-this repository's workflow from the tagged commit). The iOS build goes to
-TestFlight only - an App Store-signed IPA installs nowhere else, so it is not
-attached.
+A GitHub release carries the release notes and no files: each build goes
+straight to its store's testing. The Android bundle is released on Play's
+closed testing track (`alpha`) by `scripts/play_upload.py`, with the version's
+entry in `assets/release_notes.yaml` as its notes (one line per item, cut at
+Play's 500 characters); the iOS build goes to TestFlight. Promoting either to
+production is done by hand in Play Console and App Store Connect.
 
-The APK is signed with the upload key, while Google Play re-signs what it
-distributes with the app signing key it holds. The two installs therefore do
-not update each other: someone moving between the GitHub APK and the Play
-build has to uninstall first.
+`play_upload.py` signs in as the service account whose key is the
+`GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` secret (locally
+`~/.config/termphin/google-service-account.json`). In Play Console give that
+account "Release apps to testing tracks" and nothing that reaches production,
+so a leaked key cannot ship to users. Run by hand it uploads a
+locally built bundle the same way:
+`python3 scripts/play_upload.py build/app/outputs/bundle/release/app-release.aab 1.15.0 alpha`
+(needs `google-auth` and `pyyaml`).
 
 ## Release workflow
 
@@ -53,12 +57,12 @@ build has to uninstall first.
 tag - a dotted version matching `pubspec.yaml`, on a commit that is on
 `main` - and runs `flutter analyze` and the tests. Then it creates a **draft**
 release with notes rendered from that version's entry in
-`assets/release_notes.yaml` (plus how to verify the APK), the Android and iOS
-builds run in parallel, and only when every build succeeded is the draft
-published. A failed build leaves a draft to delete, never a public release
-without its files. It fails rather than guessing when the entry is
-missing or the tag is not a dotted number, so give the `Unreleased` entry its
-real number before tagging. Release tags are protected: once pushed, a `v*`
+`assets/release_notes.yaml`, the Android and iOS builds run in parallel, each
+ending in its store's testing, and only when every build succeeded is the
+draft published. A failed build leaves a draft to delete, never a public
+release for a build that did not ship. It fails rather than guessing when the
+entry is missing or the tag is not a dotted number, so give the `Unreleased`
+entry its real number before tagging. Release tags are protected: once pushed, a `v*`
 tag cannot be moved or deleted, so a broken release is fixed with the next
 version (or the next `+N`), not by re-tagging.
 
