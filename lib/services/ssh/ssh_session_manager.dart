@@ -320,8 +320,16 @@ class SshSessionManager extends ChangeNotifier {
 
   /// Whether the terminal is what is on screen rather than the machine list
   /// or settings - with [activeSessionId], which session its user is looking
-  /// at. Kept by `MainShell`.
-  bool terminalOnScreen = false;
+  /// at. Kept by `MainShell`. A change is announced to listeners, so what
+  /// remembers which session was last looked at sees the user leave the
+  /// terminal for the machine list too.
+  bool get terminalOnScreen => _terminalOnScreen;
+  bool _terminalOnScreen = false;
+  set terminalOnScreen(bool value) {
+    if (value == _terminalOnScreen) return;
+    _terminalOnScreen = value;
+    notifyListeners();
+  }
 
   /// Takes what programs in any session ask the terminal to announce. Set by
   /// `main`, which decides what of it reaches the system.

@@ -55,7 +55,7 @@ Future<void> main() async {
 
   await SshSessionManager.instance.init();
   _bindConnectionPrompts();
-  _bindTerminalAlerts();
+  final alerts = _bindTerminalAlerts();
   await ForegroundNotificationService.instance.init();
   _bindForegroundService();
   await NetworkMonitor.instance.init();
@@ -65,6 +65,7 @@ Future<void> main() async {
   AppLifecycleListener(
     onResume: _onResume,
     onPause: () => SshSessionManager.instance.setForeground(false),
+    onStateChange: (_) => alerts.visibilityChanged(),
   );
 
   await AnalyticsService.instance.init();
@@ -80,7 +81,7 @@ Future<void> main() async {
 /// the one on screen; see [TerminalAlerts]. The notifications service is
 /// started here rather than on first use so a tap that launched the app is
 /// still there to be read.
-void _bindTerminalAlerts() {
+TerminalAlerts _bindTerminalAlerts() {
   final manager = SshSessionManager.instance;
   final notifications = LocalNotificationsService.instance;
   unawaited(notifications.init());
@@ -113,6 +114,8 @@ void _bindTerminalAlerts() {
         : session.profile.name,
     notification: notification,
   );
+  manager.addListener(alerts.visibilityChanged);
+  return alerts;
 }
 
 /// Hands every machine that finishes connecting to [PushService], which

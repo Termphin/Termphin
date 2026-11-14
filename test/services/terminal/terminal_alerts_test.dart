@@ -43,7 +43,30 @@ void main() {
     ),
   );
 
+  void visibilityChanged() =>
+      withClock(Clock.fixed(now), alerts.visibilityChanged);
+
   const done = TerminalNotification(title: 'Claude is waiting for your input');
+
+  const quietNotice = TerminalNotification(
+    title: 'Waiting',
+    body: 'Do you want to proceed? [y/N]',
+    kind: TerminalNoticeKind.quiet,
+    plain: 'after 35s',
+  );
+
+  const finishedNotice = TerminalNotification(
+    title: 'Complete!',
+    body: 'Build ok',
+    kind: TerminalNoticeKind.finished,
+    plain: 'after 35s',
+  );
+
+  void leaveFront() {
+    visibilityChanged();
+    active = 'back';
+    visibilityChanged();
+  }
 
   test('a session in another tab is announced, under its machine', () {
     handle('back', done);
@@ -158,5 +181,66 @@ void main() {
       [for (final alert in posted) alert.sessionId],
       ['back', 'other', 'back'],
     );
+  });
+
+  test('a quiet notice from a session left 5 s ago is not news', () {
+    visibilityChanged();
+    leaveFront();
+    now = now.add(const Duration(seconds: 5));
+
+    handle('front', quietNotice);
+
+    expect(posted, isEmpty);
+  });
+
+  test('a quiet notice from a session left 12 s ago is posted', () {
+    visibilityChanged();
+    leaveFront();
+    now = now.add(const Duration(seconds: 12));
+
+    handle('front', quietNotice);
+
+    expect(posted.single.sessionId, 'front');
+  });
+
+  test('a finished notice from a session left 2 s ago is not news', () {
+    visibilityChanged();
+    leaveFront();
+    now = now.add(const Duration(seconds: 2));
+
+    handle('front', finishedNotice);
+
+    expect(posted, isEmpty);
+  });
+
+  test('a finished notice from a session left 6 s ago is posted', () {
+    visibilityChanged();
+    leaveFront();
+    now = now.add(const Duration(seconds: 6));
+
+    handle('front', finishedNotice);
+
+    expect(posted.single.sessionId, 'front');
+  });
+
+  test('a program notification from a session left 2 s ago is posted', () {
+    visibilityChanged();
+    leaveFront();
+    now = now.add(const Duration(seconds: 2));
+
+    handle('front', const TerminalNotification(title: 'Build', body: 'failed'));
+
+    expect(posted.single.sessionId, 'front');
+  });
+
+  test('forgetting a session clears when it was last seen', () {
+    visibilityChanged();
+    leaveFront();
+    alerts.forget('front');
+    now = now.add(const Duration(seconds: 2));
+
+    handle('front', finishedNotice);
+
+    expect(posted.single.sessionId, 'front');
   });
 }

@@ -17,6 +17,12 @@ typedef TerminalAlert = ({String sessionId, String title, String body});
 /// A notification with only a title says what happened but not where, so
 /// the machine's name becomes the title and the program's words the body.
 ///
+/// A stop the user watched and then walked away from is not news either: a
+/// session last on screen moments ago is held back for [quietSeen] (the
+/// agent's quiet notice comes about 8 s after output stops) or
+/// [finishedSeen] (its finished notice comes up to about 2 s after a command
+/// ends). A program's own notifications are not held back that way.
+///
 /// [allows] decides per notification: the agent's own come in two kinds with
 /// their own switches, a program's own have one. [quoteLines] decides
 /// whether the agent's notifications keep the line of output they quote.
@@ -28,6 +34,8 @@ class TerminalAlerts {
     required this.isForeground,
     required this.activeSessionId,
     this.quietPeriod = const Duration(seconds: 3),
+    this.quietSeen = const Duration(seconds: 10),
+    this.finishedSeen = const Duration(seconds: 4),
   });
 
   final void Function(TerminalAlert alert) post;
@@ -36,8 +44,22 @@ class TerminalAlerts {
   final bool Function() isForeground;
   final String? Function() activeSessionId;
   final Duration quietPeriod;
+  final Duration quietSeen;
+  final Duration finishedSeen;
 
   final _lastPosted = <String, DateTime>{};
+  final _lastSeen = <String, DateTime>{};
+  String? _visible;
+
+  /// Notes what is on screen now, after the app or the tabs changed. The
+  /// session that was on screen until now is stamped as seen at this moment.
+  void visibilityChanged() {
+    final visible = isForeground() ? activeSessionId() : null;
+    if (visible == _visible) return;
+    final previous = _visible;
+    if (previous != null) _lastSeen[previous] = clock.now();
+    _visible = visible;
+  }
 
   void handle({
     required String sessionId,
@@ -47,6 +69,11 @@ class TerminalAlerts {
     if (!allows(notification)) return;
     if (isForeground() && activeSessionId() == sessionId) return;
     final now = clock.now();
+    final kind = notification.kind;
+    if (kind != null) {
+      final seen = _lastSeen[sessionId];
+      if (seen != null && now.difference(seen) < _seenWindow(kind)) return;
+    }
     final last = _lastPosted[sessionId];
     if (last != null && now.difference(last) < quietPeriod) return;
     _lastPosted[sessionId] = now;
@@ -64,6 +91,14 @@ class TerminalAlerts {
     ));
   }
 
+  Duration _seenWindow(TerminalNoticeKind kind) => switch (kind) {
+    TerminalNoticeKind.quiet => quietSeen,
+    TerminalNoticeKind.finished => finishedSeen,
+  };
+
   /// Forgets [sessionId], whose tab is gone.
-  void forget(String sessionId) => _lastPosted.remove(sessionId);
+  void forget(String sessionId) {
+    _lastPosted.remove(sessionId);
+    _lastSeen.remove(sessionId);
+  }
 }
