@@ -114,6 +114,44 @@ void main() {
     expect(cloud.fetches, before + 1);
   });
 
+  test('a machine another device deleted leaves this one\'s list too', () async {
+    giveKey();
+    final snippet = SyncRecord(
+      kind: 'snippet',
+      id: 's1',
+      data: const {'name': 'uptime'},
+      updatedAt: DateTime(2026),
+    );
+    final here = FakeSyncLocal([snippet]);
+    final mine = SyncCoordinator(
+      service: device(vault, here),
+      reload: () async => reloads++,
+      localDelay: delay,
+      remoteDelay: delay,
+      resumeGap: const Duration(hours: 1),
+    );
+    addTearDown(mine.dispose);
+    await mine.start();
+    await wait(delay * 2);
+    final agreedHere = {
+      for (final key in (await SharedPreferences.getInstance()).getKeys())
+        key: (await SharedPreferences.getInstance()).get(key)!,
+    };
+
+    final other = device(
+      FakeSyncVault()..keys['u1'] = Uint8List(32),
+      FakeSyncLocal(),
+    );
+    await other.syncNow();
+    SharedPreferences.setMockInitialValues(agreedHere);
+    final before = reloads;
+    cloud.remoteChanges.add(null);
+    await wait(delay * 2);
+
+    expect(here.records, isEmpty);
+    expect(reloads, before + 1);
+  });
+
   test('a sync asked for during another runs once more after it', () async {
     giveKey();
     await coordinator.start();

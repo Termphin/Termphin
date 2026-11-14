@@ -24,11 +24,12 @@ enum SyncActivity {
 /// - [remoteDelay] after another device writes, while this one is open.
 ///
 /// Runs never overlap: a reason that arrives during one queues exactly one
-/// more after it. What a run pulls in is handed to [reload], and the edits
-/// that reload causes are not mistaken for the user's own. An account that
-/// loses Pro, or a device that forgets its key, stops the whole thing
-/// quietly into [SyncActivity.paused]; sync turned off or rekeyed on
-/// another device stops it and says so in [ended]; a network error just
+/// more after it. What a run pulls in or deletes here is handed to
+/// [reload], and the edits that reload causes are not mistaken for the
+/// user's own. An account that loses Pro, or a device that forgets its
+/// key, stops the whole thing quietly into [SyncActivity.paused]; sync
+/// turned off or rekeyed on another device stops it and says so in
+/// [ended]; a network error just
 /// waits for the next reason.
 class SyncCoordinator {
   SyncCoordinator({
@@ -151,7 +152,7 @@ class SyncCoordinator {
         _again = false;
         activity.value = SyncActivity.syncing;
         report = await _service.syncNow();
-        if (report.pulled > 0) {
+        if (report.pulled > 0 || report.deletedHere > 0) {
           _reloading = true;
           try {
             await _reload();
