@@ -16,7 +16,17 @@ without it: such a build has no analytics, crash reports, accounts or push.
 The directory holds `dart-defines.json` (passed as `--dart-define-from-file`),
 `google-services.json` and `GoogleService-Info.plist`;
 `scripts/firebase_config.sh` copies the last two into the tree, where they are
-git-ignored. **None of it is ever committed.**
+git-ignored, and writes `ios/Flutter/Firebase.xcconfig` with the reversed iOS
+client id, the URL scheme Google sign-in returns through. **None of it is ever
+committed.** `dart-defines.json` also carries RevenueCat's public SDK keys
+(`REVENUECAT_ANDROID_KEY`, `REVENUECAT_IOS_KEY`); without them the build sells
+nothing. RevenueCat's secret API key and the webhook's `Authorization` value
+live beside it in `~/.config/termphin/` and never go into a build.
+
+The iOS app signs with the `Termphin` App Store profile, which carries Push
+Notifications and Sign in with Apple (`ios/Runner/Runner.entitlements`). A
+capability added to the bundle id invalidates the profile: make a new one and
+put it into the `IOS_PROVISIONING_PROFILE_BASE64` secret.
 
 **Builds are not obfuscated.** The source is public, so obfuscation would hide
 nothing, and an unobfuscated build keeps readable Dart stack traces: a crash
