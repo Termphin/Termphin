@@ -1216,6 +1216,9 @@ class Translations$settings$en {
 	/// en: 'Show typing instantly on slow connections'
 	String get predictiveEchoSubtitle => 'Show typing instantly on slow connections';
 
+	/// en: 'Finished commands, agents that need you, and your servers'
+	String get notificationsRowSubtitle => 'Finished commands, agents that need you, and your servers';
+
 	/// en: 'Notifications from programs'
 	String get programNotifications => 'Notifications from programs';
 
@@ -4819,6 +4822,7 @@ extension on Translations {
 			'settings.cursorBlink' => 'Blink',
 			'settings.predictiveEcho' => 'Predictive echo',
 			'settings.predictiveEchoSubtitle' => 'Show typing instantly on slow connections',
+			'settings.notificationsRowSubtitle' => 'Finished commands, agents that need you, and your servers',
 			'settings.programNotifications' => 'Notifications from programs',
 			'settings.programNotificationsSubtitle' => 'When a program in another session asks for one, like Claude Code finishing',
 			'settings.finishedNotifications' => 'When a long command finishes',
@@ -4961,9 +4965,9 @@ extension on Translations {
 			'settings.errorReports' => 'Error reports',
 			'settings.errorReportsSubtitle' => 'Errors Termphin ran into, to send with a bug report',
 			'settings.feedbackEmailFailed' => 'Could not open your mail app.',
-			'settings.about' => 'About',
 			_ => null,
 		} ?? switch (path) {
+			'settings.about' => 'About',
 			'settings.aboutTagline' => 'SSH client',
 			'settings.aboutVersion' => ({required Object version}) => 'Version ${version}',
 			'settings.releaseNotes' => 'Release notes',
@@ -5475,9 +5479,9 @@ extension on Translations {
 			'onboarding.unlockTitle' => 'Unlock your machines',
 			'onboarding.unlockBody' => 'Your account syncs your machines, keys and snippets. Enter your sync passphrase to bring them to this device.',
 			'onboarding.unlockAction' => 'Unlock',
-			'onboarding.notNow' => 'Not now',
 			_ => null,
 		} ?? switch (path) {
+			'onboarding.notNow' => 'Not now',
 			'serverGuide.title' => 'Where to get a server',
 			'serverGuide.computerTitle' => 'Your own computer',
 			'serverGuide.computerBody' => 'Turn on SSH: Remote Login on a Mac, OpenSSH Server on Windows or Linux. Then add its address here.',
