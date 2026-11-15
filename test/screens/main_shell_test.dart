@@ -9,13 +9,11 @@ import 'package:termphin/providers/terminal_overlay_provider.dart';
 import 'package:termphin/screens/main_shell.dart';
 import 'package:termphin/screens/terminal/terminal_screen.dart';
 import 'package:termphin/services/settings/sidebar_settings.dart';
-import 'package:termphin/services/settings/tab_bar_settings.dart';
 import 'package:termphin/services/ssh/ssh_session_manager.dart';
 import 'package:termphin/theme/theme.dart';
 import 'package:termphin/widgets/profiles/profile_avatar.dart';
 import 'package:termphin/widgets/shell/nav_rail.dart';
 import 'package:termphin/widgets/terminal/floating_action_dock.dart';
-import 'package:termphin/widgets/ui/app_notifications.dart';
 import 'package:termphin/widgets/ui/fade_over_color.dart';
 
 import '../support/fakes.dart';
@@ -203,45 +201,6 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     expect(terminalOpacity(tester), 1.0);
-  });
-
-  testWidgets('toasts hang from the top edge once the tabs are at the bottom', (
-    tester,
-  ) async {
-    addTearDown(() => tabBarPositionSetting.set(TabBarPosition.top));
-    final profile = profileFixture();
-
-    final backend = FakeSshBackend();
-    final fakeManager = SshSessionManager.test(
-      remoteAgentService: FakeRemoteAgentService(backend),
-      serviceFactory: backend.createService,
-    );
-    addTearDown(fakeManager.dispose);
-    fakeManager.adoptRemoteSession(profile, 'devbox');
-    final container = ProviderContainer.test(
-      overrides: [
-        sshSessionManagerProvider.overrideWithValue(fakeManager),
-        profileStorageProvider.overrideWithValue(FakeProfileStorage([profile])),
-      ],
-    );
-    await container.read(profilesProvider.notifier).loadProfiles();
-
-    await pumpTestApp(tester, const MainShell(), container: container);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 250));
-    await tester.tap(find.text('devbox'));
-    await tester.pump();
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-
-    final strip = terminalTabBarHeight(tester.element(find.byType(MainShell)));
-    expect(appNotificationAnchor.value, strip);
-
-    await tabBarPositionSetting.set(TabBarPosition.bottom);
-    expect(appNotificationAnchor.value, 0, reason: 'nothing up top now');
-
-    await tabBarPositionSetting.set(TabBarPosition.top);
-    expect(appNotificationAnchor.value, strip);
   });
 
   testWidgets('system back closes the action dock before the terminal', (

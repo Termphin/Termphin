@@ -379,8 +379,8 @@ void main() {
       queue.cancel(queue.jobs.last);
       await tester.pump();
       await tester.pump();
-      expect(find.byIcon(PhosphorIconsFill.info), findsOneWidget);
-      expect(find.byIcon(PhosphorIconsFill.xCircle), findsNothing);
+      expect(find.byIcon(PhosphorIconsRegular.info), findsOneWidget);
+      expect(find.byIcon(PhosphorIconsRegular.xCircle), findsNothing);
 
       done.complete((exitCode: 0, stdout: '', stderr: ''));
       await tester.pumpAndSettle();

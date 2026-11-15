@@ -19,6 +19,7 @@ import '../security/aead.dart';
 import '../settings/terminal_settings.dart';
 import '../ssh/remote_agent_service.dart' show powerShellCommandLine;
 import '../ssh/ssh_session_manager.dart';
+import '../terminal/in_app_alerts.dart';
 
 /// Where a server sends what it wants to announce while no phone is
 /// connected: the `relay` function.
@@ -214,19 +215,26 @@ class PushService {
   }
 
   /// A push that arrives with the app open is not shown by the system; it
-  /// goes through the same channel as the terminal's own notifications, and
-  /// tapping it opens the same session.
+  /// goes where the terminal's own notifications go - a card inside the app,
+  /// or the same notification channel - and opening it opens the same
+  /// session.
   void _showInForeground(RemoteMessage message) {
     final notification = message.notification;
     if (notification == null) return;
     final target = relayTarget(message.data);
+    final alert = (
+      sessionId: target == null
+          ? '$kRelayPayloadPrefix:'
+          : '$kRelayPayloadPrefix${target.$1}:${target.$2}',
+      title: notification.title ?? '',
+      body: notification.body ?? '',
+    );
+    if (InAppAlerts.instance.handle(alert)) return;
     unawaited(
       LocalNotificationsService.instance.showTerminalAlert(
-        sessionId: target == null
-            ? '$kRelayPayloadPrefix:'
-            : '$kRelayPayloadPrefix${target.$1}:${target.$2}',
-        title: notification.title ?? '',
-        body: notification.body ?? '',
+        sessionId: alert.sessionId,
+        title: alert.title,
+        body: alert.body,
       ),
     );
   }

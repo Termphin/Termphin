@@ -15,6 +15,14 @@ const kTerminalFinishedNotificationsPrefsKey =
     'terminal_finished_notifications';
 const kTerminalQuietNotificationsPrefsKey = 'terminal_quiet_notifications';
 const kTerminalNoticeLinesPrefsKey = 'terminal_notice_lines';
+const kTerminalOpenAppNoticesPrefsKey = 'terminal_open_app_notices';
+const kTerminalOpenAppNoticeStylePrefsKey = 'terminal_open_app_notice_style';
+
+/// [TerminalSettings.openAppNoticeStyle]: the app's own card.
+const kOpenAppNoticeInApp = 'app';
+
+/// [TerminalSettings.openAppNoticeStyle]: the system's notification.
+const kOpenAppNoticeSystem = 'system';
 
 /// Dark first, then the light ones - several are the light flavour of a dark
 /// scheme above (Tokyo Night Day, Alucard, Latte), which is why they are
@@ -138,6 +146,22 @@ class TerminalSettings {
     fallback: true,
   );
 
+  /// Whether a session that is not on screen notifies at all while
+  /// Termphin is in front. In the background it always does.
+  final openAppNotices = Setting.boolean(
+    kTerminalOpenAppNoticesPrefsKey,
+    fallback: true,
+  );
+
+  /// How [openAppNotices] shows them: [kOpenAppNoticeInApp], the app's own
+  /// card at the top of the screen with a buzz, or [kOpenAppNoticeSystem],
+  /// the system's notification as in the background.
+  final openAppNoticeStyle = Setting.text(
+    kTerminalOpenAppNoticeStylePrefsKey,
+    fallback: kOpenAppNoticeInApp,
+    allowed: const {kOpenAppNoticeInApp, kOpenAppNoticeSystem},
+  );
+
   final fontFamily = Setting.text(
     kTerminalFontFamilyPrefsKey,
     fallback: 'HackNerdFontMono',
@@ -156,6 +180,8 @@ class TerminalSettings {
     finishedNotifications,
     quietNotifications,
     noticeLines,
+    openAppNotices,
+    openAppNoticeStyle,
     fontFamily,
   ];
 

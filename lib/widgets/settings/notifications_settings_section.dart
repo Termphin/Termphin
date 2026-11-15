@@ -24,6 +24,7 @@ import '../ui/app_divider.dart';
 import '../ui/app_notifications.dart';
 import '../ui/new_badge.dart';
 import '../ui/section_header.dart';
+import '../ui/segmented_switch.dart';
 import '../ui/settings_tile.dart';
 
 /// Notifications in Settings: one row to their own screen. There are too
@@ -197,6 +198,7 @@ class _NotificationsSettingsListState
           title: t.settings.noticeLines,
           subtitle: t.settings.noticeLinesSubtitle,
         ),
+        const _OpenAppNotices(),
         if (accounts)
           ListenableBuilder(
             listenable: Listenable.merge([
@@ -299,6 +301,63 @@ class _SeePro extends StatelessWidget {
           color: colors.gold,
         ),
       ],
+    );
+  }
+}
+
+/// Whether a session that is not on screen notifies while Termphin is open,
+/// and under it - only while it does - whether as the app's own card or as
+/// the system's notification.
+class _OpenAppNotices extends StatelessWidget {
+  const _OpenAppNotices();
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Translations.of(context);
+    final enabled = terminalSettings.openAppNotices;
+    final style = terminalSettings.openAppNoticeStyle;
+    return ListenableBuilder(
+      listenable: Listenable.merge([enabled, style]),
+      builder: (context, _) => Column(
+        children: [
+          const AppDivider(),
+          SettingsSwitchTile(
+            title: t.settings.openAppNotices,
+            subtitle: t.settings.openAppNoticesSubtitle,
+            value: enabled.value,
+            onChanged: (on) => unawaited(enabled.set(on)),
+          ),
+          AnimatedSize(
+            duration: AppTheme.motionSlow,
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.topCenter,
+            child: enabled.value
+                ? Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppTheme.space14,
+                      0,
+                      AppTheme.space14,
+                      AppTheme.space14,
+                    ),
+                    child: SegmentedSwitch<String>(
+                      segments: [
+                        SwitchSegment(
+                          value: kOpenAppNoticeInApp,
+                          label: t.settings.openAppNoticeInApp,
+                        ),
+                        SwitchSegment(
+                          value: kOpenAppNoticeSystem,
+                          label: t.settings.openAppNoticeSystem,
+                        ),
+                      ],
+                      selected: style.value,
+                      onChanged: (value) => unawaited(style.set(value)),
+                    ),
+                  )
+                : const SizedBox(width: double.infinity),
+          ),
+        ],
+      ),
     );
   }
 }

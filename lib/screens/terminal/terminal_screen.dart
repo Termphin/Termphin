@@ -1296,20 +1296,24 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
     final sessionName = state.multiplexer.isPersistent
         ? _manager.muxNameFor(session.$1)
         : null;
-    return TerminalTabPill<_TabConnectionAction>(
+    return ListenableBuilder(
       key: _tabKeys[session.$1],
-      sessionId: session.$1,
-      profile: session.$2,
-      status: state.status,
-      sessionName: sessionName,
-      displayName: displayName,
-      mode: _modeFor(session.$1),
-      isActive: isActive,
-      stretch: stretch,
-      collapsed: collapsed,
-      menuItems: _buildTabMenuItems(session, state),
-      onTap: () => _onTabTapped(session.$1),
-      onMenuAction: (action) => _onTabAction(session, state, action),
+      listenable: _manager,
+      builder: (context, _) => TerminalTabPill<_TabConnectionAction>(
+        sessionId: session.$1,
+        profile: session.$2,
+        status: state.status,
+        sessionName: sessionName,
+        displayName: displayName,
+        mode: _modeFor(session.$1),
+        isActive: isActive,
+        stretch: stretch,
+        collapsed: collapsed,
+        unread: _manager.hasUnreadNotice(session.$1),
+        menuItems: _buildTabMenuItems(session, state),
+        onTap: () => _onTabTapped(session.$1),
+        onMenuAction: (action) => _onTabAction(session, state, action),
+      ),
     );
   }
 

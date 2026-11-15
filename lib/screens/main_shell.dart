@@ -14,15 +14,14 @@ import '../providers/terminal_overlay_provider.dart';
 import '../services/analytics/analytics_service.dart';
 import '../services/app/identity_anonymizer.dart';
 import '../services/settings/sidebar_settings.dart';
-import '../services/settings/tab_bar_settings.dart';
 import '../services/ssh/ssh_session_manager.dart';
 import '../theme/theme.dart';
 import '../utils/platform_info.dart';
 import '../widgets/profiles/profile_avatar.dart';
 import '../widgets/shell/nav_rail.dart';
+import '../widgets/terminal/notice_dot.dart';
 import '../widgets/terminal/terminal_scheme_theme.dart';
 import '../widgets/ui/app_badge.dart';
-import '../widgets/ui/app_notifications.dart';
 import '../widgets/ui/fade_over_color.dart';
 import 'home_screen.dart';
 import 'keys/key_manager_screen.dart';
@@ -168,18 +167,12 @@ class _MainShellState extends ConsumerState<MainShell>
       ),
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _syncNotificationAnchor();
+      if (mounted) _syncTerminalOnScreen();
     });
-    tabBarPositionSetting.addListener(_onTabBarPositionChanged);
-  }
-
-  void _onTabBarPositionChanged() {
-    if (mounted) _syncNotificationAnchor();
   }
 
   @override
   void dispose() {
-    tabBarPositionSetting.removeListener(_onTabBarPositionChanged);
     _terminalMotion.dispose();
     super.dispose();
   }
@@ -204,7 +197,7 @@ class _MainShellState extends ConsumerState<MainShell>
       _terminalVisible = false;
     });
     _animateTerminal(visible: false);
-    _syncNotificationAnchor();
+    _syncTerminalOnScreen();
     _reportCurrentTab();
     ref.read(terminalOverlayProvider.notifier).hide();
   }
@@ -228,26 +221,15 @@ class _MainShellState extends ConsumerState<MainShell>
     } else {
       _terminalMotion.reverse().whenCompleteOrCancel(drop);
     }
-    _syncNotificationAnchor();
+    _syncTerminalOnScreen();
     _reportCurrentTab();
     ref.read(terminalOverlayProvider.notifier).hide();
   }
 
-  /// Toasts hang off the bottom of whichever app bar is on top, and the
-  /// terminal's tab strip is taller than a standard one - except in
-  /// landscape, where the strip has moved into a side rail, or with the
-  /// strip moved to the bottom, which leaves nothing up top to hang off. Never called from build - the overlay listening on
-  /// it is outside this element tree and would be marked dirty mid-build.
-  /// Also tells the session manager whether the terminal is what is on
-  /// screen, which is what decides if a program's notification is news.
-  void _syncNotificationAnchor() {
+  /// Tells the session manager whether the terminal is what is on screen,
+  /// which is what decides if a program's notification is news.
+  void _syncTerminalOnScreen() {
     _manager.terminalOnScreen = _terminalVisible;
-    appNotificationAnchor.value = _terminalVisible
-        ? (isWideLayout(context) ||
-                  tabBarPositionSetting.value == TabBarPosition.bottom
-              ? 0
-              : terminalTabBarHeight(context))
-        : kToolbarHeight;
   }
 
   List<_NavItemData> _navItems(Translations t) => [
@@ -380,7 +362,7 @@ class _MainShellState extends ConsumerState<MainShell>
           _terminalKey.currentState?.openSession(next.$1, next.$2);
         }
         _animateTerminalAfterBuild();
-        _syncNotificationAnchor();
+        _syncTerminalOnScreen();
         unawaited(AnalyticsService.instance.screen(AnalyticsScreen.terminal));
       }
     });
@@ -479,6 +461,22 @@ class _SessionDock extends ConsumerWidget {
     final displayHost = anonymize
         ? IdentityAnonymizer.host(session.profile.id)
         : session.profile.host;
+    final manager = ref.read(sshSessionManagerProvider);
+    final avatar = ListenableBuilder(
+      listenable: manager,
+      builder: (context, _) => NoticeDot(
+        visible: manager.hasAnyUnreadNotice,
+        ground: embedded
+            ? context.colors.surfaceCard
+            : context.colors.surfaceElevated,
+        child: ProfileAvatar(
+          iconName: session.profile.iconName,
+          colorHex: session.profile.colorHex,
+          isActive: !shouldRestore,
+          size: 34,
+        ),
+      ),
+    );
     return Tooltip(
       message: shouldRestore
           ? t.session.attach
@@ -505,22 +503,10 @@ class _SessionDock extends ConsumerWidget {
                     ),
             ),
             child: collapsed
-                ? Center(
-                    child: ProfileAvatar(
-                      iconName: session.profile.iconName,
-                      colorHex: session.profile.colorHex,
-                      isActive: !shouldRestore,
-                      size: 34,
-                    ),
-                  )
+                ? Center(child: avatar)
                 : Row(
                     children: [
-                      ProfileAvatar(
-                        iconName: session.profile.iconName,
-                        colorHex: session.profile.colorHex,
-                        isActive: !shouldRestore,
-                        size: 34,
-                      ),
+                      avatar,
                       const SizedBox(width: AppTheme.space10),
                       Expanded(
                         child: Column(

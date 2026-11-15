@@ -160,6 +160,9 @@ class Translations$common$en {
 
 	// Translations
 
+	/// en: '×{count}'
+	String repeatCount({required Object count}) => '×${count}';
+
 	/// en: 'Add'
 	String get add => 'Add';
 
@@ -1293,6 +1296,18 @@ class Translations$settings$en {
 
 	/// en: 'Shows what the command printed last. Off sends only its name and time'
 	String get noticeLinesSubtitle => 'Shows what the command printed last. Off sends only its name and time';
+
+	/// en: 'While Termphin is open'
+	String get openAppNotices => 'While Termphin is open';
+
+	/// en: 'From sessions you are not looking at'
+	String get openAppNoticesSubtitle => 'From sessions you are not looking at';
+
+	/// en: 'In Termphin'
+	String get openAppNoticeInApp => 'In Termphin';
+
+	/// en: 'As system'
+	String get openAppNoticeSystem => 'As system';
 
 	/// en: 'Fast upload'
 	String get fastUpload => 'Fast upload';
@@ -2475,6 +2490,9 @@ class Translations$notifications$en {
 	final Translations _root; // ignore: unused_field
 
 	// Translations
+
+	/// en: 'Open'
+	String get openSession => 'Open';
 
 	/// en: 'connected'
 	String get connected => 'connected';
@@ -4586,6 +4604,7 @@ extension on Translations {
 			'errorReports.clearMessage' => 'Every recorded error is removed from this device.',
 			'errorReports.repeated' => ({required Object count}) => '${count} times',
 			'errorReports.emailSubject' => 'Termphin error report',
+			'common.repeatCount' => ({required Object count}) => '×${count}',
 			'common.add' => 'Add',
 			'common.cancel' => 'Cancel',
 			'common.save' => 'Save',
@@ -4969,6 +4988,10 @@ extension on Translations {
 			'settings.quietNotificationsSubtitle' => 'An AI agent or installer that stopped to ask something',
 			'settings.noticeLines' => 'Quote the last line',
 			'settings.noticeLinesSubtitle' => 'Shows what the command printed last. Off sends only its name and time',
+			'settings.openAppNotices' => 'While Termphin is open',
+			'settings.openAppNoticesSubtitle' => 'From sessions you are not looking at',
+			'settings.openAppNoticeInApp' => 'In Termphin',
+			'settings.openAppNoticeSystem' => 'As system',
 			'settings.fastUpload' => 'Fast upload',
 			'settings.fastUploadNavSubtitleTmp' => 'Uploads land in the server\'s temporary directory',
 			'settings.fastUploadNavSubtitleCurrentDir' => 'Uploads land in the shell\'s current directory',
@@ -5077,13 +5100,13 @@ extension on Translations {
 			'settings.editorPinchHint' => 'Pinch in the editor to resize text',
 			'settings.editorLineNumbers' => 'Line numbers',
 			'settings.editorWordWrap' => 'Wrap long lines',
+			_ => null,
+		} ?? switch (path) {
 			'settings.editorWordWrapSubtitle' => 'Off, a long line scrolls sideways instead.',
 			'settings.batteryUnrestricted' => 'Unrestricted battery use',
 			'settings.batteryUnrestrictedSubtitle' => 'Keeps sessions connected in the background',
 			'settings.notificationsPermission' => 'Notifications',
 			'settings.notificationsPermissionSubtitle' => 'For background sessions and downloads',
-			_ => null,
-		} ?? switch (path) {
 			'settings.localNetworkPermission' => 'Local network access',
 			'settings.localNetworkPermissionSubtitle' => 'Needed to reach machines on your network',
 			'settings.feedback' => 'Feedback',
@@ -5355,6 +5378,7 @@ extension on Translations {
 			'portForwarding.server' => 'Server',
 			'portForwarding.arrowDevice' => 'This device',
 			'portForwarding.arrowServer' => 'Server',
+			'notifications.openSession' => 'Open',
 			'notifications.connected' => 'connected',
 			'notifications.reconnecting' => 'reconnecting…',
 			'notifications.transferDoneTitle' => 'Download finished',
@@ -5590,14 +5614,14 @@ extension on Translations {
 			'analyticsConsent.title' => 'Share usage analytics?',
 			'analyticsConsent.body' => 'Nothing personal, nothing from your screen or sessions - just a handful of named events: which screens you open, which settings you change, whether a connection succeeded or why it failed. Enough to tell what\'s used and catch crashes. No autocapture, no tracking of what you type or where you connect. Nothing is collected unless you check the box below, and you can change your mind any time in Settings.',
 			'analyticsConsent.checkboxLabel' => 'Share anonymous usage data',
+			_ => null,
+		} ?? switch (path) {
 			'analyticsConsent.legalNotice' => 'By continuing you accept the terms of service and the privacy policy.',
 			'analyticsConsent.privacyLink' => 'Privacy policy',
 			'analyticsConsent.termsLink' => 'Terms of service',
 			'analyticsConsent.allow' => 'Allow',
 			'onboarding.welcomeTitle' => 'Welcome to Termphin',
 			'onboarding.welcomeBody' => 'An SSH client whose sessions survive a dropped connection. Lock the phone, lose signal, come back - your shell is still there.',
-			_ => null,
-		} ?? switch (path) {
 			'onboarding.getStarted' => 'Get started',
 			'onboarding.serverTitle' => 'Do you have a server?',
 			'onboarding.serverBody' => 'Termphin connects to machines you already run, over SSH.',

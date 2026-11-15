@@ -40,6 +40,8 @@ Future<Map<String, dynamic>> exportTerminalSettings() async {
     'finishedNotifications': settings.finishedNotifications.value,
     'quietNotifications': settings.quietNotifications.value,
     'noticeLines': settings.noticeLines.value,
+    'openAppNotices': settings.openAppNotices.value,
+    'openAppNoticeStyle': settings.openAppNoticeStyle.value,
   };
 }
 
@@ -133,6 +135,8 @@ Future<void> importTerminalSettings(Map<String, dynamic> ts) async {
   );
   await restore<bool>(settings.quietNotifications, ts['quietNotifications']);
   await restore<bool>(settings.noticeLines, ts['noticeLines']);
+  await restore<bool>(settings.openAppNotices, ts['openAppNotices']);
+  await restore<String>(settings.openAppNoticeStyle, ts['openAppNoticeStyle']);
   await settings.load();
 }
 
