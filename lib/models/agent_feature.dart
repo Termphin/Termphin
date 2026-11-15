@@ -13,7 +13,11 @@ enum AgentFeature {
   longCommandNotice('0.15.0'),
   pushOpensSession('0.15.0'),
   inPlaceUpdates('0.16.0'),
-  wentQuietNotice('0.17.0');
+  wentQuietNotice('0.17.0'),
+
+  /// Told that the phone went to the background, so its notifications reach
+  /// an iPhone through the relay while iOS has the app frozen.
+  backgroundNotices('0.18.0');
 
   const AgentFeature(this.since);
 
@@ -25,6 +29,7 @@ enum AgentFeature {
     AgentFeature.pushOpensSession => t.agentFeatures.pushOpensSession,
     AgentFeature.inPlaceUpdates => t.agentFeatures.inPlaceUpdates,
     AgentFeature.wentQuietNotice => t.agentFeatures.wentQuietNotice,
+    AgentFeature.backgroundNotices => t.agentFeatures.backgroundNotices,
   };
 
   /// What a session served by a master of [masterVersion] cannot do. A

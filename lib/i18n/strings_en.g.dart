@@ -1261,6 +1261,15 @@ class Translations$settings$en {
 	/// en: 'When a program in another session asks for one, like Claude Code finishing'
 	String get programNotificationsSubtitle => 'When a program in another session asks for one, like Claude Code finishing';
 
+	/// en: 'When a command finishes or needs you'
+	String get commandNotifications => 'When a command finishes or needs you';
+
+	/// en: 'Long commands that end, agents waiting for an answer, and programs that ask for one'
+	String get commandNotificationsSubtitle => 'Long commands that end, agents waiting for an answer, and programs that ask for one';
+
+	/// en: 'On iPhone, iOS pauses Termphin a moment after you switch away, so these notifications come only while it is open. To hear from your servers in the background, turn on “Notify me anywhere”.'
+	String get iosNotificationsNote => 'On iPhone, iOS pauses Termphin a moment after you switch away, so these notifications come only while it is open. To hear from your servers in the background, turn on “Notify me anywhere”.';
+
 	/// en: 'When a long command finishes'
 	String get finishedNotifications => 'When a long command finishes';
 
@@ -1843,11 +1852,17 @@ class Translations$settings$en {
 	/// en: 'Notifications'
 	String get notificationsSection => 'Notifications';
 
-	/// en: 'Also when Termphin is closed'
-	String get notifyWhenClosed => 'Also when Termphin is closed';
+	/// en: 'Notify me anywhere'
+	String get notifyWhenClosed => 'Notify me anywhere';
 
-	/// en: 'Servers reach this phone through Termphin’s relay while nothing is connected.'
-	String get notifyWhenClosedSubtitle => 'Servers reach this phone through Termphin’s relay while nothing is connected.';
+	/// en: 'See Pro'
+	String get seePro => 'See Pro';
+
+	/// en: 'Wherever you are, even with Termphin closed: your servers reach this phone through Termphin’s relay.'
+	String get notifyWhenClosedSubtitle => 'Wherever you are, even with Termphin closed: your servers reach this phone through Termphin’s relay.';
+
+	/// en: 'Wherever you are, even with Termphin closed. On iPhone, the only way to hear from your servers in the background.'
+	String get notifyWhenClosedSubtitleIos => 'Wherever you are, even with Termphin closed. On iPhone, the only way to hear from your servers in the background.';
 
 	/// en: 'Servers'
 	String get notifyServers => 'Servers';
@@ -3897,6 +3912,9 @@ class Translations$agentFeatures$en {
 	/// en: 'A notification when an agent or program stops and may need you'
 	String get wentQuietNotice => 'A notification when an agent or program stops and may need you';
 
+	/// en: 'Notifications while Termphin is in the background on iPhone'
+	String get backgroundNotices => 'Notifications while Termphin is in the background on iPhone';
+
 	/// en: 'A new session has all of them. Programs running here keep running until you close it.'
 	String get hint => 'A new session has all of them. Programs running here keep running until you close it.';
 
@@ -4934,6 +4952,9 @@ extension on Translations {
 			'settings.notificationsDemo.testsBody' => 'Tests: 128 passed, 128 total',
 			'settings.programNotifications' => 'Notifications from programs',
 			'settings.programNotificationsSubtitle' => 'When a program in another session asks for one, like Claude Code finishing',
+			'settings.commandNotifications' => 'When a command finishes or needs you',
+			'settings.commandNotificationsSubtitle' => 'Long commands that end, agents waiting for an answer, and programs that ask for one',
+			'settings.iosNotificationsNote' => 'On iPhone, iOS pauses Termphin a moment after you switch away, so these notifications come only while it is open. To hear from your servers in the background, turn on “Notify me anywhere”.',
 			'settings.finishedNotifications' => 'When a long command finishes',
 			'settings.finishedNotificationsSubtitle' => 'A command that ran 30 seconds or more, named with its last line',
 			'settings.quietNotifications' => 'When a program may need you',
@@ -5055,11 +5076,11 @@ extension on Translations {
 			'settings.notificationsPermissionSubtitle' => 'For background sessions and downloads',
 			'settings.localNetworkPermission' => 'Local network access',
 			'settings.localNetworkPermissionSubtitle' => 'Needed to reach machines on your network',
+			_ => null,
+		} ?? switch (path) {
 			'settings.feedback' => 'Feedback',
 			'settings.sendFeedback' => 'Send feedback',
 			'settings.sendFeedbackSubtitle' => 'Ideas, requests, anything you\'d like to see',
-			_ => null,
-		} ?? switch (path) {
 			'settings.reportBug' => 'Report a bug',
 			'settings.reportBugSubtitle' => 'Something broke? Tell us what happened',
 			'settings.issueTracker' => 'Issue tracker',
@@ -5130,8 +5151,10 @@ extension on Translations {
 			'settings.sftpFollowTerminal' => 'Follow the terminal',
 			'settings.sftpFollowTerminalSubtitle' => 'Open in the shell\'s current folder',
 			'settings.notificationsSection' => 'Notifications',
-			'settings.notifyWhenClosed' => 'Also when Termphin is closed',
-			'settings.notifyWhenClosedSubtitle' => 'Servers reach this phone through Termphin’s relay while nothing is connected.',
+			'settings.notifyWhenClosed' => 'Notify me anywhere',
+			'settings.seePro' => 'See Pro',
+			'settings.notifyWhenClosedSubtitle' => 'Wherever you are, even with Termphin closed: your servers reach this phone through Termphin’s relay.',
+			'settings.notifyWhenClosedSubtitleIos' => 'Wherever you are, even with Termphin closed. On iPhone, the only way to hear from your servers in the background.',
 			'settings.notifyServers' => 'Servers',
 			'settings.notifyDenied' => 'Notifications are turned off for Termphin in the system settings.',
 			'settings.notifyFailed' => 'That did not work. Try again.',
@@ -5567,13 +5590,13 @@ extension on Translations {
 			'onboarding.welcomeBody' => 'An SSH client whose sessions survive a dropped connection. Lock the phone, lose signal, come back - your shell is still there.',
 			'onboarding.getStarted' => 'Get started',
 			'onboarding.serverTitle' => 'Do you have a server?',
+			_ => null,
+		} ?? switch (path) {
 			'onboarding.serverBody' => 'Termphin connects to machines you already run, over SSH.',
 			'onboarding.serverYes' => 'Yes, I have one',
 			'onboarding.serverYesSubtitle' => 'A VPS, a Raspberry Pi, a machine at work - anything you can SSH into.',
 			'onboarding.serverNotYet' => 'Not yet',
 			'onboarding.serverNotYetSubtitle' => 'See where to get one.',
-			_ => null,
-		} ?? switch (path) {
 			'onboarding.permissionsTitle' => 'A few things to set up',
 			'onboarding.permissionsBody' => 'All optional, and all changeable later in Settings.',
 			'onboarding.backgroundTitle' => 'Unrestricted battery use',
@@ -5831,6 +5854,7 @@ extension on Translations {
 			'agentFeatures.pushOpensSession' => 'Opening this session from a push',
 			'agentFeatures.inPlaceUpdates' => 'Updating on its own without restarting',
 			'agentFeatures.wentQuietNotice' => 'A notification when an agent or program stops and may need you',
+			'agentFeatures.backgroundNotices' => 'Notifications while Termphin is in the background on iPhone',
 			'agentFeatures.hint' => 'A new session has all of them. Programs running here keep running until you close it.',
 			'agentFeatures.newSession' => 'Open a new session',
 			'proHints.longCommand' => 'Know when a command finishes, even with Termphin closed',

@@ -245,6 +245,59 @@ void main() {
     },
   );
 
+  group('presence', () {
+    List<Uint8List> written() => [
+      for (final call in backend.calls)
+        if (call.method == 'write') call.arguments['data'] as Uint8List,
+    ];
+
+    bool wrote(Uint8List bytes) =>
+        written().any((data) => utf8.decode(data) == utf8.decode(bytes));
+
+    Future<ActiveSessionView> open(String masterVersion) async {
+      backend
+        ..markerWithoutReplay = true
+        ..masterVersion = masterVersion;
+      await manager.startSession(profileFixture(), sessionId: 'kept');
+      await Future<void>.delayed(Duration.zero);
+      return manager.getSession('kept')!;
+    }
+
+    test('a master that hears it is told the phone went away and back, '
+        'and nothing is announced until its marker', () async {
+      final session = await open('0.18.0');
+      final announced = <String>[];
+      manager.onTerminalNotification = (_, notice) =>
+          announced.add(notice.title);
+      final service = backend.latestService;
+
+      manager.goAway();
+      expect(wrote(SshSessionManager.presenceAway), isTrue);
+
+      service.emit(utf8.encode('\x1b]9;relayed already\x07'));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      manager.comeBack();
+      expect(wrote(SshSessionManager.presenceBack), isTrue);
+      service.emit(utf8.encode('\x1b]9;still old\x07'));
+      service.emit(utf8.encode('\x1b]5386;termphin-back\x07'));
+      service.emit(utf8.encode('\x1b]9;new\x07'));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(session.holdingNotices, isFalse);
+      expect(announced, ['new']);
+    });
+
+    test(
+      'an older master is never sent it, so its shell never sees it',
+      () async {
+        await open('0.17.0');
+
+        manager.goAway();
+
+        expect(wrote(SshSessionManager.presenceAway), isFalse);
+      },
+    );
+  });
+
   test('a session the agent keeps is watched as resumable', () async {
     await manager.startSession(profileFixture(), sessionId: 'kept');
 

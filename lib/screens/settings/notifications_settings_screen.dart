@@ -5,8 +5,10 @@ import 'package:material_ui/material_ui.dart';
 import '../../i18n/strings.g.dart';
 import '../../services/analytics/analytics_service.dart';
 import '../../theme/theme.dart';
+import '../../utils/platform_info.dart';
 import '../../widgets/settings/notifications_demo.dart';
 import '../../widgets/settings/notifications_settings_section.dart';
+import '../../widgets/ui/info_note.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
 
 /// Every notification setting on a screen of its own, reached from the one
@@ -57,6 +59,10 @@ class _NotificationsSettingsScreenState
           const SizedBox(height: AppTheme.space16),
           const NotificationsDemo(),
           const SizedBox(height: AppTheme.space20),
+          if (isIOSPlatform) ...[
+            InfoNote(t.settings.iosNotificationsNote),
+            const SizedBox(height: AppTheme.space16),
+          ],
           NotificationsSettingsList(appVersion: widget.appVersion),
         ],
       ),

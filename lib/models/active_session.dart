@@ -76,6 +76,15 @@ class ActiveSessionView {
   /// rather than one that has not spoken yet - with or without a replay.
   bool masterChecked = false;
 
+  /// Whether this session told its master the phone went to the background,
+  /// so the master relays its notifications instead of sending them here.
+  bool away = false;
+
+  /// Whether this session's notifications are kept from the user: from the
+  /// moment it said it went away until the master's marker after it came
+  /// back. What arrives in between was relayed already, or is old news.
+  bool holdingNotices = false;
+
   /// The agent binary the last attach ran, and whether it runs on Windows.
   /// What ending the session reuses instead of probing the host again.
   ({String path, bool isWindows})? agentBinary;
@@ -145,6 +154,7 @@ class ActiveSessionView {
     rows: _rows,
     onReply: _replyFromTerminal,
     onNotification: _notify,
+    onPresenceBack: _presenceBack,
   );
   SessionTerminal? _terminal;
   int _columns;
@@ -201,6 +211,7 @@ class ActiveSessionView {
       replay: replay,
       onReply: _replyFromTerminal,
       onNotification: _notify,
+      onPresenceBack: _presenceBack,
     );
     previous?.retire();
   }
@@ -212,9 +223,11 @@ class ActiveSessionView {
   Stream<TerminalNotification> get notifications => _notifications.stream;
 
   void _notify(TerminalNotification notification) {
-    if (_disposed || _notifications.isClosed) return;
+    if (_disposed || _notifications.isClosed || holdingNotices) return;
     _notifications.add(notification);
   }
+
+  void _presenceBack() => holdingNotices = false;
 
   /// What the terminal answers the program with while no pane is mounted to
   /// send it. Not noted as input: nobody typed it.

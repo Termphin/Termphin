@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
 import '../../models/pro_source.dart';
@@ -16,7 +17,7 @@ import '../../services/push/push_service.dart';
 import '../../services/settings/setting.dart';
 import '../../services/settings/terminal_settings.dart';
 import '../../theme/theme.dart';
-import '../account/pro_feature_sheet.dart';
+import '../../utils/platform_info.dart';
 import '../ui/app_badge.dart';
 import '../ui/app_card.dart';
 import '../ui/app_divider.dart';
@@ -136,6 +137,16 @@ class _NotificationsSettingsListState
     ),
   );
 
+  /// What the one "finishes or needs you" switch turns on and off together:
+  /// a program's own request, a long command finishing, a program waiting.
+  /// Kept as three settings underneath - the relay, backup and sync read
+  /// them one by one.
+  List<Setting<bool>> get _announcing => [
+    terminalSettings.programNotifications,
+    terminalSettings.finishedNotifications,
+    terminalSettings.quietNotifications,
+  ];
+
   Widget _noticeSwitch(
     Setting<bool> setting, {
     required String title,
@@ -164,29 +175,22 @@ class _NotificationsSettingsListState
     final signedIn = ref.watch(accountProvider) != null;
     return AppCard.fields(
       children: [
-        ValueListenableBuilder<bool>(
-          valueListenable: terminalSettings.programNotifications,
-          builder: (context, on, _) => SettingsSwitchTile(
-            title: t.settings.programNotifications,
+        ListenableBuilder(
+          listenable: Listenable.merge(_announcing),
+          builder: (context, _) => SettingsSwitchTile(
+            title: t.settings.commandNotifications,
             titleTrailing: NewBadge(
               appVersion: widget.appVersion,
               until: _newUntil,
             ),
-            subtitle: t.settings.programNotificationsSubtitle,
-            value: on,
-            onChanged: (v) =>
-                unawaited(terminalSettings.programNotifications.set(v)),
+            subtitle: t.settings.commandNotificationsSubtitle,
+            value: _announcing.any((setting) => setting.value),
+            onChanged: (on) {
+              for (final setting in _announcing) {
+                unawaited(setting.set(on));
+              }
+            },
           ),
-        ),
-        _noticeSwitch(
-          terminalSettings.finishedNotifications,
-          title: t.settings.finishedNotifications,
-          subtitle: t.settings.finishedNotificationsSubtitle,
-        ),
-        _noticeSwitch(
-          terminalSettings.quietNotifications,
-          title: t.settings.quietNotifications,
-          subtitle: t.settings.quietNotificationsSubtitle,
         ),
         _noticeSwitch(
           terminalSettings.noticeLines,
@@ -203,14 +207,32 @@ class _NotificationsSettingsListState
               final pro = ProService.instance.active.value;
               final enabled = PushService.instance.enabledNotifier.value;
               final paused = enabled && signedIn && !pro;
+              final subtitle = isIOSPlatform
+                  ? t.settings.notifyWhenClosedSubtitleIos
+                  : t.settings.notifyWhenClosedSubtitle;
+              if (!pro && !paused) {
+                void paywall() => ProPaywallScreen.show(
+                  context,
+                  source: ProSource.settingsNotifications,
+                );
+                return Column(
+                  children: [
+                    const AppDivider(),
+                    SettingsTile(
+                      title: t.settings.notifyWhenClosed,
+                      subtitle: subtitle,
+                      trailingWidget: const _SeePro(),
+                      onTap: paywall,
+                    ),
+                  ],
+                );
+              }
               return Column(
                 children: [
                   const AppDivider(),
                   SettingsSwitchTile(
                     title: t.settings.notifyWhenClosed,
-                    subtitle: paused
-                        ? t.settings.notifyPaused
-                        : t.settings.notifyWhenClosedSubtitle,
+                    subtitle: paused ? t.settings.notifyPaused : subtitle,
                     titleTrailing: Padding(
                       padding: const EdgeInsets.only(left: AppTheme.space8),
                       child: paused
@@ -218,13 +240,9 @@ class _NotificationsSettingsListState
                               t.account.sync.pausedBadge,
                               tone: BadgeTone.warning,
                             )
-                          : pro
-                          ? NewBadge(
+                          : NewBadge(
                               appVersion: widget.appVersion,
                               until: _newUntil,
-                            )
-                          : const ProFeatureChip(
-                              feature: ProFeature.notifications,
                             ),
                     ),
                     value: enabled && signedIn,
@@ -251,6 +269,35 @@ class _NotificationsSettingsListState
               );
             },
           ),
+      ],
+    );
+  }
+}
+
+/// What stands where the switch would be for someone without Pro: the way
+/// to the plans, in Pro's gold. The row around it opens them.
+class _SeePro extends StatelessWidget {
+  const _SeePro();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          Translations.of(context).settings.seePro,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: colors.gold,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(width: AppTheme.space4),
+        Icon(
+          PhosphorIconsRegular.caretRight,
+          size: AppTheme.icon16,
+          color: colors.gold,
+        ),
       ],
     );
   }

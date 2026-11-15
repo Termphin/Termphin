@@ -12,12 +12,15 @@ void main() {
       expect(AgentFeature.missingFor('0.15.0'), [
         AgentFeature.inPlaceUpdates,
         AgentFeature.wentQuietNotice,
+        AgentFeature.backgroundNotices,
       ]);
-      expect(AgentFeature.missingFor('0.16.0'), [AgentFeature.wentQuietNotice]);
+      expect(AgentFeature.missingFor('0.17.0'), [
+        AgentFeature.backgroundNotices,
+      ]);
     });
 
     test('a current master misses nothing', () {
-      expect(AgentFeature.missingFor('0.17.0'), isEmpty);
+      expect(AgentFeature.missingFor('0.18.0'), isEmpty);
       expect(AgentFeature.missingFor('1.0.0'), isEmpty);
     });
 
