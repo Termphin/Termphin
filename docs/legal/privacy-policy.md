@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated: 14 November 2026**
+**Last updated: 15 November 2026**
 
 ## Summary
 
@@ -80,17 +80,22 @@ notification on its way to your phone (section 6).
 ## 4. Your account (only for Termphin Pro)
 
 You need an account only to buy and use Termphin Pro. You can sign in with
-Google, with Apple, or with an email address and a password. Accounts are
-run on **Firebase Authentication** by Google.
+Google, with Apple, with GitHub, or with an email address and a password.
+Accounts are run on **Firebase Authentication** by Google.
 
 What an account holds:
 
 - your email address, and whether you have confirmed it
-- how you sign in (Google, Apple or email)
-- the name and profile picture your Google or Apple account provides, if any
+- how you sign in (Google, Apple, GitHub or email)
+- the name and profile picture your Google, Apple or GitHub account provides,
+  if any
 - a random account identifier
 - when the account was created and last signed in
 - whether it has Pro, and until when
+
+The app shows that profile picture as your account's avatar: it downloads it
+once from Google's or GitHub's servers and keeps a copy on your device, which
+signing out deletes.
 
 Your password, if you use one, is held by Firebase Authentication as a salted
 hash; we never see it.
@@ -205,23 +210,17 @@ advertising identifier and ad personalisation are switched off.
 termphin.dev is a static site: pages, screenshots, the changelog and this
 document. There are no accounts and nothing to sign in to.
 
-**Nothing is stored on your device.** The site sets no cookies and writes
-nothing to local or session storage. That is why there is no cookie banner:
-Article 5(3) of the ePrivacy Directive asks for consent before information is
-stored on or read from your device, and the site does neither.
+**No cookies, no tracking.** The site sets no cookies and runs no analytics
+or tracking scripts. The one thing it keeps in your browser is a list, in
+local storage, of the announcements at the top of the page you have closed, so
+they stay closed; it never leaves your browser. That is why there is no cookie
+banner: Article 5(3) of the ePrivacy Directive does not ask for consent to
+store what is strictly needed for something you asked for.
 
-**Visits are counted without identifying you.** PostHog, on EU
-infrastructure, runs on the site in its cookieless mode. Your IP address is
-used only in passing, with your browser's user agent, to derive a hash that
-tells one visitor from another within a single day, and is never stored. The
-hash is re-salted every day, so it cannot follow you from one day to the
-next. A page view records the page, the referring site if your browser sent
-one, device type, browser, operating system and language; leaving the page
-records how long the visit lasted. Nothing else is recorded.
-
-**Server logs.** Our hosting provider keeps ordinary web-server logs - IP
-address, time, requested address, user agent - for a short period, for
-security and abuse handling. We do not analyse them.
+**Server logs.** Cloudflare, which hosts the site, keeps ordinary request
+logs - IP address, time, requested address, user agent - for a short period,
+for security and abuse handling. It shows us traffic only in aggregate, such
+as request counts per page and country; we never look at individual visitors.
 
 ## 10. Legal basis for processing
 
@@ -234,9 +233,6 @@ security and abuse handling. We do not analyse them.
 - **Keeping the relay from being abused** - limiting how often a key can
   send - is in our **legitimate interest** in a service that works for
   everyone, Article 6(1)(f) GDPR.
-- **The website's visit counting** (section 9) is in our legitimate interest
-  in knowing which pages are read, by a method that cannot identify a visitor
-  or follow one across days. You may object at contact@termphin.dev.
 
 ## 11. How long it is kept
 
@@ -249,7 +245,6 @@ security and abuse handling. We do not analyse them.
 | RevenueCat's purchase record | Until you delete your account |
 | Analytics events | 2 months |
 | Crash reports | 90 days |
-| Website visit counts | 12 months |
 
 The stores keep their own records of purchases under their own policies. Data
 on your device stays there until you delete it or uninstall the app.
@@ -264,9 +259,8 @@ on your device stays there until you delete it or uninstall the app.
 | RevenueCat | Managing Pro purchases | United States |
 | Resend | Sending the one email we send: the notice before a synced copy is deleted | United States |
 | Google Play, App Store | Selling Pro; their own terms apply | - |
-| PostHog | Website visit counting | EU (Germany) |
-| Railway | Website hosting | EU |
-| Cloudflare | Website CDN and DNS | Global |
+| GitHub | Signing in with GitHub, if you choose it; its own terms apply | United States |
+| Cloudflare | Website hosting, CDN and DNS | Global |
 
 Where data goes to the United States, the transfer relies on the EU-US Data
 Privacy Framework where the provider is certified under it, and otherwise on

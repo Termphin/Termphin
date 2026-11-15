@@ -62,7 +62,14 @@ class RelayServersScreen extends ConsumerWidget {
                   AppTheme.space32,
                 ).add(gutter),
                 children: [
-                  LargeTitleHeader(title: r.title, subtitle: r.intro),
+                  LargeTitleHeader(
+                    title: r.title,
+                    subtitle: r.intro,
+                    padding: const EdgeInsets.only(
+                      top: AppTheme.space24,
+                      bottom: AppTheme.space8,
+                    ),
+                  ),
                   const SizedBox(height: AppTheme.space16),
                   if (servers == null)
                     const Center(child: CircularProgressIndicator())

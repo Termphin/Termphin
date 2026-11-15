@@ -102,6 +102,12 @@ void main() {
     );
   });
 
+  test('closing the GitHub page counts as cancelling, which says nothing', () {
+    for (final code in ['web-context-canceled', 'web-context-cancelled']) {
+      expect(FirebaseAccountBackend.failureOf(code), AccountFailure.cancelled);
+    }
+  });
+
   test('Firebase error codes become failures the screen can explain', () {
     expect(
       FirebaseAccountBackend.failureOf('invalid-credential'),

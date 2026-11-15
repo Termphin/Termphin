@@ -284,19 +284,21 @@ class _MainShellState extends ConsumerState<MainShell>
           return Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (!_terminalVisible && dockSession != null)
-                _SessionDock(
-                  session: dockSession,
-                  sessionCount: manager.restoreStripSize(dockSession.id),
-                  onTap: () => ref
-                      .read(terminalOverlayProvider.notifier)
-                      .show(dockSession.id, dockSession.profile),
-                ),
               _BottomNavBar(
                 key: const ValueKey('bottomNavBar'),
                 currentIndex: _currentIndex,
                 onSelected: _selectTab,
                 items: _navItems(t),
+                dock: !_terminalVisible && dockSession != null
+                    ? _SessionDock(
+                        session: dockSession,
+                        sessionCount: manager.restoreStripSize(dockSession.id),
+                        embedded: true,
+                        onTap: () => ref
+                            .read(terminalOverlayProvider.notifier)
+                            .show(dockSession.id, dockSession.profile),
+                      )
+                    : null,
               ),
             ],
           );
@@ -447,6 +449,7 @@ class _SessionDock extends ConsumerWidget {
     required this.sessionCount,
     required this.onTap,
     this.collapsed = false,
+    this.embedded = false,
   });
 
   final ActiveSessionView session;
@@ -456,6 +459,10 @@ class _SessionDock extends ConsumerWidget {
   /// Icons-only, for a collapsed rail. The bottom-nav dock is never
   /// collapsed, so this only ever comes from [_Sidebar].
   final bool collapsed;
+
+  /// Inside the bottom bar's panel, which draws the ground and the edges:
+  /// no fill and no rule of its own.
+  final bool embedded;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -476,7 +483,9 @@ class _SessionDock extends ConsumerWidget {
           ? t.session.attach
           : t.profiles.returnToSession(name: displayName),
       child: Material(
-        color: context.colors.surfaceElevated,
+        color: embedded
+            ? context.colors.surfaceCard.invisible
+            : context.colors.surfaceElevated,
         child: InkWell(
           onTap: () {
             HapticFeedback.selectionClick();
@@ -488,9 +497,11 @@ class _SessionDock extends ConsumerWidget {
               horizontal: collapsed ? AppTheme.space8 : AppTheme.space14,
             ),
             decoration: BoxDecoration(
-              border: Border(
-                top: BorderSide(color: context.colors.surfaceBorder),
-              ),
+              border: embedded
+                  ? null
+                  : Border(
+                      top: BorderSide(color: context.colors.surfaceBorder),
+                    ),
             ),
             child: collapsed
                 ? Center(
@@ -607,17 +618,69 @@ class _BottomNavBar extends StatelessWidget {
     required this.currentIndex,
     required this.onSelected,
     required this.items,
+    this.dock,
   });
 
   final int currentIndex;
   final ValueChanged<int> onSelected;
   final List<_NavItemData> items;
 
+  /// The session dock, carried inside the bar: the capsule grows into one
+  /// rounded panel with the way back to the session on top of the tabs, so
+  /// the foot of the screen is one thing rather than a strip and a pill.
+  final Widget? dock;
+
   static const _inset = AppTheme.space4;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final dock = this.dock;
+    final radius = dock == null ? AppTheme.radiusPill : AppTheme.radiusLg;
+    final tabs = SizedBox(
+      height: AppTheme.bottomBarHeight - _inset * 2,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final itemWidth = constraints.maxWidth / items.length;
+          return Stack(
+            children: [
+              AnimatedPositioned(
+                duration: AppTheme.interactiveDuration,
+                curve: AppTheme.interactiveCurve,
+                left: itemWidth * currentIndex,
+                top: 0,
+                bottom: 0,
+                width: itemWidth,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: colors.surfaceOffset2,
+                    borderRadius: BorderRadius.circular(
+                      dock == null ? AppTheme.radiusPill : AppTheme.radiusMd,
+                    ),
+                  ),
+                ),
+              ),
+              Row(
+                children: [
+                  for (int i = 0; i < items.length; i++)
+                    SizedBox(
+                      width: itemWidth,
+                      child: _BottomNavItem(
+                        data: items[i],
+                        selected: currentIndex == i,
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          onSelected(i);
+                        },
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
+    );
     return ColoredBox(
       color: colors.backgroundPrimary,
       child: SafeArea(
@@ -630,58 +693,32 @@ class _BottomNavBar extends StatelessWidget {
             AppTheme.space16,
             AppTheme.space4,
           ),
-          child: Container(
-            height: AppTheme.bottomBarHeight,
-            padding: const EdgeInsets.all(_inset),
+          child: DecoratedBox(
             decoration: BoxDecoration(
               color: colors.surfaceCard,
-              borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+              borderRadius: BorderRadius.circular(radius),
               border: Border.all(
-                color: colors.surfaceBorder,
+                color: colors.surfaceBorderStrong,
                 width: AppTheme.hairline,
               ),
               boxShadow: AppTheme.floatingShadow,
             ),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final itemWidth = constraints.maxWidth / items.length;
-                return Stack(
-                  children: [
-                    AnimatedPositioned(
-                      duration: AppTheme.interactiveDuration,
-                      curve: AppTheme.interactiveCurve,
-                      left: itemWidth * currentIndex,
-                      top: 0,
-                      bottom: 0,
-                      width: itemWidth,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: colors.surfaceOffset2,
-                          borderRadius: BorderRadius.circular(
-                            AppTheme.radiusPill,
-                          ),
-                        ),
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        for (int i = 0; i < items.length; i++)
-                          SizedBox(
-                            width: itemWidth,
-                            child: _BottomNavItem(
-                              data: items[i],
-                              selected: currentIndex == i,
-                              onTap: () {
-                                HapticFeedback.selectionClick();
-                                onSelected(i);
-                              },
-                            ),
-                          ),
-                      ],
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(radius),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (dock != null) ...[
+                    dock,
+                    Divider(
+                      height: AppTheme.hairline,
+                      thickness: AppTheme.hairline,
+                      color: colors.surfaceBorderStrong,
                     ),
                   ],
-                );
-              },
+                  Padding(padding: const EdgeInsets.all(_inset), child: tabs),
+                ],
+              ),
             ),
           ),
         ),

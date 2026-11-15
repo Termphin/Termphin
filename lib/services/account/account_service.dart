@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../firebase/firebase_service.dart';
+import 'account_photos.dart';
 import 'firebase_account_backend.dart';
 
 /// Remembers that this device has an account signed in, so Firebase is
@@ -11,7 +12,7 @@ import 'firebase_account_backend.dart';
 const kAccountSignedInPrefsKey = 'account_signed_in';
 
 /// How someone signed in, as far as the app needs to tell them apart.
-enum AccountProvider { google, apple, password }
+enum AccountProvider { google, apple, github, password }
 
 /// The signed-in user, as the app sees them.
 @immutable
@@ -21,6 +22,7 @@ class AccountUser {
     required this.provider,
     this.email,
     this.displayName,
+    this.photoUrl,
     this.emailVerified = true,
   });
 
@@ -28,6 +30,9 @@ class AccountUser {
   final AccountProvider provider;
   final String? email;
   final String? displayName;
+
+  /// The profile picture Google or GitHub gave the account, if any.
+  final String? photoUrl;
 
   /// Whether the address has been shown to belong to the user. Google and
   /// Apple vouch for theirs; a password account confirms its own by the
@@ -41,11 +46,12 @@ class AccountUser {
       other.provider == provider &&
       other.email == email &&
       other.displayName == displayName &&
+      other.photoUrl == photoUrl &&
       other.emailVerified == emailVerified;
 
   @override
   int get hashCode =>
-      Object.hash(uid, provider, email, displayName, emailVerified);
+      Object.hash(uid, provider, email, displayName, photoUrl, emailVerified);
 }
 
 /// Why signing in, signing up or deleting did not happen, in terms the
@@ -82,6 +88,9 @@ abstract interface class AccountBackend {
   Future<void> signInWithGoogle();
 
   Future<void> signInWithApple();
+
+  /// Signs in through GitHub's own page in a browser tab.
+  Future<void> signInWithGitHub();
 
   bool get supportsApple;
 
@@ -161,6 +170,7 @@ class AccountService {
     _user = user;
     _users.add(user);
     unawaited(_remember(user != null));
+    if (user == null) unawaited(AccountPhotos.instance.clear());
   }
 
   Future<void> _remember(bool signedIn) async {
@@ -181,6 +191,8 @@ class AccountService {
   Future<void> signInWithGoogle() => _run((b) => b.signInWithGoogle());
 
   Future<void> signInWithApple() => _run((b) => b.signInWithApple());
+
+  Future<void> signInWithGitHub() => _run((b) => b.signInWithGitHub());
 
   Future<void> signInWithEmail(String email, String password) =>
       _run((b) => b.signInWithEmail(email.trim(), password));

@@ -51,6 +51,7 @@ const kSyncedSettingGroups = <String, List<String>>{
   ],
   'app.commandSuggestions': ['app.commandSuggestions'],
   'app.proTips': ['app.proTips'],
+  'app.profileFormMoreOptions': ['app.profileFormMoreOptions'],
   'app.editor': [
     'app.editorWordWrap',
     'app.editorFontFamily',

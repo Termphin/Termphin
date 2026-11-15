@@ -7,6 +7,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import '../../utils/platform_info.dart';
+import '../firebase/firebase_config.dart';
 import 'account_service.dart';
 
 /// The OAuth client Google returns an id token for, the project's web
@@ -15,10 +16,19 @@ import 'account_service.dart';
 const _webClientId = String.fromEnvironment('FIREBASE_WEB_CLIENT_ID');
 const _iosClientId = String.fromEnvironment('FIREBASE_IOS_CLIENT_ID');
 
-/// Accounts on Firebase Auth: Google everywhere, Apple on iOS, and an email
-/// with a password for anyone who wants neither.
+/// Accounts on Firebase Auth: Google and GitHub everywhere, Apple on iOS,
+/// and an email with a password for anyone who wants none of them.
+///
+/// GitHub has no sign-in SDK of its own: Firebase opens GitHub's page in a
+/// browser tab and finishes the sign-in when it comes back.
 class FirebaseAccountBackend implements AccountBackend {
-  FirebaseAccountBackend();
+  /// Points browser sign-ins - GitHub's - at [FirebaseConfig.authDomain],
+  /// the address registered with GitHub, when the build names one.
+  FirebaseAccountBackend() {
+    if (FirebaseConfig.authDomain.isNotEmpty) {
+      _auth.customAuthDomain = FirebaseConfig.authDomain;
+    }
+  }
 
   FirebaseAuth get _auth => FirebaseAuth.instance;
 
@@ -40,11 +50,16 @@ class FirebaseAccountBackend implements AccountBackend {
       uid: user.uid,
       email: user.email,
       displayName: user.displayName,
+      photoUrl:
+          user.photoURL ??
+          user.providerData.map((info) => info.photoURL).nonNulls.firstOrNull,
       emailVerified: user.emailVerified,
       provider: providers.contains('google.com')
           ? AccountProvider.google
           : providers.contains('apple.com')
           ? AccountProvider.apple
+          : providers.contains('github.com')
+          ? AccountProvider.github
           : AccountProvider.password,
     );
   }
@@ -114,6 +129,10 @@ class FirebaseAccountBackend implements AccountBackend {
       _guard(() async => _auth.signInWithCredential(await _appleCredential()));
 
   @override
+  Future<void> signInWithGitHub() =>
+      _guard(() => _auth.signInWithProvider(GithubAuthProvider()));
+
+  @override
   Future<void> signInWithEmail(String email, String password) => _guard(
     () => _auth.signInWithEmailAndPassword(email: email, password: password),
   );
@@ -148,7 +167,8 @@ class FirebaseAccountBackend implements AccountBackend {
 
   /// A deletion the backend refuses for an old sign-in is retried once
   /// after signing in again the same way: the provider's own sheet for
-  /// Google and Apple, [password] for a password account.
+  /// Google and Apple, GitHub's page for GitHub, [password] for a password
+  /// account.
   @override
   Future<void> deleteAccount({String? password}) => _guard(() async {
     final user = _auth.currentUser;
@@ -157,20 +177,30 @@ class FirebaseAccountBackend implements AccountBackend {
       await user.delete();
     } on FirebaseAuthException catch (error) {
       if (error.code != 'requires-recent-login') rethrow;
-      final credential = switch (_toUser(user)!.provider) {
-        AccountProvider.google => await _googleCredential(),
-        AccountProvider.apple => await _appleCredential(),
-        AccountProvider.password when password != null =>
-          EmailAuthProvider.credential(email: user.email!, password: password),
-        AccountProvider.password => throw const AccountException(
-          AccountFailure.requiresRecentLogin,
-        ),
-      };
-      await user.reauthenticateWithCredential(credential);
+      await _reauthenticate(user, password);
       await user.delete();
     }
     if (_googleReady) await GoogleSignIn.instance.signOut();
   });
+
+  /// Signs [user] in again the way they signed in before, for an action
+  /// the backend only allows right after a sign-in.
+  Future<void> _reauthenticate(User user, String? password) async {
+    switch (_toUser(user)!.provider) {
+      case AccountProvider.google:
+        await user.reauthenticateWithCredential(await _googleCredential());
+      case AccountProvider.apple:
+        await user.reauthenticateWithCredential(await _appleCredential());
+      case AccountProvider.github:
+        await user.reauthenticateWithProvider(GithubAuthProvider());
+      case AccountProvider.password when password != null:
+        await user.reauthenticateWithCredential(
+          EmailAuthProvider.credential(email: user.email!, password: password),
+        );
+      case AccountProvider.password:
+        throw const AccountException(AccountFailure.requiresRecentLogin);
+    }
+  }
 
   Future<void> _guard(Future<void> Function() action) async {
     try {
@@ -196,6 +226,9 @@ class FirebaseAccountBackend implements AccountBackend {
     'network-request-failed' => AccountFailure.network,
     'too-many-requests' => AccountFailure.tooManyRequests,
     'operation-not-allowed' => AccountFailure.unavailable,
+    'web-context-canceled' ||
+    'web-context-cancelled' ||
+    'canceled' => AccountFailure.cancelled,
     _ => AccountFailure.unknown,
   };
 }

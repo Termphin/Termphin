@@ -83,6 +83,7 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 	late final Translations$agentFeatures$en agentFeatures = Translations$agentFeatures$en.internal(_root);
 	late final Translations$proHints$en proHints = Translations$proHints$en.internal(_root);
 	late final Translations$proFeature$en proFeature = Translations$proFeature$en.internal(_root);
+	late final Translations$legalUpdate$en legalUpdate = Translations$legalUpdate$en.internal(_root);
 }
 
 // Path: nav
@@ -188,6 +189,12 @@ class Translations$common$en {
 
 	/// en: 'Discard'
 	String get discard => 'Discard';
+
+	/// en: 'Discard changes?'
+	String get unsavedTitle => 'Discard changes?';
+
+	/// en: 'What you changed here is not saved yet. Leave without saving it?'
+	String get unsavedMessage => 'What you changed here is not saved yet. Leave without saving it?';
 
 	/// en: 'Required'
 	String get required => 'Required';
@@ -488,6 +495,33 @@ class Translations$profileForm$en {
 
 	/// en: 'Avatar'
 	String get avatar => 'Avatar';
+
+	/// en: 'More options'
+	String get moreOptions => 'More options';
+
+	/// en: 'Fallback hosts, jump host, port forwarding, notifications'
+	String get moreOptionsHint => 'Fallback hosts, jump host, port forwarding, notifications';
+
+	/// en: '(one) {{n} fallback host} (other) {{n} fallback hosts}'
+	String moreFallbacks({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n,
+		one: '${n} fallback host',
+		other: '${n} fallback hosts',
+	);
+
+	/// en: 'via {name}'
+	String moreJumpHost({required Object name}) => 'via ${name}';
+
+	/// en: 'via a jump host'
+	String get moreJumpHostHidden => 'via a jump host';
+
+	/// en: '(one) {{n} forward} (other) {{n} forwards}'
+	String moreForwards({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n,
+		one: '${n} forward',
+		other: '${n} forwards',
+	);
+
+	/// en: 'notifications off'
+	String get moreNotificationsOff => 'notifications off';
 
 	/// en: 'Fallback addresses'
 	String get fallbackHosts => 'Fallback addresses';
@@ -1215,6 +1249,11 @@ class Translations$settings$en {
 
 	/// en: 'Show typing instantly on slow connections'
 	String get predictiveEchoSubtitle => 'Show typing instantly on slow connections';
+
+	/// en: 'Finished commands, agents that need you, and your servers'
+	String get notificationsRowSubtitle => 'Finished commands, agents that need you, and your servers';
+
+	late final Translations$settings$notificationsDemo$en notificationsDemo = Translations$settings$notificationsDemo$en.internal(_root);
 
 	/// en: 'Notifications from programs'
 	String get programNotifications => 'Notifications from programs';
@@ -3697,6 +3736,12 @@ class Translations$account$en {
 	/// en: 'Continue with Apple'
 	String get continueWithApple => 'Continue with Apple';
 
+	/// en: 'Continue with GitHub'
+	String get continueWithGitHub => 'Continue with GitHub';
+
+	/// en: 'By signing in or creating an account you agree to the terms of service and the privacy policy.'
+	String get agreeNotice => 'By signing in or creating an account you agree to the terms of service and the privacy policy.';
+
 	/// en: 'Or with an email address'
 	String get orEmail => 'Or with an email address';
 
@@ -3729,6 +3774,9 @@ class Translations$account$en {
 
 	/// en: 'Apple'
 	String get providerApple => 'Apple';
+
+	/// en: 'GitHub'
+	String get providerGitHub => 'GitHub';
 
 	/// en: 'email and password'
 	String get providerPassword => 'email and password';
@@ -3892,6 +3940,21 @@ class Translations$proFeature$en {
 	String get seePro => 'See Pro';
 }
 
+// Path: legalUpdate
+class Translations$legalUpdate$en {
+	Translations$legalUpdate$en.internal(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'Our terms and privacy policy have changed'
+	String get title => 'Our terms and privacy policy have changed';
+
+	/// en: 'Got it'
+	String get gotIt => 'Got it';
+}
+
 // Path: sftp.errors
 class Translations$sftp$errors$en {
 	Translations$sftp$errors$en.internal(this._root);
@@ -3992,6 +4055,36 @@ class Translations$sftp$queue$en {
 
 	/// en: 'Moving'
 	String get movingTitle => 'Moving';
+}
+
+// Path: settings.notificationsDemo
+class Translations$settings$notificationsDemo$en {
+	Translations$settings$notificationsDemo$en.internal(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'Termphin · now'
+	String get appLine => 'Termphin · now';
+
+	/// en: 'cargo build finished'
+	String get finishedTitle => 'cargo build finished';
+
+	/// en: 'Finished release target in 41s'
+	String get finishedBody => 'Finished release target in 41s';
+
+	/// en: 'claude is waiting for you'
+	String get waitingTitle => 'claude is waiting for you';
+
+	/// en: 'Do you want to make this edit? (y/n)'
+	String get waitingBody => 'Do you want to make this edit? (y/n)';
+
+	/// en: 'npm test finished'
+	String get testsTitle => 'npm test finished';
+
+	/// en: 'Tests: 128 passed, 128 total'
+	String get testsBody => 'Tests: 128 passed, 128 total';
 }
 
 // Path: connection.quality
@@ -4384,6 +4477,9 @@ class Translations$account$pro$paywall$en {
 	/// en: 'Prices could not be loaded.'
 	String get noOffers => 'Prices could not be loaded.';
 
+	/// en: 'Sign in to see the plans and their prices in your store.'
+	String get signInForPrices => 'Sign in to see the plans and their prices in your store.';
+
 	/// en: 'Try again'
 	String get retry => 'Try again';
 
@@ -4476,6 +4572,8 @@ extension on Translations {
 			'common.done' => 'Done',
 			'common.copy' => 'Copy',
 			'common.discard' => 'Discard',
+			'common.unsavedTitle' => 'Discard changes?',
+			'common.unsavedMessage' => 'What you changed here is not saved yet. Leave without saving it?',
 			'common.required' => 'Required',
 			'common.invalid' => 'Invalid',
 			'common.optional' => 'optional',
@@ -4566,6 +4664,13 @@ extension on Translations {
 			'profileForm.privateKeyRequired' => 'Private key is required.',
 			'profileForm.saveFailed' => ({required Object error}) => 'Could not save: ${error}',
 			'profileForm.avatar' => 'Avatar',
+			'profileForm.moreOptions' => 'More options',
+			'profileForm.moreOptionsHint' => 'Fallback hosts, jump host, port forwarding, notifications',
+			'profileForm.moreFallbacks' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '${n} fallback host', other: '${n} fallback hosts', ), 
+			'profileForm.moreJumpHost' => ({required Object name}) => 'via ${name}',
+			'profileForm.moreJumpHostHidden' => 'via a jump host',
+			'profileForm.moreForwards' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '${n} forward', other: '${n} forwards', ), 
+			'profileForm.moreNotificationsOff' => 'notifications off',
 			'profileForm.fallbackHosts' => 'Fallback addresses',
 			'profileForm.fallbackHostsHint' => 'Tried in order if the host above doesn\'t answer, e.g. a Tailscale IP or a LAN address.',
 			'profileForm.fallbackHostHint' => 'host or host:port',
@@ -4819,6 +4924,14 @@ extension on Translations {
 			'settings.cursorBlink' => 'Blink',
 			'settings.predictiveEcho' => 'Predictive echo',
 			'settings.predictiveEchoSubtitle' => 'Show typing instantly on slow connections',
+			'settings.notificationsRowSubtitle' => 'Finished commands, agents that need you, and your servers',
+			'settings.notificationsDemo.appLine' => 'Termphin · now',
+			'settings.notificationsDemo.finishedTitle' => 'cargo build finished',
+			'settings.notificationsDemo.finishedBody' => 'Finished release target in 41s',
+			'settings.notificationsDemo.waitingTitle' => 'claude is waiting for you',
+			'settings.notificationsDemo.waitingBody' => 'Do you want to make this edit? (y/n)',
+			'settings.notificationsDemo.testsTitle' => 'npm test finished',
+			'settings.notificationsDemo.testsBody' => 'Tests: 128 passed, 128 total',
 			'settings.programNotifications' => 'Notifications from programs',
 			'settings.programNotificationsSubtitle' => 'When a program in another session asks for one, like Claude Code finishing',
 			'settings.finishedNotifications' => 'When a long command finishes',
@@ -4945,6 +5058,8 @@ extension on Translations {
 			'settings.feedback' => 'Feedback',
 			'settings.sendFeedback' => 'Send feedback',
 			'settings.sendFeedbackSubtitle' => 'Ideas, requests, anything you\'d like to see',
+			_ => null,
+		} ?? switch (path) {
 			'settings.reportBug' => 'Report a bug',
 			'settings.reportBugSubtitle' => 'Something broke? Tell us what happened',
 			'settings.issueTracker' => 'Issue tracker',
@@ -4962,8 +5077,6 @@ extension on Translations {
 			'settings.errorReportsSubtitle' => 'Errors Termphin ran into, to send with a bug report',
 			'settings.feedbackEmailFailed' => 'Could not open your mail app.',
 			'settings.about' => 'About',
-			_ => null,
-		} ?? switch (path) {
 			'settings.aboutTagline' => 'SSH client',
 			'settings.aboutVersion' => ({required Object version}) => 'Version ${version}',
 			'settings.releaseNotes' => 'Release notes',
@@ -5459,6 +5572,8 @@ extension on Translations {
 			'onboarding.serverYesSubtitle' => 'A VPS, a Raspberry Pi, a machine at work - anything you can SSH into.',
 			'onboarding.serverNotYet' => 'Not yet',
 			'onboarding.serverNotYetSubtitle' => 'See where to get one.',
+			_ => null,
+		} ?? switch (path) {
 			'onboarding.permissionsTitle' => 'A few things to set up',
 			'onboarding.permissionsBody' => 'All optional, and all changeable later in Settings.',
 			'onboarding.backgroundTitle' => 'Unrestricted battery use',
@@ -5476,8 +5591,6 @@ extension on Translations {
 			'onboarding.unlockBody' => 'Your account syncs your machines, keys and snippets. Enter your sync passphrase to bring them to this device.',
 			'onboarding.unlockAction' => 'Unlock',
 			'onboarding.notNow' => 'Not now',
-			_ => null,
-		} ?? switch (path) {
 			'serverGuide.title' => 'Where to get a server',
 			'serverGuide.computerTitle' => 'Your own computer',
 			'serverGuide.computerBody' => 'Turn on SSH: Remote Login on a Mac, OpenSSH Server on Windows or Linux. Then add its address here.',
@@ -5565,6 +5678,8 @@ extension on Translations {
 			'account.intro' => 'An account is only needed for Pro. Everything else works without one.',
 			'account.continueWithGoogle' => 'Continue with Google',
 			'account.continueWithApple' => 'Continue with Apple',
+			'account.continueWithGitHub' => 'Continue with GitHub',
+			'account.agreeNotice' => 'By signing in or creating an account you agree to the terms of service and the privacy policy.',
 			'account.orEmail' => 'Or with an email address',
 			'account.email' => 'Email',
 			'account.password' => 'Password',
@@ -5576,6 +5691,7 @@ extension on Translations {
 			'account.planFree' => 'Free plan',
 			'account.providerGoogle' => 'Google',
 			'account.providerApple' => 'Apple',
+			'account.providerGitHub' => 'GitHub',
 			'account.providerPassword' => 'email and password',
 			'account.signOut' => 'Sign out',
 			'account.deleteAccount' => 'Delete account',
@@ -5630,6 +5746,7 @@ extension on Translations {
 			'account.pro.paywall.subscribe' => 'Continue',
 			'account.pro.paywall.signInFirst' => 'Sign in to continue',
 			'account.pro.paywall.noOffers' => 'Prices could not be loaded.',
+			'account.pro.paywall.signInForPrices' => 'Sign in to see the plans and their prices in your store.',
 			'account.pro.paywall.retry' => 'Try again',
 			'account.pro.paywall.legal' => 'Renews automatically until cancelled. Cancel any time in your store account.',
 			'account.pro.paywall.terms' => 'Terms',
@@ -5722,6 +5839,8 @@ extension on Translations {
 			'proFeature.notificationsTitle' => 'Notifications with Termphin closed',
 			'proFeature.notificationsBody' => 'Termphin tells you when a command finishes or a program needs you. With Pro this reaches you even when the app is closed, through a relay that keeps nothing.',
 			'proFeature.seePro' => 'See Pro',
+			'legalUpdate.title' => 'Our terms and privacy policy have changed',
+			'legalUpdate.gotIt' => 'Got it',
 			_ => null,
 		};
 	}

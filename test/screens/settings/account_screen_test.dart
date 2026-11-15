@@ -49,6 +49,14 @@ void main() {
     expect(find.text(t.account.createAccount), findsOneWidget);
   });
 
+  testWidgets('signing in says it means agreeing to the terms', (tester) async {
+    await open(tester);
+
+    expect(find.text(t.account.agreeNotice), findsOneWidget);
+    expect(find.text(t.analyticsConsent.termsLink), findsOneWidget);
+    expect(find.text(t.analyticsConsent.privacyLink), findsOneWidget);
+  });
+
   testWidgets('Apple is offered where the backend can do it', (tester) async {
     backend.apple = true;
 
@@ -65,12 +73,26 @@ void main() {
     await tester.tap(find.text(t.account.continueWithGoogle));
     await tester.pumpAndSettle();
 
+    expect(find.text('me@example.com'), findsOneWidget);
+    expect(find.text(t.account.signOut), findsOneWidget);
+    expect(find.text(t.account.deleteAccount), findsOneWidget);
+  });
+
+  testWidgets('signing in with GitHub turns the screen into the account', (
+    tester,
+  ) async {
+    await open(tester);
+
+    await tester.ensureVisible(find.text(t.account.continueWithGitHub));
+    await tester.tap(find.text(t.account.continueWithGitHub));
+    await tester.pumpAndSettle();
+
+    expect(backend.calls, contains('github'));
     expect(
-      find.text('me@example.com'),
+      find.text(t.account.signedInWith(provider: t.account.providerGitHub)),
       findsOneWidget,
     );
     expect(find.text(t.account.signOut), findsOneWidget);
-    expect(find.text(t.account.deleteAccount), findsOneWidget);
   });
 
   testWidgets('opened only to sign in, it closes once someone has', (

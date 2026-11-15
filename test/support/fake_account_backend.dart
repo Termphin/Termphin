@@ -53,6 +53,18 @@ class FakeAccountBackend implements AccountBackend {
   );
 
   @override
+  Future<void> signInWithGitHub() => _call(
+    'github',
+    () => _set(
+      const AccountUser(
+        uid: 'h1',
+        provider: AccountProvider.github,
+        email: 'me@example.com',
+      ),
+    ),
+  );
+
+  @override
   Future<void> signInWithEmail(String email, String password) => _call(
     'email:$email',
     () => _set(
