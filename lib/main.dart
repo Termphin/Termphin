@@ -8,6 +8,7 @@ import 'screens/share/share_screen.dart';
 import 'services/account/account_service.dart';
 import 'services/analytics/analytics_service.dart';
 import 'services/app/error_reports.dart';
+import 'services/app/font_licenses.dart';
 import 'services/app/identity_anonymizer.dart';
 import 'services/platform/foreground_notification_service.dart';
 import 'services/platform/local_notifications_service.dart';
@@ -49,6 +50,7 @@ Future<void> main() async {
 
   WidgetsFlutterBinding.ensureInitialized();
   ErrorReports.instance.install();
+  registerFontLicenses();
 
   await loadAppSettings();
   await ErrorReports.instance.load();
