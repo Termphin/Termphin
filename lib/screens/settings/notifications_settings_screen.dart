@@ -6,6 +6,7 @@ import '../../i18n/strings.g.dart';
 import '../../services/analytics/analytics_service.dart';
 import '../../theme/theme.dart';
 import '../../utils/platform_info.dart';
+import '../../widgets/settings/notification_permission_note.dart';
 import '../../widgets/settings/notifications_demo.dart';
 import '../../widgets/settings/notifications_settings_section.dart';
 import '../../widgets/ui/info_note.dart';
@@ -59,6 +60,7 @@ class _NotificationsSettingsScreenState
           const SizedBox(height: AppTheme.space16),
           const NotificationsDemo(),
           const SizedBox(height: AppTheme.space20),
+          const NotificationPermissionNote(),
           if (isIOSPlatform) ...[
             InfoNote(t.settings.iosNotificationsNote),
             const SizedBox(height: AppTheme.space16),
