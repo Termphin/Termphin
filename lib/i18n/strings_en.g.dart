@@ -1267,6 +1267,12 @@ class Translations$settings$en {
 	/// en: 'Long commands that end, agents waiting for an answer, and programs that ask for one'
 	String get commandNotificationsSubtitle => 'Long commands that end, agents waiting for an answer, and programs that ask for one';
 
+	/// en: 'Notifications are turned off for Termphin, so none of these reach you.'
+	String get notificationsBlocked => 'Notifications are turned off for Termphin, so none of these reach you.';
+
+	/// en: 'Allow notifications'
+	String get notificationsBlockedAction => 'Allow notifications';
+
 	/// en: 'On iPhone, iOS pauses Termphin a moment after you switch away, so these notifications come only while it is open. To hear from your servers in the background, turn on “Notify me anywhere”.'
 	String get iosNotificationsNote => 'On iPhone, iOS pauses Termphin a moment after you switch away, so these notifications come only while it is open. To hear from your servers in the background, turn on “Notify me anywhere”.';
 
@@ -4954,6 +4960,8 @@ extension on Translations {
 			'settings.programNotificationsSubtitle' => 'When a program in another session asks for one, like Claude Code finishing',
 			'settings.commandNotifications' => 'When a command finishes or needs you',
 			'settings.commandNotificationsSubtitle' => 'Long commands that end, agents waiting for an answer, and programs that ask for one',
+			'settings.notificationsBlocked' => 'Notifications are turned off for Termphin, so none of these reach you.',
+			'settings.notificationsBlockedAction' => 'Allow notifications',
 			'settings.iosNotificationsNote' => 'On iPhone, iOS pauses Termphin a moment after you switch away, so these notifications come only while it is open. To hear from your servers in the background, turn on “Notify me anywhere”.',
 			'settings.finishedNotifications' => 'When a long command finishes',
 			'settings.finishedNotificationsSubtitle' => 'A command that ran 30 seconds or more, named with its last line',
@@ -5074,10 +5082,10 @@ extension on Translations {
 			'settings.batteryUnrestrictedSubtitle' => 'Keeps sessions connected in the background',
 			'settings.notificationsPermission' => 'Notifications',
 			'settings.notificationsPermissionSubtitle' => 'For background sessions and downloads',
-			'settings.localNetworkPermission' => 'Local network access',
-			'settings.localNetworkPermissionSubtitle' => 'Needed to reach machines on your network',
 			_ => null,
 		} ?? switch (path) {
+			'settings.localNetworkPermission' => 'Local network access',
+			'settings.localNetworkPermissionSubtitle' => 'Needed to reach machines on your network',
 			'settings.feedback' => 'Feedback',
 			'settings.sendFeedback' => 'Send feedback',
 			'settings.sendFeedbackSubtitle' => 'Ideas, requests, anything you\'d like to see',
@@ -5588,10 +5596,10 @@ extension on Translations {
 			'analyticsConsent.allow' => 'Allow',
 			'onboarding.welcomeTitle' => 'Welcome to Termphin',
 			'onboarding.welcomeBody' => 'An SSH client whose sessions survive a dropped connection. Lock the phone, lose signal, come back - your shell is still there.',
-			'onboarding.getStarted' => 'Get started',
-			'onboarding.serverTitle' => 'Do you have a server?',
 			_ => null,
 		} ?? switch (path) {
+			'onboarding.getStarted' => 'Get started',
+			'onboarding.serverTitle' => 'Do you have a server?',
 			'onboarding.serverBody' => 'Termphin connects to machines you already run, over SSH.',
 			'onboarding.serverYes' => 'Yes, I have one',
 			'onboarding.serverYesSubtitle' => 'A VPS, a Raspberry Pi, a machine at work - anything you can SSH into.',

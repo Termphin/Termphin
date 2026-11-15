@@ -428,6 +428,8 @@
     "programNotificationsSubtitle": "When a program in another session asks for one, like Claude Code finishing",
     "commandNotifications": "When a command finishes or needs you",
     "commandNotificationsSubtitle": "Long commands that end, agents waiting for an answer, and programs that ask for one",
+    "notificationsBlocked": "Notifications are turned off for Termphin, so none of these reach you.",
+    "notificationsBlockedAction": "Allow notifications",
     "iosNotificationsNote": "On iPhone, iOS pauses Termphin a moment after you switch away, so these notifications come only while it is open. To hear from your servers in the background, turn on “Notify me anywhere”.",
     "finishedNotifications": "When a long command finishes",
     "finishedNotificationsSubtitle": "A command that ran 30 seconds or more, named with its last line",
