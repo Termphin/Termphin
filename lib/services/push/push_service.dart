@@ -11,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/ssh_profile.dart';
 import '../../utils/platform_info.dart';
 import '../account/account_service.dart';
+import '../analytics/analytics_service.dart';
 import '../firebase/firebase_service.dart';
 import '../platform/local_notifications_service.dart';
 import '../pro/pro_service.dart';
@@ -307,8 +308,14 @@ class PushService {
       if (given != null) await _deleteKey(given);
       await _rememberKey(profile.id, keyId);
       outcome = MachineCheck.settled;
+      unawaited(
+        AnalyticsService.instance.capture(AnalyticsEvent.relayServerAdded),
+      );
     } catch (_) {
       outcome = MachineCheck.failed;
+      unawaited(
+        AnalyticsService.instance.capture(AnalyticsEvent.relayServerFailed),
+      );
     } finally {
       _checks.finish(profile.id, outcome);
     }

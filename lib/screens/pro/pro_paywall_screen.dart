@@ -29,7 +29,15 @@ import '../settings/account_screen.dart';
 /// "Sign in to continue", since a purchase belongs to an account. Opening it
 /// with Pro already on, or finishing a purchase, closes it.
 class ProPaywallScreen extends ConsumerStatefulWidget {
-  const ProPaywallScreen({super.key, @visibleForTesting this.offers});
+  const ProPaywallScreen({
+    super.key,
+    this.source,
+    @visibleForTesting this.offers,
+  });
+
+  /// Where the paywall was opened from, carried onto every funnel event it
+  /// sends so a purchase can be put down to the place that sold it.
+  final ProSource? source;
 
   /// Stands in for the store's offers in tests, as if they had loaded.
   final List<ProOffer>? offers;
@@ -46,7 +54,7 @@ class ProPaywallScreen extends ConsumerStatefulWidget {
     return Navigator.of(context).push(
       MaterialPageRoute<void>(
         fullscreenDialog: true,
-        builder: (_) => const ProPaywallScreen(),
+        builder: (_) => ProPaywallScreen(source: source),
       ),
     );
   }
@@ -106,13 +114,40 @@ class _ProPaywallScreenState extends ConsumerState<ProPaywallScreen> {
     }
   }
 
+  /// What every funnel event from this paywall carries: where it was
+  /// opened from, plus [extra].
+  void _capture(
+    AnalyticsEvent event, [
+    Map<AnalyticsProperty, Object> extra = const {},
+  ]) {
+    final source = widget.source;
+    unawaited(
+      AnalyticsService.instance.capture(
+        event,
+        properties: {AnalyticsProperty.source: ?source?.id, ...extra},
+      ),
+    );
+  }
+
   Future<void> _load() async {
     if (_loaded) setState(() => _loaded = false);
     List<ProOffer> offers = const [];
+    var failed = false;
     try {
       offers = sortedOffers(widget.offers ?? await _pro.offers());
-    } catch (_) {}
+    } catch (_) {
+      failed = true;
+    }
     if (!mounted) return;
+    if (offers.isEmpty) {
+      _capture(AnalyticsEvent.paywallOffersFailed, {
+        AnalyticsProperty.reason: ref.read(accountProvider) == null
+            ? 'not_signed_in'
+            : failed
+            ? 'error'
+            : 'none',
+      });
+    }
     setState(() {
       _offers = offers;
       _chosen = offers.isEmpty ? null : offers.first;
@@ -120,7 +155,12 @@ class _ProPaywallScreenState extends ConsumerState<ProPaywallScreen> {
     });
   }
 
-  Future<void> _attempt(Future<void> Function() action) async {
+  /// Runs a purchase or restore. [failed] hears why one did not go through,
+  /// as the store's own reason or `failed` for anything else.
+  Future<void> _attempt(
+    Future<void> Function() action, {
+    required void Function(String reason) failed,
+  }) async {
     final t = Translations.of(context);
     setState(() => _busy = true);
     try {
@@ -132,10 +172,12 @@ class _ProPaywallScreenState extends ConsumerState<ProPaywallScreen> {
         return;
       }
     } on ProException catch (error) {
+      failed(analyticsName(error.failure));
       if (mounted && error.failure != ProFailure.cancelled) {
         AppNotifications.error(context, t.account.pro.failed);
       }
     } catch (_) {
+      failed('failed');
       if (mounted) AppNotifications.error(context, t.account.pro.failed);
     }
     if (mounted) setState(() => _busy = false);
@@ -143,36 +185,41 @@ class _ProPaywallScreenState extends ConsumerState<ProPaywallScreen> {
 
   Future<void> _buy(ProOffer offer) async {
     final plan = {AnalyticsProperty.plan: offer.period};
-    unawaited(
-      AnalyticsService.instance.capture(
-        AnalyticsEvent.purchaseStarted,
-        properties: plan,
-      ),
+    _capture(AnalyticsEvent.purchaseStarted, plan);
+    await _attempt(
+      () async {
+        await _pro.buy(offer);
+        if (_pro.active.value) {
+          _capture(AnalyticsEvent.purchaseCompleted, plan);
+        }
+      },
+      failed: (reason) => _capture(AnalyticsEvent.purchaseFailed, {
+        ...plan,
+        AnalyticsProperty.reason: reason,
+      }),
     );
-    await _attempt(() async {
-      await _pro.buy(offer);
-      if (_pro.active.value) {
-        unawaited(
-          AnalyticsService.instance.capture(
-            AnalyticsEvent.purchaseCompleted,
-            properties: plan,
-          ),
-        );
-      }
-    });
   }
 
   /// Restores what the store has for this account. Finding none says so,
   /// since the screen would otherwise look as if nothing happened.
-  Future<void> _restore() => _attempt(() async {
-    await _pro.restore();
-    if (mounted && !_pro.active.value) {
-      AppNotifications.info(
-        context,
-        Translations.of(context).account.pro.paywall.nothingToRestore,
-      );
-    }
-  });
+  Future<void> _restore() => _attempt(
+    () async {
+      await _pro.restore();
+      _capture(AnalyticsEvent.restoreFinished, {
+        AnalyticsProperty.outcome: _pro.active.value ? 'found' : 'none',
+      });
+      if (mounted && !_pro.active.value) {
+        AppNotifications.info(
+          context,
+          Translations.of(context).account.pro.paywall.nothingToRestore,
+        );
+      }
+    },
+    failed: (reason) => _capture(AnalyticsEvent.restoreFinished, {
+      AnalyticsProperty.outcome: 'failed',
+      AnalyticsProperty.reason: reason,
+    }),
+  );
 
   Future<void> _signIn() async {
     await Navigator.of(

@@ -409,8 +409,16 @@ class _AppShellState extends ConsumerState<_AppShell> {
     service.iconIds = ProfileAvatarData.icons.map((icon) => icon.id).toList();
     service.normalizeColorHex = (hex) => ProfileAvatarColor.forHex(hex).hex;
     service.init();
-    LocalNotificationsService.instance.onOpenSession = _openNotifiedSession;
-    PushService.instance.onOpenRelayed = _openRelayedSession;
+    LocalNotificationsService.instance.onOpenSession = (sessionId) {
+      _noteOpened(
+        relayTargetFromPayload(sessionId) != null ? 'push' : 'terminal',
+      );
+      _openNotifiedSession(sessionId);
+    };
+    PushService.instance.onOpenRelayed = (profileId, session) {
+      _noteOpened('push');
+      _openRelayedSession(profileId, session);
+    };
     WidgetsBinding.instance.addPostFrameCallback(
       (_) => _runStartupInterstitials(),
     );
@@ -422,6 +430,15 @@ class _AppShellState extends ConsumerState<_AppShell> {
     PushService.instance.onOpenRelayed = null;
     super.dispose();
   }
+
+  /// Records a tapped notification, by what it came through: [via] is
+  /// `push` from a server or `terminal` from a session the app had open.
+  void _noteOpened(String via) => unawaited(
+    AnalyticsService.instance.capture(
+      AnalyticsEvent.notificationOpened,
+      properties: {AnalyticsProperty.via: via},
+    ),
+  );
 
   /// What tapping a notification from the terminal does: the session it was
   /// about, in front, with the rest of the tabs behind it. Like a shortcut it

@@ -10,6 +10,7 @@ import '../../screens/pro/pro_paywall_screen.dart';
 import '../../screens/settings/notifications_settings_screen.dart';
 import '../../screens/settings/relay_servers_screen.dart';
 import '../../services/account/account_service.dart';
+import '../../services/analytics/analytics_service.dart';
 import '../../services/pro/pro_service.dart';
 import '../../services/push/push_service.dart';
 import '../../services/settings/setting.dart';
@@ -110,18 +111,30 @@ class _NotificationsSettingsListState
     try {
       if (on) {
         final granted = await PushService.instance.enable();
+        _notePush(granted ? 'granted' : 'denied');
         if (!granted && mounted) {
           AppNotifications.error(context, t.settings.notifyDenied);
         }
       } else {
         await PushService.instance.disable();
+        unawaited(
+          AnalyticsService.instance.capture(AnalyticsEvent.pushDisabled),
+        );
       }
     } catch (_) {
+      if (on) _notePush('failed');
       if (mounted) AppNotifications.error(context, t.settings.notifyFailed);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
+
+  void _notePush(String outcome) => unawaited(
+    AnalyticsService.instance.capture(
+      AnalyticsEvent.pushEnabled,
+      properties: {AnalyticsProperty.outcome: outcome},
+    ),
+  );
 
   Widget _noticeSwitch(
     Setting<bool> setting, {
