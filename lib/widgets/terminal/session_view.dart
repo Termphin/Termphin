@@ -752,8 +752,6 @@ class SessionViewState extends ConsumerState<SessionView> {
       final savePath = await FilePicker.saveFile(
         dialogTitle: t.actionDock.saveOutputDialogTitle,
         fileName: 'termphin_output_$timestamp.txt',
-        type: FileType.custom,
-        allowedExtensions: ['txt'],
         bytes: Uint8List.fromList(utf8.encode('$text\n')),
       );
       if (savePath == null || !mounted) return;

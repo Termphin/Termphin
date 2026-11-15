@@ -132,8 +132,6 @@ class _BackupExportScreenState extends State<BackupExportScreen> {
       final savePath = await FilePicker.saveFile(
         dialogTitle: t.exportScreen.saveDialogTitle,
         fileName: fileName,
-        type: FileType.custom,
-        allowedExtensions: ['json'],
         bytes: Uint8List.fromList(utf8.encode(json)),
       );
 
