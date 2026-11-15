@@ -1,6 +1,7 @@
 {
   "name": "termphin-functions",
   "private": true,
+  "license": "GPL-3.0-or-later",
   "type": "commonjs",
   "main": "index.js",
   "engines": {

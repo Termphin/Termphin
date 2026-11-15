@@ -8,6 +8,9 @@ Use the issue forms at https://github.com/Termphin/Termphin/issues. A
 security vulnerability goes to **contact@termphin.dev** instead, never to a
 public issue - see [SECURITY.md](SECURITY.md).
 
+Everyone taking part is expected to follow the
+[code of conduct](CODE_OF_CONDUCT.md).
+
 ## Pull requests
 
 1. For anything larger than a small fix, open an issue first so we can agree
