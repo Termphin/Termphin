@@ -1,7 +1,9 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:termphin/i18n/strings.g.dart';
+import 'package:termphin/providers/sync_provider.dart';
 import 'package:termphin/services/pro/pro_service.dart';
 import 'package:termphin/services/sync/sync_coordinator.dart';
 import 'package:termphin/services/sync/sync_service.dart';
@@ -104,6 +106,24 @@ void main() {
       expect(find.text(t.account.sync.retry), findsOneWidget);
       expect(find.text(t.account.sync.turnOn), findsNothing);
     });
+  });
+
+  testWidgets('leaving the screen with the app\'s coordinator does not read '
+      'providers from a widget being torn down', (tester) async {
+    final container = ProviderContainer(
+      overrides: [
+        syncCoordinatorProvider.overrideWithValue(
+          SyncCoordinator(service: service, reload: () async {}),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    await pumpTestApp(tester, SyncCard(service: service), container: container);
+    await tester.pumpAndSettle();
+
+    await tester.pumpWidget(const SizedBox());
+
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('sync that lost Pro says it is paused and offers to renew', (
