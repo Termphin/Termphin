@@ -12,13 +12,15 @@ void main() {
     bodyBuilder: (context, controller, gutter) => ListView(
       controller: controller,
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 32).add(gutter),
-      children: const [SizedBox(height: 2000, child: Text('body'))],
+      children: const [
+        SizedBox(height: 2000, child: Text('body')),
+        SizedBox(key: ValueKey('end'), height: 1),
+      ],
     ),
   );
 
-  testWidgets('scroll body ends above the system navigation bar', (
-    tester,
-  ) async {
+  testWidgets('scroll body runs under the bottom inset and pads its end '
+      'clear of it', (tester) async {
     tester.view.padding = const FakeViewPadding(bottom: 48);
     tester.view.viewPadding = const FakeViewPadding(bottom: 48);
     addTearDown(tester.view.resetPadding);
@@ -26,7 +28,20 @@ void main() {
 
     await pumpTestApp(tester, scaffold());
 
-    expect(tester.getBottomLeft(find.byType(ListView)).dy, 1000 - 48);
+    expect(tester.getBottomLeft(find.byType(ListView)).dy, 1000);
+
+    final controller = tester
+        .widget<ListView>(find.byType(ListView))
+        .controller!;
+    for (var i = 0; i < 2; i++) {
+      controller.jumpTo(controller.position.maxScrollExtent);
+      await tester.pump();
+    }
+
+    expect(
+      tester.getBottomLeft(find.byKey(const ValueKey('end'))).dy,
+      1000 - 48 - 32,
+    );
   });
 
   testWidgets('a wide window centres the content without boxing the scroll '
