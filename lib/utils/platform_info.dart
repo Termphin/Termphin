@@ -22,12 +22,18 @@ bool get isDesktopPlatform =>
         defaultTargetPlatform == TargetPlatform.macOS ||
         defaultTargetPlatform == TargetPlatform.windows);
 
+/// The narrowest window that gets the sidebar layout. A landscape window
+/// below it - one half of a split screen, a pop-up window - cannot spare the
+/// sidebar's width: beside it the screen would be squeezed to a sliver too
+/// narrow for its own rows.
+const double kWideLayoutMinWidth = 600;
+
 /// True when there's enough room for the desktop sidebar layout: a desktop
-/// window, or any device turned to landscape - width freed up from the
-/// side, rather than the bottom nav eating into height that's already
-/// short.
+/// window, or any device turned to landscape at least [kWideLayoutMinWidth]
+/// across - width freed up from the side, rather than the bottom nav eating
+/// into height that's already short.
 bool isWideLayout(BuildContext context) {
   if (isDesktopPlatform) return true;
   final size = MediaQuery.sizeOf(context);
-  return size.width > size.height;
+  return size.width > size.height && size.width >= kWideLayoutMinWidth;
 }
