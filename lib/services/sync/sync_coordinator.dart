@@ -22,7 +22,8 @@ enum SyncActivity {
 /// - when the app starts, and when it comes back after [resumeGap];
 /// - [localDelay] after the last edit on this device, so typing a profile
 ///   does not sync each keystroke;
-/// - [remoteDelay] after another device writes, while this one is open.
+/// - [remoteDelay] after another device writes, while this one is open;
+/// - when the network comes back after a run that failed for want of it.
 ///
 /// Runs never overlap: a reason that arrives during one queues exactly one
 /// more after it. What a run pulls in or deletes here is handed to
@@ -107,6 +108,13 @@ class SyncCoordinator {
   void localChanged() {
     if (!_active || _reloading) return;
     _schedule(localDelay);
+  }
+
+  /// The device is online again. A run that failed meanwhile is tried
+  /// again at once, rather than waiting for the next edit to send it.
+  void networkRegained() {
+    if (!_active || activity.value != SyncActivity.failed) return;
+    _schedule(Duration.zero);
   }
 
   /// The app came back to the foreground.
