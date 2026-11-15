@@ -69,4 +69,59 @@ void main() {
 
     expect(warning, findsNothing);
   });
+
+  group('the permission row', () {
+    Future<void> row(
+      WidgetTester tester, {
+      required Future<bool> Function() hasPermission,
+      Future<bool> Function()? requestPermission,
+      Future<void> Function()? openSettings,
+    }) async {
+      await pumpTestApp(
+        tester,
+        NotificationPermissionRow(
+          hasPermission: hasPermission,
+          requestPermission: requestPermission ?? () async => false,
+          openSettings: openSettings ?? () async {},
+        ),
+      );
+      await tester.pump();
+    }
+
+    testWidgets('allowed, a tap opens the system page', (tester) async {
+      var opened = 0;
+      var asked = 0;
+      await row(
+        tester,
+        hasPermission: () async => true,
+        requestPermission: () async {
+          asked++;
+          return true;
+        },
+        openSettings: () async => opened++,
+      );
+
+      expect(find.text(t.common.allowed), findsOneWidget);
+      await tester.tap(find.text(t.settings.notificationsPermission));
+      await tester.pump();
+
+      expect(opened, 1);
+      expect(asked, 0);
+    });
+
+    testWidgets('not allowed, a tap asks and the row follows', (tester) async {
+      var granted = false;
+      await row(
+        tester,
+        hasPermission: () async => granted,
+        requestPermission: () async => granted = true,
+      );
+      expect(find.text(t.common.allow), findsOneWidget);
+
+      await tester.tap(find.text(t.settings.notificationsPermission));
+      await tester.pump();
+
+      expect(find.text(t.common.allowed), findsOneWidget);
+    });
+  });
 }

@@ -19,7 +19,6 @@ class AnalyticsSettingsSection extends StatefulWidget {
 }
 
 class _AnalyticsSettingsSectionState extends State<AnalyticsSettingsSection> {
-  bool _loaded = false;
   bool _analyticsEnabled = false;
 
   @override
@@ -33,7 +32,6 @@ class _AnalyticsSettingsSectionState extends State<AnalyticsSettingsSection> {
     if (!mounted) return;
     setState(() {
       _analyticsEnabled = analyticsEnabled ?? false;
-      _loaded = true;
     });
   }
 
@@ -44,7 +42,6 @@ class _AnalyticsSettingsSectionState extends State<AnalyticsSettingsSection> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_loaded) return const SizedBox.shrink();
     final t = Translations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -1297,6 +1297,44 @@ class Translations$settings$en {
 	/// en: 'Shows what the command printed last. Off sends only its name and time'
 	String get noticeLinesSubtitle => 'Shows what the command printed last. Off sends only its name and time';
 
+	/// en: 'Search settings'
+	String get searchHint => 'Search settings';
+
+	/// en: 'Nothing in Settings matches “{query}”'
+	String searchEmpty({required Object query}) => 'Nothing in Settings matches “${query}”';
+
+	late final Translations$settings$searchKeywords$en searchKeywords = Translations$settings$searchKeywords$en.internal(_root);
+
+	/// en: 'Look, key toolbar, action dock and tabs'
+	String get terminalRowSubtitle => 'Look, key toolbar, action dock and tabs';
+
+	/// en: 'Files'
+	String get filesRow => 'Files';
+
+	/// en: 'Downloads, hidden files and the text editor'
+	String get filesRowSubtitle => 'Downloads, hidden files and the text editor';
+
+	/// en: 'The Termphin helper, running in the background and permissions'
+	String get connectionRowSubtitle => 'The Termphin helper, running in the background and permissions';
+
+	/// en: 'Privacy & security'
+	String get privacySecurity => 'Privacy & security';
+
+	/// en: 'PIN lock, known hosts, anonymize and analytics'
+	String get privacySecurityRowSubtitle => 'PIN lock, known hosts, anonymize and analytics';
+
+	/// en: 'Help & feedback'
+	String get helpFeedback => 'Help & feedback';
+
+	/// en: 'The manual, feedback, bug and error reports'
+	String get helpFeedbackRowSubtitle => 'The manual, feedback, bug and error reports';
+
+	/// en: 'About Termphin'
+	String get aboutTermphin => 'About Termphin';
+
+	/// en: 'Release notes, open source, licences and legal'
+	String get aboutRowSubtitle => 'Release notes, open source, licences and legal';
+
 	/// en: 'While Termphin is open'
 	String get openAppNotices => 'While Termphin is open';
 
@@ -1642,11 +1680,11 @@ class Translations$settings$en {
 	/// en: 'Keeps sessions connected in the background'
 	String get batteryUnrestrictedSubtitle => 'Keeps sessions connected in the background';
 
-	/// en: 'Notifications'
-	String get notificationsPermission => 'Notifications';
+	/// en: 'System permission'
+	String get notificationsPermission => 'System permission';
 
-	/// en: 'For background sessions and downloads'
-	String get notificationsPermissionSubtitle => 'For background sessions and downloads';
+	/// en: 'Sound, banners and the lock screen are set there too'
+	String get notificationsPermissionSubtitle => 'Sound, banners and the lock screen are set there too';
 
 	/// en: 'Local network access'
 	String get localNetworkPermission => 'Local network access';
@@ -4129,6 +4167,78 @@ class Translations$settings$notificationsDemo$en {
 	String get testsBody => 'Tests: 128 passed, 128 total';
 }
 
+// Path: settings.searchKeywords
+class Translations$settings$searchKeywords$en {
+	Translations$settings$searchKeywords$en.internal(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'dark light mode colours colors'
+	String get themeMode => 'dark light mode colours colors';
+
+	/// en: 'font size colour color scheme cursor line height theme'
+	String get terminalAppearance => 'font size colour color scheme cursor line height theme';
+
+	/// en: 'keys keyboard esc ctrl tab arrows'
+	String get keyToolbar => 'keys keyboard esc ctrl tab arrows';
+
+	/// en: 'palette shortcuts buttons'
+	String get actionDock => 'palette shortcuts buttons';
+
+	/// en: 'tab strip position'
+	String get tabsAtBottom => 'tab strip position';
+
+	/// en: 'autocomplete completion suggest'
+	String get commandSuggestions => 'autocomplete completion suggest';
+
+	/// en: 'upload paste path'
+	String get fastUpload => 'upload paste path';
+
+	/// en: 'save location downloads'
+	String get downloadFolder => 'save location downloads';
+
+	/// en: 'editor code font'
+	String get textEditor => 'editor code font';
+
+	/// en: 'agent persistent sessions tmux screen reconnect'
+	String get remoteAgentToggle => 'agent persistent sessions tmux screen reconnect';
+
+	/// en: 'battery background optimization'
+	String get batteryUnrestricted => 'battery background optimization';
+
+	/// en: 'permission allow sound banners lock screen'
+	String get notificationsPermission => 'permission allow sound banners lock screen';
+
+	/// en: 'password passcode code lock'
+	String get pinLock => 'password passcode code lock';
+
+	/// en: 'fingerprint face unlock'
+	String get biometricUnlock => 'fingerprint face unlock';
+
+	/// en: 'host keys fingerprints trust'
+	String get knownHosts => 'host keys fingerprints trust';
+
+	/// en: 'hide screenshots privacy'
+	String get anonymize => 'hide screenshots privacy';
+
+	/// en: 'tracking telemetry crash reports'
+	String get analyticsToggle => 'tracking telemetry crash reports';
+
+	/// en: 'backup restore export import json'
+	String get backup => 'backup restore export import json';
+
+	/// en: 'email contact'
+	String get sendFeedback => 'email contact';
+
+	/// en: 'bug issue problem'
+	String get reportBug => 'bug issue problem';
+
+	/// en: 'open source licences'
+	String get licenses => 'open source licences';
+}
+
 // Path: connection.quality
 class Translations$connection$quality$en {
 	Translations$connection$quality$en.internal(this._root);
@@ -4988,6 +5098,39 @@ extension on Translations {
 			'settings.quietNotificationsSubtitle' => 'An AI agent or installer that stopped to ask something',
 			'settings.noticeLines' => 'Quote the last line',
 			'settings.noticeLinesSubtitle' => 'Shows what the command printed last. Off sends only its name and time',
+			'settings.searchHint' => 'Search settings',
+			'settings.searchEmpty' => ({required Object query}) => 'Nothing in Settings matches “${query}”',
+			'settings.searchKeywords.themeMode' => 'dark light mode colours colors',
+			'settings.searchKeywords.terminalAppearance' => 'font size colour color scheme cursor line height theme',
+			'settings.searchKeywords.keyToolbar' => 'keys keyboard esc ctrl tab arrows',
+			'settings.searchKeywords.actionDock' => 'palette shortcuts buttons',
+			'settings.searchKeywords.tabsAtBottom' => 'tab strip position',
+			'settings.searchKeywords.commandSuggestions' => 'autocomplete completion suggest',
+			'settings.searchKeywords.fastUpload' => 'upload paste path',
+			'settings.searchKeywords.downloadFolder' => 'save location downloads',
+			'settings.searchKeywords.textEditor' => 'editor code font',
+			'settings.searchKeywords.remoteAgentToggle' => 'agent persistent sessions tmux screen reconnect',
+			'settings.searchKeywords.batteryUnrestricted' => 'battery background optimization',
+			'settings.searchKeywords.notificationsPermission' => 'permission allow sound banners lock screen',
+			'settings.searchKeywords.pinLock' => 'password passcode code lock',
+			'settings.searchKeywords.biometricUnlock' => 'fingerprint face unlock',
+			'settings.searchKeywords.knownHosts' => 'host keys fingerprints trust',
+			'settings.searchKeywords.anonymize' => 'hide screenshots privacy',
+			'settings.searchKeywords.analyticsToggle' => 'tracking telemetry crash reports',
+			'settings.searchKeywords.backup' => 'backup restore export import json',
+			'settings.searchKeywords.sendFeedback' => 'email contact',
+			'settings.searchKeywords.reportBug' => 'bug issue problem',
+			'settings.searchKeywords.licenses' => 'open source licences',
+			'settings.terminalRowSubtitle' => 'Look, key toolbar, action dock and tabs',
+			'settings.filesRow' => 'Files',
+			'settings.filesRowSubtitle' => 'Downloads, hidden files and the text editor',
+			'settings.connectionRowSubtitle' => 'The Termphin helper, running in the background and permissions',
+			'settings.privacySecurity' => 'Privacy & security',
+			'settings.privacySecurityRowSubtitle' => 'PIN lock, known hosts, anonymize and analytics',
+			'settings.helpFeedback' => 'Help & feedback',
+			'settings.helpFeedbackRowSubtitle' => 'The manual, feedback, bug and error reports',
+			'settings.aboutTermphin' => 'About Termphin',
+			'settings.aboutRowSubtitle' => 'Release notes, open source, licences and legal',
 			'settings.openAppNotices' => 'While Termphin is open',
 			'settings.openAppNoticesSubtitle' => 'From sessions you are not looking at',
 			'settings.openAppNoticeInApp' => 'In Termphin',
@@ -5067,6 +5210,8 @@ extension on Translations {
 			'settings.actionDockHide' => ({required Object name}) => 'Hide ${name}',
 			'settings.actionDockShow' => ({required Object name}) => 'Add ${name} to the dock',
 			'settings.actionDockReset' => 'Reset dock',
+			_ => null,
+		} ?? switch (path) {
 			'settings.actionDockResetTitle' => 'Reset the dock?',
 			'settings.actionDockResetMessage' => 'The default actions come back, in the default order.',
 			'settings.actionDockResetDone' => 'Dock reset',
@@ -5100,13 +5245,11 @@ extension on Translations {
 			'settings.editorPinchHint' => 'Pinch in the editor to resize text',
 			'settings.editorLineNumbers' => 'Line numbers',
 			'settings.editorWordWrap' => 'Wrap long lines',
-			_ => null,
-		} ?? switch (path) {
 			'settings.editorWordWrapSubtitle' => 'Off, a long line scrolls sideways instead.',
 			'settings.batteryUnrestricted' => 'Unrestricted battery use',
 			'settings.batteryUnrestrictedSubtitle' => 'Keeps sessions connected in the background',
-			'settings.notificationsPermission' => 'Notifications',
-			'settings.notificationsPermissionSubtitle' => 'For background sessions and downloads',
+			'settings.notificationsPermission' => 'System permission',
+			'settings.notificationsPermissionSubtitle' => 'Sound, banners and the lock screen are set there too',
 			'settings.localNetworkPermission' => 'Local network access',
 			'settings.localNetworkPermissionSubtitle' => 'Needed to reach machines on your network',
 			'settings.feedback' => 'Feedback',
@@ -5581,6 +5724,8 @@ extension on Translations {
 			'actionDock.copyAllFailed' => 'Couldn\'t copy the output - it may be too large for the clipboard. Try saving it to a file.',
 			'actionDock.saveOutput' => 'Save output',
 			'actionDock.saveOutputDialogTitle' => 'Save terminal output',
+			_ => null,
+		} ?? switch (path) {
 			'actionDock.outputSaved' => 'Terminal output saved',
 			'actionDock.saveOutputFailed' => ({required Object error}) => 'Couldn\'t save the output: ${error}',
 			'actionDock.nothingToCopy' => 'The terminal is empty.',
@@ -5614,8 +5759,6 @@ extension on Translations {
 			'analyticsConsent.title' => 'Share usage analytics?',
 			'analyticsConsent.body' => 'Nothing personal, nothing from your screen or sessions - just a handful of named events: which screens you open, which settings you change, whether a connection succeeded or why it failed. Enough to tell what\'s used and catch crashes. No autocapture, no tracking of what you type or where you connect. Nothing is collected unless you check the box below, and you can change your mind any time in Settings.',
 			'analyticsConsent.checkboxLabel' => 'Share anonymous usage data',
-			_ => null,
-		} ?? switch (path) {
 			'analyticsConsent.legalNotice' => 'By continuing you accept the terms of service and the privacy policy.',
 			'analyticsConsent.privacyLink' => 'Privacy policy',
 			'analyticsConsent.termsLink' => 'Terms of service',

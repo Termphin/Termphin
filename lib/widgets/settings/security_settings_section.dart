@@ -15,6 +15,7 @@ import '../ui/section_header.dart';
 import '../ui/settings_controls.dart';
 import '../ui/settings_tile.dart';
 import 'pin_setup_dialog.dart';
+import 'settings_rows_reveal.dart';
 
 /// Security section: the PIN lock, biometric unlock, its timeout and the
 /// known hosts list.
@@ -27,7 +28,6 @@ class SecuritySettingsSection extends StatefulWidget {
 }
 
 class _SecuritySettingsSectionState extends State<SecuritySettingsSection> {
-  bool _loaded = false;
   bool _lockEnabled = false;
   bool _biometricEnabled = false;
   bool _biometricAvailable = false;
@@ -47,7 +47,6 @@ class _SecuritySettingsSectionState extends State<SecuritySettingsSection> {
       _lockEnabled = lockEnabled;
       _biometricEnabled = biometricEnabled;
       _biometricAvailable = biometricAvailable;
-      _loaded = true;
     });
   }
 
@@ -89,7 +88,6 @@ class _SecuritySettingsSectionState extends State<SecuritySettingsSection> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_loaded) return const SizedBox.shrink();
     final t = Translations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -126,40 +124,43 @@ class _SecuritySettingsSectionState extends State<SecuritySettingsSection> {
                     }
                   : null,
             ),
-            if (_lockEnabled) ...[
-              const AppDivider(),
-              Padding(
-                padding: const EdgeInsets.all(AppTheme.space14),
-                child: ValueListenableBuilder<LockTimeout>(
-                  valueListenable: lockTimeoutSetting,
-                  builder: (context, timeout, _) =>
-                      SettingsDropdownRow<LockTimeout>(
-                        key: const ValueKey('lockTimeoutRow'),
-                        label: t.settings.lockAfter,
-                        value: timeout,
-                        labels: {
-                          LockTimeout.immediately:
-                              t.settings.lockAfterImmediately,
-                          LockTimeout.seconds30: t.settings.lockAfter30s,
-                          LockTimeout.minute1: t.settings.lockAfter1m,
-                          LockTimeout.minutes5: t.settings.lockAfter5m,
-                        },
-                        onChanged: (timeout) =>
-                            unawaited(lockTimeoutSetting.set(timeout)),
-                      ),
+            SettingsRowsReveal(
+              visible: _lockEnabled,
+              children: [
+                const AppDivider(),
+                Padding(
+                  padding: const EdgeInsets.all(AppTheme.space14),
+                  child: ValueListenableBuilder<LockTimeout>(
+                    valueListenable: lockTimeoutSetting,
+                    builder: (context, timeout, _) =>
+                        SettingsDropdownRow<LockTimeout>(
+                          key: const ValueKey('lockTimeoutRow'),
+                          label: t.settings.lockAfter,
+                          value: timeout,
+                          labels: {
+                            LockTimeout.immediately:
+                                t.settings.lockAfterImmediately,
+                            LockTimeout.seconds30: t.settings.lockAfter30s,
+                            LockTimeout.minute1: t.settings.lockAfter1m,
+                            LockTimeout.minutes5: t.settings.lockAfter5m,
+                          },
+                          onChanged: (timeout) =>
+                              unawaited(lockTimeoutSetting.set(timeout)),
+                        ),
+                  ),
                 ),
-              ),
-              const AppDivider(),
-              SettingsTile(
-                title: t.settings.changePin,
-                onTap: () async {
-                  final pin = await _showPinSetupDialog();
-                  if (pin != null) {
-                    await LockService.instance.setPin(pin);
-                  }
-                },
-              ),
-            ],
+                const AppDivider(),
+                SettingsTile(
+                  title: t.settings.changePin,
+                  onTap: () async {
+                    final pin = await _showPinSetupDialog();
+                    if (pin != null) {
+                      await LockService.instance.setPin(pin);
+                    }
+                  },
+                ),
+              ],
+            ),
             const AppDivider(),
             SettingsTile(
               title: t.settings.knownHosts,
