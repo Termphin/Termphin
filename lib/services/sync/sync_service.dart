@@ -9,6 +9,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../account/account_service.dart';
+import '../analytics/analytics_service.dart';
 import '../security/aead.dart';
 import '../security/secret_cipher.dart';
 import 'settings_sync.dart';
@@ -169,6 +170,7 @@ class SyncService {
     );
     if (!created) throw const SyncException(SyncFailure.alreadySetUp);
     await _vault.write(uid, key.bytes);
+    _noteEnabled('new');
     return syncNow();
   }
 
@@ -187,8 +189,19 @@ class SyncService {
       throw const SyncException(SyncFailure.wrongPassphrase);
     }
     await _vault.write(uid, key.bytes);
+    _noteEnabled('joined');
     return syncNow();
   }
+
+  /// Records sync coming on for this device: [outcome] is `new` for an
+  /// account that starts syncing, `joined` for one more device of one that
+  /// already does.
+  void _noteEnabled(String outcome) => unawaited(
+    AnalyticsService.instance.capture(
+      AnalyticsEvent.syncEnabled,
+      properties: {AnalyticsProperty.outcome: outcome},
+    ),
+  );
 
   /// Syncs, after checking the account still syncs under this device's key:
   /// one small read, which is what stops a device that missed sync being

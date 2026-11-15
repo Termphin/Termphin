@@ -50,7 +50,29 @@ enum AnalyticsEvent {
   proPromptShown('pro_prompt_shown'),
   paywallViewed('paywall_viewed'),
   purchaseStarted('purchase_started'),
-  purchaseCompleted('purchase_completed');
+  purchaseCompleted('purchase_completed'),
+
+  /// The paywall had nothing to sell: not signed in, the store had no offer,
+  /// or asking it failed. A visit that ends here never had a chance to buy.
+  paywallOffersFailed('paywall_offers_failed'),
+
+  /// A purchase that did not go through, and why: cancelled, or the store
+  /// failing - the two mean very different things for the funnel.
+  purchaseFailed('purchase_failed'),
+
+  /// Restoring purchases: found Pro, found nothing, or failed.
+  restoreFinished('restore_finished'),
+
+  /// Whether Pro is used once bought: push turned on or off, a server given
+  /// its relay key or failing to take it, a notification tapped, sync set up
+  /// or stopped by something other than a missing network.
+  pushEnabled('push_enabled'),
+  pushDisabled('push_disabled'),
+  relayServerAdded('relay_server_added'),
+  relayServerFailed('relay_server_failed'),
+  notificationOpened('notification_opened'),
+  syncEnabled('sync_enabled'),
+  syncFailed('sync_failed');
 
   const AnalyticsEvent(this.eventName);
   final String eventName;
@@ -95,11 +117,26 @@ enum AnalyticsProperty {
   source('source'),
 
   /// `annual`, `monthly` or `lifetime`.
-  plan('plan');
+  plan('plan'),
+
+  /// How an attempt ended, from a fixed set per event: `granted` or `denied`
+  /// for push, `found` or `none` for a restore, `new` or `joined` for sync.
+  outcome('outcome'),
+
+  /// What a tapped notification came through: `push` from a server, or
+  /// `terminal` from a session the app had open.
+  via('via');
 
   const AnalyticsProperty(this.propertyName);
   final String propertyName;
 }
+
+/// The snake_case name analytics sends for one of the app's own enum values,
+/// `notSignedIn` as `not_signed_in`: a fixed name, never anything typed.
+String analyticsName(Enum value) => value.name.replaceAllMapped(
+  RegExp('[A-Z]'),
+  (match) => '_${match[0]!.toLowerCase()}',
+);
 
 /// Screens, as analytics sees them. Names are ours, not widget class names,
 /// so renaming a class does not silently split a funnel in two.

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../analytics/analytics_service.dart';
 import 'sync_engine.dart';
 import 'sync_service.dart';
 
@@ -163,6 +164,9 @@ class SyncCoordinator {
       } while (_again && _active);
       activity.value = SyncActivity.idle;
     } on SyncException catch (error) {
+      if (error.failure != SyncFailure.network) {
+        _noteFailed(analyticsName(error.failure));
+      }
       switch (error.failure) {
         case SyncFailure.notPro:
           stop();
@@ -174,12 +178,22 @@ class SyncCoordinator {
           activity.value = SyncActivity.failed;
       }
     } catch (_) {
+      _noteFailed('unknown');
       activity.value = SyncActivity.failed;
     } finally {
       _running = null;
     }
     return report;
   }
+
+  /// Records a sync that failed for a reason worth knowing about. A missing
+  /// network is not one: it would be sent on every try made offline.
+  void _noteFailed(String reason) => unawaited(
+    AnalyticsService.instance.capture(
+      AnalyticsEvent.syncFailed,
+      properties: {AnalyticsProperty.reason: reason},
+    ),
+  );
 
   void dispose() {
     stop();
