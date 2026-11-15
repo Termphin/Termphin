@@ -36,6 +36,7 @@ class SessionTerminal {
     Uint8List? replay,
     this.onReply,
     this.onNotification,
+    this.onPresenceBack,
   }) : terminal = _SessionTerminalCore(
          maxLines: kTerminalScrollbackLines,
          platform: _terminalPlatform(defaultTargetPlatform),
@@ -63,6 +64,11 @@ class SessionTerminal {
   /// looking at is exactly the one whose news matters. Never called for a
   /// replay: that notification was shown, or missed, when it happened.
   void Function(TerminalNotification notification)? onNotification;
+
+  /// Called on the marker an agent master sends after everything it queued
+  /// while the phone was away - in the same order as the output around it,
+  /// so the notifications before it and after it fall on the right side.
+  void Function()? onPresenceBack;
 
   /// The bound pane's handler for the private OSCs it acts on itself.
   void Function(String code, List<String> args)? _paneOsc;
@@ -136,6 +142,10 @@ class SessionTerminal {
   }
 
   void _privateOsc(String code, List<String> args) {
+    if (code == '5386' && args.firstOrNull == 'termphin-back') {
+      onPresenceBack?.call();
+      return;
+    }
     if (!replaying) {
       final notification = TerminalNotification.fromOsc(code, args);
       if (notification != null) onNotification?.call(notification);

@@ -11,6 +11,7 @@ import 'services/app/error_reports.dart';
 import 'services/app/font_licenses.dart';
 import 'services/app/identity_anonymizer.dart';
 import 'services/platform/foreground_notification_service.dart';
+import 'services/platform/ios_background_task.dart';
 import 'services/platform/local_notifications_service.dart';
 import 'services/pro/pro_hints.dart';
 import 'services/pro/pro_service.dart';
@@ -23,6 +24,7 @@ import 'services/ssh/ssh_prompts.dart';
 import 'services/ssh/ssh_session_manager.dart';
 import 'services/terminal/terminal_alerts.dart';
 import 'services/terminal/terminal_notification.dart';
+import 'utils/platform_info.dart';
 import 'widgets/ssh/host_key_dialog.dart';
 import 'widgets/ssh/keyboard_interactive_dialog.dart';
 
@@ -66,7 +68,7 @@ Future<void> main() async {
   );
   AppLifecycleListener(
     onResume: _onResume,
-    onPause: () => SshSessionManager.instance.setForeground(false),
+    onPause: _onPause,
     onStateChange: (_) => alerts.visibilityChanged(),
   );
 
@@ -175,6 +177,23 @@ void _onResume() {
   SshSessionManager.instance.dropDeadSessions();
   SshSessionManager.instance.probeSessions();
   SshSessionManager.instance.setForeground(true);
+  if (isIOSPlatform) SshSessionManager.instance.comeBack();
+}
+
+/// iOS freezes the app moments after this without closing its connections,
+/// so the masters are told the phone went away while there is still time:
+/// under a background grant, held a moment so the bytes leave. Android's
+/// foreground service keeps the app running and its notifications working,
+/// so it says nothing and nothing changes there.
+void _onPause() {
+  SshSessionManager.instance.setForeground(false);
+  if (!isIOSPlatform) return;
+  unawaited(
+    IOSBackgroundTask.guard('presence', () async {
+      SshSessionManager.instance.goAway();
+      await Future<void>.delayed(const Duration(seconds: 1));
+    }),
+  );
 }
 
 /// Gives the SSH layer a way to ask the user something mid-handshake.

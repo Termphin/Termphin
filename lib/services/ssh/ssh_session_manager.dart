@@ -9,6 +9,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../i18n/strings.g.dart';
 import '../../models/active_session.dart';
+import '../../models/agent_feature.dart';
 import '../../models/remote_agent_status.dart';
 import '../../models/remote_shell.dart';
 import '../../models/session_tab.dart';
@@ -347,6 +348,61 @@ class SshSessionManager extends ChangeNotifier {
     _notificationWatches[session] = session.notifications.listen(
       (notification) => onTerminalNotification?.call(session, notification),
     );
+  }
+
+  /// What the app types to tell an agent master the phone went to the
+  /// background. The master's attach client takes it out of the input, so
+  /// the shell never sees it - which is why only a master that knows it,
+  /// [AgentFeature.backgroundNotices], is ever sent it.
+  static final presenceAway = Uint8List.fromList(
+    utf8.encode('\x1b]5386;away\x07'),
+  );
+
+  /// What the app types to tell the master the phone is back.
+  static final presenceBack = Uint8List.fromList(
+    utf8.encode('\x1b]5386;back\x07'),
+  );
+
+  /// How long notifications stay held after coming back if the marker never
+  /// arrives - a master that went down meanwhile sends none.
+  static const presenceMarkerWait = Duration(seconds: 10);
+
+  /// Whether [session]'s master can be told the phone went away.
+  static bool _hearsPresence(ActiveSessionView session) =>
+      !session.dropped &&
+      session.sshService != null &&
+      session.multiplexer == Multiplexer.termphin &&
+      !AgentFeature.missingFor(
+        session.masterVersion,
+      ).contains(AgentFeature.backgroundNotices);
+
+  /// Tells every master that can hear it that the phone went to the
+  /// background. A phone that freezes the app - an iPhone - keeps its
+  /// connection open, so without this the master would go on treating it as
+  /// attached and never relay a notification. Notifications from these
+  /// sessions are held from now until [comeBack]'s marker.
+  void goAway() {
+    for (final session in _sessions.values) {
+      if (!_hearsPresence(session)) continue;
+      session.away = true;
+      session.holdingNotices = true;
+      session.sshService!.write(presenceAway);
+    }
+  }
+
+  /// Tells the masters told [goAway] that the phone is back. Notifications
+  /// stay held until each master's marker, which follows whatever it queued
+  /// meanwhile - the session's terminal sees it in order with the output -
+  /// or [presenceMarkerWait] at the most.
+  void comeBack() {
+    for (final session in _sessions.values) {
+      if (!session.away) continue;
+      session.away = false;
+      if (_hearsPresence(session)) {
+        session.sshService!.write(presenceBack);
+      }
+      Timer(presenceMarkerWait, () => session.holdingNotices = false);
+    }
   }
 
   void setForeground(bool foreground) {
