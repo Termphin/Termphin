@@ -56,4 +56,41 @@ void main() {
     expect(find.text(demo.testsTitle), findsWidgets);
     expect(tester.hasRunningAnimations, isFalse);
   });
+
+  testWidgets('it waits for its screen to finish sliding in', (tester) async {
+    await pumpTestApp(
+      tester,
+      Builder(
+        builder: (context) => TextButton(
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute<void>(
+              builder: (_) => const Scaffold(body: NotificationsDemo()),
+            ),
+          ),
+          child: const Text('open'),
+        ),
+      ),
+    );
+
+    double arriving() => tester
+        .widget<Opacity>(
+          find
+              .ancestor(
+                of: find.text(demo.waitingTitle).last,
+                matching: find.byType(Opacity),
+              )
+              .first,
+        )
+        .opacity;
+
+    await tester.tap(find.text('open'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 150));
+    expect(arriving(), 0, reason: 'still sliding in');
+
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pump(NotificationsDemo.step * 0.5);
+    expect(arriving(), greaterThan(0));
+  });
 }

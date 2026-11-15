@@ -14,18 +14,21 @@ import '../ui/app_divider.dart';
 import '../ui/app_notifications.dart';
 import '../ui/section_header.dart';
 import '../ui/settings_tile.dart';
+import 'settings_rows_reveal.dart';
 
 /// SFTP section: download folder, hidden files, follow-the-terminal and the
 /// text editor settings.
 class SftpSettingsSection extends StatefulWidget {
-  const SftpSettingsSection({super.key});
+  const SftpSettingsSection({super.key, this.header = true});
+
+  /// Off on a screen of its own, whose title already says what this is.
+  final bool header;
 
   @override
   State<SftpSettingsSection> createState() => _SftpSettingsSectionState();
 }
 
 class _SftpSettingsSectionState extends State<SftpSettingsSection> {
-  bool _loaded = false;
   DownloadFolder? _downloadFolder;
 
   @override
@@ -39,7 +42,6 @@ class _SftpSettingsSectionState extends State<SftpSettingsSection> {
     if (!mounted) return;
     setState(() {
       _downloadFolder = downloadFolder;
-      _loaded = true;
     });
   }
 
@@ -64,13 +66,14 @@ class _SftpSettingsSectionState extends State<SftpSettingsSection> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_loaded) return const SizedBox.shrink();
     final t = Translations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SectionHeader(t.settings.sftp),
-        const SizedBox(height: AppTheme.space10),
+        if (widget.header) ...[
+          SectionHeader(t.settings.sftp),
+          const SizedBox(height: AppTheme.space10),
+        ],
         AppCard.fields(
           children: [
             SettingsTile(
@@ -85,14 +88,17 @@ class _SftpSettingsSectionState extends State<SftpSettingsSection> {
                   : SettingsTileTrailing.chevron,
               onTap: isIOSPlatform ? null : _onPickDownloadFolder,
             ),
-            if (!isIOSPlatform && _downloadFolder != null) ...[
-              const AppDivider(),
-              SettingsTile(
-                title: t.settings.downloadFolderReset,
-                trailing: SettingsTileTrailing.none,
-                onTap: _onResetDownloadFolder,
-              ),
-            ],
+            SettingsRowsReveal(
+              visible: !isIOSPlatform && _downloadFolder != null,
+              children: [
+                const AppDivider(),
+                SettingsTile(
+                  title: t.settings.downloadFolderReset,
+                  trailing: SettingsTileTrailing.none,
+                  onTap: _onResetDownloadFolder,
+                ),
+              ],
+            ),
             const AppDivider(),
             ValueListenableBuilder<bool>(
               valueListenable: sftpShowHiddenSetting,

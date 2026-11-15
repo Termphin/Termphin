@@ -57,6 +57,26 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// Settings, then the category row [title] leads to, loaded the same
+  /// way.
+  Future<void> open(WidgetTester tester, String title) async {
+    await pump(tester);
+    final row = find.text(title).first;
+    await tester.scrollUntilVisible(
+      row,
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(row);
+    for (var i = 0; i < 5; i++) {
+      await tester.pump();
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 50)),
+      );
+    }
+    await tester.pumpAndSettle();
+  }
+
   SwitchListTile switchFor(WidgetTester tester, String title) =>
       tester.widget<SwitchListTile>(
         find.ancestor(
@@ -73,7 +93,11 @@ void main() {
       ),
       matching: find.byType(Switch),
     );
-    await tester.scrollUntilVisible(finder, 120);
+    await tester.scrollUntilVisible(
+      finder,
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.ensureVisible(finder);
     await tester.pumpAndSettle();
     await tester.tap(finder);
@@ -81,51 +105,79 @@ void main() {
   }
 
   Future<void> scrollTo(WidgetTester tester, Finder finder) async {
-    await tester.scrollUntilVisible(finder, 120);
+    await tester.scrollUntilVisible(
+      finder,
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.ensureVisible(finder);
     await tester.pumpAndSettle();
   }
 
   group('the shape of the screen', () {
-    testWidgets('groups its rows under headings', (tester) async {
+    testWidgets('leads to a screen per category', (tester) async {
       await pump(tester);
 
-      final headings = <String>{};
-      for (var i = 0; i < 30; i++) {
-        headings.addAll(
-          tester
-              .widgetList<SectionHeader>(find.byType(SectionHeader))
-              .map((h) => h.text),
-        );
-        await tester.drag(find.byType(Scrollable).last, const Offset(0, -400));
-        await tester.pumpAndSettle();
+      final rows = [
+        t.settings.notificationsSection,
+        t.settings.terminal,
+        t.settings.filesRow,
+        t.settings.connection,
+        t.groups.title,
+        t.settings.privacySecurity,
+        t.exportScreen.title,
+        t.settings.helpFeedback,
+        t.settings.aboutTermphin,
+      ];
+      for (final row in rows) {
+        await scrollTo(tester, find.text(row));
+        expect(find.text(row), findsOneWidget);
       }
+      expect(find.text(t.settings.pinLock), findsNothing);
+    });
 
+    testWidgets('privacy and security keeps its three parts under headings', (
+      tester,
+    ) async {
+      await open(tester, t.settings.privacySecurity);
+
+      final headings = tester
+          .widgetList<SectionHeader>(find.byType(SectionHeader))
+          .map((h) => h.text);
       expect(
         headings,
-        containsAll(<String>[
-          t.settings.appearance,
-          t.settings.terminal,
-          t.settings.sftp,
-          t.settings.connection,
+        containsAll([
           t.settings.security,
           t.settings.privacy,
-          t.settings.openSource,
           t.settings.analytics,
-          t.settings.about,
         ]),
       );
     });
 
-    testWidgets('shows the version it was built as', (tester) async {
+    testWidgets('the notifications row opens their screen', (tester) async {
       await pump(tester);
+      await tester.tap(find.text(t.settings.notificationsSection));
+      await tester.pumpAndSettle();
+
+      expect(find.text(t.settings.commandNotifications), findsOneWidget);
+    });
+
+    testWidgets('about holds the open source links too', (tester) async {
+      await open(tester, t.settings.aboutTermphin);
+      await scrollTo(tester, find.text(t.settings.starOnGitHub));
+
+      expect(find.text(t.settings.starOnGitHub), findsOneWidget);
+    });
+
+    testWidgets('shows the version it was built as', (tester) async {
+      await open(tester, t.settings.aboutTermphin);
       await scrollTo(tester, find.textContaining('1.4.2'));
       expect(find.textContaining('1.4.2 (57)'), findsOneWidget);
     });
 
     testWidgets('links to the terminal appearance screen rather than '
         'repeating its settings', (tester) async {
-      await pump(tester);
+      await open(tester, t.settings.terminal);
       expect(find.text(t.settings.terminalAppearance), findsOneWidget);
       expect(find.byType(Slider), findsNothing);
     });
@@ -133,7 +185,7 @@ void main() {
 
   group('the SFTP section', () {
     testWidgets('leads to the text editor settings', (tester) async {
-      await pump(tester);
+      await open(tester, t.settings.filesRow);
       await scrollTo(tester, find.text(t.settings.textEditor));
       await tester.tap(find.text(t.settings.textEditor));
       await tester.pumpAndSettle();
@@ -144,7 +196,7 @@ void main() {
     testWidgets('the hidden files switch is the browser\'s setting', (
       tester,
     ) async {
-      await pump(tester);
+      await open(tester, t.settings.filesRow);
       await toggle(tester, t.settings.sftpShowHidden);
 
       expect(sftpShowHiddenSetting.value, isTrue);
@@ -152,7 +204,7 @@ void main() {
 
     testWidgets('the follow-the-terminal switch turns it off', (tester) async {
       await sftpFollowTerminalSetting.load();
-      await pump(tester);
+      await open(tester, t.settings.filesRow);
       await toggle(tester, t.settings.sftpFollowTerminal);
 
       expect(sftpFollowTerminalSetting.value, isFalse);
@@ -161,7 +213,7 @@ void main() {
 
   group('the remote agent switch', () {
     testWidgets('starts from what is stored', (tester) async {
-      await pump(tester);
+      await open(tester, t.settings.connection);
       await scrollTo(tester, find.text(t.settings.remoteAgentToggle));
       expect(
         switchFor(tester, t.settings.remoteAgentToggle).value,
@@ -170,7 +222,7 @@ void main() {
     });
 
     testWidgets('writes straight through to the setting', (tester) async {
-      await pump(tester);
+      await open(tester, t.settings.connection);
       final before = remoteAgentSetting.value;
 
       await toggle(tester, t.settings.remoteAgentToggle);
@@ -182,7 +234,7 @@ void main() {
 
   group('the on-screen controls', () {
     testWidgets('moves the tabs to the bottom and back', (tester) async {
-      await pump(tester);
+      await open(tester, t.settings.terminal);
       await scrollTo(tester, find.text(t.settings.tabsAtBottom));
       expect(switchFor(tester, t.settings.tabsAtBottom).value, isFalse);
 
@@ -195,7 +247,7 @@ void main() {
     });
 
     testWidgets('each feature has its own switch', (tester) async {
-      await pump(tester);
+      await open(tester, t.settings.terminal);
       await scrollTo(tester, find.text(t.settings.keyToolbar));
 
       expect(switchFor(tester, t.settings.keyToolbar).value, isTrue);
@@ -211,7 +263,7 @@ void main() {
     testWidgets('the layout row only exists under a switch that is on', (
       tester,
     ) async {
-      await pump(tester);
+      await open(tester, t.settings.terminal);
       await scrollTo(tester, find.text(t.settings.keyToolbar));
 
       expect(find.text(t.settings.toolbarLayout), findsOneWidget);
@@ -233,7 +285,7 @@ void main() {
       });
       SharedPreferences.resetStatic();
       await loadAppSettings();
-      await pump(tester);
+      await open(tester, t.settings.terminal);
       await scrollTo(tester, find.text(t.settings.keyToolbar));
 
       expect(find.text(t.settings.toolbarLayout), findsNothing);
@@ -245,7 +297,7 @@ void main() {
     });
 
     testWidgets('the layout row opens the editor', (tester) async {
-      await pump(tester);
+      await open(tester, t.settings.terminal);
       await scrollTo(tester, find.text(t.settings.toolbarLayout));
       await tester.tap(find.text(t.settings.toolbarLayout));
       await tester.pumpAndSettle();
@@ -265,7 +317,7 @@ void main() {
 
   group('biometric unlock is gated behind the PIN', () {
     testWidgets('is off and says to set a PIN first', (tester) async {
-      await pump(tester);
+      await open(tester, t.settings.privacySecurity);
       await scrollTo(tester, find.text(t.settings.biometricUnlock));
 
       expect(switchFor(tester, t.settings.biometricUnlock).value, isFalse);
@@ -275,7 +327,7 @@ void main() {
     testWidgets('tapping it explains rather than doing nothing', (
       tester,
     ) async {
-      await pump(tester);
+      await open(tester, t.settings.privacySecurity);
       await toggle(tester, t.settings.biometricUnlock);
 
       expect(find.text(t.settings.enablePinFirst), findsWidgets);
@@ -287,7 +339,7 @@ void main() {
     ) async {
       SharedPreferences.setMockInitialValues({kLockEnabledPrefsKey: true});
       SharedPreferences.resetStatic();
-      await pump(tester);
+      await open(tester, t.settings.privacySecurity);
       await scrollTo(tester, find.text(t.settings.biometricUnlock));
 
       expect(find.text(t.settings.biometricUnavailable), findsOneWidget);
@@ -299,7 +351,7 @@ void main() {
     testWidgets('reflects a lock that is already on', (tester) async {
       SharedPreferences.setMockInitialValues({kLockEnabledPrefsKey: true});
       SharedPreferences.resetStatic();
-      await pump(tester);
+      await open(tester, t.settings.privacySecurity);
       await scrollTo(tester, find.text(t.settings.pinLock));
 
       expect(switchFor(tester, t.settings.pinLock).value, isTrue);
@@ -307,7 +359,7 @@ void main() {
     });
 
     testWidgets('is off on a fresh install', (tester) async {
-      await pump(tester);
+      await open(tester, t.settings.privacySecurity);
       await scrollTo(tester, find.text(t.settings.pinLock));
 
       expect(switchFor(tester, t.settings.pinLock).value, isFalse);
@@ -317,7 +369,7 @@ void main() {
     testWidgets('turning it on asks for a PIN instead of just flipping', (
       tester,
     ) async {
-      await pump(tester);
+      await open(tester, t.settings.privacySecurity);
       await toggle(tester, t.settings.pinLock);
 
       expect(find.byType(Dialog), findsOneWidget);
@@ -328,7 +380,7 @@ void main() {
     testWidgets('a five-digit PIN is set with the tick and confirmed', (
       tester,
     ) async {
-      await pump(tester);
+      await open(tester, t.settings.privacySecurity);
       await toggle(tester, t.settings.pinLock);
       Future<void> type(String digits) async {
         for (final d in digits.split('')) {
@@ -369,7 +421,7 @@ void main() {
 
   group('analytics consent', () {
     testWidgets('is off until it is answered', (tester) async {
-      await pump(tester);
+      await open(tester, t.settings.privacySecurity);
       await scrollTo(tester, find.text(t.settings.analyticsToggle));
       expect(switchFor(tester, t.settings.analyticsToggle).value, isFalse);
     });
@@ -377,7 +429,7 @@ void main() {
     testWidgets('the toggle is the same answer the prompt takes', (
       tester,
     ) async {
-      await pump(tester);
+      await open(tester, t.settings.privacySecurity);
       await toggle(tester, t.settings.analyticsToggle);
 
       expect(switchFor(tester, t.settings.analyticsToggle).value, isTrue);
@@ -386,7 +438,7 @@ void main() {
     });
 
     testWidgets('and turns it back off again', (tester) async {
-      await pump(tester);
+      await open(tester, t.settings.privacySecurity);
       await toggle(tester, t.settings.analyticsToggle);
       await toggle(tester, t.settings.analyticsToggle);
 
@@ -398,7 +450,7 @@ void main() {
 
   group('anonymize', () {
     testWidgets('writes through to the setting it fronts', (tester) async {
-      await pump(tester);
+      await open(tester, t.settings.privacySecurity);
       final before = anonymizeSetting.value;
 
       await toggle(tester, t.settings.anonymize);
@@ -422,7 +474,7 @@ void main() {
     );
 
     testWidgets('marks only tabs at the bottom', (tester) async {
-      await pump(tester);
+      await open(tester, t.settings.terminal);
       await scrollTo(tester, find.text(t.settings.tabsAtBottom));
       expect(badgeBeside(t.settings.tabsAtBottom), findsOneWidget);
       await scrollTo(tester, find.text(t.settings.commandSuggestions));
@@ -437,7 +489,7 @@ void main() {
         buildNumber: '30',
         buildSignature: '',
       );
-      await pump(tester);
+      await open(tester, t.settings.terminal);
       await scrollTo(tester, find.text(t.settings.tabsAtBottom));
       expect(badgeBeside(t.settings.tabsAtBottom), findsNothing);
     });
@@ -455,7 +507,7 @@ void main() {
       ),
     ]);
     addTearDown(() => WhatsNewService.instance.debugSetHighlights(null));
-    await pump(tester);
+    await open(tester, t.settings.terminal);
     final info = find.byKey(const ValueKey('commandSuggestionsInfo'));
     await scrollTo(tester, info);
 
@@ -479,7 +531,7 @@ void main() {
       ),
     ]);
     addTearDown(() => WhatsNewService.instance.debugSetHighlights(null));
-    await pump(tester);
+    await open(tester, t.settings.terminal);
     final info = find.byKey(const ValueKey('fastUploadInfo'));
     await scrollTo(tester, info);
 

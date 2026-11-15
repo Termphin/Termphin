@@ -23,43 +23,8 @@ import '../ui/app_card.dart';
 import '../ui/app_divider.dart';
 import '../ui/app_notifications.dart';
 import '../ui/new_badge.dart';
-import '../ui/section_header.dart';
 import '../ui/segmented_switch.dart';
 import '../ui/settings_tile.dart';
-
-/// Notifications in Settings: one row to their own screen. There are too
-/// many of them - which kinds, quoting the last line, the closed app and its
-/// servers - to sit among the other sections.
-class NotificationsSettingsSection extends StatelessWidget {
-  const NotificationsSettingsSection({super.key, this.appVersion});
-
-  /// For the "New" badge, which goes by itself in [_newUntil].
-  final String? appVersion;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = Translations.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SectionHeader(t.settings.notificationsSection),
-        const SizedBox(height: AppTheme.space10),
-        AppCard.fields(
-          children: [
-            SettingsTile(
-              title: t.settings.notificationsSection,
-              titleTrailing: NewBadge(appVersion: appVersion, until: _newUntil),
-              subtitle: t.settings.notificationsRowSubtitle,
-              destination: () =>
-                  NotificationsSettingsScreen(appVersion: appVersion),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppTheme.space20),
-      ],
-    );
-  }
-}
 
 /// Every notification setting, for [NotificationsSettingsScreen]: what
 /// programs in a session announce while the phone is connected (free), and
@@ -72,7 +37,7 @@ class NotificationsSettingsSection extends StatelessWidget {
 class NotificationsSettingsList extends ConsumerStatefulWidget {
   const NotificationsSettingsList({super.key, this.appVersion});
 
-  /// For the "New" badges, which go by themselves in [_newUntil].
+  /// For the "New" badges, which go by themselves in [kNotificationsNewUntil].
   final String? appVersion;
 
   @override
@@ -80,8 +45,9 @@ class NotificationsSettingsList extends ConsumerStatefulWidget {
       _NotificationsSettingsListState();
 }
 
-/// The first version the section is no longer new in.
-const _newUntil = '1.17.0';
+/// The first version notifications are no longer new in, for their badges
+/// here and on the row in Settings.
+const kNotificationsNewUntil = '1.17.0';
 
 class _NotificationsSettingsListState
     extends ConsumerState<NotificationsSettingsList> {
@@ -182,7 +148,7 @@ class _NotificationsSettingsListState
             title: t.settings.commandNotifications,
             titleTrailing: NewBadge(
               appVersion: widget.appVersion,
-              until: _newUntil,
+              until: kNotificationsNewUntil,
             ),
             subtitle: t.settings.commandNotificationsSubtitle,
             value: _announcing.any((setting) => setting.value),
@@ -244,7 +210,7 @@ class _NotificationsSettingsListState
                             )
                           : NewBadge(
                               appVersion: widget.appVersion,
-                              until: _newUntil,
+                              until: kNotificationsNewUntil,
                             ),
                     ),
                     value: enabled && signedIn,

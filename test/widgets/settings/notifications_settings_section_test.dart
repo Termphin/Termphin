@@ -70,27 +70,6 @@ void main() {
     expect(find.text(t.settings.openAppNoticeSystem), findsNothing);
   });
 
-  testWidgets('settings keep one row that opens the notifications screen', (
-    tester,
-  ) async {
-    await pumpTestApp(
-      tester,
-      const Scaffold(
-        body: SingleChildScrollView(child: NotificationsSettingsSection()),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text(t.settings.commandNotifications), findsNothing);
-    expect(find.text(t.settings.notificationsRowSubtitle), findsOneWidget);
-
-    await tester.tap(find.text(t.settings.notificationsRowSubtitle));
-    await tester.pumpAndSettle();
-
-    expect(find.text(t.settings.commandNotifications), findsOneWidget);
-    expect(find.text(t.settings.noticeLines), findsOneWidget);
-  });
-
   testWidgets('the screen title lines up with the card below it', (
     tester,
   ) async {

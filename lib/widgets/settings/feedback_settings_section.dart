@@ -13,7 +13,10 @@ import '../ui/settings_tile.dart';
 /// Feedback section: email, the error reports to send with a bug, and the
 /// manual. The issue tracker sits in the open source section.
 class FeedbackSettingsSection extends StatelessWidget {
-  const FeedbackSettingsSection({super.key});
+  const FeedbackSettingsSection({super.key, this.header = true});
+
+  /// Off on a screen of its own, whose title already says what this is.
+  final bool header;
 
   /// Opens the device's mail app with the address and subject already
   /// filled in - no in-app form, no backend to receive it.
@@ -41,8 +44,10 @@ class FeedbackSettingsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SectionHeader(t.settings.feedback),
-        const SizedBox(height: AppTheme.space10),
+        if (header) ...[
+          SectionHeader(t.settings.feedback),
+          const SizedBox(height: AppTheme.space10),
+        ],
         AppCard.fields(
           children: [
             SettingsTile(

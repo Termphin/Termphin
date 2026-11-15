@@ -9,16 +9,20 @@ import '../../utils/platform_info.dart';
 import '../../widgets/settings/notification_permission_note.dart';
 import '../../widgets/settings/notifications_demo.dart';
 import '../../widgets/settings/notifications_settings_section.dart';
+import '../../widgets/settings/setting_reveal.dart';
 import '../../widgets/ui/info_note.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
 
 /// Every notification setting on a screen of its own, reached from the one
 /// row Settings keeps for them.
 class NotificationsSettingsScreen extends StatefulWidget {
-  const NotificationsSettingsScreen({super.key, this.appVersion});
+  const NotificationsSettingsScreen({super.key, this.appVersion, this.focus});
 
   /// For the "New" badges on the settings that are new.
   final String? appVersion;
+
+  /// The title of a setting to scroll to and mark, when search opened it.
+  final String? focus;
 
   @override
   State<NotificationsSettingsScreen> createState() =>
@@ -40,33 +44,40 @@ class _NotificationsSettingsScreenState
     final t = Translations.of(context);
     return LargeTitleScaffold(
       title: t.settings.notificationsSection,
-      bodyBuilder: (context, scrollController, gutter) => ListView(
-        controller: scrollController,
-        padding: const EdgeInsets.fromLTRB(
-          AppTheme.space16,
-          0,
-          AppTheme.space16,
-          AppTheme.space32,
-        ).add(gutter),
-        children: [
-          LargeTitleHeader(
-            title: t.settings.notificationsSection,
-            subtitle: t.settings.notificationsRowSubtitle,
-            padding: const EdgeInsets.only(
-              top: AppTheme.space24,
-              bottom: AppTheme.space8,
+      bodyBuilder: (context, scrollController, gutter) => SettingReveal(
+        focus: widget.focus,
+        child: ListView(
+          controller: scrollController,
+          padding: const EdgeInsets.fromLTRB(
+            AppTheme.space16,
+            0,
+            AppTheme.space16,
+            AppTheme.space32,
+          ).add(gutter),
+          children: [
+            LargeTitleHeader(
+              title: t.settings.notificationsSection,
+              subtitle: t.settings.notificationsRowSubtitle,
+              padding: const EdgeInsets.only(
+                top: AppTheme.space24,
+                bottom: AppTheme.space8,
+              ),
             ),
-          ),
-          const SizedBox(height: AppTheme.space16),
-          const NotificationsDemo(),
-          const SizedBox(height: AppTheme.space20),
-          const NotificationPermissionNote(),
-          if (isIOSPlatform) ...[
-            InfoNote(t.settings.iosNotificationsNote),
             const SizedBox(height: AppTheme.space16),
+            const NotificationsDemo(),
+            const SizedBox(height: AppTheme.space20),
+            const NotificationPermissionNote(),
+            if (isIOSPlatform) ...[
+              InfoNote(t.settings.iosNotificationsNote),
+              const SizedBox(height: AppTheme.space16),
+            ],
+            NotificationsSettingsList(appVersion: widget.appVersion),
+            if (isAndroidPlatform || isIOSPlatform) ...[
+              const SizedBox(height: AppTheme.space20),
+              const NotificationPermissionRow(),
+            ],
           ],
-          NotificationsSettingsList(appVersion: widget.appVersion),
-        ],
+        ),
       ),
     );
   }

@@ -13,7 +13,10 @@ import '../ui/settings_tile.dart';
 
 /// Terminal section: the appearance editor and the fast-upload destination.
 class TerminalSettingsSection extends StatelessWidget {
-  const TerminalSettingsSection({super.key});
+  const TerminalSettingsSection({super.key, this.header = true});
+
+  /// Off on a screen of its own, whose title already says what this is.
+  final bool header;
 
   @override
   Widget build(BuildContext context) {
@@ -21,8 +24,10 @@ class TerminalSettingsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SectionHeader(t.settings.terminal),
-        const SizedBox(height: AppTheme.space10),
+        if (header) ...[
+          SectionHeader(t.settings.terminal),
+          const SizedBox(height: AppTheme.space10),
+        ],
         AppCard.fields(
           children: [
             SettingsTile(

@@ -158,6 +158,12 @@ enum AnalyticsScreen {
   sftpEditor('sftp_editor'),
   editorSettings('editor_settings'),
   notificationsSettings('notifications_settings'),
+  terminalSettings('terminal_settings'),
+  filesSettings('files_settings'),
+  connectionSettings('connection_settings'),
+  privacySettings('privacy_settings'),
+  helpSettings('help_settings'),
+  aboutSettings('about_settings'),
   sftpImagePreview('sftp_image_preview'),
   manual('manual'),
 

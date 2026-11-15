@@ -20,7 +20,14 @@ import '../ui/settings_tile.dart';
 /// About section: version, release notes, rating the app, licenses and the
 /// legal documents.
 class AboutSettingsSection extends StatelessWidget {
-  const AboutSettingsSection({super.key, required this.version});
+  const AboutSettingsSection({
+    super.key,
+    required this.version,
+    this.header = true,
+  });
+
+  /// Off on a screen of its own, whose title already says what this is.
+  final bool header;
 
   /// "1.4.2 (57)", or `null` while [PackageInfo] is still loading.
   final String? version;
@@ -77,8 +84,10 @@ class AboutSettingsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SectionHeader(t.settings.about),
-        const SizedBox(height: AppTheme.space10),
+        if (header) ...[
+          SectionHeader(t.settings.about),
+          const SizedBox(height: AppTheme.space10),
+        ],
         AppCard.fields(
           children: [
             SettingsTile(

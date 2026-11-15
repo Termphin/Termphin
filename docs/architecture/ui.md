@@ -304,11 +304,14 @@ bottom of the screen belongs to the nav bar, the session dock and the key
 toolbar.
 
 `AppNotifications.alert` is the in-app stand-in for a terminal notification:
-while Termphin is in front and `terminalSettings.inAppNotices` is on (the
-default), `InAppAlerts` hands a program's alert from another session, or a
-server's push, to the app shell, which shows it as a card with "Open" instead
-of posting a system notification. In the background, behind the PIN screen
-or with the setting off, the system notification is posted as before.
+while Termphin is in front, `terminalSettings.openAppNotices` is on and
+`openAppNoticeStyle` is `app` (both the defaults), `InAppAlerts` hands a
+program's alert from another session, or a server's push, to the app shell,
+which shows it as a card with "Open" instead of posting a system
+notification. With the style set to `system`, behind the PIN screen or in the
+background, the system notification is posted; with `openAppNotices` off,
+nothing is while the app is in front. Either way the session's tab gets a dot
+(`SshSessionManager.noteUnread`) until it is looked at.
 
 **Context bars:** selecting rows (machines, keys, snippets, files) and the
 transfer bar all use `ContextBar` - a flat docked strip, never a floating card,
