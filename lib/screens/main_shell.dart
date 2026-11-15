@@ -275,6 +275,7 @@ class _MainShellState extends ConsumerState<MainShell>
 
   Widget _buildMobileScaffold(Translations t) {
     return Scaffold(
+      extendBody: true,
       body: _AnimatedNavBody(currentIndex: _currentIndex, children: _screens),
       bottomNavigationBar: ListenableBuilder(
         listenable: _manager,
@@ -681,8 +682,13 @@ class _BottomNavBar extends StatelessWidget {
         },
       ),
     );
-    return ColoredBox(
-      color: colors.backgroundPrimary,
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.backgroundPrimary,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(AppTheme.radiusLg + AppTheme.space16),
+        ),
+      ),
       child: SafeArea(
         top: false,
         minimum: const EdgeInsets.only(bottom: AppTheme.space8),

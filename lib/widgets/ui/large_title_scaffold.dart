@@ -221,9 +221,15 @@ class _LargeTitleScaffoldState extends State<LargeTitleScaffold> {
       floatingActionButton: widget.floatingActionButton,
       body: SafeArea(
         top: false,
+        bottom: false,
         child: ContentGutter(
-          builder: (context, gutter) =>
-              widget.bodyBuilder(context, _scrollController, gutter),
+          builder: (context, gutter) => widget.bodyBuilder(
+            context,
+            _scrollController,
+            gutter.copyWith(
+              bottom: gutter.bottom + MediaQuery.paddingOf(context).bottom,
+            ),
+          ),
         ),
       ),
     );
