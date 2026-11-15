@@ -48,6 +48,28 @@ void main() {
     expect(terminalSettings.noticeLines.value, isFalse);
   });
 
+  testWidgets('while the app is open they show in it, and the choice goes '
+      'away with the switch', (tester) async {
+    await pumpTestApp(
+      tester,
+      const Scaffold(
+        body: SingleChildScrollView(child: NotificationsSettingsList()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(terminalSettings.openAppNotices.value, isTrue);
+    expect(terminalSettings.openAppNoticeStyle.value, kOpenAppNoticeInApp);
+
+    await tester.tap(find.text(t.settings.openAppNoticeSystem));
+    await tester.pumpAndSettle();
+    expect(terminalSettings.openAppNoticeStyle.value, kOpenAppNoticeSystem);
+
+    await tester.tap(find.text(t.settings.openAppNotices));
+    await tester.pumpAndSettle();
+    expect(terminalSettings.openAppNotices.value, isFalse);
+    expect(find.text(t.settings.openAppNoticeSystem), findsNothing);
+  });
+
   testWidgets('settings keep one row that opens the notifications screen', (
     tester,
   ) async {
@@ -106,7 +128,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(t.settings.notifyWhenClosed), findsOneWidget);
-    expect(find.byType(Switch), findsNWidgets(2));
+    expect(find.byType(Switch), findsNWidgets(3));
     expect(find.text(t.settings.seePro), findsOneWidget);
 
     await tester.tap(find.text(t.settings.seePro));

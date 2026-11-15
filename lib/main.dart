@@ -22,6 +22,7 @@ import 'services/settings/terminal_settings.dart';
 import 'services/ssh/network_monitor.dart';
 import 'services/ssh/ssh_prompts.dart';
 import 'services/ssh/ssh_session_manager.dart';
+import 'services/terminal/in_app_alerts.dart';
 import 'services/terminal/terminal_alerts.dart';
 import 'services/terminal/terminal_notification.dart';
 import 'utils/platform_info.dart';
@@ -91,13 +92,16 @@ TerminalAlerts _bindTerminalAlerts() {
   unawaited(notifications.init());
   final alerts = TerminalAlerts(
     post: (alert) {
-      unawaited(
-        notifications.showTerminalAlert(
-          sessionId: alert.sessionId,
-          title: alert.title,
-          body: alert.body,
-        ),
-      );
+      manager.noteUnread(alert.sessionId);
+      if (!InAppAlerts.instance.handle(alert)) {
+        unawaited(
+          notifications.showTerminalAlert(
+            sessionId: alert.sessionId,
+            title: alert.title,
+            body: alert.body,
+          ),
+        );
+      }
       unawaited(ProHints.instance.offer(ProHint.longCommand));
     },
     allows: (notification) => switch (notification.kind) {

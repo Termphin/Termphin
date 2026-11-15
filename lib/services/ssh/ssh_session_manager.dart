@@ -329,7 +329,33 @@ class SshSessionManager extends ChangeNotifier {
   set terminalOnScreen(bool value) {
     if (value == _terminalOnScreen) return;
     _terminalOnScreen = value;
+    _clearSeen();
     notifyListeners();
+  }
+
+  /// Sessions that notified since they were last looked at, for the dot on
+  /// their tab and on the session dock. Only a session that exists gets
+  /// one - a server's push names a machine, not a tab - and the one on
+  /// screen never does: whoever is looking at it saw what happened.
+  final _unread = <String>{};
+
+  bool hasUnreadNotice(String sessionId) => _unread.contains(sessionId);
+
+  bool get hasAnyUnreadNotice => _unread.any(_sessions.containsKey);
+
+  void noteUnread(String sessionId) {
+    if (!_sessions.containsKey(sessionId)) return;
+    if (sessionId == _visibleSessionId) return;
+    if (_unread.add(sessionId)) notifyListeners();
+  }
+
+  String? get _visibleSessionId =>
+      _foreground && _terminalOnScreen ? _lastActiveSessionId : null;
+
+  /// Forgets the dot of the session now on screen. True when there was one.
+  bool _clearSeen() {
+    final visible = _visibleSessionId;
+    return visible != null && _unread.remove(visible);
   }
 
   /// Takes what programs in any session ask the terminal to announce. Set by
@@ -411,6 +437,7 @@ class SshSessionManager extends ChangeNotifier {
     for (final session in _sessions.values) {
       session.sshService?.setForeground(foreground);
     }
+    if (_clearSeen()) notifyListeners();
   }
 
   /// Marks sessions whose transport died while the app was away.
@@ -625,6 +652,7 @@ class SshSessionManager extends ChangeNotifier {
   Future<void> setActiveSession(String sessionId) async {
     if (_lastActiveSessionId == sessionId) return;
     _lastActiveSessionId = sessionId;
+    if (_clearSeen()) notifyListeners();
     await _saveSessionUiState();
   }
 

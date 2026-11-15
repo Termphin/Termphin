@@ -7,6 +7,7 @@ import '../../providers/ssh_connection_provider.dart' show ConnectionStatus;
 import '../../theme/theme.dart';
 import '../profiles/profile_avatar.dart';
 import '../ui/app_dropdown.dart';
+import 'notice_dot.dart';
 import 'session_view.dart';
 import 'tab_menu_parts.dart';
 
@@ -51,6 +52,7 @@ class TerminalTabPill<T> extends StatelessWidget {
     required this.isActive,
     required this.stretch,
     this.collapsed = false,
+    this.unread = false,
     required this.menuItems,
     required this.onTap,
     required this.onMenuAction,
@@ -67,6 +69,9 @@ class TerminalTabPill<T> extends StatelessWidget {
   final bool isActive;
   final bool stretch;
   final bool collapsed;
+
+  /// A notification came from this session since it was last on screen.
+  final bool unread;
 
   final List<DropdownItem<T>> menuItems;
   final VoidCallback onTap;
@@ -85,7 +90,7 @@ class TerminalTabPill<T> extends StatelessWidget {
       ConnectionStatus.error => context.colors.error,
       ConnectionStatus.disconnected => activeBorder,
     };
-    final avatar = AnimatedContainer(
+    final ring = AnimatedContainer(
       key: ValueKey('sessionStatusAvatar-$sessionId'),
       duration: AppTheme.interactiveDuration,
       decoration: BoxDecoration(
@@ -98,6 +103,11 @@ class TerminalTabPill<T> extends StatelessWidget {
         colorHex: profile.colorHex,
         size: 20,
       ),
+    );
+    final avatar = NoticeDot(
+      visible: unread,
+      ground: Theme.of(context).scaffoldBackgroundColor,
+      child: ring,
     );
 
     final tab = GestureDetector(

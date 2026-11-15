@@ -218,8 +218,7 @@ between the session and the key toolbar - so in the file browser, which has
 no toolbar, it is the bottom row. **Moving it must never resize the pane**:
 the strip is the same height in either place and nothing is added around it
 (`terminal_tab_bar_position_test.dart` pins the pane's size across a switch).
-The toolbar's own top line parts tabs from keys; a gap would cost rows. With
-the strip down there is nothing up top, so `MainShell` anchors toasts at 0.
+The toolbar's own top line parts tabs from keys; a gap would cost rows.
 Landscape keeps the side rail either way.
 
 ### Action dock
@@ -294,12 +293,22 @@ the live toolbar is `SpecialKeysToolbar`; the editor is `ToolbarSettingsScreen`.
 
 ### Notifications and sheets
 
-`AppNotifications` is the only way to show transient feedback. Toasts slide out
-from under the app bar, up to three at a time, in a root `OverlayEntry`; the
-stack clears as one unit. **Do not use `ScaffoldMessenger`/`SnackBar`** - the
+`AppNotifications` is the only way to show transient feedback. Toasts drop in
+at the top of the screen, just under the status bar, up to three at a time, in
+a root `OverlayEntry`; the stack clears as one unit. A short message with
+nothing to tap is a pill; a title, an action or a second line make it a card
+tinted with its kind. A repeat while it is up counts on the one shown (×2).
+How long one stays follows its length (an alert 12 s); errors buzz once, alerts twice,
+confirmations not at all. **Do not use `ScaffoldMessenger`/`SnackBar`** - the
 bottom of the screen belongs to the nav bar, the session dock and the key
-toolbar. Screens with a non-standard app bar height set
-`appNotificationAnchor`.
+toolbar.
+
+`AppNotifications.alert` is the in-app stand-in for a terminal notification:
+while Termphin is in front and `terminalSettings.inAppNotices` is on (the
+default), `InAppAlerts` hands a program's alert from another session, or a
+server's push, to the app shell, which shows it as a card with "Open" instead
+of posting a system notification. In the background, behind the PIN screen
+or with the setting off, the system notification is posted as before.
 
 **Context bars:** selecting rows (machines, keys, snippets, files) and the
 transfer bar all use `ContextBar` - a flat docked strip, never a floating card,

@@ -20,6 +20,7 @@
     "emailSubject": "Termphin error report"
   },
   "common": {
+    "repeatCount": "×{count}",
     "add": "Add",
     "cancel": "Cancel",
     "save": "Save",
@@ -437,6 +438,10 @@
     "quietNotificationsSubtitle": "An AI agent or installer that stopped to ask something",
     "noticeLines": "Quote the last line",
     "noticeLinesSubtitle": "Shows what the command printed last. Off sends only its name and time",
+    "openAppNotices": "While Termphin is open",
+    "openAppNoticesSubtitle": "From sessions you are not looking at",
+    "openAppNoticeInApp": "In Termphin",
+    "openAppNoticeSystem": "As system",
     "fastUpload": "Fast upload",
     "fastUploadNavSubtitleTmp": "Uploads land in the server's temporary directory",
     "fastUploadNavSubtitleCurrentDir": "Uploads land in the shell's current directory",
@@ -864,6 +869,7 @@
     "arrowServer": "Server"
   },
   "notifications": {
+    "openSession": "Open",
     "connected": "connected",
     "reconnecting": "reconnecting…",
     "transferDoneTitle": "Download finished",

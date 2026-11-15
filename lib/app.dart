@@ -35,6 +35,8 @@ import 'services/security/lock_service.dart';
 import 'services/security/relock_guard.dart';
 import 'services/settings/toolbar_share_link.dart';
 import 'services/ssh/ssh_link.dart';
+import 'services/terminal/in_app_alerts.dart';
+import 'services/terminal/terminal_alerts.dart';
 import 'theme/theme.dart';
 import 'utils/platform_info.dart';
 import 'widgets/onboarding/legal_update_dialog.dart';
@@ -421,6 +423,7 @@ class _AppShellState extends ConsumerState<_AppShell> {
       _noteOpened('push');
       _openRelayedSession(profileId, session);
     };
+    InAppAlerts.instance.present = _presentAlert;
     WidgetsBinding.instance.addPostFrameCallback(
       (_) => _runStartupInterstitials(),
     );
@@ -430,11 +433,33 @@ class _AppShellState extends ConsumerState<_AppShell> {
   void dispose() {
     LocalNotificationsService.instance.onOpenSession = null;
     PushService.instance.onOpenRelayed = null;
+    InAppAlerts.instance.present = null;
     super.dispose();
   }
 
+  /// Shows [alert] as a card at the top of the app; opening it does what
+  /// tapping the system notification would. Behind the PIN screen it is left
+  /// to the system, which keeps it until the user is back in.
+  bool _presentAlert(TerminalAlert alert) {
+    if (RelockGuard.instance.holding) return false;
+    final context = navigatorKey.currentContext;
+    if (context == null || !context.mounted) return false;
+    AppNotifications.alert(
+      context,
+      title: alert.title,
+      body: alert.body,
+      actionLabel: t.notifications.openSession,
+      onOpen: () {
+        _noteOpened('in_app');
+        _openNotifiedSession(alert.sessionId);
+      },
+    );
+    return true;
+  }
+
   /// Records a tapped notification, by what it came through: [via] is
-  /// `push` from a server or `terminal` from a session the app had open.
+  /// `push` from a server, `terminal` from a session the app had open, or
+  /// `in_app` for the card shown while the app was in front.
   void _noteOpened(String via) => unawaited(
     AnalyticsService.instance.capture(
       AnalyticsEvent.notificationOpened,

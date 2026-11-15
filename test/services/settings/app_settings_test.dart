@@ -208,6 +208,8 @@ final Map<Setting<Object?>, Object?> _alternatives = {
   terminalSettings.finishedNotifications: false,
   terminalSettings.quietNotifications: false,
   terminalSettings.noticeLines: false,
+  terminalSettings.openAppNotices: false,
+  terminalSettings.openAppNoticeStyle: kOpenAppNoticeSystem,
   terminalSettings.fontFamily: kTerminalFontLabels.keys.firstWhere(
     (name) => name != terminalSettings.fontFamily.fallback,
   ),
