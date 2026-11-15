@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:termphin/i18n/strings.g.dart';
 import 'package:termphin/models/pro_source.dart';
 import 'package:termphin/screens/pro/pro_paywall_screen.dart';
 import 'package:termphin/services/analytics/analytics_service.dart';
@@ -76,8 +77,8 @@ void main() {
     });
   });
 
-  testWidgets('a paywall with nothing to sell says why, and where it was '
-      'opened from', (tester) async {
+  testWidgets('signed out, the paywall asks for a sign-in instead of saying '
+      'prices failed, and reports why and from where', (tester) async {
     SharedPreferences.setMockInitialValues({});
     AnalyticsService.instance.resetForTest();
     await tester.runAsync(() => AnalyticsService.instance.setConsent(true));
@@ -88,6 +89,10 @@ void main() {
       const ProPaywallScreen(source: ProSource.syncCard, offers: []),
     );
     await tester.pump();
+
+    final t = AppLocale.en.buildSync().account.pro.paywall;
+    expect(find.text(t.signInForPrices), findsOneWidget);
+    expect(find.text(t.noOffers), findsNothing);
 
     final failed = analyticsRecorder.events.where(
       (event) => event.name == AnalyticsEvent.paywallOffersFailed.eventName,

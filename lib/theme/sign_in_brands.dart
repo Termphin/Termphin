@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
-/// The colours Google's and Apple's sign-in buttons are required to use.
+/// The colours Google's, Apple's and GitHub's sign-in buttons are required
+/// to use.
 ///
 /// Not the app's palette on purpose: both companies publish exactly what
 /// their buttons look like - Google's "Sign in with Google" branding
@@ -20,6 +21,14 @@ abstract final class SignInBrandColors {
   static const appleOnDarkText = Color(0xFF000000);
   static const appleOnLightFill = Color(0xFF000000);
   static const appleOnLightText = Color(0xFFFFFFFF);
+
+  /// GitHub's mark is used in its own near-black or in white, never
+  /// recoloured: a white button on a dark background, a near-black one on a
+  /// light background.
+  static const githubOnDarkFill = Color(0xFFFFFFFF);
+  static const githubOnDarkText = Color(0xFF1F2328);
+  static const githubOnLightFill = Color(0xFF1F2328);
+  static const githubOnLightText = Color(0xFFFFFFFF);
 }
 
 /// Google's four-colour "G", as its branding guidelines supply it.

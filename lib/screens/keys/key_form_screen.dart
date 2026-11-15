@@ -19,6 +19,7 @@ import '../../widgets/ui/app_form_field.dart';
 import '../../widgets/ui/app_notifications.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
 import '../../widgets/ui/section_header.dart';
+import '../../widgets/ui/unsaved_changes_guard.dart';
 
 /// Opens the create/edit screen for [existing] (or a new key if null).
 ///
@@ -87,7 +88,24 @@ class _KeyFormScreenState extends ConsumerState<KeyFormScreen> {
     _passphraseCtrl = TextEditingController();
     _group =
         existing?.group ?? widget.initialGroup ?? GroupStorage.defaultGroup;
+    _initialSnapshot = _snapshot();
   }
+
+  /// What the form held when it opened, to tell whether leaving it would
+  /// lose anything.
+  late final String _initialSnapshot;
+
+  /// Every field, typed or picked, as one comparable value.
+  String _snapshot() => jsonEncode([
+    _nameCtrl.text,
+    _pemCtrl.text,
+    _passphraseCtrl.text,
+    _group,
+    _selectedType.name,
+    _selectedFileName,
+  ]);
+
+  bool get _dirty => !_isSaving && _snapshot() != _initialSnapshot;
 
   @override
   void dispose() {
@@ -282,218 +300,222 @@ class _KeyFormScreenState extends ConsumerState<KeyFormScreen> {
   Widget build(BuildContext context) {
     final t = Translations.of(context);
 
-    return Scaffold(
-      backgroundColor: context.colors.backgroundPrimary,
-      appBar: AppBar(
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: Text(
-          _isEditing ? t.keys.editKeyTitle : t.keys.newKeyTitle,
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        leading: IconButton(
-          tooltip: t.common.close,
-          icon: const Icon(PhosphorIconsRegular.x),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: AppTheme.space12),
-            child: _isSaving
-                ? const SizedBox(
-                    width: AppTheme.icon20,
-                    height: AppTheme.icon20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : ListenableBuilder(
-                    listenable: Listenable.merge([
-                      _nameCtrl,
-                      _pemCtrl,
-                      _passphraseCtrl,
-                    ]),
-                    builder: (context, _) => TextButton(
-                      onPressed: _canSave ? _save : null,
-                      child: Text(
-                        t.common.save,
-                        style: TextStyle(
-                          color: _canSave
-                              ? context.colors.primary
-                              : context.colors.textTertiary,
-                          fontWeight: FontWeight.w700,
-                          fontSize: AppTheme.font15,
+    return UnsavedChangesGuard(
+      dirty: () => _dirty,
+      changes: Listenable.merge([_nameCtrl, _pemCtrl, _passphraseCtrl]),
+      child: Scaffold(
+        backgroundColor: context.colors.backgroundPrimary,
+        appBar: AppBar(
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          title: Text(
+            _isEditing ? t.keys.editKeyTitle : t.keys.newKeyTitle,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          leading: IconButton(
+            tooltip: t.common.close,
+            icon: const Icon(PhosphorIconsRegular.x),
+            onPressed: () => Navigator.of(context).maybePop(),
+          ),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: AppTheme.space12),
+              child: _isSaving
+                  ? const SizedBox(
+                      width: AppTheme.icon20,
+                      height: AppTheme.icon20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : ListenableBuilder(
+                      listenable: Listenable.merge([
+                        _nameCtrl,
+                        _pemCtrl,
+                        _passphraseCtrl,
+                      ]),
+                      builder: (context, _) => TextButton(
+                        onPressed: _canSave ? _save : null,
+                        child: Text(
+                          t.common.save,
+                          style: TextStyle(
+                            color: _canSave
+                                ? context.colors.primary
+                                : context.colors.textTertiary,
+                            fontWeight: FontWeight.w700,
+                            fontSize: AppTheme.font15,
+                          ),
                         ),
                       ),
                     ),
+            ),
+          ],
+        ),
+        body: SafeArea(
+          top: false,
+          child: ContentGutter(
+            builder: (context, gutter) => ListView(
+              padding: EdgeInsets.fromLTRB(
+                AppTheme.space20,
+                _isEditing ? AppTheme.space8 : AppTheme.space16,
+                AppTheme.space20,
+                AppTheme.space40,
+              ).add(gutter),
+              children: [
+                SectionHeader(t.groups.groupTitle),
+                const SizedBox(height: AppTheme.space10),
+                GroupPickerField(
+                  group: _group,
+                  onChanged: (group) => setState(() => _group = group),
+                ),
+                const SizedBox(height: AppTheme.space20),
+                AppFormField(
+                  key: const ValueKey('keyNameField'),
+                  controller: _nameCtrl,
+                  label: t.keys.keyNameLabel,
+                  hint: t.keys.keyNameHint,
+                  icon: PhosphorIconsFill.key,
+                  action: TextInputAction.next,
+                  autofocus: !_isEditing,
+                ),
+                const SizedBox(height: AppTheme.space24),
+                SectionHeader(t.keys.keyTypeLabel),
+                const SizedBox(height: AppTheme.space10),
+                if (_isEditing) ...[
+                  _KeyTypeOption(
+                    icon: _keyTypeIcon(widget.existing!.keyType),
+                    label: _keyTypeLabel(t, widget.existing!.keyType),
+                    subtitle: _keyTypeSubtitle(t, widget.existing!.keyType),
+                    isSelected: false,
+                    onTap: null,
                   ),
-          ),
-        ],
-      ),
-      body: SafeArea(
-        top: false,
-        child: ContentGutter(
-          builder: (context, gutter) => ListView(
-            padding: EdgeInsets.fromLTRB(
-              AppTheme.space20,
-              _isEditing ? AppTheme.space8 : AppTheme.space16,
-              AppTheme.space20,
-              AppTheme.space40,
-            ).add(gutter),
-            children: [
-              SectionHeader(t.groups.groupTitle),
-              const SizedBox(height: AppTheme.space10),
-              GroupPickerField(
-                group: _group,
-                onChanged: (group) => setState(() => _group = group),
-              ),
-              const SizedBox(height: AppTheme.space20),
-              AppFormField(
-                key: const ValueKey('keyNameField'),
-                controller: _nameCtrl,
-                label: t.keys.keyNameLabel,
-                hint: t.keys.keyNameHint,
-                icon: PhosphorIconsFill.key,
-                action: TextInputAction.next,
-                autofocus: !_isEditing,
-              ),
-              const SizedBox(height: AppTheme.space24),
-              SectionHeader(t.keys.keyTypeLabel),
-              const SizedBox(height: AppTheme.space10),
-              if (_isEditing) ...[
-                _KeyTypeOption(
-                  icon: _keyTypeIcon(widget.existing!.keyType),
-                  label: _keyTypeLabel(t, widget.existing!.keyType),
-                  subtitle: _keyTypeSubtitle(t, widget.existing!.keyType),
-                  isSelected: false,
-                  onTap: null,
-                ),
-              ] else ...[
-                _KeyTypeOption(
-                  key: const ValueKey('keyTypeOption:ed25519'),
-                  icon: PhosphorIconsFill.sparkle,
-                  label: t.keys.keyTypeEd25519,
-                  subtitle: t.keys.keyTypeEd25519Subtitle,
-                  isSelected: _selectedType == _KeyFormType.ed25519,
-                  onTap: () =>
-                      setState(() => _selectedType = _KeyFormType.ed25519),
-                ),
-                const SizedBox(height: AppTheme.space8),
-                _KeyTypeOption(
-                  key: const ValueKey('keyTypeOption:rsa2048'),
-                  icon: PhosphorIconsFill.lock,
-                  label: t.keys.keyTypeRsa2048,
-                  subtitle: t.keys.keyTypeRsa2048Subtitle,
-                  isSelected: _selectedType == _KeyFormType.rsa2048,
-                  onTap: () =>
-                      setState(() => _selectedType = _KeyFormType.rsa2048),
-                ),
-                const SizedBox(height: AppTheme.space8),
-                _KeyTypeOption(
-                  key: const ValueKey('keyTypeOption:rsa4096'),
-                  icon: PhosphorIconsFill.shieldCheck,
-                  label: t.keys.keyTypeRsa4096,
-                  subtitle: t.keys.keyTypeRsa4096Subtitle,
-                  isSelected: _selectedType == _KeyFormType.rsa4096,
-                  onTap: () =>
-                      setState(() => _selectedType = _KeyFormType.rsa4096),
-                ),
-                const SizedBox(height: AppTheme.space8),
-                _KeyTypeOption(
-                  key: const ValueKey('keyTypeOption:import'),
-                  icon: PhosphorIconsFill.fileArrowUp,
-                  label: t.keys.keyTypeImport,
-                  subtitle: t.keys.keyTypeImportSubtitle,
-                  isSelected: _selectedType == _KeyFormType.import,
-                  onTap: () =>
-                      setState(() => _selectedType = _KeyFormType.import),
-                ),
-                if (_selectedType == _KeyFormType.import) ...[
-                  const SizedBox(height: AppTheme.space16),
-                  OutlinedButton.icon(
-                    onPressed: _readingFile ? null : _pickKeyFile,
-                    icon: _readingFile
-                        ? const SizedBox.square(
-                            dimension: AppTheme.icon16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(
-                            PhosphorIconsFill.fileArrowUp,
-                            size: AppTheme.icon18,
-                          ),
-                    label: Text(t.keys.selectPrivateKeyFile),
+                ] else ...[
+                  _KeyTypeOption(
+                    key: const ValueKey('keyTypeOption:ed25519'),
+                    icon: PhosphorIconsFill.sparkle,
+                    label: t.keys.keyTypeEd25519,
+                    subtitle: t.keys.keyTypeEd25519Subtitle,
+                    isSelected: _selectedType == _KeyFormType.ed25519,
+                    onTap: () =>
+                        setState(() => _selectedType = _KeyFormType.ed25519),
                   ),
-                  if (_selectedFileName != null) ...[
-                    const SizedBox(height: AppTheme.space8),
-                    Text(
-                      t.keys.selectedFile(name: _selectedFileName!),
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: context.colors.success,
-                      ),
+                  const SizedBox(height: AppTheme.space8),
+                  _KeyTypeOption(
+                    key: const ValueKey('keyTypeOption:rsa2048'),
+                    icon: PhosphorIconsFill.lock,
+                    label: t.keys.keyTypeRsa2048,
+                    subtitle: t.keys.keyTypeRsa2048Subtitle,
+                    isSelected: _selectedType == _KeyFormType.rsa2048,
+                    onTap: () =>
+                        setState(() => _selectedType = _KeyFormType.rsa2048),
+                  ),
+                  const SizedBox(height: AppTheme.space8),
+                  _KeyTypeOption(
+                    key: const ValueKey('keyTypeOption:rsa4096'),
+                    icon: PhosphorIconsFill.shieldCheck,
+                    label: t.keys.keyTypeRsa4096,
+                    subtitle: t.keys.keyTypeRsa4096Subtitle,
+                    isSelected: _selectedType == _KeyFormType.rsa4096,
+                    onTap: () =>
+                        setState(() => _selectedType = _KeyFormType.rsa4096),
+                  ),
+                  const SizedBox(height: AppTheme.space8),
+                  _KeyTypeOption(
+                    key: const ValueKey('keyTypeOption:import'),
+                    icon: PhosphorIconsFill.fileArrowUp,
+                    label: t.keys.keyTypeImport,
+                    subtitle: t.keys.keyTypeImportSubtitle,
+                    isSelected: _selectedType == _KeyFormType.import,
+                    onTap: () =>
+                        setState(() => _selectedType = _KeyFormType.import),
+                  ),
+                  if (_selectedType == _KeyFormType.import) ...[
+                    const SizedBox(height: AppTheme.space16),
+                    OutlinedButton.icon(
+                      onPressed: _readingFile ? null : _pickKeyFile,
+                      icon: _readingFile
+                          ? const SizedBox.square(
+                              dimension: AppTheme.icon16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(
+                              PhosphorIconsFill.fileArrowUp,
+                              size: AppTheme.icon18,
+                            ),
+                      label: Text(t.keys.selectPrivateKeyFile),
                     ),
-                  ],
-                  const SizedBox(height: AppTheme.space12),
-                  AppFormField(
-                    key: const ValueKey('keyPemField'),
-                    controller: _pemCtrl,
-                    label: t.keys.privateKeyLabel,
-                    hint: t.keys.privateKeyHint,
-                    minLines: 6,
-                    maxLines: 14,
-                    monospace: true,
-                    keyboardType: TextInputType.multiline,
-                    action: TextInputAction.newline,
-                    onChanged: _onPemChanged,
-                  ),
-                  if (_pemIsEncrypted) ...[
+                    if (_selectedFileName != null) ...[
+                      const SizedBox(height: AppTheme.space8),
+                      Text(
+                        t.keys.selectedFile(name: _selectedFileName!),
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: context.colors.success,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: AppTheme.space12),
                     AppFormField(
-                      key: const ValueKey('keyPassphraseField'),
-                      controller: _passphraseCtrl,
-                      label: t.keys.keyPassphraseLabel,
-                      hint: t.keys.keyPassphraseHint,
-                      obscure: true,
-                      action: TextInputAction.done,
+                      key: const ValueKey('keyPemField'),
+                      controller: _pemCtrl,
+                      label: t.keys.privateKeyLabel,
+                      hint: t.keys.privateKeyHint,
+                      minLines: 6,
+                      maxLines: 14,
+                      monospace: true,
+                      keyboardType: TextInputType.multiline,
+                      action: TextInputAction.newline,
+                      onChanged: _onPemChanged,
                     ),
-                    const SizedBox(height: AppTheme.space6),
-                    Text(
-                      t.keys.keyPassphraseNote,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: context.colors.textTertiary,
+                    if (_pemIsEncrypted) ...[
+                      const SizedBox(height: AppTheme.space12),
+                      AppFormField(
+                        key: const ValueKey('keyPassphraseField'),
+                        controller: _passphraseCtrl,
+                        label: t.keys.keyPassphraseLabel,
+                        hint: t.keys.keyPassphraseHint,
+                        obscure: true,
+                        action: TextInputAction.done,
+                      ),
+                      const SizedBox(height: AppTheme.space6),
+                      Text(
+                        t.keys.keyPassphraseNote,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: context.colors.textTertiary,
+                        ),
+                      ),
+                    ],
+                  ],
+                  if (_isSaving) ...[
+                    const SizedBox(height: AppTheme.space20),
+                    AppCard(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppTheme.space16,
+                        vertical: AppTheme.space12,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox.square(
+                            dimension: AppTheme.icon16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: context.colors.primary,
+                            ),
+                          ),
+                          const SizedBox(width: AppTheme.space10),
+                          Text(
+                            t.keys.generating,
+                            style: TextStyle(
+                              color: context.colors.textSecondary,
+                              fontSize: AppTheme.font14,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ],
-                if (_isSaving) ...[
-                  const SizedBox(height: AppTheme.space20),
-                  AppCard(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppTheme.space16,
-                      vertical: AppTheme.space12,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        SizedBox.square(
-                          dimension: AppTheme.icon16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: context.colors.primary,
-                          ),
-                        ),
-                        const SizedBox(width: AppTheme.space10),
-                        Text(
-                          t.keys.generating,
-                          style: TextStyle(
-                            color: context.colors.textSecondary,
-                            fontSize: AppTheme.font14,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
               ],
-            ],
+            ),
           ),
         ),
       ),

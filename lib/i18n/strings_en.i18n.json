@@ -30,6 +30,8 @@
     "done": "Done",
     "copy": "Copy",
     "discard": "Discard",
+    "unsavedTitle": "Discard changes?",
+    "unsavedMessage": "What you changed here is not saved yet. Leave without saving it?",
     "required": "Required",
     "invalid": "Invalid",
     "optional": "optional",
@@ -129,6 +131,19 @@
     "privateKeyRequired": "Private key is required.",
     "saveFailed": "Could not save: {error}",
     "avatar": "Avatar",
+    "moreOptions": "More options",
+    "moreOptionsHint": "Fallback hosts, jump host, port forwarding, notifications",
+    "moreFallbacks(n: num)": {
+      "one": "{n} fallback host",
+      "other": "{n} fallback hosts"
+    },
+    "moreJumpHost": "via {name}",
+    "moreJumpHostHidden": "via a jump host",
+    "moreForwards(n: num)": {
+      "one": "{n} forward",
+      "other": "{n} forwards"
+    },
+    "moreNotificationsOff": "notifications off",
     "fallbackHosts": "Fallback addresses",
     "fallbackHostsHint": "Tried in order if the host above doesn't answer, e.g. a Tailscale IP or a LAN address.",
     "fallbackHostHint": "host or host:port",
@@ -400,6 +415,15 @@
     "predictiveEcho": "Predictive echo",
     "predictiveEchoSubtitle": "Show typing instantly on slow connections",
     "notificationsRowSubtitle": "Finished commands, agents that need you, and your servers",
+    "notificationsDemo": {
+      "appLine": "Termphin · now",
+      "finishedTitle": "cargo build finished",
+      "finishedBody": "Finished release target in 41s",
+      "waitingTitle": "claude is waiting for you",
+      "waitingBody": "Do you want to make this edit? (y/n)",
+      "testsTitle": "npm test finished",
+      "testsBody": "Tests: 128 passed, 128 total"
+    },
     "programNotifications": "Notifications from programs",
     "programNotificationsSubtitle": "When a program in another session asks for one, like Claude Code finishing",
     "finishedNotifications": "When a long command finishes",
@@ -1263,6 +1287,8 @@
     "intro": "An account is only needed for Pro. Everything else works without one.",
     "continueWithGoogle": "Continue with Google",
     "continueWithApple": "Continue with Apple",
+    "continueWithGitHub": "Continue with GitHub",
+    "agreeNotice": "By signing in or creating an account you agree to the terms of service and the privacy policy.",
     "orEmail": "Or with an email address",
     "email": "Email",
     "password": "Password",
@@ -1274,6 +1300,7 @@
     "planFree": "Free plan",
     "providerGoogle": "Google",
     "providerApple": "Apple",
+    "providerGitHub": "GitHub",
     "providerPassword": "email and password",
     "signOut": "Sign out",
     "deleteAccount": "Delete account",
@@ -1330,6 +1357,7 @@
         "subscribe": "Continue",
         "signInFirst": "Sign in to continue",
         "noOffers": "Prices could not be loaded.",
+        "signInForPrices": "Sign in to see the plans and their prices in your store.",
         "retry": "Try again",
         "legal": "Renews automatically until cancelled. Cancel any time in your store account.",
         "terms": "Terms",
@@ -1440,5 +1468,9 @@
     "notificationsTitle": "Notifications with Termphin closed",
     "notificationsBody": "Termphin tells you when a command finishes or a program needs you. With Pro this reaches you even when the app is closed, through a relay that keeps nothing.",
     "seePro": "See Pro"
+  },
+  "legalUpdate": {
+    "title": "Our terms and privacy policy have changed",
+    "gotIt": "Got it"
   }
 }

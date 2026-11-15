@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../i18n/strings.g.dart';
 import '../../services/analytics/analytics_service.dart';
 import '../../theme/theme.dart';
+import '../../widgets/settings/notifications_demo.dart';
 import '../../widgets/settings/notifications_settings_section.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
 
@@ -54,6 +55,8 @@ class _NotificationsSettingsScreenState
             ),
           ),
           const SizedBox(height: AppTheme.space16),
+          const NotificationsDemo(),
+          const SizedBox(height: AppTheme.space20),
           NotificationsSettingsList(appVersion: widget.appVersion),
         ],
       ),

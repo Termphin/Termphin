@@ -4,6 +4,7 @@ import '../settings/action_dock_settings.dart';
 import '../settings/editor_settings.dart';
 import '../settings/floating_dock_settings.dart';
 import '../settings/lock_settings.dart';
+import '../settings/profile_form_settings.dart';
 import '../settings/setting.dart';
 import '../settings/sftp_settings.dart';
 import '../settings/sidebar_settings.dart';
@@ -74,6 +75,7 @@ Future<Map<String, dynamic>> exportAppPreferences() async {
     'uploadAutoPaste': await uploadAutoPasteSetting.load(),
     'remoteAgentEnabled': await remoteAgentSetting.load(),
     'sidebarCollapsed': await sidebarCollapsedSetting.load(),
+    'profileFormMoreOptions': await profileFormMoreOptionsSetting.load(),
     'sftpShowHidden': await sftpShowHiddenSetting.load(),
     'sftpFollowTerminal': await sftpFollowTerminalSetting.load(),
     'sftpSortField': (await sftpSortFieldSetting.load()).name,
@@ -235,6 +237,10 @@ Future<void> importAppPreferences(Map<String, dynamic> appPrefs) async {
   final sidebarCollapsed = appPrefs['sidebarCollapsed'];
   if (sidebarCollapsed is bool) {
     await sidebarCollapsedSetting.set(sidebarCollapsed);
+  }
+  final moreOptions = appPrefs['profileFormMoreOptions'];
+  if (moreOptions is bool) {
+    await profileFormMoreOptionsSetting.set(moreOptions);
   }
 
   final sftpShowHidden = appPrefs['sftpShowHidden'];

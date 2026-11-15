@@ -7,12 +7,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/agent_feature.dart';
 import '../models/pro_source.dart';
 import '../screens/pro/pro_paywall_screen.dart';
+import '../services/app/legal_updates_service.dart';
 import '../services/app/onboarding_service.dart';
 import '../services/app/whats_new_service.dart';
 import '../services/platform/local_notifications_service.dart';
 import '../services/pro/pro_hints.dart';
 import '../services/pro/pro_service.dart';
 import '../theme/theme.dart';
+import '../widgets/onboarding/legal_update_dialog.dart';
 import '../widgets/onboarding/whats_new_modal.dart';
 import '../widgets/terminal/older_session_sheet.dart';
 import '../widgets/terminal/terminal_rendering.dart';
@@ -230,6 +232,16 @@ class _DebugSheet extends StatelessWidget {
                     'Onboarding shows on the next launch',
                     kind: AppNotificationKind.success,
                   );
+                }
+              }),
+            ),
+            SettingsTile(
+              title: 'Terms notice',
+              subtitle: 'The latest change to the terms, as shown at launch',
+              onTap: () => _then(context, (app) async {
+                final update = await LegalUpdatesService.instance.latest();
+                if (update != null && app.mounted) {
+                  await showLegalUpdateDialog(app, update);
                 }
               }),
             ),

@@ -11,6 +11,7 @@ import 'package:termphin/services/settings/app_settings.dart';
 import 'package:termphin/services/settings/editor_settings.dart';
 import 'package:termphin/services/settings/floating_dock_settings.dart';
 import 'package:termphin/services/settings/lock_settings.dart';
+import 'package:termphin/services/settings/profile_form_settings.dart';
 import 'package:termphin/services/settings/setting.dart';
 import 'package:termphin/services/settings/sftp_settings.dart';
 import 'package:termphin/services/settings/sidebar_settings.dart';
@@ -46,6 +47,7 @@ List<Setting<Object?>> get _loaded => [
   sftpSortDescendingSetting,
   tabBarPositionSetting,
   lockTimeoutSetting,
+  profileFormMoreOptionsSetting,
 ];
 
 /// Where a `Setting` is built, found by reading the source rather than by
@@ -259,4 +261,5 @@ final Map<Setting<Object?>, Object?> _alternatives = {
   proTipsSetting: !proTipsSetting.fallback,
   tabBarPositionSetting: TabBarPosition.bottom,
   lockTimeoutSetting: LockTimeout.minutes5,
+  profileFormMoreOptionsSetting: !profileFormMoreOptionsSetting.fallback,
 };

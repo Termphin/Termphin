@@ -232,6 +232,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     final provider = switch (user.provider) {
       AccountProvider.google => t.account.providerGoogle,
       AccountProvider.apple => t.account.providerApple,
+      AccountProvider.github => t.account.providerGitHub,
       AccountProvider.password => t.account.providerPassword,
     };
     return [
