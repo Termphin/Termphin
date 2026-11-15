@@ -30,6 +30,11 @@ class FirebaseConfig {
   static const _iosAppId = String.fromEnvironment('FIREBASE_IOS_APP_ID');
   static const _iosBundleId = String.fromEnvironment('FIREBASE_IOS_BUNDLE_ID');
 
+  /// The project's own domain for the pages a browser sign-in passes
+  /// through, `auth.termphin.dev` rather than `<project>.firebaseapp.com`.
+  /// Empty keeps Firebase's default, as a fork's project would need.
+  static const authDomain = String.fromEnvironment('FIREBASE_AUTH_DOMAIN');
+
   /// Stands in for the build-time values in tests.
   @visibleForTesting
   static FirebaseOptions? Function()? optionsOverride;

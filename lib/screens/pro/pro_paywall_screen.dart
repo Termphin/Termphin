@@ -309,7 +309,7 @@ class _ProPaywallScreenState extends ConsumerState<ProPaywallScreen> {
               ),
             ),
             _Footer(
-              plans: _plans(context, t),
+              plans: _plans(context, t, signedIn: signedIn),
               busy: _busy,
               signedIn: signedIn,
               chosen: _chosen,
@@ -327,7 +327,14 @@ class _ProPaywallScreenState extends ConsumerState<ProPaywallScreen> {
     );
   }
 
-  List<Widget> _plans(BuildContext context, Translations t) {
+  /// The plans to pick from. Signed out there are none to show - the store
+  /// is asked only for an account - and that is said as what it is rather
+  /// than as prices failing to load.
+  List<Widget> _plans(
+    BuildContext context,
+    Translations t, {
+    required bool signedIn,
+  }) {
     final p = t.account.pro.paywall;
     final text = Theme.of(context).textTheme;
     if (!_canSell) {
@@ -341,6 +348,12 @@ class _ProPaywallScreenState extends ConsumerState<ProPaywallScreen> {
             child: CircularProgressIndicator(strokeWidth: AppTheme.strokeWide),
           ),
         ),
+      ];
+    }
+    if (_offers.isEmpty && !signedIn) {
+      return [
+        Text(p.signInForPrices, style: text.bodyMedium),
+        const SizedBox(height: AppTheme.space10),
       ];
     }
     if (_offers.isEmpty) {

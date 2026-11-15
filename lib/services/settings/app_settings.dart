@@ -7,6 +7,7 @@ import 'anonymize_setting.dart';
 import 'editor_settings.dart';
 import 'floating_dock_settings.dart';
 import 'lock_settings.dart';
+import 'profile_form_settings.dart';
 import 'setting.dart';
 import 'sftp_settings.dart';
 import 'sidebar_settings.dart';
@@ -47,5 +48,6 @@ Future<void> loadAppSettings() async {
     sftpSortDescendingSetting.load(),
     tabBarPositionSetting.load(),
     lockTimeoutSetting.load(),
+    profileFormMoreOptionsSetting.load(),
   ]);
 }

@@ -80,17 +80,22 @@ notification on its way to your phone (section 6).
 ## 4. Your account (only for Termphin Pro)
 
 You need an account only to buy and use Termphin Pro. You can sign in with
-Google, with Apple, or with an email address and a password. Accounts are
-run on **Firebase Authentication** by Google.
+Google, with Apple, with GitHub, or with an email address and a password.
+Accounts are run on **Firebase Authentication** by Google.
 
 What an account holds:
 
 - your email address, and whether you have confirmed it
-- how you sign in (Google, Apple or email)
-- the name and profile picture your Google or Apple account provides, if any
+- how you sign in (Google, Apple, GitHub or email)
+- the name and profile picture your Google, Apple or GitHub account provides,
+  if any
 - a random account identifier
 - when the account was created and last signed in
 - whether it has Pro, and until when
+
+The app shows that profile picture as your account's avatar: it downloads it
+once from Google's or GitHub's servers and keeps a copy on your device, which
+signing out deletes.
 
 Your password, if you use one, is held by Firebase Authentication as a salted
 hash; we never see it.
@@ -254,6 +259,7 @@ on your device stays there until you delete it or uninstall the app.
 | RevenueCat | Managing Pro purchases | United States |
 | Resend | Sending the one email we send: the notice before a synced copy is deleted | United States |
 | Google Play, App Store | Selling Pro; their own terms apply | - |
+| GitHub | Signing in with GitHub, if you choose it; its own terms apply | United States |
 | Cloudflare | Website hosting, CDN and DNS | Global |
 
 Where data goes to the United States, the transfer relies on the EU-US Data

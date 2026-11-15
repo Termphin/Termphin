@@ -1,0 +1,21 @@
+# Changes to the terms of service and the privacy policy that people who
+# already use the app are told about, once, at the next launch.
+#
+# Only a material change gets an entry with `material: true`: a new kind of
+# service, data or provider, or a term that is less favourable than before.
+# A rewording, a typo or a new date is `material: false` or no entry at all,
+# and shows nothing.
+#
+# Fields per entry:
+#   id       - the change's date, `YYYY-MM-DD`. Stored on the device as the
+#              latest change seen, so ids must only ever grow. Required.
+#   material - whether the change is announced. Required.
+#   summary  - one or two sentences on what changed, in plain words.
+#              Required when material.
+- id: 2026-11-15
+  material: true
+  summary: >-
+    Termphin Pro is here: an account, end-to-end encrypted sync and
+    notifications from your servers. You can sign in with Google, Apple,
+    GitHub or an email address. The terms now cover Pro, and the privacy
+    policy explains what an account and these services handle.

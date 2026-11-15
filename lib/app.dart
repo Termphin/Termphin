@@ -21,6 +21,7 @@ import 'screens/lock_screen.dart';
 import 'screens/main_shell.dart';
 import 'screens/onboarding_screen.dart';
 import 'services/analytics/analytics_service.dart';
+import 'services/app/legal_updates_service.dart';
 import 'services/app/onboarding_service.dart';
 import 'services/app/review_prompt_service.dart';
 import 'services/app/tag_migration_service.dart';
@@ -36,6 +37,7 @@ import 'services/settings/toolbar_share_link.dart';
 import 'services/ssh/ssh_link.dart';
 import 'theme/theme.dart';
 import 'utils/platform_info.dart';
+import 'widgets/onboarding/legal_update_dialog.dart';
 import 'widgets/onboarding/tag_migration_modal.dart';
 import 'widgets/onboarding/whats_new_modal.dart';
 import 'widgets/profiles/profile_avatar.dart';
@@ -507,8 +509,9 @@ class _AppShellState extends ConsumerState<_AppShell> {
     ).read(terminalOverlayProvider.notifier).openProfile(profile);
   }
 
-  /// What the home screen may interrupt with, in order: what changed, then the
-  /// one question this release has to ask, then - only if neither of those
+  /// What the home screen may interrupt with, in order: a material change
+  /// to the terms or the privacy policy, what changed in the app, then the
+  /// one question this release has to ask, then - only if none of those
   /// spoke - the store prompt.
   ///
   /// The review dialog never stacks on another modal: two interstitials get
@@ -523,11 +526,18 @@ class _AppShellState extends ConsumerState<_AppShell> {
   Future<void> _runStartupInterstitials() async {
     final packageInfo = await PackageInfo.fromPlatform();
 
+    var interrupted = false;
+    final legal = await LegalUpdatesService.instance.pending();
+    if (legal != null && mounted) {
+      await showLegalUpdateDialog(context, legal);
+      await LegalUpdatesService.instance.markSeen();
+      interrupted = true;
+    }
+
     final highlights = await WhatsNewService.instance.pendingSince(
       packageInfo.version,
     );
     if (!mounted) return;
-    var interrupted = false;
     if (highlights.isNotEmpty) {
       await showWhatsNewModal(context, highlights);
       await WhatsNewService.instance.markSeen(highlights);

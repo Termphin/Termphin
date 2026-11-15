@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
@@ -16,6 +18,7 @@ import '../../widgets/ui/app_notifications.dart';
 import '../../widgets/ui/confirm_dialog.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
 import '../../widgets/ui/section_header.dart';
+import '../../widgets/ui/unsaved_changes_guard.dart';
 import 'groups_screen.dart';
 
 /// Opens the create/edit screen for [existing] (or a new group if null).
@@ -88,7 +91,17 @@ class _GroupFormScreenState extends ConsumerState<GroupFormScreen> {
       }
       _selectedColorHex = (unused ?? ProfileAvatarColor.colors.first).hex;
     }
+    _initialSnapshot = _snapshot();
   }
+
+  /// What the form held when it opened, to tell whether leaving it would
+  /// lose anything.
+  late final String _initialSnapshot;
+
+  /// Every field, typed or picked, as one comparable value.
+  String _snapshot() => jsonEncode([_nameCtrl.text, _selectedColorHex]);
+
+  bool get _dirty => !_isSaving && _snapshot() != _initialSnapshot;
 
   @override
   void dispose() {
@@ -186,184 +199,188 @@ class _GroupFormScreenState extends ConsumerState<GroupFormScreen> {
   Widget build(BuildContext context) {
     final t = Translations.of(context);
 
-    return Scaffold(
-      backgroundColor: context.colors.backgroundPrimary,
-      appBar: AppBar(
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: Text(
-          _isEditing ? t.groups.editGroup : t.groups.newGroup,
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        leading: IconButton(
-          tooltip: t.common.close,
-          icon: const Icon(PhosphorIconsRegular.x),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        actions: [
-          if (widget.showManageGroups)
-            IconButton(
-              tooltip: t.groups.manageGroups,
-              icon: const Icon(PhosphorIconsRegular.slidersHorizontal),
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => const GroupsScreen()),
-              ),
-            ),
-          Padding(
-            padding: const EdgeInsets.only(right: AppTheme.space12),
-            child: _isSaving
-                ? const SizedBox(
-                    width: AppTheme.icon20,
-                    height: AppTheme.icon20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : ListenableBuilder(
-                    listenable: _nameCtrl,
-                    builder: (context, _) => TextButton(
-                      onPressed: _canSave ? _save : null,
-                      child: Text(
-                        t.common.save,
-                        style: TextStyle(
-                          color: _canSave
-                              ? context.colors.primary
-                              : context.colors.textTertiary,
-                          fontWeight: FontWeight.w700,
-                          fontSize: AppTheme.font15,
-                        ),
-                      ),
-                    ),
-                  ),
+    return UnsavedChangesGuard(
+      dirty: () => _dirty,
+      changes: Listenable.merge([_nameCtrl]),
+      child: Scaffold(
+        backgroundColor: context.colors.backgroundPrimary,
+        appBar: AppBar(
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          title: Text(
+            _isEditing ? t.groups.editGroup : t.groups.newGroup,
+            style: Theme.of(context).textTheme.titleLarge,
           ),
-        ],
-      ),
-      body: SafeArea(
-        top: false,
-        child: ContentGutter(
-          builder: (context, gutter) => ListView(
-            padding: EdgeInsets.fromLTRB(
-              AppTheme.space20,
-              _isEditing ? AppTheme.space8 : AppTheme.space16,
-              AppTheme.space20,
-              AppTheme.space40,
-            ).add(gutter),
-            children: [
-              _GroupPreview(
-                name: _nameCtrl,
-                colorHex: _selectedColorHex,
-                isDefaultGroup: _isDefaultGroup,
-              ),
-              const SizedBox(height: AppTheme.space20),
-              AppFormField(
-                key: const ValueKey('groupNameField'),
-                controller: _nameCtrl,
-                label: t.groups.groupName,
-                hint: t.groups.groupNameHint,
-                icon: PhosphorIconsFill.folder,
-                action: TextInputAction.done,
-                autofocus: !_isEditing,
-                readOnly: _isDefaultGroup,
-                onSubmitted: (_) => _save(),
-              ),
-              if (_isDefaultGroup) ...[
-                const SizedBox(height: AppTheme.space8),
-                Text(
-                  t.groups.defaultNameLocked,
-                  style: Theme.of(context).textTheme.bodySmall,
+          leading: IconButton(
+            tooltip: t.common.close,
+            icon: const Icon(PhosphorIconsRegular.x),
+            onPressed: () => Navigator.of(context).maybePop(),
+          ),
+          actions: [
+            if (widget.showManageGroups)
+              IconButton(
+                tooltip: t.groups.manageGroups,
+                icon: const Icon(PhosphorIconsRegular.slidersHorizontal),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => const GroupsScreen()),
                 ),
-              ],
-              const SizedBox(height: AppTheme.space24),
-              SectionHeader(t.groups.colorLabel),
-              const SizedBox(height: AppTheme.space12),
-              Wrap(
-                spacing: AppTheme.space10,
-                runSpacing: AppTheme.space10,
-                children: [
-                  Tooltip(
-                    message: t.groups.noColour,
-                    child: GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _selectedColorHex = null;
-                        });
-                      },
-                      child: AnimatedContainer(
-                        duration: AppTheme.interactiveDuration,
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: context.colors.fieldFill,
-                          shape: BoxShape.circle,
-                          border: _selectedColorHex == null
-                              ? Border.all(
-                                  color: context.colors.textPrimary,
-                                  width: 2.5,
-                                )
-                              : Border.all(
-                                  color: context.colors.surfaceBorderStrong,
-                                ),
+              ),
+            Padding(
+              padding: const EdgeInsets.only(right: AppTheme.space12),
+              child: _isSaving
+                  ? const SizedBox(
+                      width: AppTheme.icon20,
+                      height: AppTheme.icon20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : ListenableBuilder(
+                      listenable: _nameCtrl,
+                      builder: (context, _) => TextButton(
+                        onPressed: _canSave ? _save : null,
+                        child: Text(
+                          t.common.save,
+                          style: TextStyle(
+                            color: _canSave
+                                ? context.colors.primary
+                                : context.colors.textTertiary,
+                            fontWeight: FontWeight.w700,
+                            fontSize: AppTheme.font15,
+                          ),
                         ),
-                        child: _selectedColorHex == null
-                            ? Icon(
-                                PhosphorIconsRegular.check,
-                                size: AppTheme.icon16,
-                                color: context.colors.textPrimary,
-                              )
-                            : null,
                       ),
                     ),
+            ),
+          ],
+        ),
+        body: SafeArea(
+          top: false,
+          child: ContentGutter(
+            builder: (context, gutter) => ListView(
+              padding: EdgeInsets.fromLTRB(
+                AppTheme.space20,
+                _isEditing ? AppTheme.space8 : AppTheme.space16,
+                AppTheme.space20,
+                AppTheme.space40,
+              ).add(gutter),
+              children: [
+                _GroupPreview(
+                  name: _nameCtrl,
+                  colorHex: _selectedColorHex,
+                  isDefaultGroup: _isDefaultGroup,
+                ),
+                const SizedBox(height: AppTheme.space20),
+                AppFormField(
+                  key: const ValueKey('groupNameField'),
+                  controller: _nameCtrl,
+                  label: t.groups.groupName,
+                  hint: t.groups.groupNameHint,
+                  icon: PhosphorIconsFill.folder,
+                  action: TextInputAction.done,
+                  autofocus: !_isEditing,
+                  readOnly: _isDefaultGroup,
+                  onSubmitted: (_) => _save(),
+                ),
+                if (_isDefaultGroup) ...[
+                  const SizedBox(height: AppTheme.space8),
+                  Text(
+                    t.groups.defaultNameLocked,
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
-                  ...ProfileAvatarColor.colors.map((item) {
-                    final selected =
-                        _selectedColorHex?.toUpperCase() ==
-                        item.hex.toUpperCase();
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _selectedColorHex = item.hex;
-                        });
-                      },
-                      child: AnimatedContainer(
-                        duration: AppTheme.interactiveDuration,
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: item.color,
-                          shape: BoxShape.circle,
-                          border: selected
-                              ? Border.all(
-                                  color: ProfileAvatarColor.onSwatch,
-                                  width: 2.5,
+                ],
+                const SizedBox(height: AppTheme.space24),
+                SectionHeader(t.groups.colorLabel),
+                const SizedBox(height: AppTheme.space12),
+                Wrap(
+                  spacing: AppTheme.space10,
+                  runSpacing: AppTheme.space10,
+                  children: [
+                    Tooltip(
+                      message: t.groups.noColour,
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _selectedColorHex = null;
+                          });
+                        },
+                        child: AnimatedContainer(
+                          duration: AppTheme.interactiveDuration,
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: context.colors.fieldFill,
+                            shape: BoxShape.circle,
+                            border: _selectedColorHex == null
+                                ? Border.all(
+                                    color: context.colors.textPrimary,
+                                    width: 2.5,
+                                  )
+                                : Border.all(
+                                    color: context.colors.surfaceBorderStrong,
+                                  ),
+                          ),
+                          child: _selectedColorHex == null
+                              ? Icon(
+                                  PhosphorIconsRegular.check,
+                                  size: AppTheme.icon16,
+                                  color: context.colors.textPrimary,
                                 )
                               : null,
                         ),
-                        child: selected
-                            ? const Icon(
-                                PhosphorIconsRegular.check,
-                                size: AppTheme.icon16,
-                                color: ProfileAvatarColor.onSwatch,
-                              )
-                            : null,
                       ),
-                    );
-                  }),
-                ],
-              ),
-              if (_isEditing && !_isDefaultGroup) ...[
-                const SizedBox(height: AppTheme.space32),
-                OutlinedButton.icon(
-                  onPressed: _isSaving ? null : _delete,
-                  icon: const Icon(
-                    PhosphorIconsRegular.trash,
-                    size: AppTheme.icon18,
-                  ),
-                  label: Text(t.common.delete),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: context.colors.error,
-                    side: BorderSide(color: context.colors.error),
-                  ),
+                    ),
+                    ...ProfileAvatarColor.colors.map((item) {
+                      final selected =
+                          _selectedColorHex?.toUpperCase() ==
+                          item.hex.toUpperCase();
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _selectedColorHex = item.hex;
+                          });
+                        },
+                        child: AnimatedContainer(
+                          duration: AppTheme.interactiveDuration,
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: item.color,
+                            shape: BoxShape.circle,
+                            border: selected
+                                ? Border.all(
+                                    color: ProfileAvatarColor.onSwatch,
+                                    width: 2.5,
+                                  )
+                                : null,
+                          ),
+                          child: selected
+                              ? const Icon(
+                                  PhosphorIconsRegular.check,
+                                  size: AppTheme.icon16,
+                                  color: ProfileAvatarColor.onSwatch,
+                                )
+                              : null,
+                        ),
+                      );
+                    }),
+                  ],
                 ),
+                if (_isEditing && !_isDefaultGroup) ...[
+                  const SizedBox(height: AppTheme.space32),
+                  OutlinedButton.icon(
+                    onPressed: _isSaving ? null : _delete,
+                    icon: const Icon(
+                      PhosphorIconsRegular.trash,
+                      size: AppTheme.icon18,
+                    ),
+                    label: Text(t.common.delete),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: context.colors.error,
+                      side: BorderSide(color: context.colors.error),
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),

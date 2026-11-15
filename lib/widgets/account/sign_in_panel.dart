@@ -10,6 +10,7 @@ import '../../services/account/account_service.dart';
 import '../../theme/theme.dart';
 import '../ui/app_form_field.dart';
 import '../ui/app_notifications.dart';
+import '../ui/legal_links.dart';
 import 'account_failure_text.dart';
 import 'sign_in_buttons.dart';
 
@@ -95,6 +96,13 @@ class _SignInPanelState extends State<SignInPanel> {
               ? null
               : () => _attempt(AccountService.instance.signInWithGoogle),
         ),
+        const SizedBox(height: AppTheme.space10),
+        GitHubSignInButton(
+          label: t.account.continueWithGitHub,
+          onPressed: _busy
+              ? null
+              : () => _attempt(AccountService.instance.signInWithGitHub),
+        ),
         if (_supportsApple) ...[
           const SizedBox(height: AppTheme.space10),
           AppleSignInButton(
@@ -173,6 +181,15 @@ class _SignInPanelState extends State<SignInPanel> {
             child: Text(t.account.forgotPassword),
           ),
         ),
+        const SizedBox(height: AppTheme.space12),
+        Text(
+          t.account.agreeNotice,
+          textAlign: TextAlign.center,
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: context.colors.textTertiary),
+        ),
+        const LegalLinks(),
       ],
     );
   }

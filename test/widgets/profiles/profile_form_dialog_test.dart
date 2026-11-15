@@ -11,6 +11,7 @@ import 'package:termphin/providers/groups_provider.dart';
 import 'package:termphin/providers/profiles_provider.dart';
 import 'package:termphin/providers/ssh_keys_provider.dart';
 import 'package:termphin/screens/keys/key_form_screen.dart';
+import 'package:termphin/services/settings/profile_form_settings.dart';
 import 'package:termphin/services/ssh/ssh_link.dart';
 import 'package:termphin/services/ssh/ssh_service.dart';
 import 'package:termphin/widgets/groups/group_picker_field.dart';
@@ -49,10 +50,27 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   final t = AppLocale.en.buildSync();
 
-  setUp(() {
+  setUp(() async {
     SharedPreferences.setMockInitialValues({});
     SharedPreferences.resetStatic();
+    await profileFormMoreOptionsSetting.load();
   });
+
+  /// The form's own list, not the row of avatars across its top.
+  final formList = find
+      .byWidgetPredicate(
+        (widget) =>
+            widget is Scrollable && widget.axisDirection == AxisDirection.down,
+      )
+      .first;
+
+  /// Opens "More options", where the jump host and the rest live.
+  Future<void> openMoreOptions(WidgetTester tester) async {
+    final header = find.text(t.profileForm.moreOptions);
+    await tester.scrollUntilVisible(header, 250, scrollable: formList);
+    await tester.tap(header);
+    await tester.pumpAndSettle();
+  }
 
   Future<
     (ProviderContainer, FakeProfileStorage, FakeSshKeyStorage, FakeGroupStorage)
@@ -153,6 +171,61 @@ void main() {
       expect(find.text('Could not reach server.example.com.'), findsOneWidget);
       expect(find.text(t.profileForm.testSucceeded), findsNothing);
     });
+  });
+
+  testWidgets('a new machine keeps the advanced options folded away until '
+      'asked, and the form remembers they were opened', (tester) async {
+    await pumpProfileForm(tester);
+    await tester.scrollUntilVisible(
+      find.text(t.profileForm.moreOptionsHint),
+      250,
+      scrollable: formList,
+    );
+
+    expect(find.text(t.profileForm.jumpHostNone), findsNothing);
+
+    await openMoreOptions(tester);
+    await tester.scrollUntilVisible(
+      find.text(t.profileForm.jumpHostNone),
+      250,
+      scrollable: formList,
+    );
+
+    expect(find.text(t.profileForm.jumpHostNone), findsOneWidget);
+    expect(profileFormMoreOptionsSetting.value, isTrue);
+  });
+
+  testWidgets('a machine that uses a jump host opens with it shown and named', (
+    tester,
+  ) async {
+    final bastion = profileFixture(id: 'bastion', name: 'Bastion');
+    final current = profileFixture(
+      id: 'current',
+      name: 'Current',
+      jumpHostProfileId: 'bastion',
+    );
+
+    await pumpProfileForm(
+      tester,
+      profile: current,
+      profiles: [current, bastion],
+    );
+    await tester.scrollUntilVisible(
+      find.text(t.profileForm.moreJumpHost(name: 'Bastion')),
+      250,
+      scrollable: formList,
+    );
+    await tester.scrollUntilVisible(
+      find.text(t.profileForm.fallbackHostsEmpty),
+      250,
+      scrollable: formList,
+    );
+
+    expect(find.text(t.profileForm.fallbackHostsEmpty), findsOneWidget);
+    expect(
+      find.text(t.profileForm.moreJumpHost(name: 'Bastion')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('validates required connection fields before saving', (
@@ -532,6 +605,7 @@ void main() {
         profiles: [currentProfile, jhOther, jhSame, jhLoop],
       );
 
+      await openMoreOptions(tester);
       final jumpHostTile = find.text(t.profileForm.jumpHostNone);
       await tester.scrollUntilVisible(
         jumpHostTile,
@@ -594,6 +668,7 @@ void main() {
           profiles: [currentProfile, jhSame1, jhSame2],
         );
 
+        await openMoreOptions(tester);
         final jumpHostTile = find.text(t.profileForm.jumpHostNone);
         await tester.scrollUntilVisible(
           jumpHostTile,

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
@@ -11,6 +13,7 @@ import '../../widgets/groups/group_picker_field.dart';
 import '../../widgets/ui/app_form_field.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
 import '../../widgets/ui/section_header.dart';
+import '../../widgets/ui/unsaved_changes_guard.dart';
 
 /// Opens the create/edit screen for [existing] (or a new snippet if null).
 Future<void> showSnippetFormScreen(
@@ -70,7 +73,25 @@ class _SnippetFormScreenState extends ConsumerState<SnippetFormScreen> {
     existing?.defaults.forEach((name, value) {
       _defaultCtrls[name] = TextEditingController(text: value);
     });
+    _initialSnapshot = _snapshot();
   }
+
+  /// What the form held when it opened, to tell whether leaving it would
+  /// lose anything.
+  late final String _initialSnapshot;
+
+  /// Every field, typed or picked, as one comparable value.
+  String _snapshot() => jsonEncode([
+    _nameCtrl.text,
+    _commandCtrl.text,
+    _group,
+    {
+      for (final entry in _defaultCtrls.entries)
+        if (entry.value.text.isNotEmpty) entry.key: entry.value.text,
+    },
+  ]);
+
+  bool get _dirty => !_isSaving && _snapshot() != _initialSnapshot;
 
   @override
   void dispose() {
@@ -128,121 +149,129 @@ class _SnippetFormScreenState extends ConsumerState<SnippetFormScreen> {
     final t = Translations.of(context);
     final isEditing = widget.existing != null;
 
-    return Scaffold(
-      backgroundColor: context.colors.backgroundPrimary,
-      appBar: AppBar(
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: Text(
-          isEditing ? t.snippets.editTitle : t.snippets.newTitle,
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        leading: IconButton(
-          tooltip: t.common.close,
-          icon: const Icon(PhosphorIconsRegular.x),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: AppTheme.space12),
-            child: _isSaving
-                ? const SizedBox(
-                    width: AppTheme.icon20,
-                    height: AppTheme.icon20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : ListenableBuilder(
-                    listenable: Listenable.merge([_nameCtrl, _commandCtrl]),
-                    builder: (context, _) => TextButton(
-                      onPressed: _canSave ? _save : null,
-                      child: Text(
-                        t.common.save,
-                        style: TextStyle(
-                          color: _canSave
-                              ? context.colors.primary
-                              : context.colors.textTertiary,
-                          fontWeight: FontWeight.w700,
-                          fontSize: AppTheme.font15,
+    return UnsavedChangesGuard(
+      dirty: () => _dirty,
+      changes: Listenable.merge([
+        _nameCtrl,
+        _commandCtrl,
+        ..._defaultCtrls.values,
+      ]),
+      child: Scaffold(
+        backgroundColor: context.colors.backgroundPrimary,
+        appBar: AppBar(
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          title: Text(
+            isEditing ? t.snippets.editTitle : t.snippets.newTitle,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          leading: IconButton(
+            tooltip: t.common.close,
+            icon: const Icon(PhosphorIconsRegular.x),
+            onPressed: () => Navigator.of(context).maybePop(),
+          ),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: AppTheme.space12),
+              child: _isSaving
+                  ? const SizedBox(
+                      width: AppTheme.icon20,
+                      height: AppTheme.icon20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : ListenableBuilder(
+                      listenable: Listenable.merge([_nameCtrl, _commandCtrl]),
+                      builder: (context, _) => TextButton(
+                        onPressed: _canSave ? _save : null,
+                        child: Text(
+                          t.common.save,
+                          style: TextStyle(
+                            color: _canSave
+                                ? context.colors.primary
+                                : context.colors.textTertiary,
+                            fontWeight: FontWeight.w700,
+                            fontSize: AppTheme.font15,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-          ),
-        ],
-      ),
-      body: SafeArea(
-        top: false,
-        child: ContentGutter(
-          builder: (context, gutter) => ListView(
-            padding: EdgeInsets.fromLTRB(
-              AppTheme.space20,
-              isEditing ? AppTheme.space8 : AppTheme.space16,
-              AppTheme.space20,
-              AppTheme.space40,
-            ).add(gutter),
-            children: [
-              SectionHeader(t.groups.groupTitle),
-              const SizedBox(height: AppTheme.space10),
-              GroupPickerField(
-                group: _group,
-                onChanged: (group) => setState(() => _group = group),
-              ),
-              const SizedBox(height: AppTheme.space20),
-              SectionHeader(
-                t.snippets.commandSection,
-                hint: t.snippets.placeholderHint,
-              ),
-              const SizedBox(height: AppTheme.space10),
-              AppFormField(
-                key: const ValueKey('snippetNameField'),
-                controller: _nameCtrl,
-                label: t.snippets.nameHint,
-                icon: PhosphorIconsFill.tag,
-                action: TextInputAction.next,
-                autofocus: !isEditing,
-              ),
-              const SizedBox(height: AppTheme.space10),
-              AppFormField(
-                key: const ValueKey('snippetCommandField'),
-                controller: _commandCtrl,
-                label: t.snippets.commandHint,
-                minLines: 6,
-                maxLines: 12,
-                monospace: true,
-                keyboardType: TextInputType.multiline,
-                action: TextInputAction.newline,
-              ),
+            ),
+          ],
+        ),
+        body: SafeArea(
+          top: false,
+          child: ContentGutter(
+            builder: (context, gutter) => ListView(
+              padding: EdgeInsets.fromLTRB(
+                AppTheme.space20,
+                isEditing ? AppTheme.space8 : AppTheme.space16,
+                AppTheme.space20,
+                AppTheme.space40,
+              ).add(gutter),
+              children: [
+                SectionHeader(t.groups.groupTitle),
+                const SizedBox(height: AppTheme.space10),
+                GroupPickerField(
+                  group: _group,
+                  onChanged: (group) => setState(() => _group = group),
+                ),
+                const SizedBox(height: AppTheme.space20),
+                SectionHeader(
+                  t.snippets.commandSection,
+                  hint: t.snippets.placeholderHint,
+                ),
+                const SizedBox(height: AppTheme.space10),
+                AppFormField(
+                  key: const ValueKey('snippetNameField'),
+                  controller: _nameCtrl,
+                  label: t.snippets.nameHint,
+                  icon: PhosphorIconsFill.tag,
+                  action: TextInputAction.next,
+                  autofocus: !isEditing,
+                ),
+                const SizedBox(height: AppTheme.space10),
+                AppFormField(
+                  key: const ValueKey('snippetCommandField'),
+                  controller: _commandCtrl,
+                  label: t.snippets.commandHint,
+                  minLines: 6,
+                  maxLines: 12,
+                  monospace: true,
+                  keyboardType: TextInputType.multiline,
+                  action: TextInputAction.newline,
+                ),
 
-              ListenableBuilder(
-                listenable: _commandCtrl,
-                builder: (context, _) {
-                  final placeholders = _placeholders;
-                  if (placeholders.isEmpty) return const SizedBox.shrink();
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const SizedBox(height: AppTheme.space24),
-                      SectionHeader(
-                        t.snippets.argumentsTitle,
-                        hint: t.snippets.argumentsHint,
-                      ),
-                      const SizedBox(height: AppTheme.space10),
-                      for (final name in placeholders) ...[
-                        AppFormField(
-                          key: ValueKey('snippetDefaultField:$name'),
-                          controller: _defaultCtrlFor(name),
-                          label: name,
-                          icon: PhosphorIconsFill.bracketsCurly,
-                          monospace: true,
-                          action: TextInputAction.next,
+                ListenableBuilder(
+                  listenable: _commandCtrl,
+                  builder: (context, _) {
+                    final placeholders = _placeholders;
+                    if (placeholders.isEmpty) return const SizedBox.shrink();
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const SizedBox(height: AppTheme.space24),
+                        SectionHeader(
+                          t.snippets.argumentsTitle,
+                          hint: t.snippets.argumentsHint,
                         ),
                         const SizedBox(height: AppTheme.space10),
+                        for (final name in placeholders) ...[
+                          AppFormField(
+                            key: ValueKey('snippetDefaultField:$name'),
+                            controller: _defaultCtrlFor(name),
+                            label: name,
+                            icon: PhosphorIconsFill.bracketsCurly,
+                            monospace: true,
+                            action: TextInputAction.next,
+                          ),
+                          const SizedBox(height: AppTheme.space10),
+                        ],
                       ],
-                    ],
-                  );
-                },
-              ),
-            ],
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
         ),
       ),
