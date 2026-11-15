@@ -326,6 +326,10 @@ class KeystoreSyncKeyVault implements SyncKeyVault {
 class FirestoreSyncCloud implements SyncCloud {
   FirebaseFirestore get _db => FirebaseFirestore.instance;
 
+  /// What this device last wrote to each record, so [watch] can tell its
+  /// own writes from another device's; see [ownWritesOnly].
+  final _written = <String, String>{};
+
   DocumentReference<Map<String, dynamic>> _meta(String uid) =>
       _db.collection('users').doc(uid).collection('syncMeta').doc('key');
 
@@ -356,8 +360,10 @@ class FirestoreSyncCloud implements SyncCloud {
       });
 
   @override
-  SyncRemote records(String uid) =>
-      _FirestoreRecords(_db.collection('users').doc(uid).collection('records'));
+  SyncRemote records(String uid) => _FirestoreRecords(
+    _db.collection('users').doc(uid).collection('records'),
+    _written,
+  );
 
   /// Through the `deleteSyncData` function rather than the database: the
   /// rules let no client delete the sync settings, and the function works
@@ -402,14 +408,39 @@ class FirestoreSyncCloud implements SyncCloud {
       .where(
         (snapshot) =>
             !snapshot.metadata.hasPendingWrites &&
-            snapshot.docChanges.isNotEmpty,
+            snapshot.docChanges.isNotEmpty &&
+            !ownWritesOnly([
+              for (final change in snapshot.docChanges)
+                (change.doc.id, change.doc.data()),
+            ], _written),
       );
 }
 
+/// Whether every record in [changes] is just what this device wrote last,
+/// by [written]: a record's id to [writtenAs] of what was put there.
+///
+/// A record is written with the server's time, so once a write is confirmed
+/// the record changes once more - from the local estimate to the server's
+/// value - and arrives as a change like any other. Taken for another
+/// device's write, it would start a whole sync to find nothing new.
+@visibleForTesting
+bool ownWritesOnly(
+  Iterable<(String, Map<String, dynamic>?)> changes,
+  Map<String, String> written,
+) => changes.every(
+  (change) => change.$2 != null && written[change.$1] == writtenAs(change.$2!),
+);
+
+/// What a record holds that tells one write from another: its sealed
+/// content and whether it is a deletion, without the time.
+String writtenAs(Map<String, dynamic> data) =>
+    '${data['deleted'] == true}:${data['ciphertext']}';
+
 class _FirestoreRecords implements SyncRemote {
-  _FirestoreRecords(this._collection);
+  _FirestoreRecords(this._collection, this._written);
 
   final CollectionReference<Map<String, dynamic>> _collection;
+  final Map<String, String> _written;
 
   @override
   Future<Map<String, RemoteEntry>> fetchAll() async {
@@ -425,10 +456,15 @@ class _FirestoreRecords implements SyncRemote {
   }
 
   @override
-  Future<void> put(String documentId, RemoteEntry entry) =>
-      _collection.doc(documentId).set({
-        'ciphertext': entry.ciphertext,
-        'deleted': entry.deleted,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+  Future<void> put(String documentId, RemoteEntry entry) {
+    _written[documentId] = writtenAs({
+      'ciphertext': entry.ciphertext,
+      'deleted': entry.deleted,
+    });
+    return _collection.doc(documentId).set({
+      'ciphertext': entry.ciphertext,
+      'deleted': entry.deleted,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
 }

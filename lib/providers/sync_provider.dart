@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../services/ssh/network_monitor.dart';
 import '../services/sync/settings_sync.dart';
 import '../services/sync/sync_coordinator.dart';
 import '../services/sync/sync_service.dart';
@@ -34,6 +35,10 @@ final syncCoordinatorProvider = Provider<SyncCoordinator>((ref) {
   ref.listen(profileGroupsProvider, changed);
   ref.listen(snippetsProvider, changed);
   ref.listen(sshKeysRevisionProvider, changed);
+  final regained = NetworkMonitor.instance.onRegained.listen(
+    (_) => coordinator.networkRegained(),
+  );
+  ref.onDispose(regained.cancel);
   final settings = Listenable.merge(SettingsSync.listenables);
   settings.addListener(coordinator.localChanged);
   ref.onDispose(() => settings.removeListener(coordinator.localChanged));
