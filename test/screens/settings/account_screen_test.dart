@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:termphin/i18n/strings.g.dart';
 import 'package:termphin/screens/settings/account_screen.dart';
 import 'package:termphin/services/account/account_service.dart';
+import 'package:termphin/services/pro/pro_service.dart';
 import 'package:termphin/services/sync/sync_service.dart';
 
 import '../../support/fake_account_backend.dart';
@@ -28,6 +29,7 @@ void main() {
   });
 
   tearDown(() {
+    ProService.renewsOverride = null;
     SyncService.instanceOverride = null;
     AccountService.backendOverride = null;
     AccountService.instance.resetForTest();
@@ -208,5 +210,56 @@ void main() {
     expect(find.text(t.account.continueWithGoogle), findsOneWidget);
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpAndSettle();
+  });
+
+  testWidgets(
+    'a renewing subscription is pointed out before deleting, then deleting goes on',
+    (tester) async {
+      ProService.renewsOverride = () async => true;
+      await AccountService.instance.signInWithEmail('me@example.com', 'secret');
+      await open(tester);
+
+      await tester.tap(find.text(t.account.deleteAccount));
+      await tester.pumpAndSettle();
+      expect(find.text(t.account.deleteRenewsTitle), findsOneWidget);
+      expect(find.text(t.account.deleteRenewsMessage), findsOneWidget);
+      expect(find.text(t.account.deleteTitle), findsNothing);
+
+      await tester.tap(find.text(t.account.deleteAnyway));
+      await tester.pumpAndSettle();
+      expect(find.text(t.account.deleteTitle), findsOneWidget);
+    },
+  );
+
+  testWidgets('going to manage the subscription deletes nothing', (
+    tester,
+  ) async {
+    ProService.renewsOverride = () async => true;
+    await AccountService.instance.signInWithEmail('me@example.com', 'secret');
+    await open(tester);
+
+    await tester.tap(find.text(t.account.deleteAccount));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(t.account.pro.manage).last);
+    await tester.pumpAndSettle();
+
+    expect(find.text(t.account.deleteTitle), findsNothing);
+    expect(backend.calls.where((call) => call.startsWith('delete')), isEmpty);
+    await tester.pump(const Duration(seconds: 10));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('a subscription that does not renew is not brought up', (
+    tester,
+  ) async {
+    ProService.renewsOverride = () async => false;
+    await AccountService.instance.signInWithEmail('me@example.com', 'secret');
+    await open(tester);
+
+    await tester.tap(find.text(t.account.deleteAccount));
+    await tester.pumpAndSettle();
+
+    expect(find.text(t.account.deleteRenewsTitle), findsNothing);
+    expect(find.text(t.account.deleteTitle), findsOneWidget);
   });
 }

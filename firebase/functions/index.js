@@ -11,6 +11,7 @@ const { getMessaging } = require("firebase-admin/messaging");
 const {
   syncSweepAction,
   proFromEvent,
+  transferredAccounts,
   proFromActiveEntitlements,
   parseRelayKey,
   cleanText,
@@ -47,9 +48,15 @@ const RELAY_QUIET_SECONDS = 3;
  * the uid. The outcome goes to two places: `users/{uid}` for the app to
  * read, and the `pro` custom claim for the security rules and the relay -
  * a client can write neither.
+ *
+ * Restoring purchases on another account makes RevenueCat move them there
+ * and send a `TRANSFER`. Both accounts are checked with RevenueCat again on
+ * the spot, so the one that gave the purchase up stops having Pro now, not
+ * when its paid period would have ended. A check that fails answers 500,
+ * which RevenueCat retries.
  */
 exports.revenuecat = onRequest(
-  { secrets: [revenueCatAuth] },
+  { secrets: [revenueCatAuth, revenueCatKey] },
   async (request, response) => {
     if (request.method !== "POST") {
       response.status(405).end();
@@ -62,6 +69,21 @@ exports.revenuecat = onRequest(
       return;
     }
     const event = request.body && request.body.event;
+    const moved = transferredAccounts(event);
+    if (moved) {
+      try {
+        for (const uid of moved) {
+          const checked = await proFromRevenueCat(uid);
+          await setPro(uid, checked.pro, checked.expiresAt);
+        }
+      } catch (error) {
+        console.error(`transfer check failed: ${error && error.message}`);
+        response.status(500).end();
+        return;
+      }
+      response.status(200).json({ transferred: moved.length });
+      return;
+    }
     const decision = proFromEvent(event, Date.now());
     if (!decision) {
       response.status(200).json({ ignored: true });
@@ -196,28 +218,38 @@ exports.confirmPro = onRequest({ secrets: [revenueCatKey] }, guarded(async (requ
     response.status(401).end();
     return;
   }
-  const key = (revenueCatKey.value() || "").trim();
-  if (!key) {
+  if (!(revenueCatKey.value() || "").trim()) {
     response.status(503).end();
     return;
   }
+  let decision;
+  try {
+    decision = await proFromRevenueCat(uid);
+  } catch (_) {
+    response.status(502).end();
+    return;
+  }
+  await setPro(uid, decision.pro, decision.expiresAt);
+  response.status(200).json({ pro: decision.pro });
+}));
+
+/**
+ * Whether RevenueCat says [uid] has Pro right now: `{pro, expiresAt}`. A
+ * customer it does not know has none. Throws when RevenueCat could not be
+ * asked or did not answer, so nothing is changed on a guess.
+ */
+async function proFromRevenueCat(uid) {
+  const key = (revenueCatKey.value() || "").trim();
+  if (!key) throw new Error("no RevenueCat key");
   const answer = await fetch(
     `https://api.revenuecat.com/v2/projects/${REVENUECAT_PROJECT}/customers/` +
       `${encodeURIComponent(uid)}/active_entitlements`,
     { headers: { Authorization: `Bearer ${key}` } },
   );
-  if (answer.status === 404) {
-    response.status(200).json({ pro: false });
-    return;
-  }
-  if (!answer.ok) {
-    response.status(502).end();
-    return;
-  }
-  const decision = proFromActiveEntitlements(await answer.json(), Date.now());
-  await setPro(uid, decision.pro, decision.expiresAt);
-  response.status(200).json({ pro: decision.pro });
-}));
+  if (answer.status === 404) return { pro: false, expiresAt: null };
+  if (!answer.ok) throw new Error(`RevenueCat answered ${answer.status}`);
+  return proFromActiveEntitlements(await answer.json(), Date.now());
+}
 
 /**
  * [handler] with every failure answered: a Firestore, Auth or network error

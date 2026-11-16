@@ -3870,6 +3870,15 @@ class Translations$account$en {
 	/// en: 'Your account and everything stored with it are deleted for good. Machines and keys on this device stay.'
 	String get deleteMessage => 'Your account and everything stored with it are deleted for good. Machines and keys on this device stay.';
 
+	/// en: 'Pro keeps renewing'
+	String get deleteRenewsTitle => 'Pro keeps renewing';
+
+	/// en: 'Deleting your account does not cancel your Pro subscription. The store keeps charging for it until you cancel it in your subscriptions.'
+	String get deleteRenewsMessage => 'Deleting your account does not cancel your Pro subscription. The store keeps charging for it until you cancel it in your subscriptions.';
+
+	/// en: 'Delete anyway'
+	String get deleteAnyway => 'Delete anyway';
+
 	/// en: 'Delete account'
 	String get deleteConfirm => 'Delete account';
 
@@ -5895,6 +5904,9 @@ extension on Translations {
 			'account.deleteAccount' => 'Delete account',
 			'account.deleteTitle' => 'Delete your account?',
 			'account.deleteMessage' => 'Your account and everything stored with it are deleted for good. Machines and keys on this device stay.',
+			'account.deleteRenewsTitle' => 'Pro keeps renewing',
+			'account.deleteRenewsMessage' => 'Deleting your account does not cancel your Pro subscription. The store keeps charging for it until you cancel it in your subscriptions.',
+			'account.deleteAnyway' => 'Delete anyway',
 			'account.deleteConfirm' => 'Delete account',
 			'account.passwordToDelete' => 'Enter your password to delete the account',
 			'account.deleted' => 'Account deleted',

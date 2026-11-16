@@ -34,9 +34,7 @@ const REVENUECAT_PRO_ENTITLEMENT = "entl75d6155ff5";
 function proFromEvent(event, now) {
   if (!event || typeof event !== "object") return null;
   const uid = event.app_user_id;
-  if (typeof uid !== "string" || uid === "" || uid.startsWith("$RCAnonymousID")) {
-    return null;
-  }
+  if (!isAccount(uid)) return null;
   const entitlements = event.entitlement_ids || [];
   if (entitlements.length > 0 && !entitlements.includes(ENTITLEMENT)) return null;
   const expiresAt =
@@ -48,6 +46,28 @@ function proFromEvent(event, now) {
     return { uid, pro: false, expiresAt };
   }
   return null;
+}
+
+/** An account RevenueCat knows by its Firebase uid, not one it made up for
+ * a purchase before signing in. */
+function isAccount(uid) {
+  return typeof uid === "string" && uid !== "" && !uid.startsWith("$RCAnonymousID");
+}
+
+/**
+ * The accounts a RevenueCat `TRANSFER` [event] moved purchases between -
+ * restoring on another account moves them to it - or null for any other
+ * event. Both sides are listed, each once, to be checked again with
+ * RevenueCat: the event says who lost and who gained a purchase, not
+ * whether either still has Pro from another one.
+ */
+function transferredAccounts(event) {
+  if (!event || typeof event !== "object" || event.type !== "TRANSFER") return null;
+  const sides = [
+    ...(Array.isArray(event.transferred_from) ? event.transferred_from : []),
+    ...(Array.isArray(event.transferred_to) ? event.transferred_to : []),
+  ];
+  return [...new Set(sides.filter(isAccount))];
 }
 
 /**
@@ -156,6 +176,7 @@ module.exports = {
   relayText,
   syncSweepAction,
   proFromEvent,
+  transferredAccounts,
   proFromActiveEntitlements,
   parseRelayKey,
   cleanText,

@@ -91,6 +91,17 @@ int? _trialDays(StoreProduct product) {
   return null;
 }
 
+/// The store's own page of the subscriptions on this device's account, or
+/// null where there is no store.
+@visibleForTesting
+String? storeSubscriptionsUrl() {
+  if (isIOSPlatform) return 'https://apps.apple.com/account/subscriptions';
+  if (isAndroidPlatform) {
+    return 'https://play.google.com/store/account/subscriptions';
+  }
+  return null;
+}
+
 enum ProFailure { cancelled, notSignedIn, unavailable, failed }
 
 class ProException implements Exception {
@@ -296,13 +307,36 @@ class ProService {
     await Purchases.restorePurchases();
   });
 
-  /// Where the store lets the subscriber change or cancel Pro, if it says.
+  /// Where the store lets the subscriber change or cancel Pro: the address
+  /// it gives, or its own subscriptions page when it gives none.
   Future<String?> managementUrl() async {
     try {
-      if (!await _ready()) return null;
-      return (await Purchases.getCustomerInfo()).managementURL;
+      if (await _ready()) {
+        final url = (await Purchases.getCustomerInfo()).managementURL;
+        if (url != null) return url;
+      }
+    } catch (_) {}
+    return storeSubscriptionsUrl();
+  }
+
+  /// Stands in for the store's answer to [renews] in tests.
+  @visibleForTesting
+  static Future<bool> Function()? renewsOverride;
+
+  /// Whether the account's Pro is a subscription the store will charge for
+  /// again - which deleting the account does not stop, only cancelling it in
+  /// the store does. Not a lifetime purchase, nor a subscription already
+  /// cancelled. When the store cannot be asked, whether Pro is on at all:
+  /// telling someone to check is better than letting them be charged.
+  Future<bool> renews() async {
+    final override = renewsOverride;
+    if (override != null) return override();
+    try {
+      if (!await _ready()) return active.value;
+      final info = await Purchases.getCustomerInfo();
+      return info.entitlements.active[kProEntitlement]?.willRenew ?? false;
     } catch (_) {
-      return null;
+      return active.value;
     }
   }
 
