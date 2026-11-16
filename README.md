@@ -24,9 +24,13 @@
   vim and other TUIs render without broken box characters.
 - **Encrypted local vault.** Keys and passwords are sealed with AES-256-GCM,
   under a key your phone's secure hardware holds.
+- **Know when it's done.** A long command or an AI agent waiting for an
+  answer sends you a notification, even with Termphin closed.
+- **Sync across devices.** Machines, keys, snippets and settings, end-to-end
+  encrypted with a passphrase only you know.
 
 <p align="center">
-  <img src="docs/images/readme-tablet.webp" alt="htop and a service log side by side in Termphin" width="100%">
+  <img src="docs/images/readme-pixel.webp" alt="A deploy session in Termphin on a phone, still there after coming back" width="360">
 </p>
 
 ## Download
