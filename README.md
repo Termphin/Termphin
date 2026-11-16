@@ -1,5 +1,3 @@
-[![Termphin](docs/images/readme-header.webp)](https://termphin.dev)
-
 <h1 align="center">Termphin</h1>
 
 <p align="center">
