@@ -19,6 +19,7 @@ import '../../widgets/account/sync_card.dart';
 import '../../widgets/ui/app_badge.dart';
 import '../../widgets/ui/app_card.dart';
 import '../../widgets/ui/app_notifications.dart';
+import '../../widgets/ui/clipboard_and_links.dart';
 import '../../widgets/ui/confirm_dialog.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
 import '../../widgets/ui/settings_tile.dart';
@@ -101,7 +102,29 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     }
   }
 
+  /// Deleting the account leaves a store subscription running, so one that
+  /// renews is pointed out first, with the way to the store's page for it.
+  /// False when they went there instead of deleting.
+  Future<bool> _passRenewingPro() async {
+    if (!await ProService.instance.renews() || !mounted) return true;
+    final t = Translations.of(context);
+    final manage = await showConfirmDialog(
+      context,
+      title: t.account.deleteRenewsTitle,
+      message: t.account.deleteRenewsMessage,
+      confirmLabel: t.account.pro.manage,
+      cancelLabel: t.account.deleteAnyway,
+    );
+    if (!manage || !mounted) return true;
+    final url = await ProService.instance.managementUrl();
+    if (url != null && mounted) {
+      await openExternalUrl(context, Uri.parse(url));
+    }
+    return false;
+  }
+
   Future<void> _delete(AccountUser user) async {
+    if (!await _passRenewingPro() || !mounted) return;
     final t = Translations.of(context);
     final confirmed = await showConfirmDialog(
       context,

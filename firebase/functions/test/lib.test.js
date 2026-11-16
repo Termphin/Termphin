@@ -1,6 +1,13 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { proFromEvent, parseRelayKey, cleanText, relayAndroid, relayText } = require("../lib");
+const {
+  proFromEvent,
+  transferredAccounts,
+  parseRelayKey,
+  cleanText,
+  relayAndroid,
+  relayText,
+} = require("../lib");
 
 const now = Date.UTC(2026, 10, 13);
 const later = now + 30 * 24 * 3600 * 1000;
@@ -129,5 +136,39 @@ test("the agent's notices follow the user's settings, programs' do not", () => {
   assert.deepEqual(
     relayText({ kind: "finished", body: "secret line · 3s" }, { lines: false }),
     { body: "" },
+  );
+});
+
+test("a transfer names both sides, to be checked again", () => {
+  assert.deepEqual(
+    transferredAccounts({
+      type: "TRANSFER",
+      transferred_from: ["old-uid"],
+      transferred_to: ["new-uid"],
+    }),
+    ["old-uid", "new-uid"],
+  );
+});
+
+test("a transfer leaves out purchases made before signing in, and names an account once", () => {
+  assert.deepEqual(
+    transferredAccounts({
+      type: "TRANSFER",
+      transferred_from: ["$RCAnonymousID:abc", "old-uid", ""],
+      transferred_to: ["new-uid", "old-uid", 7],
+    }),
+    ["old-uid", "new-uid"],
+  );
+});
+
+test("an event that is not a transfer names nobody", () => {
+  assert.equal(transferredAccounts({ type: "RENEWAL", app_user_id: "uid1" }), null);
+  assert.equal(transferredAccounts(null), null);
+});
+
+test("a transfer is not read as a purchase", () => {
+  assert.equal(
+    proFromEvent({ type: "TRANSFER", app_user_id: "new-uid", transferred_to: ["new-uid"] }, now),
+    null,
   );
 });
