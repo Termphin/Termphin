@@ -42,6 +42,7 @@
   fixed:
     - "Text no longer disappears from the terminal when the keyboard opens or closes"
     - "Bold text no longer loses letters"
+    - "Coming back to a session no longer breaks a line or leaves empty lines in the output"
     - "Backspace and Polish letters work in sessions on Windows servers"
     - "A machine deleted on another device disappears right away"
     - "Sync catches up after you were offline"
