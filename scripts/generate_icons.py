@@ -12,6 +12,8 @@ Produces:
   assets/icons/termphin_monochrome.png    512 silhouette, adaptive monochrome
   macos/Runner/Assets.xcassets/...        the AppIcon set
   android/.../drawable-*/ic_stat_termphin.png  the notification small icon
+  android/.../drawable-*/splash_logo.png  the launch screen tile, Android 11 and older
+  ios/Runner/Assets.xcassets/SplashLogo.imageset  the launch screen tile
 
 After running this, run `dart run flutter_launcher_icons` to rebuild the
 Android resources from the icon files. It only touches `ic_launcher*`, so the
@@ -38,6 +40,12 @@ FOREGROUND_SCALE = 0.62
 # The notification icon is drawn into a circle the system already pads, so it
 # needs far less breathing room of its own than the adaptive foreground.
 STATUS_SCALE = 0.9
+
+# The launch screen shows the tile at this size in dp / pt, rounded like the
+# icon on a home screen, on the app's own background for the system theme.
+SPLASH_SIZE = 120
+SPLASH_CORNER = 0.2237
+SPLASH_DENSITIES = {"mdpi": 1, "hdpi": 1.5, "xhdpi": 2, "xxhdpi": 3, "xxxhdpi": 4}
 
 # Android's canonical notification icon is 24dp.
 STATUS_DENSITIES = {"mdpi": 24, "hdpi": 36, "xhdpi": 48, "xxhdpi": 72, "xxxhdpi": 96}
@@ -120,6 +128,42 @@ def padded(glyph_svg, size, scale):
     )
 
 
+def rounded(full_svg):
+    """The full tile with the corners a home screen gives an icon."""
+    inner = full_svg.split(">", 1)[1].rsplit("</svg>", 1)[0]
+    radius = round(360 * SPLASH_CORNER, 2)
+    return (
+        '<svg xmlns="http://www.w3.org/2000/svg" width="360" height="360" '
+        'viewBox="0 0 360 360">'
+        f'<clipPath id="corners"><rect width="360" height="360" rx="{radius}"/></clipPath>'
+        f'<g clip-path="url(#corners)">{inner}</g></svg>'
+    )
+
+
+def emit_splash(full_svg, written):
+    """The launch screen tile: Android's drawables and iOS's image set."""
+    with tempfile.TemporaryDirectory() as tmp:
+        tile = pathlib.Path(tmp) / "splash.png"
+        render(rounded(full_svg), 1024, tile)
+
+        def emit(dest, size):
+            dest = ROOT / dest
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            magick(tile, "-resize", f"{size}x{size}", "-strip", dest)
+            written[str(dest.relative_to(ROOT))] = size
+
+        for density, scale in SPLASH_DENSITIES.items():
+            emit(
+                f"android/app/src/main/res/drawable-{density}/splash_logo.png",
+                round(SPLASH_SIZE * scale),
+            )
+        for scale, suffix in ((1, ""), (2, "@2x"), (3, "@3x")):
+            emit(
+                f"ios/Runner/Assets.xcassets/SplashLogo.imageset/SplashLogo{suffix}.png",
+                SPLASH_SIZE * scale,
+            )
+
+
 def magick(*args):
     subprocess.run(["magick", *[str(a) for a in args]], check=True)
 
@@ -178,6 +222,8 @@ def main():
 
         for size in (16, 32, 64, 128, 256, 512, 1024):
             emit(tile, f"macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_{size}.png", size)
+
+    emit_splash(full, written)
 
     for k in sorted(written):
         print(f"{k}  {written[k]}")
