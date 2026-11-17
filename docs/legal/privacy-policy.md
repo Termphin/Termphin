@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated: 15 November 2026**
+**Last updated: 17 November 2026**
 
 ## Summary
 
@@ -182,8 +182,10 @@ with your account (section 4).
 
 ## 8. Analytics and crash reports, only if you allow them
 
-The first time you run Termphin you are asked whether to share anonymous usage
-data and crash reports. Until you answer yes, neither is started and nothing
+Once you have used Termphin for a couple of days, it asks you once whether to
+share anonymous usage data and crash reports, with "Sure" and "No thanks"
+side by side. Nothing is ticked in advance, and leaving the question
+unanswered counts as no. Until you answer yes, neither is started and nothing
 is written for them on your device. You can change your answer in Settings at
 any time, and it takes effect immediately.
 

@@ -537,7 +537,8 @@ class _AppShellState extends ConsumerState<_AppShell> {
   /// What the home screen may interrupt with, in order: a material change
   /// to the terms or the privacy policy, what changed in the app, then the
   /// one question this release has to ask, then - only if none of those
-  /// spoke - the store prompt.
+  /// spoke - the one-time question about sharing anonymous stats, and only
+  /// if that did not come up either, the store prompt.
   ///
   /// The review dialog never stacks on another modal: two interstitials get
   /// both dismissed unread. The tag conversion is not subject to that budget,
@@ -584,6 +585,7 @@ class _AppShellState extends ConsumerState<_AppShell> {
     }
 
     if (interrupted) return;
+    if (await AnalyticsService.instance.maybeAsk()) return;
     if (await ReviewPromptService.instance.maybePrompt(packageInfo.version)) {
       unawaited(
         AnalyticsService.instance.capture(AnalyticsEvent.reviewPromptRequested),

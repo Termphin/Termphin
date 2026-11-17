@@ -59,9 +59,21 @@ names the machine - is never sent to Crashlytics.
   `toString()` is the bare message, so callers rendering `error.toString()`
   render what they did before. Pattern-matching English prose out of an error is
   what this exists to avoid.
-- The consent question is the last step of onboarding, not a standalone dialog;
-  the Settings toggle calls the same `setConsent()`, so it works both as the
-  answer to a prompt the user missed and as an off switch later.
+- **The consent question is asked once in the app's life**, not in
+  onboarding: `AnalyticsService.maybeAsk` puts a card over the home screen
+  (`AnalyticsAskCard`) once there have been three successful connections and
+  two days since the first, from the startup prompts in `app.dart` - only
+  when nothing else interrupted that launch, and before the store prompt.
+  "Sure" and "No thanks" are the same size and nothing is preselected,
+  because a pre-ticked box is not consent (CJEU, Planet49). It is marked
+  asked the moment it shows; leaving the home screen takes it down, and an
+  unanswered question is a no. The Settings toggle calls the same
+  `setConsent()`.
+- **A yes recorded by the old onboarding is dropped once** (its box came
+  ticked), so those users are asked like everyone else; a no stays a no.
+- **Declining never starts Firebase.** With nothing else running it there is
+  nothing to switch off; if an account or push starts it later, the
+  `onStart` hook puts the no in force.
 - **Retention is a project setting.** Google Analytics keeps event-level data
   for 2 or 14 months (Admin → Data retention); the policy's §6 has to match
   it. Crashlytics keeps crash reports for 90 days.

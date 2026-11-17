@@ -38,43 +38,28 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Future<void> skipToAnalytics(WidgetTester tester) async {
+  Future<void> skipToPermissions(WidgetTester tester) async {
     await tapAndSettle(tester, t.onboarding.getStarted);
     expect(find.text(t.onboarding.serverTitle), findsOneWidget);
     await tapAndSettle(tester, t.onboarding.serverYes);
     await tapAndSettle(tester, t.onboarding.continueAction);
     expect(find.text(t.onboarding.permissionsTitle), findsOneWidget);
-    await tapAndSettle(tester, t.onboarding.continueAction);
-    expect(find.text(t.analyticsConsent.title), findsOneWidget);
   }
 
   testWidgets(
-    'the analytics box is checked by default, so finishing shares analytics',
+    'onboarding ends on the permissions page and leaves analytics unanswered',
     (tester) async {
       ServerAnswer? answer;
       await pumpOnboarding(tester, onComplete: (a) => answer = a);
 
       expect(find.text(t.onboarding.welcomeTitle), findsOneWidget);
-      await skipToAnalytics(tester);
+      await skipToPermissions(tester);
+      expect(find.text(t.analyticsConsent.legalNotice), findsOneWidget);
       await tapAndSettle(tester, t.onboarding.finish);
 
       expect(answer, ServerAnswer.hasServer);
       expect(await OnboardingService.instance.isCompleted(), isTrue);
-      expect(await AnalyticsService.instance.loadConsent(), isTrue);
-    },
-  );
-
-  testWidgets(
-    'unchecking the analytics box before finishing declines analytics',
-    (tester) async {
-      await pumpOnboarding(tester);
-
-      await skipToAnalytics(tester);
-      await tapAndSettle(tester, t.analyticsConsent.checkboxLabel);
-      await tapAndSettle(tester, t.onboarding.finish);
-
-      expect(await OnboardingService.instance.isCompleted(), isTrue);
-      expect(await AnalyticsService.instance.loadConsent(), isFalse);
+      expect(await AnalyticsService.instance.loadConsent(), isNull);
     },
   );
 
@@ -232,8 +217,6 @@ void main() {
         await tapAndSettle(tester, t.onboarding.unlockAction);
         expect(find.text(t.onboarding.permissionsTitle), findsOneWidget);
 
-        await tapAndSettle(tester, t.onboarding.continueAction);
-        expect(find.text(t.analyticsConsent.title), findsOneWidget);
         await tapAndSettle(tester, t.onboarding.finish);
 
         expect(answer, ServerAnswer.synced);
@@ -272,7 +255,6 @@ void main() {
 
         await tapAndSettle(tester, t.onboarding.serverYes);
         await tapAndSettle(tester, t.onboarding.continueAction);
-        await tapAndSettle(tester, t.onboarding.continueAction);
         await tapAndSettle(tester, t.onboarding.finish);
 
         expect(answer, ServerAnswer.hasServer);
@@ -296,7 +278,6 @@ void main() {
       expect(find.text(t.onboarding.unlockTitle), findsNothing);
       expect(find.text(t.onboarding.permissionsTitle), findsOneWidget);
 
-      await tapAndSettle(tester, t.onboarding.continueAction);
       await tapAndSettle(tester, t.onboarding.finish);
 
       expect(answer, ServerAnswer.synced);

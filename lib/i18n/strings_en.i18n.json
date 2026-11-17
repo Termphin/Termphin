@@ -1163,13 +1163,14 @@
     "notificationText": "Tap to return"
   },
   "analyticsConsent": {
-    "title": "Share usage analytics?",
-    "body": "Nothing personal, nothing from your screen or sessions - just a handful of named events: which screens you open, which settings you change, whether a connection succeeded or why it failed. Enough to tell what's used and catch crashes. No autocapture, no tracking of what you type or where you connect. Nothing is collected unless you check the box below, and you can change your mind any time in Settings.",
-    "checkboxLabel": "Share anonymous usage data",
     "legalNotice": "By continuing you accept the terms of service and the privacy policy.",
     "privacyLink": "Privacy policy",
     "termsLink": "Terms of service",
-    "allow": "Allow"
+    "allow": "Allow",
+    "askTitle": "Help improve Termphin?",
+    "askBody": "Share anonymous stats on which features get used, and crash reports. Never what you type, see or connect to.",
+    "askYes": "Sure",
+    "askNo": "No thanks"
   },
   "onboarding": {
     "welcomeTitle": "Welcome to Termphin",
