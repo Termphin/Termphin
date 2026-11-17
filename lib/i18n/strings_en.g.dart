@@ -3324,15 +3324,6 @@ class Translations$analyticsConsent$en {
 
 	// Translations
 
-	/// en: 'Share usage analytics?'
-	String get title => 'Share usage analytics?';
-
-	/// en: 'Nothing personal, nothing from your screen or sessions - just a handful of named events: which screens you open, which settings you change, whether a connection succeeded or why it failed. Enough to tell what's used and catch crashes. No autocapture, no tracking of what you type or where you connect. Nothing is collected unless you check the box below, and you can change your mind any time in Settings.'
-	String get body => 'Nothing personal, nothing from your screen or sessions - just a handful of named events: which screens you open, which settings you change, whether a connection succeeded or why it failed. Enough to tell what\'s used and catch crashes. No autocapture, no tracking of what you type or where you connect. Nothing is collected unless you check the box below, and you can change your mind any time in Settings.';
-
-	/// en: 'Share anonymous usage data'
-	String get checkboxLabel => 'Share anonymous usage data';
-
 	/// en: 'By continuing you accept the terms of service and the privacy policy.'
 	String get legalNotice => 'By continuing you accept the terms of service and the privacy policy.';
 
@@ -3344,6 +3335,18 @@ class Translations$analyticsConsent$en {
 
 	/// en: 'Allow'
 	String get allow => 'Allow';
+
+	/// en: 'Help improve Termphin?'
+	String get askTitle => 'Help improve Termphin?';
+
+	/// en: 'Share anonymous stats on which features get used, and crash reports. Never what you type, see or connect to.'
+	String get askBody => 'Share anonymous stats on which features get used, and crash reports. Never what you type, see or connect to.';
+
+	/// en: 'Sure'
+	String get askYes => 'Sure';
+
+	/// en: 'No thanks'
+	String get askNo => 'No thanks';
 }
 
 // Path: onboarding
@@ -5765,13 +5768,14 @@ extension on Translations {
 			'background.notificationTitleOne' => '1 session connected',
 			'background.notificationTitleOther' => ({required Object count}) => '${count} sessions connected',
 			'background.notificationText' => 'Tap to return',
-			'analyticsConsent.title' => 'Share usage analytics?',
-			'analyticsConsent.body' => 'Nothing personal, nothing from your screen or sessions - just a handful of named events: which screens you open, which settings you change, whether a connection succeeded or why it failed. Enough to tell what\'s used and catch crashes. No autocapture, no tracking of what you type or where you connect. Nothing is collected unless you check the box below, and you can change your mind any time in Settings.',
-			'analyticsConsent.checkboxLabel' => 'Share anonymous usage data',
 			'analyticsConsent.legalNotice' => 'By continuing you accept the terms of service and the privacy policy.',
 			'analyticsConsent.privacyLink' => 'Privacy policy',
 			'analyticsConsent.termsLink' => 'Terms of service',
 			'analyticsConsent.allow' => 'Allow',
+			'analyticsConsent.askTitle' => 'Help improve Termphin?',
+			'analyticsConsent.askBody' => 'Share anonymous stats on which features get used, and crash reports. Never what you type, see or connect to.',
+			'analyticsConsent.askYes' => 'Sure',
+			'analyticsConsent.askNo' => 'No thanks',
 			'onboarding.welcomeTitle' => 'Welcome to Termphin',
 			'onboarding.welcomeBody' => 'An SSH client whose sessions survive a dropped connection. Lock the phone, lose signal, come back - your shell is still there.',
 			'onboarding.getStarted' => 'Get started',

@@ -62,7 +62,10 @@ void main() {
 
   test('a previously granted consent switches collection on at the next '
       'launch', () async {
-    SharedPreferences.setMockInitialValues({kAnalyticsConsentPrefsKey: true});
+    SharedPreferences.setMockInitialValues({
+      kAnalyticsConsentPrefsKey: true,
+      kAnalyticsConsentResetPrefsKey: true,
+    });
     AnalyticsService.instance.resetForTest();
     calls.clear();
 

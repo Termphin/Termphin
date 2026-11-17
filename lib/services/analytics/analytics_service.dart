@@ -4,10 +4,29 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../app/review_prompt_service.dart';
 import '../firebase/firebase_service.dart';
 import 'analytics_backend.dart';
 
 const kAnalyticsConsentPrefsKey = 'analytics_consent';
+
+/// Set once the question has been put to the user, whatever came of it: the
+/// card asking is shown once in the app's life, and leaving it unanswered is
+/// a no.
+const kAnalyticsAskedPrefsKey = 'analytics_asked';
+
+/// Set once a "yes" recorded by the old onboarding has been dropped. That
+/// page opened with its box already ticked, so its yes was not a choice
+/// anyone made, and it is not kept as one.
+const kAnalyticsConsentResetPrefsKey = 'analytics_consent_reset';
+
+/// Successful connections before the question is asked: the app has been
+/// used for real by then.
+const _askAfterConnections = 3;
+
+/// Days since the first connection before it is asked: past the first
+/// evening of setting machines up.
+const _askAfterDays = 2;
 
 /// The only events this app ever sends. Deliberately an enum rather than a
 /// free-form string - automatic screen reporting is off and nothing is
@@ -211,18 +230,62 @@ class AnalyticsService {
   }
 
   Future<bool> _ensureStarted() async {
+    final override = startOverride;
+    if (override != null) return override();
     if (backendOverride != null) return true;
     return FirebaseService.instance.start();
   }
 
   FirebaseAnalyticsBackend? _firebase;
 
-  /// Whether the user has been asked and, if so, what they answered. Null
-  /// means the prompt has never been shown.
+  /// What the user answered, or null when they never said yes or no - which
+  /// counts as no.
   Future<bool?> loadConsent() async {
     final preferences = await SharedPreferences.getInstance();
+    await _resetUnchosenConsent(preferences);
     return preferences.getBool(kAnalyticsConsentPrefsKey);
   }
+
+  /// Drops a yes the old onboarding recorded, once. A no stays a no.
+  Future<void> _resetUnchosenConsent(SharedPreferences preferences) async {
+    if (preferences.getBool(kAnalyticsConsentResetPrefsKey) == true) return;
+    if (preferences.getBool(kAnalyticsConsentPrefsKey) == true) {
+      await preferences.remove(kAnalyticsConsentPrefsKey);
+    }
+    await preferences.setBool(kAnalyticsConsentResetPrefsKey, true);
+  }
+
+  /// Whether the card asking for consent is up. Set by [maybeAsk], cleared
+  /// by an answer or by [dismissAsk].
+  final asking = ValueNotifier<bool>(false);
+
+  /// Clock for the gate in [maybeAsk], swapped in tests.
+  @visibleForTesting
+  static DateTime Function() now = DateTime.now;
+
+  /// Puts the question up if it has never been asked or answered and the app
+  /// has been used for real: a few successful connections, spread over a
+  /// couple of days. It is marked asked the moment it shows, so it never
+  /// comes back, answered or not. Returns whether it is up.
+  Future<bool> maybeAsk() async {
+    if (_backend == null) return false;
+    final preferences = await SharedPreferences.getInstance();
+    if (await loadConsent() != null) return false;
+    if (preferences.getBool(kAnalyticsAskedPrefsKey) == true) return false;
+    final connections =
+        preferences.getInt(kReviewSuccessfulConnectionsPrefsKey) ?? 0;
+    if (connections < _askAfterConnections) return false;
+    final first = preferences.getInt(kReviewFirstConnectionAtPrefsKey);
+    if (first == null) return false;
+    final since = now().difference(DateTime.fromMillisecondsSinceEpoch(first));
+    if (since < const Duration(days: _askAfterDays)) return false;
+    await preferences.setBool(kAnalyticsAskedPrefsKey, true);
+    asking.value = true;
+    return true;
+  }
+
+  /// Takes the question down unanswered, which leaves everything off.
+  void dismissAsk() => asking.value = false;
 
   /// Whether collection is on in this process.
   bool _enabled = false;
@@ -230,7 +293,10 @@ class AnalyticsService {
   /// This is a singleton, so a test that switches collection on would
   /// otherwise leave it on for every test after it.
   @visibleForTesting
-  void resetForTest() => _enabled = false;
+  void resetForTest() {
+    _enabled = false;
+    asking.value = false;
+  }
 
   /// Acts on the answer on record. A yes starts Firebase and switches
   /// collection on. Anything else leaves Firebase alone - until something
@@ -252,13 +318,40 @@ class AnalyticsService {
   /// prompt, or later from Settings. The `app_opened` for the launch that
   /// asked is already gone by this point; counting it would mean capturing
   /// before the answer.
+  ///
+  /// A no does not start Firebase: when nothing else has brought it up there
+  /// is nothing to switch off, and starting it would write installation ids
+  /// for someone who just declined. If something starts it later, [init]'s
+  /// [FirebaseService.onStart] hook puts the no in force then.
   Future<void> setConsent(bool granted) async {
     final preferences = await SharedPreferences.getInstance();
     await preferences.setBool(kAnalyticsConsentPrefsKey, granted);
+    await preferences.setBool(kAnalyticsAskedPrefsKey, true);
+    await preferences.setBool(kAnalyticsConsentResetPrefsKey, true);
+    asking.value = false;
     final backend = _backend;
     if (backend == null) return;
+    if (!granted && !_firebaseUp) {
+      _enabled = false;
+      return;
+    }
     if (!await _ensureStarted()) return;
     await _apply(backend, granted);
+  }
+
+  /// Stands in for [FirebaseService.ready] in tests.
+  @visibleForTesting
+  static bool Function()? firebaseUpOverride;
+
+  /// Stands in for [FirebaseService.start] in tests, which count the starts.
+  @visibleForTesting
+  static Future<bool> Function()? startOverride;
+
+  bool get _firebaseUp {
+    final override = firebaseUpOverride;
+    if (override != null) return override();
+    if (backendOverride != null) return true;
+    return FirebaseService.instance.ready;
   }
 
   Future<void> _apply(AnalyticsBackend backend, bool enabled) async {

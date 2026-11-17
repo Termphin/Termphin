@@ -18,11 +18,13 @@ import '../services/ssh/ssh_session_manager.dart';
 import '../theme/theme.dart';
 import '../utils/platform_info.dart';
 import '../widgets/profiles/profile_avatar.dart';
+import '../widgets/settings/analytics_ask_card.dart';
 import '../widgets/shell/nav_rail.dart';
 import '../widgets/terminal/notice_dot.dart';
 import '../widgets/terminal/terminal_scheme_theme.dart';
 import '../widgets/ui/app_badge.dart';
 import '../widgets/ui/fade_over_color.dart';
+import '../widgets/ui/large_title_scaffold.dart';
 import 'home_screen.dart';
 import 'keys/key_manager_screen.dart';
 import 'settings/settings_screen.dart';
@@ -178,6 +180,7 @@ class _MainShellState extends ConsumerState<MainShell>
   }
 
   void _selectTab(int index) {
+    if (index != 0) AnalyticsService.instance.dismissAsk();
     if (index != _currentIndex) {
       unawaited(AnalyticsService.instance.screen(_screenNames[index]));
     }
@@ -258,7 +261,12 @@ class _MainShellState extends ConsumerState<MainShell>
   Widget _buildMobileScaffold(Translations t) {
     return Scaffold(
       extendBody: true,
-      body: _AnimatedNavBody(currentIndex: _currentIndex, children: _screens),
+      body: Stack(
+        children: [
+          _AnimatedNavBody(currentIndex: _currentIndex, children: _screens),
+          _AnalyticsAskOverlay(visible: _currentIndex == 0 && !_terminalVisible),
+        ],
+      ),
       bottomNavigationBar: ListenableBuilder(
         listenable: _manager,
         builder: (context, _) {
@@ -331,9 +339,16 @@ class _MainShellState extends ConsumerState<MainShell>
             child: MediaQuery.removePadding(
               context: context,
               removeLeft: true,
-              child: _AnimatedNavBody(
-                currentIndex: _currentIndex,
-                children: _screens,
+              child: Stack(
+                children: [
+                  _AnimatedNavBody(
+                    currentIndex: _currentIndex,
+                    children: _screens,
+                  ),
+                  _AnalyticsAskOverlay(
+                    visible: _currentIndex == 0 && !_terminalVisible,
+                  ),
+                ],
               ),
             ),
           ),
@@ -350,6 +365,7 @@ class _MainShellState extends ConsumerState<MainShell>
       if (next != null) {
         final hasLiveScreen = _terminalKey.currentState != null;
         _closeGeneration++;
+        AnalyticsService.instance.dismissAsk();
         setState(() {
           _terminalSession = (next.$1, next.$2);
           _siblingScope = next.$3;
@@ -960,5 +976,42 @@ class _SidebarNavItem extends StatelessWidget {
     );
 
     return collapsed ? Tooltip(message: data.label, child: button) : button;
+  }
+}
+
+
+/// The card asking to share anonymous stats, over the home screen just above
+/// the navigation bar, while [AnalyticsService.asking] is up. It belongs to
+/// the home screen only: [visible] is false on any other tab or behind the
+/// terminal, and leaving home takes the question down for good.
+class _AnalyticsAskOverlay extends StatelessWidget {
+  const _AnalyticsAskOverlay({required this.visible});
+
+  final bool visible;
+
+  @override
+  Widget build(BuildContext context) {
+    final service = AnalyticsService.instance;
+    return ValueListenableBuilder<bool>(
+      valueListenable: service.asking,
+      builder: (context, asking, _) {
+        if (!asking || !visible) return const SizedBox.shrink();
+        return Positioned(
+          left: AppTheme.space12,
+          right: AppTheme.space12,
+          bottom: MediaQuery.paddingOf(context).bottom + AppTheme.space12,
+          child: SafeArea(
+            top: false,
+            bottom: false,
+            child: DesktopContentWidth(
+              child: AnalyticsAskCard(
+                onAnswer: (granted) =>
+                    unawaited(service.setConsent(granted)),
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 }

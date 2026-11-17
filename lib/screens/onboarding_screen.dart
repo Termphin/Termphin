@@ -11,7 +11,6 @@ import '../providers/snippets_provider.dart';
 import '../providers/ssh_keys_provider.dart';
 import '../providers/sync_provider.dart';
 import '../services/account/account_service.dart';
-import '../services/analytics/analytics_service.dart';
 import '../services/app/legal_urls.dart';
 import '../services/app/onboarding_service.dart';
 import '../services/platform/foreground_notification_service.dart';
@@ -26,7 +25,6 @@ import '../widgets/ui/app_divider.dart';
 import '../widgets/ui/app_form_field.dart';
 import '../widgets/ui/clipboard_and_links.dart';
 import '../widgets/ui/permission_tile.dart';
-import '../widgets/ui/settings_tile.dart';
 import 'settings/account_screen.dart';
 
 /// What onboarding was told about having a server, which decides where the
@@ -38,7 +36,7 @@ import 'settings/account_screen.dart';
 enum ServerAnswer { hasServer, notYet, synced }
 
 /// The pages onboarding can show, in the order they come.
-enum _Step { welcome, server, unlock, permissions, analytics }
+enum _Step { welcome, server, unlock, permissions }
 
 /// How a returning user came in: not at all, to a synced account whose
 /// passphrase is still to be entered, or to a synced account already unlocked
@@ -90,7 +88,6 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final _pageController = PageController();
   int _page = 0;
-  bool _analyticsChecked = true;
   ServerAnswer? _answer;
   bool _signedIn = AccountService.instance.user != null;
   _Returning _returning = _Returning.none;
@@ -109,11 +106,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     if (_returning == _Returning.none) _Step.server,
     if (_returning == _Returning.locked) _Step.unlock,
     _Step.permissions,
-    _Step.analytics,
   ];
 
   Future<void> _finish() async {
-    await AnalyticsService.instance.setConsent(_analyticsChecked);
     await OnboardingService.instance.markCompleted();
     widget.onComplete(
       _returning == _Returning.unlocked
@@ -169,10 +164,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       onNotNow: () => setState(() => _returning = _Returning.none),
     ),
     _Step.permissions => const _PermissionsPage(),
-    _Step.analytics => _AnalyticsPage(
-      checked: _analyticsChecked,
-      onChanged: (v) => setState(() => _analyticsChecked = v),
-    ),
   };
 
   bool _canContinue(_Step step) => switch (step) {
@@ -841,61 +832,6 @@ class _PermissionsPageState extends State<_PermissionsPage>
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AnalyticsPage extends StatelessWidget {
-  const _AnalyticsPage({required this.checked, required this.onChanged});
-
-  final bool checked;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = Translations.of(context);
-    return _CenteredScroll(
-      padding: const EdgeInsets.symmetric(horizontal: AppTheme.space32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const _DuotoneIcon(
-            fill: PhosphorIconsFill.chartLineUp,
-            regular: PhosphorIconsRegular.chartLineUp,
-          ),
-          const SizedBox(height: AppTheme.space16),
-          Text(
-            t.analyticsConsent.title,
-            textAlign: TextAlign.center,
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: AppTheme.space12),
-          Text(
-            t.analyticsConsent.body,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: context.colors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: AppTheme.space20),
-          AppCard(
-            clipChild: true,
-            child: Material(
-              color: context.colors.surfaceCard.invisible,
-              child: SettingsCheckboxTile(
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: AppTheme.space14,
-                ),
-                title: t.analyticsConsent.checkboxLabel,
-                value: checked,
-                onChanged: onChanged,
-              ),
-            ),
-          ),
           const SizedBox(height: AppTheme.space24),
           Text(
             t.analyticsConsent.legalNotice,
@@ -912,7 +848,8 @@ class _AnalyticsPage extends StatelessWidget {
   }
 }
 
-/// The two published documents, side by side under the consent question.
+/// The two published documents, side by side under the notice on the last
+/// page that finishing means accepting them.
 class _LegalLinks extends StatelessWidget {
   const _LegalLinks();
 
