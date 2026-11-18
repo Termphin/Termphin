@@ -437,35 +437,63 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
         kind: TransferJobKind.upload,
         label: planned.first.name,
         run: (job) async {
-          var bytesBefore = 0;
-          for (var i = 0; i < planned.length; i++) {
-            job.cancel.throwIfCancelled();
-            final file = planned[i];
-            var sent = 0;
-            await sftp.uploadFile(
-              file.path!,
-              joinRemotePath(directory, file.name),
-              cancel: job.cancel,
-              onProgress: (uploaded, _) {
-                sent = uploaded;
-                final overall = bytesBefore + uploaded;
-                job.report(
-                  TransferProgress(
-                    label: file.name,
-                    itemIndex: i + 1,
-                    itemCount: planned.length,
-                    bytes: overall,
-                    totalBytes: knownTotal > 0 ? knownTotal : null,
-                    fraction: knownTotal > 0
-                        ? (overall / knownTotal).clamp(0.0, 1.0)
-                        : null,
-                  ),
+          await TransferNotification.runUpload(
+            label: planned.first.name,
+            completeTarget: planned.length == 1
+                ? planned.single.name
+                : (remotePathSegments(directory).lastOrNull ??
+                      sftpPathToDisplay(directory)),
+            fileCount: planned.length,
+            cancel: job.cancel,
+            showAndroidComplete: false,
+            body: (reportNotification) async {
+              var bytesBefore = 0;
+              for (var i = 0; i < planned.length; i++) {
+                job.cancel.throwIfCancelled();
+                final file = planned[i];
+                final startFraction = knownTotal > 0
+                    ? (bytesBefore / knownTotal).clamp(0.0, 1.0)
+                    : null;
+                reportNotification(
+                  startFraction,
+                  label: file.name,
+                  itemIndex: i + 1,
+                  itemCount: planned.length,
                 );
-              },
-            );
-            bytesBefore += sent;
-            uploadedAny = true;
-          }
+                var sent = 0;
+                await sftp.uploadFile(
+                  file.path!,
+                  joinRemotePath(directory, file.name),
+                  cancel: job.cancel,
+                  onProgress: (uploaded, _) {
+                    sent = uploaded;
+                    final overall = bytesBefore + uploaded;
+                    final fraction = knownTotal > 0
+                        ? (overall / knownTotal).clamp(0.0, 1.0)
+                        : null;
+                    job.report(
+                      TransferProgress(
+                        label: file.name,
+                        itemIndex: i + 1,
+                        itemCount: planned.length,
+                        bytes: overall,
+                        totalBytes: knownTotal > 0 ? knownTotal : null,
+                        fraction: fraction,
+                      ),
+                    );
+                    reportNotification(
+                      fraction,
+                      label: file.name,
+                      itemIndex: i + 1,
+                      itemCount: planned.length,
+                    );
+                  },
+                );
+                bytesBefore += sent;
+                uploadedAny = true;
+              }
+            },
+          );
         },
       );
     } catch (e) {

@@ -2585,6 +2585,45 @@ class Translations$notifications$en {
 
 	/// en: 'Saved'
 	String get downloadSaved => 'Saved';
+
+	/// en: 'Downloading…'
+	String get transferDownloading => 'Downloading…';
+
+	/// en: 'Downloading · {percent}%'
+	String transferDownloadingPercent({required Object percent}) => 'Downloading · ${percent}%';
+
+	/// en: 'Downloading ({current}/{total})…'
+	String transferDownloadingItem({required Object current, required Object total}) => 'Downloading (${current}/${total})…';
+
+	/// en: 'Downloading ({current}/{total}) · {percent}%'
+	String transferDownloadingItemPercent({required Object current, required Object total, required Object percent}) => 'Downloading (${current}/${total}) · ${percent}%';
+
+	/// en: 'Uploading…'
+	String get transferUploading => 'Uploading…';
+
+	/// en: 'Uploading · {percent}%'
+	String transferUploadingPercent({required Object percent}) => 'Uploading · ${percent}%';
+
+	/// en: 'Uploading ({current}/{total})…'
+	String transferUploadingItem({required Object current, required Object total}) => 'Uploading (${current}/${total})…';
+
+	/// en: 'Uploading ({current}/{total}) · {percent}%'
+	String transferUploadingItemPercent({required Object current, required Object total, required Object percent}) => 'Uploading (${current}/${total}) · ${percent}%';
+
+	/// en: 'Upload finished'
+	String get uploadDoneTitle => 'Upload finished';
+
+	/// en: '{name} uploaded'
+	String uploadDoneOne({required Object name}) => '${name} uploaded';
+
+	/// en: '{count} files uploaded to {folder}'
+	String uploadDoneMany({required Object count, required Object folder}) => '${count} files uploaded to ${folder}';
+
+	/// en: 'Upload failed'
+	String get uploadFailedTitle => 'Upload failed';
+
+	/// en: 'Uploaded'
+	String get uploadSaved => 'Uploaded';
 }
 
 // Path: linkPreview
@@ -5555,6 +5594,19 @@ extension on Translations {
 			'notifications.downloadCompleteChannelName' => 'Download complete',
 			'notifications.downloadCompleteChannelDescription' => 'Shown when a download has finished.',
 			'notifications.downloadSaved' => 'Saved',
+			'notifications.transferDownloading' => 'Downloading…',
+			'notifications.transferDownloadingPercent' => ({required Object percent}) => 'Downloading · ${percent}%',
+			'notifications.transferDownloadingItem' => ({required Object current, required Object total}) => 'Downloading (${current}/${total})…',
+			'notifications.transferDownloadingItemPercent' => ({required Object current, required Object total, required Object percent}) => 'Downloading (${current}/${total}) · ${percent}%',
+			'notifications.transferUploading' => 'Uploading…',
+			'notifications.transferUploadingPercent' => ({required Object percent}) => 'Uploading · ${percent}%',
+			'notifications.transferUploadingItem' => ({required Object current, required Object total}) => 'Uploading (${current}/${total})…',
+			'notifications.transferUploadingItemPercent' => ({required Object current, required Object total, required Object percent}) => 'Uploading (${current}/${total}) · ${percent}%',
+			'notifications.uploadDoneTitle' => 'Upload finished',
+			'notifications.uploadDoneOne' => ({required Object name}) => '${name} uploaded',
+			'notifications.uploadDoneMany' => ({required Object count, required Object folder}) => '${count} files uploaded to ${folder}',
+			'notifications.uploadFailedTitle' => 'Upload failed',
+			'notifications.uploadSaved' => 'Uploaded',
 			'linkPreview.loading' => 'Loading preview…',
 			'linkPreview.copyLink' => 'Copy Link',
 			'linkPreview.noPreview' => 'No preview available',
@@ -5726,6 +5778,8 @@ extension on Translations {
 			'actionDock.uploadNameTo' => ({required Object name}) => 'Upload ${name} to',
 			'actionDock.uploadItemsTo' => ({required Object count}) => 'Upload ${count} files to',
 			'actionDock.uploadHere' => 'Upload here',
+			_ => null,
+		} ?? switch (path) {
 			'actionDock.copyPath' => 'Copy path',
 			'actionDock.copyPathRequiresAgent' => 'Copying the current path needs a Termphin agent session - this connection doesn\'t have one.',
 			'actionDock.copyPathUnknown' => 'Couldn\'t find the current directory.',
@@ -5739,8 +5793,6 @@ extension on Translations {
 			'actionDock.copyAllFailed' => 'Couldn\'t copy the output - it may be too large for the clipboard. Try saving it to a file.',
 			'actionDock.saveOutput' => 'Save output',
 			'actionDock.saveOutputDialogTitle' => 'Save terminal output',
-			_ => null,
-		} ?? switch (path) {
 			'actionDock.outputSaved' => 'Terminal output saved',
 			'actionDock.saveOutputFailed' => ({required Object error}) => 'Couldn\'t save the output: ${error}',
 			'actionDock.nothingToCopy' => 'The terminal is empty.',

@@ -174,22 +174,37 @@ class LocalNotificationsService {
   Future<void> showTransferComplete({
     required String fileName,
     required int fileCount,
+    bool isUpload = false,
+  }) async {
+    if (!supported) return;
+    final title = isUpload
+        ? t.notifications.uploadDoneTitle
+        : t.notifications.transferDoneTitle;
+    final body = switch ((isUpload, fileCount > 1)) {
+      (true, true) => t.notifications.uploadDoneMany(
+        count: fileCount,
+        folder: fileName,
+      ),
+      (true, false) => t.notifications.uploadDoneOne(name: fileName),
+      (false, true) => t.notifications.transferDoneMany(
+        count: fileCount,
+        folder: fileName,
+      ),
+      (false, false) => t.notifications.transferDoneOne(name: fileName),
+    };
+    await _show(id: _transferDoneId, title: title, body: body);
+  }
+
+  Future<void> showTransferFailed({
+    required String fileName,
+    bool isUpload = false,
   }) async {
     if (!supported) return;
     await _show(
-      id: _transferDoneId,
-      title: t.notifications.transferDoneTitle,
-      body: fileCount > 1
-          ? t.notifications.transferDoneMany(count: fileCount, folder: fileName)
-          : t.notifications.transferDoneOne(name: fileName),
-    );
-  }
-
-  Future<void> showTransferFailed({required String fileName}) async {
-    if (!supported) return;
-    await _show(
       id: _transferFailedId,
-      title: t.notifications.transferFailedTitle,
+      title: isUpload
+          ? t.notifications.uploadFailedTitle
+          : t.notifications.transferFailedTitle,
       body: t.notifications.transferFailedBody(name: fileName),
     );
   }

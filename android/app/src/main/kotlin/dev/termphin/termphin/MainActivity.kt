@@ -58,6 +58,7 @@ class MainActivity : FlutterFragmentActivity() {
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
         super.cleanUpFlutterEngine(flutterEngine)
+        downloadChannel?.dispose()
         downloadChannel = null
         localNetworkChannel = null
     }

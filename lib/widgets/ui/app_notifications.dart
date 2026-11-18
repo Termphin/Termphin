@@ -566,7 +566,7 @@ class _Pill extends StatelessWidget {
           color: colors.surfaceBorderStrong,
           width: AppTheme.hairline,
         ),
-        boxShadow: AppTheme.popupShadow,
+        boxShadow: colors.isDark ? AppTheme.popupShadow : null,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -627,8 +627,8 @@ class _Card extends StatelessWidget {
           width: AppTheme.hairline,
         ),
       ),
-      shadowColor: AppTheme.shadowColor,
-      elevation: AppTheme.space6,
+      shadowColor: colors.isDark ? AppTheme.shadowColor : null,
+      elevation: colors.isDark ? AppTheme.space6 : 0,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(
           AppTheme.space14,

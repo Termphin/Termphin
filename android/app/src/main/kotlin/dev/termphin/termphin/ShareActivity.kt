@@ -19,6 +19,7 @@ import io.flutter.embedding.engine.FlutterEngine
 class ShareActivity : FlutterFragmentActivity() {
 
     private var shareChannel: ShareChannel? = null
+    private var downloadChannel: DownloadChannel? = null
     private var localNetworkChannel: LocalNetworkChannel? = null
 
     override fun getDartEntrypointFunctionName(): String = "shareMain"
@@ -26,6 +27,9 @@ class ShareActivity : FlutterFragmentActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         shareChannel = ShareChannel(this, intent).also { it.register(flutterEngine) }
+        downloadChannel = DownloadChannel(this, clearStaleOnRegister = false).also {
+            it.register(flutterEngine)
+        }
         localNetworkChannel = LocalNetworkChannel(this).also { it.register(flutterEngine) }
     }
 
@@ -44,6 +48,8 @@ class ShareActivity : FlutterFragmentActivity() {
         super.cleanUpFlutterEngine(flutterEngine)
         shareChannel?.dispose()
         shareChannel = null
+        downloadChannel?.dispose()
+        downloadChannel = null
         localNetworkChannel = null
     }
 }

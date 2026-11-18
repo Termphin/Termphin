@@ -1,6 +1,8 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:termphin/i18n/strings.g.dart';
+import 'package:termphin/theme/theme.dart';
 import 'package:termphin/widgets/ui/app_notifications.dart';
 
 import '../../support/test_app.dart';
@@ -411,5 +413,58 @@ void main() {
 
     expect(find.text('one'), findsNothing);
     expect(find.text('two'), findsNothing);
+  });
+
+  testWidgets('light theme drops the shadow from notification pills and cards', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      TranslationProvider(
+        child: MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => Column(
+                children: [
+                  ElevatedButton(
+                    onPressed: () => AppNotifications.info(context, 'pill'),
+                    child: const Text('pill'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => AppNotifications.success(
+                      context,
+                      'card',
+                      actionLabel: 'Undo',
+                      onAction: () {},
+                    ),
+                    child: const Text('card'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('pill'));
+    await tester.pumpAndSettle();
+    final pillContainer = tester.widget<Container>(
+      find.ancestor(
+        of: find.text('pill').last,
+        matching: find.byType(Container),
+      ).first,
+    );
+    expect((pillContainer.decoration as BoxDecoration).boxShadow, isNull);
+
+    await tester.tap(find.text('card'));
+    await tester.pumpAndSettle();
+    final cardMaterial = tester.widget<Material>(
+      find.ancestor(
+        of: find.text('Undo'),
+        matching: find.byType(Material),
+      ).first,
+    );
+    expect(cardMaterial.elevation, 0);
   });
 }

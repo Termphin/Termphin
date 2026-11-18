@@ -19,7 +19,10 @@
 - version: "Unreleased"
   date: "2026-11-18"
   added:
+    - "Live progress for SFTP downloads, uploads, fast upload and shared files in the status bar, Lock Screen and Dynamic Island"
     - "Redeem a Google Play or App Store code for Pro from the Pro screen"
+  changed:
+    - "Multi-file SFTP downloads show one continuous progress update across the whole batch"
 - version: "1.15.1"
   date: "2026-11-17"
   changed:
