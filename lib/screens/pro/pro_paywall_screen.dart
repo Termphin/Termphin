@@ -11,6 +11,7 @@ import '../../services/analytics/analytics_service.dart';
 import '../../services/app/legal_urls.dart';
 import '../../services/pro/pro_service.dart';
 import '../../theme/theme.dart';
+import '../../utils/platform_info.dart';
 import '../../widgets/ui/app_badge.dart';
 import '../../widgets/ui/app_notifications.dart';
 import '../../widgets/ui/clipboard_and_links.dart';
@@ -70,6 +71,10 @@ class _ProPaywallScreenState extends ConsumerState<ProPaywallScreen> {
   bool _busy = false;
   bool _leaving = false;
 
+  /// Whether a store's code was sent off from here, so Pro arriving after
+  /// it is thanked for rather than met with "you already have Pro".
+  bool _redeeming = false;
+
   ProService get _pro => ProService.instance;
 
   bool get _canSell => widget.offers != null || _pro.available;
@@ -101,10 +106,12 @@ class _ProPaywallScreenState extends ConsumerState<ProPaywallScreen> {
   void _leaveIfPro() {
     if (_leaving || _busy || !mounted || !_pro.active.value) return;
     _leaving = true;
-    AppNotifications.info(
-      context,
-      Translations.of(context).account.pro.already,
-    );
+    final pro = Translations.of(context).account.pro;
+    if (_redeeming) {
+      AppNotifications.success(context, pro.thanks);
+    } else {
+      AppNotifications.info(context, pro.already);
+    }
     final navigator = Navigator.of(context);
     final route = ModalRoute.of(context);
     if (route == null || route.isCurrent) {
@@ -221,6 +228,29 @@ class _ProPaywallScreenState extends ConsumerState<ProPaywallScreen> {
     }),
   );
 
+  /// Takes a store's code for Pro: the App Store's own sheet on iOS, Google
+  /// Play's redeem page on Android. Either way the purchase comes back
+  /// through the store, and [_leaveIfPro] closes the paywall when it does.
+  Future<void> _redeem() async {
+    final t = Translations.of(context);
+    _capture(AnalyticsEvent.redeemCodeOpened);
+    _redeeming = true;
+    try {
+      await _pro.redeemCode();
+    } on ProException catch (error) {
+      if (mounted && error.failure != ProFailure.cancelled) {
+        AppNotifications.error(context, t.account.pro.failed);
+      }
+      return;
+    } catch (_) {
+      if (mounted) AppNotifications.error(context, t.account.pro.failed);
+      return;
+    }
+    if (isAndroidPlatform && mounted) {
+      await openExternalUrl(context, Uri.parse(ProService.playRedeemUrl));
+    }
+  }
+
   Future<void> _signIn() async {
     await Navigator.of(
       context,
@@ -320,6 +350,7 @@ class _ProPaywallScreenState extends ConsumerState<ProPaywallScreen> {
               },
               onSignIn: _signIn,
               onRestore: _restore,
+              onRedeem: _pro.canRedeemCode ? _redeem : null,
             ),
           ],
         ),
@@ -559,6 +590,7 @@ class _Footer extends StatelessWidget {
     required this.onBuy,
     required this.onSignIn,
     required this.onRestore,
+    this.onRedeem,
   });
 
   /// The plans to pick from, kept right above the button so the choice and
@@ -574,6 +606,9 @@ class _Footer extends StatelessWidget {
   final VoidCallback onBuy;
   final VoidCallback onSignIn;
   final VoidCallback onRestore;
+
+  /// Takes a store's code for Pro; null where this build cannot.
+  final VoidCallback? onRedeem;
 
   @override
   Widget build(BuildContext context) {
@@ -638,13 +673,18 @@ class _Footer extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
             Text(p.legal, style: text.bodySmall, textAlign: TextAlign.center),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            Wrap(
+              alignment: WrapAlignment.center,
               children: [
                 if (signedIn)
                   TextButton(
                     onPressed: busy ? null : onRestore,
                     child: Text(t.account.pro.restore, style: link),
+                  ),
+                if (signedIn && onRedeem != null)
+                  TextButton(
+                    onPressed: busy ? null : onRedeem,
+                    child: Text(t.account.pro.redeem, style: link),
                   ),
                 TextButton(
                   onPressed: () => openExternalUrl(

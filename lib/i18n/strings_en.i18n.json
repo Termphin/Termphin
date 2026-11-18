@@ -1377,6 +1377,7 @@
       "annual": "{price} a year",
       "lifetime": "{price} once",
       "restore": "Restore purchases",
+      "redeem": "Redeem a code",
       "unavailable": "Pro cannot be bought in this build.",
       "badge": "Pro",
       "activeBadge": "Active",

@@ -16,6 +16,10 @@
 # before anyone has decided what version ships it. Nothing renders it: the app
 # and the landing changelog both drop any entry whose version is not a dotted
 # number. Give it the real number at release time and it appears in both.
+- version: "Unreleased"
+  date: "2026-11-18"
+  added:
+    - "Redeem a Google Play or App Store code for Pro from the Pro screen"
 - version: "1.15.1"
   date: "2026-11-17"
   changed:
