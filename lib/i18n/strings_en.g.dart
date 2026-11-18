@@ -4388,6 +4388,9 @@ class Translations$account$pro$en {
 	/// en: 'Restore purchases'
 	String get restore => 'Restore purchases';
 
+	/// en: 'Redeem a code'
+	String get redeem => 'Redeem a code';
+
 	/// en: 'Pro cannot be bought in this build.'
 	String get unavailable => 'Pro cannot be bought in this build.';
 
@@ -5981,6 +5984,7 @@ extension on Translations {
 			'account.pro.annual' => ({required Object price}) => '${price} a year',
 			'account.pro.lifetime' => ({required Object price}) => '${price} once',
 			'account.pro.restore' => 'Restore purchases',
+			'account.pro.redeem' => 'Redeem a code',
 			'account.pro.unavailable' => 'Pro cannot be bought in this build.',
 			'account.pro.badge' => 'Pro',
 			'account.pro.activeBadge' => 'Active',
