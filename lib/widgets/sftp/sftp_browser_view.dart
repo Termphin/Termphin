@@ -445,11 +445,21 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
                       sftpPathToDisplay(directory)),
             fileCount: planned.length,
             cancel: job.cancel,
+            showAndroidComplete: false,
             body: (reportNotification) async {
               var bytesBefore = 0;
               for (var i = 0; i < planned.length; i++) {
                 job.cancel.throwIfCancelled();
                 final file = planned[i];
+                final startFraction = knownTotal > 0
+                    ? (bytesBefore / knownTotal).clamp(0.0, 1.0)
+                    : null;
+                reportNotification(
+                  startFraction,
+                  label: file.name,
+                  itemIndex: i + 1,
+                  itemCount: planned.length,
+                );
                 var sent = 0;
                 await sftp.uploadFile(
                   file.path!,
@@ -471,7 +481,12 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
                         fraction: fraction,
                       ),
                     );
-                    reportNotification(fraction);
+                    reportNotification(
+                      fraction,
+                      label: file.name,
+                      itemIndex: i + 1,
+                      itemCount: planned.length,
+                    );
                   },
                 );
                 bytesBefore += sent;

@@ -374,6 +374,11 @@ void main() {
         .toList();
     final ids = progressCalls.map((a) => a['id']).toSet();
     expect(ids, hasLength(1));
+    expect(progressCalls.map((a) => a['fileName']), containsAll(['a.txt', 'b.txt']));
+    expect(
+      progressCalls.map((a) => a['subtitle']),
+      containsAll(['Downloading (1/2)…', 'Downloading (2/2) · 50%']),
+    );
     expect(
       calls.where((c) => c.method == 'showComplete'),
       hasLength(1),
@@ -489,6 +494,23 @@ void main() {
     expect(completeArgs['savedLabel'], 'Uploaded');
   });
 
+  test('TransferNotification.runUpload dismisses silently when showAndroidComplete is false', () async {
+    await TransferNotification.runUpload(
+      label: 'fast.png',
+      completeTarget: 'fast.png',
+      fileCount: 1,
+      cancel: CancelToken(),
+      showAndroidComplete: false,
+      body: (report) async => report(0.5),
+    );
+
+    expect(calls.map((c) => c.method), [
+      'showProgress',
+      'showProgress',
+      'cancelNotification',
+    ]);
+  });
+
   test('TransferNotification.runUpload cancels via notification action and cleans up', () async {
     final cancel = CancelToken();
     await expectLater(
@@ -525,16 +547,25 @@ void main() {
     const liveActivityChannel = MethodChannel(
       'dev.termphin.termphin/live_activities',
     );
+    const backgroundChannel = MethodChannel(
+      'dev.termphin.termphin/background_task',
+    );
     const notificationsChannel = MethodChannel(
       'dexterous.com/flutter/local_notifications',
     );
     final iosCalls = <MethodCall>[];
+    final bgCalls = <MethodCall>[];
     debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
     IOSFlutterLocalNotificationsPlugin.registerWith();
     final messenger =
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
     messenger.setMockMethodCallHandler(liveActivityChannel, (call) async {
       iosCalls.add(call);
+      return null;
+    });
+    messenger.setMockMethodCallHandler(backgroundChannel, (call) async {
+      bgCalls.add(call);
+      if (call.method == 'begin') return 77;
       return null;
     });
     messenger.setMockMethodCallHandler(notificationsChannel, (call) async {
@@ -547,19 +578,42 @@ void main() {
 
     try {
       await TransferNotification.runUpload(
-        label: 'archive.zip',
-        completeTarget: 'archive.zip',
-        fileCount: 1,
+        label: 'first.bin',
+        completeTarget: 'uploads',
+        fileCount: 2,
         cancel: CancelToken(),
-        body: (report) async => report(0.5),
+        body: (report) async {
+          report(0.50, label: 'first.bin', itemIndex: 1, itemCount: 2);
+          report(0.51, label: 'second.bin', itemIndex: 2, itemCount: 2);
+        },
       );
+      expect(bgCalls.map((c) => c.method), ['begin', 'end']);
+      expect(bgCalls.first.arguments, {'name': 'upload'});
+      expect(bgCalls.last.arguments, {'token': 77});
+
       expect(iosCalls.map((c) => c.method), [
+        'showProgress',
         'showProgress',
         'showProgress',
         'showComplete',
       ]);
+      final progressArgs = iosCalls
+          .where((c) => c.method == 'showProgress')
+          .map((c) => c.arguments as Map<Object?, Object?>)
+          .toList();
+      expect(progressArgs.map((a) => a['fileName']), [
+        'first.bin',
+        'first.bin',
+        'second.bin',
+      ]);
+      expect(progressArgs.map((a) => a['subtitle']), [
+        'Uploading (1/2)…',
+        'Uploading (1/2) · 50%',
+        'Uploading (2/2) · 51%',
+      ]);
 
       iosCalls.clear();
+      bgCalls.clear();
       final cancel = CancelToken();
       await expectLater(
         TransferNotification.runUpload(
@@ -578,9 +632,11 @@ void main() {
         'showProgress',
         'cancelNotification',
       ]);
+      expect(bgCalls.map((c) => c.method), ['begin', 'end']);
     } finally {
       debugDefaultTargetPlatformOverride = null;
       messenger.setMockMethodCallHandler(liveActivityChannel, null);
+      messenger.setMockMethodCallHandler(backgroundChannel, null);
       messenger.setMockMethodCallHandler(notificationsChannel, null);
     }
   });

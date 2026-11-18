@@ -30,15 +30,17 @@ struct TransferActivityWidget: Widget {
             statusIcon(context: context)
           }
           .foregroundStyle(tintColor(context: context))
+          .padding(.leading, 8)
         }
         DynamicIslandExpandedRegion(.trailing) {
           Text(context.state.shortText)
             .font(.caption.monospacedDigit().weight(.semibold))
             .foregroundStyle(tintColor(context: context))
+            .padding(.trailing, 8)
         }
         DynamicIslandExpandedRegion(.bottom) {
           VStack(alignment: .leading, spacing: 6) {
-            Text(context.attributes.fileName)
+            Text(context.state.fileName)
               .font(.subheadline.weight(.medium))
               .lineLimit(1)
             progressBar(context: context)
@@ -48,6 +50,8 @@ struct TransferActivityWidget: Widget {
                 .foregroundStyle(.secondary)
             }
           }
+          .padding(.horizontal, 8)
+          .padding(.bottom, 6)
         }
       } compactLeading: {
         statusIcon(context: context)
@@ -71,7 +75,7 @@ struct TransferActivityWidget: Widget {
           .font(.title3)
           .foregroundStyle(tintColor(context: context))
         VStack(alignment: .leading, spacing: 2) {
-          Text(context.attributes.fileName)
+          Text(context.state.fileName)
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(.white)
             .lineLimit(1)

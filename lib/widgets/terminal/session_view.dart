@@ -567,6 +567,7 @@ class SessionViewState extends ConsumerState<SessionView> {
                   : sftpPathToDisplay(directory),
               fileCount: queue.length,
               cancel: job.cancel,
+              showAndroidComplete: false,
               body: (reportNotification) async {
                 var bytesBefore = 0;
                 for (var i = 0; i < queue.length; i++) {
@@ -584,7 +585,12 @@ class SessionViewState extends ConsumerState<SessionView> {
                   );
                   final initial = progressAt(bytesBefore);
                   job.report(initial);
-                  reportNotification(initial.fraction);
+                  reportNotification(
+                    initial.fraction,
+                    label: file.name,
+                    itemIndex: i + 1,
+                    itemCount: queue.length,
+                  );
                   var fileSent = 0;
                   await sftp.uploadStream(
                     file.open(),
@@ -595,7 +601,12 @@ class SessionViewState extends ConsumerState<SessionView> {
                       fileSent = sent;
                       final update = progressAt(bytesBefore + sent);
                       job.report(update);
-                      reportNotification(update.fraction);
+                      reportNotification(
+                        update.fraction,
+                        label: file.name,
+                        itemIndex: i + 1,
+                        itemCount: queue.length,
+                      );
                     },
                   );
                   bytesBefore += sizes[i] ?? fileSent;

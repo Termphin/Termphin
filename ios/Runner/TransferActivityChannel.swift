@@ -61,6 +61,7 @@ enum TransferActivityChannel {
     let shortText = args["shortText"] as? String ?? "\(rawProgress)%"
 
     let state = TransferActivityAttributes.ContentState(
+      fileName: fileName,
       progress: fraction,
       indeterminate: indeterminate,
       subtitle: subtitle,
@@ -79,7 +80,6 @@ enum TransferActivityChannel {
 
     let attributes = TransferActivityAttributes(
       transferId: id,
-      fileName: fileName,
       isUpload: isUpload
     )
     if let created = try? Activity.request(
@@ -97,8 +97,10 @@ enum TransferActivityChannel {
       let activity = activities.removeValue(forKey: id)
     else { return }
 
+    let fileName = args["fileName"] as? String ?? activity.content.state.fileName
     let savedLabel = args["savedLabel"] as? String ?? "Done"
     let state = TransferActivityAttributes.ContentState(
+      fileName: fileName,
       progress: 1.0,
       indeterminate: false,
       subtitle: savedLabel,

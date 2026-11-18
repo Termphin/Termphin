@@ -6,6 +6,7 @@ import Foundation
 @available(iOS 16.2, *)
 struct TransferActivityAttributes: ActivityAttributes {
   public struct ContentState: Codable, Hashable {
+    var fileName: String
     var progress: Double
     var indeterminate: Bool
     var subtitle: String
@@ -14,6 +15,5 @@ struct TransferActivityAttributes: ActivityAttributes {
   }
 
   var transferId: Int
-  var fileName: String
   var isUpload: Bool
 }

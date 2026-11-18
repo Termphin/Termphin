@@ -2592,11 +2592,23 @@ class Translations$notifications$en {
 	/// en: 'Downloading · {percent}%'
 	String transferDownloadingPercent({required Object percent}) => 'Downloading · ${percent}%';
 
+	/// en: 'Downloading ({current}/{total})…'
+	String transferDownloadingItem({required Object current, required Object total}) => 'Downloading (${current}/${total})…';
+
+	/// en: 'Downloading ({current}/{total}) · {percent}%'
+	String transferDownloadingItemPercent({required Object current, required Object total, required Object percent}) => 'Downloading (${current}/${total}) · ${percent}%';
+
 	/// en: 'Uploading…'
 	String get transferUploading => 'Uploading…';
 
 	/// en: 'Uploading · {percent}%'
 	String transferUploadingPercent({required Object percent}) => 'Uploading · ${percent}%';
+
+	/// en: 'Uploading ({current}/{total})…'
+	String transferUploadingItem({required Object current, required Object total}) => 'Uploading (${current}/${total})…';
+
+	/// en: 'Uploading ({current}/{total}) · {percent}%'
+	String transferUploadingItemPercent({required Object current, required Object total, required Object percent}) => 'Uploading (${current}/${total}) · ${percent}%';
 
 	/// en: 'Upload finished'
 	String get uploadDoneTitle => 'Upload finished';
@@ -5581,8 +5593,12 @@ extension on Translations {
 			'notifications.downloadSaved' => 'Saved',
 			'notifications.transferDownloading' => 'Downloading…',
 			'notifications.transferDownloadingPercent' => ({required Object percent}) => 'Downloading · ${percent}%',
+			'notifications.transferDownloadingItem' => ({required Object current, required Object total}) => 'Downloading (${current}/${total})…',
+			'notifications.transferDownloadingItemPercent' => ({required Object current, required Object total, required Object percent}) => 'Downloading (${current}/${total}) · ${percent}%',
 			'notifications.transferUploading' => 'Uploading…',
 			'notifications.transferUploadingPercent' => ({required Object percent}) => 'Uploading · ${percent}%',
+			'notifications.transferUploadingItem' => ({required Object current, required Object total}) => 'Uploading (${current}/${total})…',
+			'notifications.transferUploadingItemPercent' => ({required Object current, required Object total, required Object percent}) => 'Uploading (${current}/${total}) · ${percent}%',
 			'notifications.uploadDoneTitle' => 'Upload finished',
 			'notifications.uploadDoneOne' => ({required Object name}) => '${name} uploaded',
 			'notifications.uploadDoneMany' => ({required Object count, required Object folder}) => '${count} files uploaded to ${folder}',
@@ -5759,12 +5775,12 @@ extension on Translations {
 			'actionDock.uploadNameTo' => ({required Object name}) => 'Upload ${name} to',
 			'actionDock.uploadItemsTo' => ({required Object count}) => 'Upload ${count} files to',
 			'actionDock.uploadHere' => 'Upload here',
+			_ => null,
+		} ?? switch (path) {
 			'actionDock.copyPath' => 'Copy path',
 			'actionDock.copyPathRequiresAgent' => 'Copying the current path needs a Termphin agent session - this connection doesn\'t have one.',
 			'actionDock.copyPathUnknown' => 'Couldn\'t find the current directory.',
 			'actionDock.uploaded' => ({required Object path}) => 'Uploaded to ${path}',
-			_ => null,
-		} ?? switch (path) {
 			'actionDock.uploadedMany' => ({required Object count, required Object path}) => 'Uploaded ${count} files to ${path}',
 			'actionDock.pasteUploadedPath' => 'Paste path',
 			'actionDock.paste' => 'Paste',

@@ -204,6 +204,14 @@ class _ShareUploadScreenState extends ConsumerState<ShareUploadScreen> {
             cancel.throwIfCancelled();
             final (file, remotePath) = queue[i];
             setState(() => _current = file.name);
+            reportNotification(
+              total == null || total <= 0
+                  ? null
+                  : (bytesBefore / total).clamp(0.0, 1.0),
+              label: file.name,
+              itemIndex: i + 1,
+              itemCount: queue.length,
+            );
             var fileSent = 0;
             await sftp.uploadStream(
               file.open(),
@@ -217,6 +225,9 @@ class _ShareUploadScreenState extends ConsumerState<ShareUploadScreen> {
                   total == null || total <= 0
                       ? null
                       : (totalSent / total).clamp(0.0, 1.0),
+                  label: file.name,
+                  itemIndex: i + 1,
+                  itemCount: queue.length,
                 );
                 if (!mounted) return;
                 setState(

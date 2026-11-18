@@ -314,6 +314,8 @@ class DownloadService {
     final notification = await TransferNotification.start(
       multiFileLabel,
       cancel: effectiveCancel,
+      itemIndex: 1,
+      itemCount: entries.length,
     );
 
     final total = entries.length;
@@ -330,6 +332,15 @@ class DownloadService {
         final entry = entries[index];
         final remotePath = _joinPath(parentPath, entry.name);
         var entryBytes = 0;
+        final initialFraction = knownTotal != null
+            ? _fractionOf(bytesBefore, knownTotal)
+            : (index / total).clamp(0.0, 1.0);
+        notification.report(
+          initialFraction,
+          label: entry.name,
+          itemIndex: index + 1,
+          itemCount: total,
+        );
 
         void report(TransferProgress inner) {
           entryBytes = inner.bytes;
@@ -348,7 +359,12 @@ class DownloadService {
               fraction: fraction,
             ),
           );
-          notification.report(fraction);
+          notification.report(
+            fraction,
+            label: inner.label,
+            itemIndex: index + 1,
+            itemCount: total,
+          );
         }
 
         lastSaved = entry.isDirectory
@@ -457,7 +473,12 @@ class DownloadService {
                 fraction: fraction,
               ),
             );
-            notification?.report(fraction);
+            notification?.report(
+              fraction,
+              label: file.relativePath,
+              itemIndex: index,
+              itemCount: files.length,
+            );
           },
         );
 
@@ -566,32 +587,81 @@ class DownloadService {
   }
 }
 
+/// Reports progress updates (with optional per-item label and index) to the
+/// active [TransferNotification].
+typedef TransferNotificationReporter =
+    void Function(
+      double? fraction, {
+      String? label,
+      int? itemIndex,
+      int? itemCount,
+    });
+
 /// Whether a [TransferNotification] tracks a download from or an upload to
 /// the remote host.
 enum TransferNotificationDirection { download, upload }
 
-/// The Android Live Update / progress notification that mirrors a transfer.
-/// Torn down on every exit path - a stuck ongoing notification outlives the
-/// app and there is no way for the user to clear it.
+/// The Android Live Update / iOS Live Activity notification that mirrors a
+/// transfer. Torn down on every exit path - a stuck ongoing notification
+/// outlives the app and there is no way for the user to clear it.
 class TransferNotification {
-  TransferNotification._(this.id, this.title, this.direction);
+  TransferNotification._(
+    this.id,
+    this.title,
+    this.direction, {
+    int? itemIndex,
+    int? itemCount,
+  }) : _currentLabel = title,
+       _itemIndex = itemIndex,
+       _itemCount = itemCount;
 
   final int id;
   final String title;
   final TransferNotificationDirection direction;
+  String _currentLabel;
+  int? _itemIndex;
+  int? _itemCount;
   int _lastPercent = -1;
   bool _finished = false;
 
   bool get _isUpload => direction == TransferNotificationDirection.upload;
 
-  String _subtitleFor(int percent) => switch ((_isUpload, percent <= 0)) {
-    (true, true) => t.notifications.transferUploading,
-    (true, false) => t.notifications.transferUploadingPercent(percent: percent),
-    (false, true) => t.notifications.transferDownloading,
-    (false, false) => t.notifications.transferDownloadingPercent(
-      percent: percent,
-    ),
-  };
+  String _subtitleFor(int percent) {
+    final current = _itemIndex;
+    final total = _itemCount;
+    if (total != null && total > 1 && current != null) {
+      return switch ((_isUpload, percent <= 0)) {
+        (true, true) => t.notifications.transferUploadingItem(
+          current: current,
+          total: total,
+        ),
+        (true, false) => t.notifications.transferUploadingItemPercent(
+          current: current,
+          total: total,
+          percent: percent,
+        ),
+        (false, true) => t.notifications.transferDownloadingItem(
+          current: current,
+          total: total,
+        ),
+        (false, false) => t.notifications.transferDownloadingItemPercent(
+          current: current,
+          total: total,
+          percent: percent,
+        ),
+      };
+    }
+    return switch ((_isUpload, percent <= 0)) {
+      (true, true) => t.notifications.transferUploading,
+      (true, false) => t.notifications.transferUploadingPercent(
+        percent: percent,
+      ),
+      (false, true) => t.notifications.transferDownloading,
+      (false, false) => t.notifications.transferDownloadingPercent(
+        percent: percent,
+      ),
+    };
+  }
 
   String _shortTextFor(int percent) {
     final arrow = _isUpload ? '↑' : '↓';
@@ -600,7 +670,7 @@ class TransferNotification {
 
   Map<String, Object?> _progressPayload(int percent) => {
     'id': id,
-    'fileName': title,
+    'fileName': _currentLabel,
     'progress': percent,
     'subtitle': _subtitleFor(percent),
     'shortText': _shortTextFor(percent),
@@ -626,13 +696,21 @@ class TransferNotification {
     TransferNotificationDirection direction =
         TransferNotificationDirection.download,
     CancelToken? cancel,
+    int? itemIndex,
+    int? itemCount,
   }) async {
     DownloadService._ensureMethodCallHandler();
     final id = DownloadService._rng.nextInt(0x7FFFFFFF);
     if (cancel != null) {
       DownloadService._activeDownloads[id] = cancel;
     }
-    final notification = TransferNotification._(id, title, direction);
+    final notification = TransferNotification._(
+      id,
+      title,
+      direction,
+      itemIndex: itemIndex,
+      itemCount: itemCount,
+    );
     if (_supportsLiveProgress) {
       _postNotification('showProgress', notification._progressPayload(0));
       notification._lastPercent = 0;
@@ -642,37 +720,71 @@ class TransferNotification {
 
   /// Mirrors an upload batch onto the platform notification and tears it down
   /// on every exit path, cancelling [cancel] if the user taps the action.
+  /// Holds an iOS background execution grant so an upload in flight can finish
+  /// after leaving the app.
   static Future<void> runUpload({
     required String label,
     required String completeTarget,
     required int fileCount,
     required CancelToken cancel,
-    required Future<void> Function(void Function(double? fraction) report) body,
-  }) async {
+    bool showAndroidComplete = true,
+    required Future<void> Function(TransferNotificationReporter report) body,
+  }) => IOSBackgroundTask.guard('upload', () async {
     final notification = await TransferNotification.start(
       label,
       direction: TransferNotificationDirection.upload,
       cancel: cancel,
+      itemIndex: fileCount > 1 ? 1 : null,
+      itemCount: fileCount > 1 ? fileCount : null,
     );
     try {
       await body(notification.report);
-      await notification.complete(completeTarget, fileCount: fileCount);
+      await notification.complete(
+        completeTarget,
+        fileCount: fileCount,
+        showAndroidComplete: showAndroidComplete,
+      );
     } catch (error) {
       await notification.dismiss(error);
       rethrow;
     }
-  }
+  });
 
   /// Android rate-limits notification updates, so this only posts every few
-  /// percent. A null fraction means the size is unknown; the notification
-  /// stays where it is rather than pretending to advance.
-  void report(double? fraction) {
+  /// percent unless the active file or item index changed. A null fraction
+  /// keeps the last known percentage rather than pretending to advance.
+  void report(
+    double? fraction, {
+    String? label,
+    int? itemIndex,
+    int? itemCount,
+  }) {
     if (_finished || !_supportsLiveProgress) return;
-    if (fraction == null) return;
+    final nextLabel = label ?? _currentLabel;
+    final nextIndex = itemIndex ?? _itemIndex;
+    final nextCount = itemCount ?? _itemCount;
+    final itemChanged =
+        nextLabel != _currentLabel ||
+        nextIndex != _itemIndex ||
+        nextCount != _itemCount;
+    _currentLabel = nextLabel;
+    _itemIndex = nextIndex;
+    _itemCount = nextCount;
+
+    if (fraction == null) {
+      if (!itemChanged) return;
+      _postNotification(
+        'showProgress',
+        _progressPayload(_lastPercent.clamp(0, 100)),
+      );
+      return;
+    }
+
     final percent = (fraction * 100).round().clamp(0, 100);
-    if (percent < _lastPercent + 3 || percent >= 100) return;
-    _lastPercent = percent;
-    _postNotification('showProgress', _progressPayload(percent));
+    if (!itemChanged && (percent < _lastPercent + 3 || percent >= 100)) return;
+    final shownPercent = percent >= 100 ? _lastPercent.clamp(0, 99) : percent;
+    _lastPercent = shownPercent;
+    _postNotification('showProgress', _progressPayload(shownPercent));
   }
 
   /// [announce] is false for one entry of a selection, which posts a single
@@ -685,6 +797,7 @@ class TransferNotification {
     int fileCount = 1,
     String? uri,
     bool announce = true,
+    bool showAndroidComplete = true,
   }) async {
     if (_finished) return;
     _finished = true;
@@ -697,6 +810,10 @@ class TransferNotification {
       );
     }
     if (!_supportsLiveProgress) return;
+    if (isAndroidPlatform && !showAndroidComplete) {
+      _postNotification('cancelNotification', {'id': id});
+      return;
+    }
     _postNotification('showComplete', {
       'id': id,
       'fileName': fileName,
