@@ -188,9 +188,53 @@ class ProService {
     }
   }
 
+  /// Where Google Play takes a promo code. Play applies the code to Pro on
+  /// its own; the app only has to hear about the purchase when it comes back.
+  static const playRedeemUrl = 'https://play.google.com/redeem';
+
+  /// Stands in for [redeemCode] in tests, and makes [canRedeemCode] true.
+  @visibleForTesting
+  static Future<void> Function()? redeemOverride;
+
+  /// Whether this build can take a store's code for Pro: an App Store offer
+  /// code on iOS, a Google Play promo code on Android.
+  bool get canRedeemCode => redeemOverride != null || available;
+
+  /// Whether a code went off to Google Play to be redeemed, so coming back
+  /// asks the store at once instead of waiting out [_resumeGap].
+  bool _awaitingCode = false;
+
+  /// Starts redeeming a store's code. On iOS it shows the App Store's own
+  /// sheet for an offer code - Apple's sheet, not a field of ours, which App
+  /// Review requires - and the purchase arrives through the store listener.
+  /// On Android the caller opens [playRedeemUrl] next; this only marks that
+  /// the purchase is to be picked up on [resumed].
+  Future<void> redeemCode() async {
+    final override = redeemOverride;
+    if (override != null) return override();
+    await _store(() async {
+      if (!await _ready()) throw const ProException(ProFailure.notSignedIn);
+      if (isIOSPlatform) {
+        await Purchases.presentCodeRedemptionSheet();
+      } else {
+        _awaitingCode = true;
+      }
+    });
+  }
+
   /// [refresh], unless it ran in the last [_resumeGap]: what coming back to
   /// the app calls, so switching apps does not ask the store every time.
+  /// Coming back from redeeming a code in Google Play syncs the store's
+  /// purchases first, whatever the gap, so the code's Pro shows at once.
   Future<void> resumed() async {
+    if (_awaitingCode) {
+      _awaitingCode = false;
+      try {
+        if (await _ready()) await Purchases.syncPurchasesForResult();
+      } catch (_) {}
+      await refresh();
+      return;
+    }
     final last = _refreshedAt;
     if (last != null && DateTime.now().difference(last) < _resumeGap) return;
     await refresh();
@@ -347,6 +391,7 @@ class ProService {
     confirmed.value = false;
     settled.value = false;
     _refreshedAt = null;
+    _awaitingCode = false;
     if (!_configured || _loggedIn == null) return;
     try {
       await Purchases.logOut();

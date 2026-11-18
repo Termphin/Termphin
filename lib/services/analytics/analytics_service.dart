@@ -82,6 +82,10 @@ enum AnalyticsEvent {
   /// Restoring purchases: found Pro, found nothing, or failed.
   restoreFinished('restore_finished'),
 
+  /// The paywall's redeem link tapped: a store's own code for Pro, sent to
+  /// the App Store's sheet or Google Play's redeem page.
+  redeemCodeOpened('redeem_code_opened'),
+
   /// Whether Pro is used once bought: push turned on or off, a server given
   /// its relay key or failing to take it, a notification tapped, sync set up
   /// or stopped by something other than a missing network.

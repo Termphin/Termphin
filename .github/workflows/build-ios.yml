@@ -191,20 +191,29 @@ jobs:
             exit 1
           fi
 
-          # altool exits 0 on a rejected upload: the first attempt reported
-          # "UPLOAD FAILED with 4 errors" and the job still went green, so the
-          # release looked complete with nothing on TestFlight. Read the output
-          # rather than the status.
-          set -o pipefail
-          xcrun altool --upload-app \
-            -f "${IPA_FILES[0]}" \
-            -t ios \
-            --apiKey "$APPSTORE_API_KEY_ID" \
-            --apiIssuer "$APPSTORE_API_ISSUER_ID" 2>&1 | tee /tmp/altool.log
-          if grep -qE "UPLOAD FAILED|Failed to upload package|ERROR ITMS" /tmp/altool.log; then
-            echo "altool reported a failed upload" >&2
-            exit 1
-          fi
+          # altool exits 0 when nothing reached Apple: once on a rejected
+          # upload ("UPLOAD FAILED with 4 errors"), and for 1.15.1 when App
+          # Store Connect answered 500 and altool gave up without uploading.
+          # Both releases looked complete with nothing on TestFlight. Only
+          # "UPLOAD SUCCEEDED" counts; a rejection fails at once, anything
+          # else (an outage on Apple's side) is tried again.
+          for attempt in 1 2 3; do
+            xcrun altool --upload-app \
+              -f "${IPA_FILES[0]}" \
+              -t ios \
+              --apiKey "$APPSTORE_API_KEY_ID" \
+              --apiIssuer "$APPSTORE_API_ISSUER_ID" 2>&1 | tee /tmp/altool.log || true
+            if grep -q "UPLOAD SUCCEEDED" /tmp/altool.log; then
+              exit 0
+            fi
+            if grep -qE "UPLOAD FAILED|Failed to upload package|ERROR ITMS" /tmp/altool.log; then
+              echo "altool reported a rejected upload" >&2
+              exit 1
+            fi
+            echo "Upload attempt $attempt did not reach App Store Connect" >&2
+            [ "$attempt" -lt 3 ] && sleep 90
+          done
+          exit 1
 
       - name: Clean up secrets and temporary files
         if: always()
