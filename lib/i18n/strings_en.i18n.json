@@ -922,7 +922,16 @@
     "downloadProgressChannelDescription": "Shown while a file is being downloaded.",
     "downloadCompleteChannelName": "Download complete",
     "downloadCompleteChannelDescription": "Shown when a download has finished.",
-    "downloadSaved": "Saved"
+    "downloadSaved": "Saved",
+    "transferDownloading": "Downloading…",
+    "transferDownloadingPercent": "Downloading · {percent}%",
+    "transferUploading": "Uploading…",
+    "transferUploadingPercent": "Uploading · {percent}%",
+    "uploadDoneTitle": "Upload finished",
+    "uploadDoneOne": "{name} uploaded",
+    "uploadDoneMany": "{count} files uploaded to {folder}",
+    "uploadFailedTitle": "Upload failed",
+    "uploadSaved": "Uploaded"
   },
   "linkPreview": {
     "loading": "Loading preview…",

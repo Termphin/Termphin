@@ -27,5 +27,10 @@ import UserNotifications
         forPlugin: LocalNetworkChannel.name
       )!
     )
+    TransferActivityChannel.register(
+      with: engineBridge.pluginRegistry.registrar(
+        forPlugin: TransferActivityChannel.name
+      )!
+    )
   }
 }

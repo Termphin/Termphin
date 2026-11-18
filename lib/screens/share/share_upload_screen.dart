@@ -12,6 +12,8 @@ import '../../services/app/identity_anonymizer.dart';
 import '../../services/platform/share_intent_service.dart';
 import '../../services/settings/sftp_settings.dart';
 import '../../services/sftp/cancel_token.dart';
+import '../../services/sftp/download_service.dart';
+import '../../services/sftp/remote_path.dart';
 import '../../services/sftp/sftp_service.dart';
 import '../../services/sftp/upload_plan.dart';
 import '../../services/ssh/ssh_prompts.dart';
@@ -187,33 +189,50 @@ class _ShareUploadScreenState extends ConsumerState<ShareUploadScreen> {
       _progress = UploadProgress(bytes: 0, total: total);
     });
 
-    var bytesBefore = 0;
     try {
-      for (var i = 0; i < queue.length; i++) {
-        cancel.throwIfCancelled();
-        final (file, remotePath) = queue[i];
-        setState(() => _current = file.name);
-        var fileSent = 0;
-        await sftp.uploadStream(
-          file.open(),
-          remotePath,
-          totalSize: sizes[i],
-          cancel: cancel,
-          onProgress: (sent, _) {
-            fileSent = sent;
-            if (!mounted) return;
-            setState(
-              () => _progress = UploadProgress(
-                bytes: bytesBefore + sent,
-                total: total,
-                index: i + 1,
-                count: queue.length,
-              ),
+      await TransferNotification.runUpload(
+        label: queue.first.$1.name,
+        completeTarget: queue.length == 1
+            ? queue.single.$1.name
+            : (remotePathSegments(directory).lastOrNull ??
+                  sftpPathToDisplay(directory)),
+        fileCount: queue.length,
+        cancel: cancel,
+        body: (reportNotification) async {
+          var bytesBefore = 0;
+          for (var i = 0; i < queue.length; i++) {
+            cancel.throwIfCancelled();
+            final (file, remotePath) = queue[i];
+            setState(() => _current = file.name);
+            var fileSent = 0;
+            await sftp.uploadStream(
+              file.open(),
+              remotePath,
+              totalSize: sizes[i],
+              cancel: cancel,
+              onProgress: (sent, _) {
+                fileSent = sent;
+                final totalSent = bytesBefore + sent;
+                reportNotification(
+                  total == null || total <= 0
+                      ? null
+                      : (totalSent / total).clamp(0.0, 1.0),
+                );
+                if (!mounted) return;
+                setState(
+                  () => _progress = UploadProgress(
+                    bytes: totalSent,
+                    total: total,
+                    index: i + 1,
+                    count: queue.length,
+                  ),
+                );
+              },
             );
-          },
-        );
-        bytesBefore += sizes[i] ?? fileSent;
-      }
+            bytesBefore += sizes[i] ?? fileSent;
+          }
+        },
+      );
     } catch (error) {
       if (!mounted) return;
       setState(() => _stage = _Stage.picking);

@@ -1,7 +1,9 @@
 import 'dart:io';
 
 import 'package:dartssh2/dartssh2.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -365,6 +367,17 @@ void main() {
     expect(sftp.downloadedRemotePaths, ['/remote/a.txt', '/remote/b.txt']);
     expect(saved?.fileName, 'Downloads');
     expect(saved?.fileCount, 2);
+
+    final progressCalls = calls
+        .where((c) => c.method == 'showProgress')
+        .map((c) => c.arguments as Map<Object?, Object?>)
+        .toList();
+    final ids = progressCalls.map((a) => a['id']).toSet();
+    expect(ids, hasLength(1));
+    expect(
+      calls.where((c) => c.method == 'showComplete'),
+      hasLength(1),
+    );
   });
 
   test('saves into the folder the user picked', () async {
@@ -441,5 +454,134 @@ void main() {
     final open = calls.lastWhere((c) => c.method == 'openDownload');
     expect(open.arguments['uri'], 'content://downloads/1');
     expect(open.arguments['fileName'], 'file.txt');
+  });
+
+  test('TransferNotification.runUpload reports upload Live Update progress and completion', () async {
+    final cancel = CancelToken();
+    await TransferNotification.runUpload(
+      label: 'bundle.tar.gz',
+      completeTarget: 'bundle.tar.gz',
+      fileCount: 1,
+      cancel: cancel,
+      body: (report) async {
+        report(0.25);
+        report(0.60);
+      },
+    );
+
+    expect(calls.map((c) => c.method), [
+      'showProgress',
+      'showProgress',
+      'showProgress',
+      'showComplete',
+    ]);
+    final progressCalls = calls
+        .where((c) => c.method == 'showProgress')
+        .map((c) => c.arguments as Map<Object?, Object?>)
+        .toList();
+    expect(progressCalls.map((a) => a['shortText']), ['↑ …', '↑ 25%', '↑ 60%']);
+    expect(progressCalls.last['subtitle'], 'Uploading · 60%');
+
+    final completeArgs =
+        calls.lastWhere((c) => c.method == 'showComplete').arguments
+            as Map<Object?, Object?>;
+    expect(completeArgs['fileName'], 'bundle.tar.gz');
+    expect(completeArgs['savedLabel'], 'Uploaded');
+  });
+
+  test('TransferNotification.runUpload cancels via notification action and cleans up', () async {
+    final cancel = CancelToken();
+    await expectLater(
+      TransferNotification.runUpload(
+        label: 'bundle.tar.gz',
+        completeTarget: 'bundle.tar.gz',
+        fileCount: 1,
+        cancel: cancel,
+        body: (_) async {
+          final id =
+              (calls.firstWhere((c) => c.method == 'showProgress').arguments
+                      as Map<Object?, Object?>)['id']
+                  as int;
+          await TestDefaultBinaryMessengerBinding
+              .instance
+              .defaultBinaryMessenger
+              .handlePlatformMessage(
+                downloadsChannel.name,
+                const StandardMethodCodec().encodeMethodCall(
+                  MethodCall('downloadCancelRequested', {'id': id}),
+                ),
+                (_) {},
+              );
+          cancel.throwIfCancelled();
+        },
+      ),
+      throwsA(isA<TransferCancelled>()),
+    );
+
+    expect(calls.map((c) => c.method), ['showProgress', 'cancelNotification']);
+  });
+
+  test('iOS Live Activities channel receives upload progress, complete, and cancel', () async {
+    const liveActivityChannel = MethodChannel(
+      'dev.termphin.termphin/live_activities',
+    );
+    const notificationsChannel = MethodChannel(
+      'dexterous.com/flutter/local_notifications',
+    );
+    final iosCalls = <MethodCall>[];
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    IOSFlutterLocalNotificationsPlugin.registerWith();
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(liveActivityChannel, (call) async {
+      iosCalls.add(call);
+      return null;
+    });
+    messenger.setMockMethodCallHandler(notificationsChannel, (call) async {
+      if (call.method == 'initialize') return true;
+      if (call.method == 'checkPermissions') {
+        return <String, dynamic>{'isEnabled': true};
+      }
+      return null;
+    });
+
+    try {
+      await TransferNotification.runUpload(
+        label: 'archive.zip',
+        completeTarget: 'archive.zip',
+        fileCount: 1,
+        cancel: CancelToken(),
+        body: (report) async => report(0.5),
+      );
+      expect(iosCalls.map((c) => c.method), [
+        'showProgress',
+        'showProgress',
+        'showComplete',
+      ]);
+
+      iosCalls.clear();
+      final cancel = CancelToken();
+      await expectLater(
+        TransferNotification.runUpload(
+          label: 'archive.zip',
+          completeTarget: 'archive.zip',
+          fileCount: 1,
+          cancel: cancel,
+          body: (_) async {
+            cancel.cancel();
+            cancel.throwIfCancelled();
+          },
+        ),
+        throwsA(isA<TransferCancelled>()),
+      );
+      expect(iosCalls.map((c) => c.method), [
+        'showProgress',
+        'cancelNotification',
+      ]);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+      messenger.setMockMethodCallHandler(liveActivityChannel, null);
+      messenger.setMockMethodCallHandler(notificationsChannel, null);
+    }
   });
 }

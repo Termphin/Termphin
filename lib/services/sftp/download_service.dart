@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
@@ -83,6 +84,9 @@ class SftpEntryRef {
 
 class DownloadService {
   static const _channel = MethodChannel('dev.termphin.termphin/downloads');
+  static const _iosLiveActivityChannel = MethodChannel(
+    'dev.termphin.termphin/live_activities',
+  );
   static final _rng = Random();
   static final Map<int, CancelToken> _activeDownloads = {};
   static bool _handlerInitialized = false;
@@ -149,12 +153,12 @@ class DownloadService {
     TransferProgressCallback? onProgress,
     CancelToken? cancel,
     bool announce = true,
+    bool manageNotification = true,
   }) async {
     final effectiveCancel = cancel ?? CancelToken();
-    final notification = await _DownloadNotification.start(
-      fileName,
-      cancel: effectiveCancel,
-    );
+    final notification = manageNotification
+        ? await TransferNotification.start(fileName, cancel: effectiveCancel)
+        : null;
     final tempDir = await getTemporaryDirectory();
     final localPath =
         '${tempDir.path}/download_${DateTime.now().microsecondsSinceEpoch}_'
@@ -166,27 +170,30 @@ class DownloadService {
         localPath,
         cancel: effectiveCancel,
         onProgress: (received, total) {
+          final fraction = _fractionOf(received, total);
           onProgress?.call(
             TransferProgress(
               label: fileName,
               bytes: received,
               totalBytes: total,
-              fraction: _fractionOf(received, total),
+              fraction: fraction,
             ),
           );
-          notification.report(_fractionOf(received, total));
+          notification?.report(fraction);
         },
       );
       effectiveCancel.throwIfCancelled();
 
       final uri = await _save(sourcePath: localPath, fileName: fileName);
-      await notification.complete(fileName, uri: uri, announce: announce);
+      await notification?.complete(fileName, uri: uri, announce: announce);
       return SavedDownload(fileName: fileName, uri: uri);
     } catch (error) {
-      await notification.dismiss(error, announce: announce);
+      await notification?.dismiss(error, announce: announce);
       rethrow;
     } finally {
-      _activeDownloads.remove(notification.id);
+      if (notification != null) {
+        _activeDownloads.remove(notification.id);
+      }
       await _deleteQuietly(localPath);
     }
   }
@@ -218,12 +225,12 @@ class DownloadService {
     TransferProgressCallback? onProgress,
     CancelToken? cancel,
     bool announce = true,
+    bool manageNotification = true,
   }) async {
     final effectiveCancel = cancel ?? CancelToken();
-    final notification = await _DownloadNotification.start(
-      folderName,
-      cancel: effectiveCancel,
-    );
+    final notification = manageNotification
+        ? await TransferNotification.start(folderName, cancel: effectiveCancel)
+        : null;
     try {
       final saved = await _copyTree(
         sftp: sftp,
@@ -234,7 +241,7 @@ class DownloadService {
         onProgress: onProgress,
         cancel: effectiveCancel,
       );
-      await notification.complete(
+      await notification?.complete(
         folderName,
         fileCount: saved.fileCount,
         uri: saved.uri,
@@ -242,10 +249,12 @@ class DownloadService {
       );
       return saved;
     } catch (error) {
-      await notification.dismiss(error, announce: announce);
+      await notification?.dismiss(error, announce: announce);
       rethrow;
     } finally {
-      _activeDownloads.remove(notification.id);
+      if (notification != null) {
+        _activeDownloads.remove(notification.id);
+      }
     }
   }
 
@@ -281,7 +290,31 @@ class DownloadService {
     CancelToken? cancel,
   }) async {
     if (entries.isEmpty) return null;
+    if (entries.length == 1) {
+      final single = entries.single;
+      final remotePath = _joinPath(parentPath, single.name);
+      return single.isDirectory
+          ? _downloadDirectory(
+              sftp: sftp,
+              remotePath: remotePath,
+              folderName: single.name,
+              onProgress: onProgress,
+              cancel: cancel,
+            )
+          : _downloadFile(
+              sftp: sftp,
+              remotePath: remotePath,
+              fileName: single.name,
+              onProgress: onProgress,
+              cancel: cancel,
+            );
+    }
+
     final effectiveCancel = cancel ?? CancelToken();
+    final notification = await TransferNotification.start(
+      multiFileLabel,
+      cancel: effectiveCancel,
+    );
 
     final total = entries.length;
     final knownTotal = entries.every((e) => !e.isDirectory && e.size != null)
@@ -291,31 +324,33 @@ class DownloadService {
     SavedDownload? lastSaved;
     var savedCount = 0;
 
-    for (var index = 0; index < entries.length; index++) {
-      effectiveCancel.throwIfCancelled();
-      final entry = entries[index];
-      final remotePath = _joinPath(parentPath, entry.name);
-      var entryBytes = 0;
+    try {
+      for (var index = 0; index < entries.length; index++) {
+        effectiveCancel.throwIfCancelled();
+        final entry = entries[index];
+        final remotePath = _joinPath(parentPath, entry.name);
+        var entryBytes = 0;
 
-      void report(TransferProgress inner) {
-        entryBytes = inner.bytes;
-        final overall = bytesBefore + inner.bytes;
-        onProgress?.call(
-          TransferProgress(
-            label: inner.label,
-            phase: inner.phase,
-            itemIndex: index + 1,
-            itemCount: total,
-            bytes: overall,
-            totalBytes: knownTotal,
-            fraction: knownTotal != null
-                ? _fractionOf(overall, knownTotal)
-                : ((index + (inner.fraction ?? 0)) / total).clamp(0.0, 1.0),
-          ),
-        );
-      }
+        void report(TransferProgress inner) {
+          entryBytes = inner.bytes;
+          final overall = bytesBefore + inner.bytes;
+          final fraction = knownTotal != null
+              ? _fractionOf(overall, knownTotal)
+              : ((index + (inner.fraction ?? 0)) / total).clamp(0.0, 1.0);
+          onProgress?.call(
+            TransferProgress(
+              label: inner.label,
+              phase: inner.phase,
+              itemIndex: index + 1,
+              itemCount: total,
+              bytes: overall,
+              totalBytes: knownTotal,
+              fraction: fraction,
+            ),
+          );
+          notification.report(fraction);
+        }
 
-      try {
         lastSaved = entry.isDirectory
             ? await _downloadDirectory(
                 sftp: sftp,
@@ -324,6 +359,7 @@ class DownloadService {
                 onProgress: report,
                 cancel: effectiveCancel,
                 announce: false,
+                manageNotification: false,
               )
             : await _downloadFile(
                 sftp: sftp,
@@ -332,28 +368,27 @@ class DownloadService {
                 onProgress: report,
                 cancel: effectiveCancel,
                 announce: false,
+                manageNotification: false,
               );
-      } catch (error) {
-        if (error is! TransferCancelled) {
-          await LocalNotificationsService.instance.showTransferFailed(
-            fileName: multiFileLabel,
-          );
-        }
-        rethrow;
+        bytesBefore += entryBytes;
+        savedCount++;
       }
-      bytesBefore += entryBytes;
-      savedCount++;
-    }
 
-    if (lastSaved == null) return null;
-    final saved = savedCount > 1
-        ? SavedDownload(fileName: multiFileLabel, fileCount: savedCount)
-        : lastSaved;
-    await LocalNotificationsService.instance.showTransferComplete(
-      fileName: saved.fileName,
-      fileCount: saved.fileCount,
-    );
-    return saved;
+      if (lastSaved == null) {
+        await notification.dismiss(const TransferCancelled(), announce: false);
+        return null;
+      }
+      final saved = savedCount > 1
+          ? SavedDownload(fileName: multiFileLabel, fileCount: savedCount)
+          : lastSaved;
+      await notification.complete(saved.fileName, fileCount: saved.fileCount);
+      return saved;
+    } catch (error) {
+      await notification.dismiss(error);
+      rethrow;
+    } finally {
+      _activeDownloads.remove(notification.id);
+    }
   }
 
   /// Walks the tree and copies it file by file, keeping its shape under
@@ -364,7 +399,7 @@ class DownloadService {
     required String remotePath,
     required String folderName,
     required Directory tempDir,
-    required _DownloadNotification notification,
+    required TransferNotification? notification,
     TransferProgressCallback? onProgress,
     CancelToken? cancel,
   }) async {
@@ -422,7 +457,7 @@ class DownloadService {
                 fraction: fraction,
               ),
             );
-            notification.report(fraction);
+            notification?.report(fraction);
           },
         );
 
@@ -531,18 +566,65 @@ class DownloadService {
   }
 }
 
-/// The Android notification that mirrors a transfer. One per download, torn
-/// down on every exit path - a stuck progress notification outlives the app
-/// and there is no way for the user to clear it.
-class _DownloadNotification {
-  _DownloadNotification._(this.id, this.title);
+/// Whether a [TransferNotification] tracks a download from or an upload to
+/// the remote host.
+enum TransferNotificationDirection { download, upload }
+
+/// The Android Live Update / progress notification that mirrors a transfer.
+/// Torn down on every exit path - a stuck ongoing notification outlives the
+/// app and there is no way for the user to clear it.
+class TransferNotification {
+  TransferNotification._(this.id, this.title, this.direction);
 
   final int id;
   final String title;
+  final TransferNotificationDirection direction;
   int _lastPercent = -1;
+  bool _finished = false;
 
-  static Future<_DownloadNotification> start(
+  bool get _isUpload => direction == TransferNotificationDirection.upload;
+
+  String _subtitleFor(int percent) => switch ((_isUpload, percent <= 0)) {
+    (true, true) => t.notifications.transferUploading,
+    (true, false) => t.notifications.transferUploadingPercent(percent: percent),
+    (false, true) => t.notifications.transferDownloading,
+    (false, false) => t.notifications.transferDownloadingPercent(
+      percent: percent,
+    ),
+  };
+
+  String _shortTextFor(int percent) {
+    final arrow = _isUpload ? '↑' : '↓';
+    return percent <= 0 ? '$arrow …' : '$arrow $percent%';
+  }
+
+  Map<String, Object?> _progressPayload(int percent) => {
+    'id': id,
+    'fileName': title,
+    'progress': percent,
+    'subtitle': _subtitleFor(percent),
+    'shortText': _shortTextFor(percent),
+    'channelName': t.notifications.downloadProgressChannelName,
+    'channelDescription': t.notifications.downloadProgressChannelDescription,
+    'cancelLabel': t.common.cancel,
+  };
+
+  static bool get _supportsLiveProgress => isAndroidPlatform || isIOSPlatform;
+
+  static void _postNotification(String method, Map<String, Object?> args) {
+    final channel = isAndroidPlatform
+        ? DownloadService._channel
+        : isIOSPlatform
+        ? DownloadService._iosLiveActivityChannel
+        : null;
+    if (channel == null) return;
+    unawaited(channel.invokeMethod<void>(method, args).catchError((_) {}));
+  }
+
+  static Future<TransferNotification> start(
     String title, {
+    TransferNotificationDirection direction =
+        TransferNotificationDirection.download,
     CancelToken? cancel,
   }) async {
     DownloadService._ensureMethodCallHandler();
@@ -550,39 +632,47 @@ class _DownloadNotification {
     if (cancel != null) {
       DownloadService._activeDownloads[id] = cancel;
     }
-    final notification = _DownloadNotification._(id, title);
-    if (isAndroidPlatform) {
-      await DownloadService._channel.invokeMethod('showProgress', {
-        'id': notification.id,
-        'fileName': title,
-        'progress': 0,
-        'channelName': t.notifications.downloadProgressChannelName,
-        'channelDescription':
-            t.notifications.downloadProgressChannelDescription,
-        'cancelLabel': t.common.cancel,
-      });
+    final notification = TransferNotification._(id, title, direction);
+    if (_supportsLiveProgress) {
+      _postNotification('showProgress', notification._progressPayload(0));
       notification._lastPercent = 0;
     }
     return notification;
+  }
+
+  /// Mirrors an upload batch onto the platform notification and tears it down
+  /// on every exit path, cancelling [cancel] if the user taps the action.
+  static Future<void> runUpload({
+    required String label,
+    required String completeTarget,
+    required int fileCount,
+    required CancelToken cancel,
+    required Future<void> Function(void Function(double? fraction) report) body,
+  }) async {
+    final notification = await TransferNotification.start(
+      label,
+      direction: TransferNotificationDirection.upload,
+      cancel: cancel,
+    );
+    try {
+      await body(notification.report);
+      await notification.complete(completeTarget, fileCount: fileCount);
+    } catch (error) {
+      await notification.dismiss(error);
+      rethrow;
+    }
   }
 
   /// Android rate-limits notification updates, so this only posts every few
   /// percent. A null fraction means the size is unknown; the notification
   /// stays where it is rather than pretending to advance.
   void report(double? fraction) {
-    if (!isAndroidPlatform) return;
+    if (_finished || !_supportsLiveProgress) return;
     if (fraction == null) return;
     final percent = (fraction * 100).round().clamp(0, 100);
     if (percent < _lastPercent + 3 || percent >= 100) return;
     _lastPercent = percent;
-    DownloadService._channel.invokeMethod('showProgress', {
-      'id': id,
-      'fileName': title,
-      'progress': percent,
-      'channelName': t.notifications.downloadProgressChannelName,
-      'channelDescription': t.notifications.downloadProgressChannelDescription,
-      'cancelLabel': t.common.cancel,
-    });
+    _postNotification('showProgress', _progressPayload(percent));
   }
 
   /// [announce] is false for one entry of a selection, which posts a single
@@ -596,38 +686,42 @@ class _DownloadNotification {
     String? uri,
     bool announce = true,
   }) async {
+    if (_finished) return;
+    _finished = true;
     DownloadService._activeDownloads.remove(id);
     if (announce) {
       await LocalNotificationsService.instance.showTransferComplete(
         fileName: fileName,
         fileCount: fileCount,
+        isUpload: _isUpload,
       );
     }
-    if (!isAndroidPlatform) return;
-    await DownloadService._channel.invokeMethod('showComplete', {
+    if (!_supportsLiveProgress) return;
+    _postNotification('showComplete', {
       'id': id,
       'fileName': fileName,
       'uri': uri,
       'channelName': t.notifications.downloadCompleteChannelName,
       'channelDescription': t.notifications.downloadCompleteChannelDescription,
-      'savedLabel': t.notifications.downloadSaved,
+      'savedLabel': _isUpload
+          ? t.notifications.uploadSaved
+          : t.notifications.downloadSaved,
     });
   }
 
   /// [error] is positional and required so that a caller cannot omit it and
   /// silently report a cancellation as a failure.
   Future<void> dismiss(Object? error, {bool announce = true}) async {
+    if (_finished) return;
+    _finished = true;
     DownloadService._activeDownloads.remove(id);
     if (announce && error is! TransferCancelled) {
       await LocalNotificationsService.instance.showTransferFailed(
         fileName: title,
+        isUpload: _isUpload,
       );
     }
-    if (!isAndroidPlatform) return;
-    try {
-      await DownloadService._channel.invokeMethod('cancelNotification', {
-        'id': id,
-      });
-    } catch (_) {}
+    if (!_supportsLiveProgress) return;
+    _postNotification('cancelNotification', {'id': id});
   }
 }

@@ -560,35 +560,49 @@ class SessionViewState extends ConsumerState<SessionView> {
           waited = job.waited;
           final sftp = SftpService.resolving(() => session.sftpClient);
           try {
-            var bytesBefore = 0;
-            for (var i = 0; i < queue.length; i++) {
-              job.cancel.throwIfCancelled();
-              final (file, remotePath) = queue[i];
-              TransferProgress progressAt(int bytes) => TransferProgress(
-                label: file.name,
-                itemIndex: i + 1,
-                itemCount: queue.length,
-                bytes: bytes,
-                totalBytes: total,
-                fraction: total == null || total <= 0
-                    ? null
-                    : (bytes / total).clamp(0.0, 1.0),
-              );
-              job.report(progressAt(bytesBefore));
-              var fileSent = 0;
-              await sftp.uploadStream(
-                file.open(),
-                remotePath,
-                totalSize: sizes[i],
-                cancel: job.cancel,
-                onProgress: (sent, _) {
-                  fileSent = sent;
-                  job.report(progressAt(bytesBefore + sent));
-                },
-              );
-              bytesBefore += sizes[i] ?? fileSent;
-              done.add(remotePath);
-            }
+            await TransferNotification.runUpload(
+              label: queue.first.$1.name,
+              completeTarget: queue.length == 1
+                  ? queue.single.$1.name
+                  : sftpPathToDisplay(directory),
+              fileCount: queue.length,
+              cancel: job.cancel,
+              body: (reportNotification) async {
+                var bytesBefore = 0;
+                for (var i = 0; i < queue.length; i++) {
+                  job.cancel.throwIfCancelled();
+                  final (file, remotePath) = queue[i];
+                  TransferProgress progressAt(int bytes) => TransferProgress(
+                    label: file.name,
+                    itemIndex: i + 1,
+                    itemCount: queue.length,
+                    bytes: bytes,
+                    totalBytes: total,
+                    fraction: total == null || total <= 0
+                        ? null
+                        : (bytes / total).clamp(0.0, 1.0),
+                  );
+                  final initial = progressAt(bytesBefore);
+                  job.report(initial);
+                  reportNotification(initial.fraction);
+                  var fileSent = 0;
+                  await sftp.uploadStream(
+                    file.open(),
+                    remotePath,
+                    totalSize: sizes[i],
+                    cancel: job.cancel,
+                    onProgress: (sent, _) {
+                      fileSent = sent;
+                      final update = progressAt(bytesBefore + sent);
+                      job.report(update);
+                      reportNotification(update.fraction);
+                    },
+                  );
+                  bytesBefore += sizes[i] ?? fileSent;
+                  done.add(remotePath);
+                }
+              },
+            );
           } finally {
             await sftp.close();
           }

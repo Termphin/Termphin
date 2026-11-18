@@ -78,6 +78,8 @@
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<!-- No ITSAppUsesNonExemptEncryption here, deliberately, and it is not the
 	     same as answering "false".
 
