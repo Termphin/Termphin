@@ -34,6 +34,7 @@ import '../ui/app_notifications.dart';
 import '../ui/app_sheet.dart';
 import '../ui/empty_state.dart';
 import '../ui/large_title_scaffold.dart';
+import '../ui/save_shortcuts.dart';
 import '../ui/section_header.dart';
 import '../ui/settings_tile.dart';
 import '../ui/unsaved_changes_guard.dart';
@@ -325,6 +326,16 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
     });
   }
 
+  /// What Save does, from the button or Ctrl+S: a key pasted into the form
+  /// is taken as it stands first.
+  void _saveFromForm() {
+    if (_authMethod == AuthMethod.privateKey &&
+        _keySource == _KeySource.manual) {
+      _privateKeyContent = _privateKeyCtrl.text.trim();
+    }
+    _save();
+  }
+
   Future<void> _save() async {
     if (!_validate()) return;
     setState(() => _isSaving = true);
@@ -461,226 +472,224 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
         _privateKeyCtrl,
         _fallbackHostInputCtrl,
       ]),
-      child: Scaffold(
-        backgroundColor: context.colors.backgroundPrimary,
-        appBar: AppBar(
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          title: Text(
-            isNew ? t.profileForm.newTitle : t.profileForm.editTitle,
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          leading: IconButton(
-            tooltip: t.common.close,
-            icon: const Icon(PhosphorIconsRegular.x),
-            onPressed: () => Navigator.of(context).maybePop(),
-          ),
-          actions: [
-            Padding(
-              padding: const EdgeInsets.only(right: AppTheme.space12),
-              child: _isSaving
-                  ? const SizedBox(
-                      width: AppTheme.icon20,
-                      height: AppTheme.icon20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : TextButton(
-                      onPressed: () {
-                        if (_authMethod == AuthMethod.privateKey &&
-                            _keySource == _KeySource.manual) {
-                          _privateKeyContent = _privateKeyCtrl.text.trim();
-                        }
-                        _save();
-                      },
-                      child: Text(
-                        t.common.save,
-                        style: TextStyle(
-                          color: context.colors.primary,
-                          fontWeight: FontWeight.w700,
-                          fontSize: AppTheme.font15,
-                        ),
-                      ),
-                    ),
+      child: SaveShortcuts(
+        onSave: _isSaving ? null : _saveFromForm,
+        child: Scaffold(
+          backgroundColor: context.colors.backgroundPrimary,
+          appBar: AppBar(
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            title: Text(
+              isNew ? t.profileForm.newTitle : t.profileForm.editTitle,
+              style: Theme.of(context).textTheme.titleLarge,
             ),
-          ],
-        ),
-        body: SafeArea(
-          top: false,
-          child: ContentGutter(
-            builder: (context, gutter) => Form(
-              key: _formKey,
-              child: ListView(
-                padding: EdgeInsets.fromLTRB(
-                  AppTheme.space20,
-                  isNew ? AppTheme.space16 : AppTheme.space8,
-                  AppTheme.space20,
-                  AppTheme.space40,
-                ).add(gutter),
-                children: [
-                  SectionHeader(t.profileForm.avatar),
-                  const SizedBox(height: AppTheme.space10),
-                  _buildAvatarSection(),
-
-                  const SizedBox(height: AppTheme.space24),
-                  SectionHeader(t.groups.groupTitle),
-                  const SizedBox(height: AppTheme.space10),
-                  GroupPickerField(
-                    group: _group,
-                    onChanged: (g) => setState(() => _group = g),
-                  ),
-
-                  const SizedBox(height: AppTheme.space24),
-                  SectionHeader(t.profileForm.connection),
-                  const SizedBox(height: AppTheme.space10),
-                  AppFormField(
-                    controller: _nameCtrl,
-                    label: t.common.name,
-                    hint: t.profileForm.nameHint,
-                    icon: PhosphorIconsFill.tag,
-                    action: TextInputAction.next,
-                  ),
-                  const SizedBox(height: AppTheme.space10),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        flex: 3,
-                        child: AppFormField(
-                          controller: _hostCtrl,
-                          label: t.profileForm.host,
-                          hint: t.profileForm.hostHint,
-                          icon: PhosphorIconsFill.hardDrives,
-                          action: TextInputAction.next,
-                          keyboardType: TextInputType.url,
-                          validator: (v) => (v == null || v.trim().isEmpty)
-                              ? t.common.required
-                              : null,
+            leading: IconButton(
+              tooltip: t.common.close,
+              icon: const Icon(PhosphorIconsRegular.x),
+              onPressed: () => Navigator.of(context).maybePop(),
+            ),
+            actions: [
+              Padding(
+                padding: const EdgeInsets.only(right: AppTheme.space12),
+                child: _isSaving
+                    ? const SizedBox(
+                        width: AppTheme.icon20,
+                        height: AppTheme.icon20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : TextButton(
+                        onPressed: _saveFromForm,
+                        child: Text(
+                          t.common.save,
+                          style: TextStyle(
+                            color: context.colors.primary,
+                            fontWeight: FontWeight.w700,
+                            fontSize: AppTheme.font15,
+                          ),
                         ),
                       ),
-                      const SizedBox(width: AppTheme.space10),
-                      SizedBox(
-                        width: 92,
-                        child: AppFormField(
-                          controller: _portCtrl,
-                          label: t.profileForm.port,
-                          hint: t.profileForm.portHint,
-                          action: TextInputAction.next,
-                          keyboardType: TextInputType.number,
-                          validator: (v) {
-                            final n = int.tryParse(v ?? '');
-                            return (n == null || n <= 0 || n > 65535)
-                                ? t.common.invalid
-                                : null;
-                          },
+              ),
+            ],
+          ),
+          body: SafeArea(
+            top: false,
+            child: ContentGutter(
+              builder: (context, gutter) => Form(
+                key: _formKey,
+                child: ListView(
+                  padding: EdgeInsets.fromLTRB(
+                    AppTheme.space20,
+                    isNew ? AppTheme.space16 : AppTheme.space8,
+                    AppTheme.space20,
+                    AppTheme.space40,
+                  ).add(gutter),
+                  children: [
+                    SectionHeader(t.profileForm.avatar),
+                    const SizedBox(height: AppTheme.space10),
+                    _buildAvatarSection(),
+
+                    const SizedBox(height: AppTheme.space24),
+                    SectionHeader(t.groups.groupTitle),
+                    const SizedBox(height: AppTheme.space10),
+                    GroupPickerField(
+                      group: _group,
+                      onChanged: (g) => setState(() => _group = g),
+                    ),
+
+                    const SizedBox(height: AppTheme.space24),
+                    SectionHeader(t.profileForm.connection),
+                    const SizedBox(height: AppTheme.space10),
+                    AppFormField(
+                      controller: _nameCtrl,
+                      label: t.common.name,
+                      hint: t.profileForm.nameHint,
+                      icon: PhosphorIconsFill.tag,
+                      action: TextInputAction.next,
+                    ),
+                    const SizedBox(height: AppTheme.space10),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: AppFormField(
+                            controller: _hostCtrl,
+                            label: t.profileForm.host,
+                            hint: t.profileForm.hostHint,
+                            icon: PhosphorIconsFill.hardDrives,
+                            action: TextInputAction.next,
+                            keyboardType: TextInputType.url,
+                            validator: (v) => (v == null || v.trim().isEmpty)
+                                ? t.common.required
+                                : null,
+                          ),
+                        ),
+                        const SizedBox(width: AppTheme.space10),
+                        SizedBox(
+                          width: 92,
+                          child: AppFormField(
+                            controller: _portCtrl,
+                            label: t.profileForm.port,
+                            hint: t.profileForm.portHint,
+                            action: TextInputAction.next,
+                            keyboardType: TextInputType.number,
+                            validator: (v) {
+                              final n = int.tryParse(v ?? '');
+                              return (n == null || n <= 0 || n > 65535)
+                                  ? t.common.invalid
+                                  : null;
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppTheme.space10),
+                    AppFormField(
+                      controller: _userCtrl,
+                      label: t.profileForm.username,
+                      hint: t.profileForm.usernameHint,
+                      icon: PhosphorIconsFill.user,
+                      action: TextInputAction.next,
+                      validator: (v) => (v == null || v.trim().isEmpty)
+                          ? t.common.required
+                          : null,
+                    ),
+
+                    const SizedBox(height: AppTheme.space24),
+                    SectionHeader(t.profileForm.authentication),
+                    const SizedBox(height: AppTheme.space10),
+                    _AuthMethodPicker(
+                      selected: _authMethod,
+                      onSelected: (method) {
+                        setState(() {
+                          _authMethod = method;
+                          _authMissing = false;
+                        });
+                        if (method == AuthMethod.privateKey &&
+                            _availableKeys.isEmpty &&
+                            !_keysLoading) {
+                          _loadKeys();
+                        }
+                      },
+                    ),
+                    if (_authMissing) ...[
+                      const SizedBox(height: AppTheme.space8),
+                      Text(
+                        t.profileForm.chooseAuth,
+                        style: context.colors.uiSmall.copyWith(
+                          color: context.colors.error,
                         ),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: AppTheme.space10),
-                  AppFormField(
-                    controller: _userCtrl,
-                    label: t.profileForm.username,
-                    hint: t.profileForm.usernameHint,
-                    icon: PhosphorIconsFill.user,
-                    action: TextInputAction.next,
-                    validator: (v) => (v == null || v.trim().isEmpty)
-                        ? t.common.required
-                        : null,
-                  ),
+                    const SizedBox(height: AppTheme.space12),
 
-                  const SizedBox(height: AppTheme.space24),
-                  SectionHeader(t.profileForm.authentication),
-                  const SizedBox(height: AppTheme.space10),
-                  _AuthMethodPicker(
-                    selected: _authMethod,
-                    onSelected: (method) {
-                      setState(() {
-                        _authMethod = method;
-                        _authMissing = false;
-                      });
-                      if (method == AuthMethod.privateKey &&
-                          _availableKeys.isEmpty &&
-                          !_keysLoading) {
-                        _loadKeys();
-                      }
-                    },
-                  ),
-                  if (_authMissing) ...[
-                    const SizedBox(height: AppTheme.space8),
-                    Text(
-                      t.profileForm.chooseAuth,
-                      style: context.colors.uiSmall.copyWith(
-                        color: context.colors.error,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: AppTheme.space12),
-
-                  if (_authMethod == AuthMethod.password)
-                    AppFormField(
-                      controller: _passwordCtrl,
-                      label: t.profileForm.password,
-                      icon: PhosphorIconsFill.lock,
-                      obscure: _hidePassword,
-                      action: TextInputAction.done,
-                      validator: (v) =>
-                          (v == null || v.isEmpty) ? t.common.required : null,
-                      suffix: IconButton(
-                        tooltip: _hidePassword
-                            ? t.common.showPassword
-                            : t.common.hidePassword,
-                        icon: Icon(
-                          _hidePassword
-                              ? PhosphorIconsFill.eyeSlash
-                              : PhosphorIconsFill.eye,
-                          size: AppTheme.icon20,
-                          color: context.colors.textTertiary,
+                    if (_authMethod == AuthMethod.password)
+                      AppFormField(
+                        controller: _passwordCtrl,
+                        label: t.profileForm.password,
+                        icon: PhosphorIconsFill.lock,
+                        obscure: _hidePassword,
+                        action: TextInputAction.done,
+                        validator: (v) =>
+                            (v == null || v.isEmpty) ? t.common.required : null,
+                        suffix: IconButton(
+                          tooltip: _hidePassword
+                              ? t.common.showPassword
+                              : t.common.hidePassword,
+                          icon: Icon(
+                            _hidePassword
+                                ? PhosphorIconsFill.eyeSlash
+                                : PhosphorIconsFill.eye,
+                            size: AppTheme.icon20,
+                            color: context.colors.textTertiary,
+                          ),
+                          onPressed: () =>
+                              setState(() => _hidePassword = !_hidePassword),
                         ),
-                        onPressed: () =>
-                            setState(() => _hidePassword = !_hidePassword),
                       ),
-                    ),
 
-                  if (_authMethod == AuthMethod.privateKey) _buildKeySection(),
-                  const SizedBox(height: AppTheme.space16),
-                  _buildConnectionTest(t),
-
-                  const SizedBox(height: AppTheme.space24),
-                  _buildMoreOptionsHeader(t),
-                  if (_moreOptions) ...[
-                    const SizedBox(height: AppTheme.space24),
-                    SectionHeader(
-                      t.profileForm.fallbackHosts,
-                      hint: t.profileForm.fallbackHostsHint,
-                    ),
-                    const SizedBox(height: AppTheme.space10),
-                    _buildFallbackHostsSection(t),
+                    if (_authMethod == AuthMethod.privateKey)
+                      _buildKeySection(),
+                    const SizedBox(height: AppTheme.space16),
+                    _buildConnectionTest(t),
 
                     const SizedBox(height: AppTheme.space24),
-                    SectionHeader(
-                      t.profileForm.jumpHost,
-                      hint: t.profileForm.jumpHostHint,
-                    ),
-                    const SizedBox(height: AppTheme.space10),
-                    _buildJumpHostSection(t),
-
-                    const SizedBox(height: AppTheme.space24),
-                    _buildPortForwardingSection(t),
-
-                    const SizedBox(height: AppTheme.space24),
-                    SectionHeader(t.profileForm.notifications),
-                    const SizedBox(height: AppTheme.space10),
-                    AppCard(
-                      child: SettingsSwitchTile(
-                        title: t.profileForm.serverNotifications,
-                        subtitle: t.profileForm.serverNotificationsHint,
-                        value: _serverNotifications,
-                        onChanged: (value) =>
-                            setState(() => _serverNotifications = value),
+                    _buildMoreOptionsHeader(t),
+                    if (_moreOptions) ...[
+                      const SizedBox(height: AppTheme.space24),
+                      SectionHeader(
+                        t.profileForm.fallbackHosts,
+                        hint: t.profileForm.fallbackHostsHint,
                       ),
-                    ),
+                      const SizedBox(height: AppTheme.space10),
+                      _buildFallbackHostsSection(t),
+
+                      const SizedBox(height: AppTheme.space24),
+                      SectionHeader(
+                        t.profileForm.jumpHost,
+                        hint: t.profileForm.jumpHostHint,
+                      ),
+                      const SizedBox(height: AppTheme.space10),
+                      _buildJumpHostSection(t),
+
+                      const SizedBox(height: AppTheme.space24),
+                      _buildPortForwardingSection(t),
+
+                      const SizedBox(height: AppTheme.space24),
+                      SectionHeader(t.profileForm.notifications),
+                      const SizedBox(height: AppTheme.space10),
+                      AppCard(
+                        child: SettingsSwitchTile(
+                          title: t.profileForm.serverNotifications,
+                          subtitle: t.profileForm.serverNotificationsHint,
+                          value: _serverNotifications,
+                          onChanged: (value) =>
+                              setState(() => _serverNotifications = value),
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ),

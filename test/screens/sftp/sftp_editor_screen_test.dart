@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:re_editor/re_editor.dart' as re;
@@ -265,6 +266,48 @@ void main() {
 
       expect(find.text(t.editor.modifiedRemotelyTitle), findsNothing);
       expect(tree.contents[_path], 'two');
+    });
+  });
+
+  group('from the keyboard', () {
+    Future<void> pressCtrl(WidgetTester tester, LogicalKeyboardKey key) async {
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(key);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      for (var i = 0; i < 6; i++) {
+        await tester.pump(const Duration(milliseconds: 20));
+      }
+    }
+
+    testWidgets('Ctrl+S saves, as the Save button does', (tester) async {
+      await open(tester, content: 'before');
+      await tester.tap(find.byType(re.CodeEditor));
+      type(tester, 'after');
+      await tester.pumpAndSettle();
+      final focused = FocusManager.instance.primaryFocus!.context!;
+      expect(
+        focused.findAncestorWidgetOfExactType<re.CodeEditor>(),
+        isNotNull,
+        reason: 'the keys come from inside the editor, as they do in use',
+      );
+
+      await pressCtrl(tester, LogicalKeyboardKey.keyS);
+
+      expect(tree.contents[_path], 'after');
+    }, variant: const TargetPlatformVariant({TargetPlatform.linux}));
+
+    testWidgets('Escape leaves, asking first about unsaved changes', (
+      tester,
+    ) async {
+      await open(tester, content: 'before');
+      await tester.tap(find.byType(re.CodeEditor));
+      type(tester, 'after');
+      await tester.pumpAndSettle();
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+
+      expect(find.text(t.editor.unsavedTitle), findsOneWidget);
     });
   });
 
