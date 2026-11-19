@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -330,4 +331,28 @@ void main() {
 
     expect(find.text('inside.txt'), findsOneWidget);
   });
+
+  testWidgets('a right click opens the row menu under the pointer', (
+    tester,
+  ) async {
+    await _pumpBrowser(tester);
+    final t = AppLocale.en.buildSync();
+    final pointer = tester.getCenter(find.text('a.txt'));
+
+    await tester.tapAt(pointer, buttons: kSecondaryButton);
+    await tester.pumpAndSettle();
+
+    final rename = find.text(t.common.rename);
+    expect(rename, findsOneWidget);
+    expect(
+      (tester.getTopLeft(rename).dx - pointer.dx).abs(),
+      lessThan(80),
+      reason: 'the menu opens where the click was, not at the row end',
+    );
+    expect(_selected(tester), ['a.txt']);
+
+    await tester.tap(rename);
+    await tester.pumpAndSettle();
+    expect(find.byType(EditableText), findsWidgets);
+  }, variant: _desktop);
 }

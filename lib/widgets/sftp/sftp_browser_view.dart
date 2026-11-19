@@ -552,8 +552,9 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
     return math.max(rows - 1, 1);
   }
 
-  /// A right click: the row's own menu, opened where its `⋮` would open it -
-  /// or, over a selection, what can be done to all of it.
+  /// A right click: the row's own actions, opened under the pointer the way
+  /// a desktop opens a context menu - or, over a selection, what can be done
+  /// to all of it.
   ///
   /// A row outside the selection becomes the selection first, so the menu is
   /// never about something other than what was clicked.
@@ -599,7 +600,80 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
       );
       return;
     }
-    _menuOpenerFor(_joinPath(item.filename)).value = Object();
+    unawaited(
+      showAppContextMenu(
+        context,
+        globalPosition: globalPosition,
+        entries: _rowMenuEntries(item, t),
+      ),
+    );
+  }
+
+  /// One row's actions as a context menu - what its `⋮` offers, in the same
+  /// order, with the keys that do the same.
+  List<ContextMenuEntry?> _rowMenuEntries(SftpName item, Translations t) {
+    final path = _joinPath(item.filename);
+    void run(SftpFileAction action) => _handleFileAction(action, item, path);
+    final isDirectory = item.attr.isDirectory;
+    return [
+      if (!isDirectory) ...[
+        ContextMenuEntry(
+          label: t.sftp.openInEditor,
+          icon: PhosphorIconsRegular.pencilSimple,
+          onSelected: () => run(SftpFileAction.openEditor),
+        ),
+        if (fileTypeOf(item.filename) == FileKind.image)
+          ContextMenuEntry(
+            label: t.sftp.preview,
+            icon: PhosphorIconsRegular.image,
+            onSelected: () => run(SftpFileAction.preview),
+          ),
+        ContextMenuEntry(
+          label: t.sftp.download,
+          icon: PhosphorIconsRegular.downloadSimple,
+          shortcut: AppCommands.describeActivator(SftpShortcuts.download),
+          onSelected: () => run(SftpFileAction.download),
+        ),
+      ],
+      ContextMenuEntry(
+        label: t.sftp.copyPath,
+        icon: PhosphorIconsRegular.copy,
+        onSelected: () => run(SftpFileAction.copyPath),
+      ),
+      ContextMenuEntry(
+        label: t.common.rename,
+        icon: PhosphorIconsRegular.pencilSimple,
+        shortcut: AppCommands.describeActivator(SftpShortcuts.rename),
+        onSelected: () => run(SftpFileAction.rename),
+      ),
+      if (_copyAvailable)
+        ContextMenuEntry(
+          label: t.sftp.copyTo,
+          icon: PhosphorIconsRegular.folders,
+          shortcut: AppCommands.describeActivator(SftpShortcuts.copyTo),
+          onSelected: () => run(SftpFileAction.copyTo),
+        ),
+      ContextMenuEntry(
+        label: t.sftp.moveTo,
+        icon: PhosphorIconsRegular.arrowSquareRight,
+        shortcut: AppCommands.describeActivator(SftpShortcuts.moveTo),
+        onSelected: () => run(SftpFileAction.moveTo),
+      ),
+      if (_copyAvailable)
+        ContextMenuEntry(
+          label: t.common.duplicate,
+          icon: PhosphorIconsRegular.copySimple,
+          onSelected: () => run(SftpFileAction.duplicate),
+        ),
+      null,
+      ContextMenuEntry(
+        label: t.common.delete,
+        icon: PhosphorIconsRegular.trash,
+        shortcut: AppCommands.describeActivator(SftpShortcuts.delete),
+        destructive: true,
+        onSelected: () => run(SftpFileAction.delete),
+      ),
+    ];
   }
 
   /// The browser's menu in the title bar: everything its keys do, each with
