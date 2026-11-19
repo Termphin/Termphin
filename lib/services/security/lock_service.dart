@@ -9,6 +9,7 @@ import 'package:pointycastle/export.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../i18n/strings.g.dart';
+import '../../utils/platform_info.dart';
 
 const kLockEnabledPrefsKey = 'lock_enabled';
 const kLockPinPrefsKey = 'lock_pin';
@@ -68,6 +69,10 @@ const _pbkdf2Prefix = 'pbkdf2';
 const _pbkdf2Iterations = 20000;
 const _saltBytes = 16;
 const _hashBytes = 32;
+
+/// Whether the biometric unlock refuses the system's own PIN or password
+/// fallback - everywhere but Windows, whose Hello offers no such switch.
+bool get biometricOnlyUnlock => !isWindowsPlatform;
 
 class LockService {
   LockService._() {
@@ -158,16 +163,23 @@ class LockService {
 
   /// [localizedReason] is what the system's own biometric sheet shows, so it
   /// is a translated string rather than a literal.
+  ///
+  /// Windows Hello cannot be held to biometrics alone - the plugin throws an
+  /// [UnsupportedError] when asked, which left the key on a Windows lock
+  /// screen doing nothing - so there it also accepts the account's Hello PIN,
+  /// which is still the computer's own sign-in.
   Future<bool> authenticateBiometric() async {
     try {
       return await _auth.authenticate(
         localizedReason: t.lock.authenticateReason,
-        biometricOnly: true,
+        biometricOnly: biometricOnlyUnlock,
         persistAcrossBackgrounding: true,
       );
     } on PlatformException {
       return false;
     } on LocalAuthException {
+      return false;
+    } on UnsupportedError {
       return false;
     }
   }

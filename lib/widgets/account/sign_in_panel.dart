@@ -11,6 +11,7 @@ import '../../theme/theme.dart';
 import '../ui/app_form_field.dart';
 import '../ui/app_notifications.dart';
 import '../ui/legal_links.dart';
+import '../ui/section_navigator.dart';
 import 'account_failure_text.dart';
 import 'sign_in_buttons.dart';
 
@@ -78,10 +79,11 @@ class _SignInPanelState extends State<SignInPanel> {
   String _failureText(AccountFailure failure) =>
       accountFailureText(Translations.of(context), failure);
 
-  Future<void> _resetPassword() => Navigator.of(context).push(
-    MaterialPageRoute<void>(
-      builder: (_) => ForgotPasswordScreen(email: _email.text.trim()),
-    ),
+  Future<void> _resetPassword() => pushAppPage<void>(
+    context,
+    window: true,
+    title: Translations.of(context).account.reset.title,
+    builder: (_) => ForgotPasswordScreen(email: _email.text.trim()),
   );
 
   @override

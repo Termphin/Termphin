@@ -155,7 +155,7 @@ class _ConnectionSettingsSectionState extends State<ConnectionSettingsSection>
               subtitle: t.settings.remoteAgentHowItWorksSubtitle,
               onTap: () => showRemoteAgentInfoSheet(context),
             ),
-            if (isIOSPlatform) ...[
+            if (platformHas(PlatformFeature.backgroundSuspension)) ...[
               const AppDivider(),
               SettingsTile(
                 title: t.settings.backgroundSuspended,
@@ -163,7 +163,7 @@ class _ConnectionSettingsSectionState extends State<ConnectionSettingsSection>
                 trailing: SettingsTileTrailing.none,
               ),
             ],
-            if (isAndroidPlatform) ...[
+            if (platformHas(PlatformFeature.batteryOptimization)) ...[
               const AppDivider(),
               PermissionTile(
                 leading: Icon(

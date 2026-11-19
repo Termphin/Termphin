@@ -73,6 +73,11 @@ class _SnippetPickerPanelState extends ConsumerState<SnippetPickerPanel> {
   String _query = '';
   String _selectedGroup = '';
 
+  /// The row Enter runs, moved with the arrow keys; back to the top whenever
+  /// the list changes under it.
+  int _cursor = 0;
+  final _cursorKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
@@ -116,9 +121,41 @@ class _SnippetPickerPanelState extends ConsumerState<SnippetPickerPanel> {
     Navigator.of(context).pop();
   }
 
-  void _submitFirst() {
+  void _submitSelected() {
     final snippets = _filteredSnippets(ref.read(snippetsProvider));
-    if (snippets.isNotEmpty) unawaited(_select(snippets.first));
+    if (snippets.isEmpty) return;
+    unawaited(_select(snippets[math.min(_cursor, snippets.length - 1)]));
+  }
+
+  /// Up and down move the cursor through the list while the field keeps the
+  /// focus, so typing and picking never take turns.
+  KeyEventResult _onFieldKey(FocusNode _, KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+    final step = switch (event.logicalKey) {
+      LogicalKeyboardKey.arrowDown => 1,
+      LogicalKeyboardKey.arrowUp => -1,
+      _ => 0,
+    };
+    if (step == 0) return KeyEventResult.ignored;
+    final count = _filteredSnippets(ref.read(snippetsProvider)).length;
+    if (count == 0) return KeyEventResult.handled;
+    setState(() => _cursor = (math.min(_cursor, count - 1) + step) % count);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final row = _cursorKey.currentContext;
+      if (row == null || !row.mounted) return;
+      unawaited(
+        Scrollable.ensureVisible(
+          row,
+          duration: AppTheme.interactiveDuration,
+          alignmentPolicy: step > 0
+              ? ScrollPositionAlignmentPolicy.keepVisibleAtEnd
+              : ScrollPositionAlignmentPolicy.keepVisibleAtStart,
+        ),
+      );
+    });
+    return KeyEventResult.handled;
   }
 
   @override
@@ -207,17 +244,25 @@ class _SnippetPickerPanelState extends ConsumerState<SnippetPickerPanel> {
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppTheme.space16,
                   ),
-                  child: AppSearchField(
-                    key: const ValueKey('snippetSearchField'),
-                    controller: _searchCtrl,
-                    focusNode: _searchFocusNode,
-                    autofocus: true,
-                    dense: true,
-                    textInputAction: TextInputAction.search,
-                    hint: t.commandPalette.searchHintSnippets,
-                    clearTooltip: t.common.clearSearch,
-                    onChanged: (v) => setState(() => _query = v),
-                    onSubmitted: (_) => _submitFirst(),
+                  child: Focus(
+                    canRequestFocus: false,
+                    skipTraversal: true,
+                    onKeyEvent: _onFieldKey,
+                    child: AppSearchField(
+                      key: const ValueKey('snippetSearchField'),
+                      controller: _searchCtrl,
+                      focusNode: _searchFocusNode,
+                      autofocus: true,
+                      dense: true,
+                      textInputAction: TextInputAction.search,
+                      hint: t.commandPalette.searchHintSnippets,
+                      clearTooltip: t.common.clearSearch,
+                      onChanged: (v) => setState(() {
+                        _query = v;
+                        _cursor = 0;
+                      }),
+                      onSubmitted: (_) => _submitSelected(),
+                    ),
                   ),
                 ),
                 if (showGroupFilter) ...[
@@ -228,8 +273,10 @@ class _SnippetPickerPanelState extends ConsumerState<SnippetPickerPanel> {
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppTheme.space16,
                     ),
-                    onChanged: (group) =>
-                        setState(() => _selectedGroup = group),
+                    onChanged: (group) => setState(() {
+                      _selectedGroup = group;
+                      _cursor = 0;
+                    }),
                   ),
                 ],
                 const SizedBox(height: AppTheme.space8),
@@ -275,15 +322,20 @@ class _SnippetPickerPanelState extends ConsumerState<SnippetPickerPanel> {
       ),
       itemCount: filtered.length,
       separatorBuilder: (_, _) => const SizedBox(height: AppTheme.space6),
-      itemBuilder: (_, index) =>
-          _buildTile(t, filtered[index], first: index == 0),
+      itemBuilder: (_, index) => _buildTile(
+        t,
+        filtered[index],
+        selected: index == math.min(_cursor, filtered.length - 1),
+      ),
     );
   }
 
-  /// The "Enter to run" hint is shown only on the row Enter would actually
-  /// act on.
-  Widget _buildTile(Translations t, Snippet snippet, {bool first = false}) {
+  /// The "Enter to run" hint is shown only on the [selected] row, the one
+  /// Enter would actually act on.
+  Widget _buildTile(Translations t, Snippet snippet, {bool selected = false}) {
     return AppCard(
+      key: selected ? _cursorKey : null,
+      selected: selected,
       onTap: () => unawaited(_select(snippet)),
       padding: const EdgeInsets.symmetric(
         horizontal: AppTheme.space12,
@@ -308,7 +360,8 @@ class _SnippetPickerPanelState extends ConsumerState<SnippetPickerPanel> {
                         ),
                       ),
                     ),
-                    if (first) _EnterHint(label: t.commandPalette.enterToRun),
+                    if (selected)
+                      _EnterHint(label: t.commandPalette.enterToRun),
                   ],
                 ),
                 const SizedBox(height: AppTheme.space2),

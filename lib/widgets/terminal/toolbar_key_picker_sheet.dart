@@ -7,6 +7,8 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../i18n/strings.g.dart';
 import '../../services/settings/toolbar_layout.dart';
 import '../../theme/theme.dart';
+import '../ui/app_sheet.dart';
+import '../ui/modal_actions.dart';
 import '../ui/settings_tile.dart';
 import '../ui/tag_chip.dart';
 import 'special_keys_toolbar.dart' show toolbarSchemeFromTheme;
@@ -30,11 +32,9 @@ Future<String?> showCustomKeyEditor(
   BuildContext context, {
   ToolbarAction? initial,
 }) {
-  return Navigator.of(context).push<String>(
-    MaterialPageRoute<String>(
-      builder: (_) => _CustomKeyBuilderScreen(initial: initial),
-      fullscreenDialog: true,
-    ),
+  return pushAppForm<String>(
+    context,
+    builder: (_) => _CustomKeyBuilderScreen(initial: initial),
   );
 }
 
@@ -253,10 +253,12 @@ class _CustomKeyBuilderScreenState extends State<_CustomKeyBuilderScreen> {
           icon: const Icon(PhosphorIconsRegular.x),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: Text(
-          widget.initial == null
-              ? t.toolbar.newCustomKey
-              : t.toolbar.editCustomKey,
+        title: AppWindowTitle(
+          child: Text(
+            widget.initial == null
+                ? t.toolbar.newCustomKey
+                : t.toolbar.editCustomKey,
+          ),
         ),
       ),
       body: Column(
@@ -308,10 +310,9 @@ class _CustomKeyBuilderScreenState extends State<_CustomKeyBuilderScreen> {
         decoration: BoxDecoration(
           border: Border(top: BorderSide(color: context.colors.surfaceBorder)),
         ),
-        child: SizedBox(
-          width: double.infinity,
-          height: 48,
-          child: FilledButton(
+        child: ModalActions(
+          phoneHeight: 48,
+          primary: FilledButton(
             onPressed: !canSave
                 ? null
                 : (_textMode ? _submitText : _submitCombo),

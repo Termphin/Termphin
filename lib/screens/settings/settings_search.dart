@@ -129,12 +129,14 @@ List<SettingsSearchEntry> settingsSearchIndex(
       keywords: k.keyToolbar,
     ),
     inCategory(SettingsCategory.terminal, t.settings.toolbarLayout),
-    inCategory(
-      SettingsCategory.terminal,
-      t.settings.actionDock,
-      keywords: k.actionDock,
-    ),
-    inCategory(SettingsCategory.terminal, t.settings.actionDockLayout),
+    if (!isDesktopPlatform)
+      inCategory(
+        SettingsCategory.terminal,
+        t.settings.actionDock,
+        keywords: k.actionDock,
+      ),
+    if (!isDesktopPlatform)
+      inCategory(SettingsCategory.terminal, t.settings.actionDockLayout),
     inCategory(
       SettingsCategory.terminal,
       t.settings.tabsAtBottom,
@@ -145,11 +147,12 @@ List<SettingsSearchEntry> settingsSearchIndex(
       t.settings.commandSuggestions,
       keywords: k.commandSuggestions,
     ),
-    inCategory(
-      SettingsCategory.terminal,
-      t.settings.mouseKeyboardGuard,
-      keywords: k.mouseKeyboardGuard,
-    ),
+    if (!isDesktopPlatform)
+      inCategory(
+        SettingsCategory.terminal,
+        t.settings.mouseKeyboardGuard,
+        keywords: k.mouseKeyboardGuard,
+      ),
     category(SettingsCategory.files),
     inCategory(
       SettingsCategory.files,

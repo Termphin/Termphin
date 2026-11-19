@@ -35,8 +35,8 @@ file is found by asking what it is about, not what kind of class it holds.
 | `services/security/` | `SecretCipher`, the AEAD ciphers, the PIN/biometric lock |
 | `services/backup/` | Export and import, the backup envelope's crypto |
 | `services/settings/` | `Setting<T>`, `loadAppSettings()` and every concrete settings object, including the toolbar layout |
-| `services/platform/` | Foreground service, local notifications, iOS background task, quick actions |
-| `services/app/` | Onboarding, what's new, release notes, review prompt, tag migration, URLs, anonymizer |
+| `services/platform/` | Foreground service, local notifications, iOS background task, quick actions, the desktop window |
+| `services/app/` | Onboarding, what's new, release notes, review prompt, tag migration, URLs, anonymizer, the desktop's commands and shortcuts |
 | `services/snippets/` | Running a snippet in a session |
 | `services/search/` | The global search's matching: every word against machines, sessions, groups, snippets and keys |
 | `services/analytics/` | Analytics and crash reports (Firebase), consent, closed enums |
@@ -47,7 +47,8 @@ file is found by asking what it is about, not what kind of class it holds.
 | `widgets/settings/` | One widget per Settings section, each loading its own state, plus the PIN setup dialog |
 | `widgets/profiles/`, `widgets/snippets/`, `widgets/backup/`, `widgets/onboarding/`, `widgets/groups/` | Pieces that belong to one feature |
 | `widgets/shell/` | The main shell's navigation rail |
-| `widgets/ui/` | The shared kit: cards, badges, chips, sheets, notifications, form fields, list and section headers, settings tiles and controls, empty states, bar buttons, confirm and text-input dialogs, clipboard and link helpers. Generic only - nothing that knows about groups, profiles or settings storage |
+| `widgets/ui/` | The shared kit: cards, badges, chips, sheets, notifications, form fields, list and section headers, settings tiles and controls, empty states, bar buttons, confirm and text-input dialogs, clipboard and link helpers, adaptive page/form/window helpers, section navigator, context menus, nav rail. Generic only - nothing that knows about groups, profiles or settings storage |
+| `widgets/window/` | The desktop's title bar, window buttons and shortcuts sheet |
 | `screens/terminal/state/` | The terminal screen's tab strip state (`TabStripController`), splits, swipe and reconciling, kept free of widgets so they unit-test |
 | `screens/` | `main_shell`, `home_screen`, `lock_screen`, `onboarding_screen`, then one folder per area: `terminal`, `settings`, `sftp`, `snippets`, `keys`, `groups`, `backup`, `search` |
 
@@ -65,6 +66,7 @@ reason to look at the folders, not to add a flat file beside them.
 | [`data.md`](data.md) | Storage, groups, the `Setting<T>` system, backup and restore |
 | [`transfers.md`](transfers.md) | SFTP downloads, uploads, copy and move |
 | [`ui.md`](ui.md) | Screens, shared widgets, layout rules, theme and terminal schemes |
+| [`desktop.md`](desktop.md) | What changes on a desktop and how to hide things by platform |
 | [`analytics.md`](analytics.md) | Firebase Analytics, Crashlytics, consent, what is sent |
 | [`onboarding.md`](onboarding.md) | First run, review prompt, changelog versus what's new |
 | [`../release.md`](../release.md) | Release builds, what a release ships, signing, export compliance, Android toolchain |

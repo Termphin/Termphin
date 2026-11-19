@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:window_manager/window_manager.dart';
 
 import 'debug/debug_panel.dart';
 import 'i18n/strings.g.dart';
@@ -21,11 +22,14 @@ import 'screens/lock_screen.dart';
 import 'screens/main_shell.dart';
 import 'screens/onboarding_screen.dart';
 import 'services/analytics/analytics_service.dart';
+import 'services/app/app_commands.dart';
+import 'services/app/debug_interstitials.dart';
 import 'services/app/legal_updates_service.dart';
 import 'services/app/onboarding_service.dart';
 import 'services/app/review_prompt_service.dart';
 import 'services/app/tag_migration_service.dart';
 import 'services/app/whats_new_service.dart';
+import 'services/platform/desktop_window.dart';
 import 'services/platform/local_notifications_service.dart';
 import 'services/platform/quick_actions_service.dart';
 import 'services/pro/pro_hints.dart';
@@ -44,8 +48,11 @@ import 'widgets/onboarding/tag_migration_modal.dart';
 import 'widgets/onboarding/whats_new_modal.dart';
 import 'widgets/profiles/profile_avatar.dart';
 import 'widgets/profiles/profile_form_dialog.dart';
+import 'widgets/terminal/terminal_scheme_theme.dart';
 import 'widgets/terminal/toolbar_import_sheet.dart';
 import 'widgets/ui/app_notifications.dart';
+import 'widgets/window/desktop_tray_host.dart';
+import 'widgets/window/title_bar.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
 
@@ -88,22 +95,27 @@ class _AppRoot extends ConsumerWidget {
       darkTheme: AppTheme.themeFor(AppColors.dark, wideLayout: wideLayout),
       themeMode: themeMode.themeMode,
       navigatorKey: navigatorKey,
+      navigatorObservers: [AppCommands.instance.modalObserver],
       home: home ?? const _AppGate(),
       // ignore: deprecated_member_use
       builder: (context, child) => MaterialUiCompatibilityBridge(
         child: AnnotatedRegion<SystemUiOverlayStyle>(
           value: AppTheme.systemOverlayStyleFor(context.colors),
           child: _ScaledMediaQuery(
-            child: debugPanelEnabled
-                ? DebugPanel(
-                    navigatorKey: navigatorKey,
-                    child: home == null
-                        ? _RelockLayer(child: child ?? const SizedBox.shrink())
-                        : child ?? const SizedBox.shrink(),
-                  )
-                : home == null
-                ? _RelockLayer(child: child ?? const SizedBox.shrink())
-                : child ?? const SizedBox.shrink(),
+            child: _DesktopChrome(
+              child: debugPanelEnabled
+                  ? DebugPanel(
+                      navigatorKey: navigatorKey,
+                      child: home == null
+                          ? _RelockLayer(
+                              child: child ?? const SizedBox.shrink(),
+                            )
+                          : child ?? const SizedBox.shrink(),
+                    )
+                  : home == null
+                  ? _RelockLayer(child: child ?? const SizedBox.shrink())
+                  : child ?? const SizedBox.shrink(),
+            ),
           ),
         ),
       ),
@@ -153,6 +165,70 @@ class _RelockLayer extends StatelessWidget {
   }
 }
 
+/// On a desktop, the app's own title bar over everything the navigator shows -
+/// pages, dialogs and sheets alike sit under it, as they would under the
+/// system's - and, on Linux, the edges to resize the window by, which a
+/// window without the system's frame has lost.
+///
+/// The bar is outside the navigator, so its menus and tooltips get an
+/// overlay of their own to open in, and a transparent `Material` to draw
+/// text on. In a session it is part of the session's chrome, painted in the
+/// terminal's scheme like the rail beside it. Being the top of the window,
+/// it leaves nothing below it a status bar or a cutout to keep clear of.
+///
+/// It wraps the relock layer rather than sitting under it, so the window
+/// can still be moved, resized and closed while the lock screen is up.
+class _DesktopChrome extends StatelessWidget {
+  const _DesktopChrome({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!platformHas(PlatformFeature.customWindowChrome)) return child;
+    BuildContext? navigatorContext() => navigatorKey.currentContext;
+    Widget chrome = Overlay(
+      initialEntries: [
+        OverlayEntry(
+          builder: (context) => Column(
+            children: [
+              ValueListenableBuilder<bool>(
+                valueListenable: terminalOnScreen,
+                builder: (context, inSession, bar) =>
+                    inSession ? TerminalSchemeTheme(child: bar!) : bar!,
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: DesktopTitleBar(navigatorContext: navigatorContext),
+                ),
+              ),
+              Expanded(
+                child: MediaQuery.removePadding(
+                  context: context,
+                  removeTop: true,
+                  child: child,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+    if (isLinuxPlatform) {
+      chrome = ValueListenableBuilder<bool>(
+        valueListenable: DesktopWindow.instance.maximized,
+        builder: (context, maximized, inner) => maximized
+            ? inner!
+            : DragToResizeArea(resizeEdgeSize: 6, child: inner!),
+        child: chrome,
+      );
+    }
+    return DesktopTrayHost(
+      navigatorContext: navigatorContext,
+      child: AppMenuBar(navigatorContext: navigatorContext, child: chrome),
+    );
+  }
+}
+
 /// Bounds the system font scale for the whole app.
 ///
 /// Android's font-size slider reaches 2.0, and Display size shrinks the
@@ -162,6 +238,9 @@ class _RelockLayer extends StatelessWidget {
 /// Clamping keeps every one of them legible without any of them collapsing,
 /// and the place where big text actually matters, the terminal itself, has
 /// its own font size in settings that this does not touch.
+///
+/// A desktop draws the interface one step smaller on top of that
+/// ([AppTheme.desktopTextScale]); the terminal undoes it for itself.
 class _ScaledMediaQuery extends StatelessWidget {
   const _ScaledMediaQuery({required this.child});
 
@@ -173,12 +252,15 @@ class _ScaledMediaQuery extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final query = MediaQuery.of(context);
+    final clamped = query.textScaler.clamp(
+      minScaleFactor: _minScale,
+      maxScaleFactor: _maxScale,
+    );
     return MediaQuery(
       data: query.copyWith(
-        textScaler: query.textScaler.clamp(
-          minScaleFactor: _minScale,
-          maxScaleFactor: _maxScale,
-        ),
+        textScaler: isDesktopPlatform
+            ? TextScaler.linear(clamped.scale(1) * AppTheme.desktopTextScale)
+            : clamped,
       ),
       child: child,
     );
@@ -256,7 +338,8 @@ class _AppGateState extends ConsumerState<_AppGate> {
   }
 
   Future<void> _checkGate() async {
-    final needsOnboarding = !await OnboardingService.instance.isCompleted();
+    final needsOnboarding =
+        forceOnboarding || !await OnboardingService.instance.isCompleted();
     final enabled = await LockService.instance.isLockEnabled;
     if (!mounted) return;
     setState(() {
@@ -271,28 +354,33 @@ class _AppGateState extends ConsumerState<_AppGate> {
   /// A link that opened the app already says which machine to add, so it
   /// takes priority over the onboarding answer. Otherwise, someone who says
   /// they have a machine goes straight to the form rather than to an empty
-  /// list with a button on it.
-  void _onOnboardingComplete(ServerAnswer answer) {
+  /// list with a button on it - filled in, if they typed it on the way.
+  /// Machines brought in from `~/.ssh/config` are already in the list, which
+  /// is then where to land.
+  void _onOnboardingComplete(OnboardingResult result) {
     setState(() => _needsOnboarding = false);
     if (_pendingLink != null) {
       _flushPendingLinkIfReady();
       return;
     }
-    if (answer == ServerAnswer.hasServer) _openFirstProfileForm();
+    if (result.target != null ||
+        (result.answer == ServerAnswer.hasServer && result.imported == 0)) {
+      _openFirstProfileForm(prefill: result.target);
+    }
   }
 
-  void _openFirstProfileForm() {
+  void _openFirstProfileForm({SshLink? prefill}) {
     final nav = navigatorKey.currentState;
     if (nav == null || _locked) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted || _locked) return;
-        _openFirstProfileForm();
+        _openFirstProfileForm(prefill: prefill);
       });
       return;
     }
     nav.push(
       MaterialPageRoute<void>(
-        builder: (_) => const ProfileFormDialog(),
+        builder: (_) => ProfileFormDialog(prefill: prefill),
         fullscreenDialog: true,
       ),
     );

@@ -4,11 +4,18 @@ import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
+import '../../services/app/app_commands.dart';
 import '../../services/sftp/remote_path.dart';
 import '../../theme/theme.dart';
+import '../../utils/platform_info.dart';
 import '../../utils/sftp_path.dart';
 import '../ui/clipboard_and_links.dart';
 import '../ui/context_bar.dart';
+import 'sftp_shortcuts.dart';
+
+/// How tall the path bar is on a desktop, where a pointer needs no 48pt
+/// target and the listing below deserves the room.
+const double kCompactSftpPathBarHeight = 36;
 
 /// The breadcrumb row above the listing: where the current folder is, and the
 /// refresh, sort and hidden-files controls. Tapping the path turns it into a
@@ -23,7 +30,7 @@ class SftpPathBar extends StatefulWidget {
     required this.onNavigateToRoot,
     required this.onPathSubmitted,
     required this.onRefresh,
-    required this.onSort,
+    this.onSort,
     required this.onToggleHidden,
     required this.onEditingChanged,
     this.trailing,
@@ -38,7 +45,10 @@ class SftpPathBar extends StatefulWidget {
   /// The trimmed text the user typed or pasted, still in display form.
   final ValueChanged<String> onPathSubmitted;
   final VoidCallback onRefresh;
-  final VoidCallback onSort;
+
+  /// Null where the listing sorts itself - a desktop's is a table whose
+  /// header does it, and a button for the same would be a second way in.
+  final VoidCallback? onSort;
   final VoidCallback onToggleHidden;
   final ValueChanged<bool> onEditingChanged;
 
@@ -98,6 +108,8 @@ class _SftpPathBarState extends State<SftpPathBar> {
     final textTertiary = textPrimary.withValues(alpha: 0.58);
     final isWindowsPath = isWindowsSftpPath(widget.currentPath);
     final segments = remotePathSegments(widget.currentPath);
+    final compact = isDesktopPlatform;
+    final pathFont = compact ? AppTheme.font13 : AppTheme.font14;
 
     Widget tool({
       required IconData icon,
@@ -109,8 +121,12 @@ class _SftpPathBarState extends State<SftpPathBar> {
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: SizedBox.square(
-          dimension: 40,
-          child: Icon(icon, color: color, size: AppTheme.icon20),
+          dimension: compact ? AppTheme.space32 : AppTheme.space40,
+          child: Icon(
+            icon,
+            color: color,
+            size: compact ? AppTheme.icon16 : AppTheme.icon20,
+          ),
         ),
       );
       return tooltip == null
@@ -119,7 +135,7 @@ class _SftpPathBarState extends State<SftpPathBar> {
     }
 
     return Container(
-      height: ContextBar.height,
+      height: compact ? kCompactSftpPathBarHeight : ContextBar.height,
       decoration: BoxDecoration(
         color: colors.surfaceCard,
         border: Border(bottom: BorderSide(color: colors.surfaceBorder)),
@@ -145,7 +161,7 @@ class _SftpPathBarState extends State<SftpPathBar> {
                     onTapOutside: (_) => _pathFocusNode.unfocus(),
                     style: colors.monoStyle.copyWith(
                       color: textPrimary,
-                      fontSize: AppTheme.font14,
+                      fontSize: pathFont,
                       fontWeight: FontWeight.w600,
                     ),
                     decoration: const InputDecoration(
@@ -176,35 +192,42 @@ class _SftpPathBarState extends State<SftpPathBar> {
                       sftpPathToDisplay(widget.currentPath),
                       message: t.sftp.pathCopied,
                     ),
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      reverse: true,
-                      child: Row(
-                        children: [
-                          for (var i = 0; i < segments.length; i++) ...[
-                            if (i > 0)
-                              Text(
-                                isWindowsPath ? r' \ ' : ' / ',
-                                style: colors.monoStyle.copyWith(
-                                  color: textTertiary,
-                                  fontSize: AppTheme.font14,
+                    child: LayoutBuilder(
+                      builder: (context, constraints) => SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        reverse: true,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minWidth: constraints.maxWidth,
+                          ),
+                          child: Row(
+                            children: [
+                              for (var i = 0; i < segments.length; i++) ...[
+                                if (i > 0)
+                                  Text(
+                                    isWindowsPath ? r' \ ' : ' / ',
+                                    style: colors.monoStyle.copyWith(
+                                      color: textTertiary,
+                                      fontSize: pathFont,
+                                    ),
+                                  ),
+                                GestureDetector(
+                                  onTap: () => widget.onNavigateToSegment(i),
+                                  child: Text(
+                                    segments[i],
+                                    style: colors.monoStyle.copyWith(
+                                      color: i == segments.length - 1
+                                          ? textPrimary
+                                          : textSecondary,
+                                      fontSize: pathFont,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            GestureDetector(
-                              onTap: () => widget.onNavigateToSegment(i),
-                              child: Text(
-                                segments[i],
-                                style: colors.monoStyle.copyWith(
-                                  color: i == segments.length - 1
-                                      ? textPrimary
-                                      : textSecondary,
-                                  fontSize: AppTheme.font14,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
+                              ],
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -213,19 +236,27 @@ class _SftpPathBarState extends State<SftpPathBar> {
           tool(
             icon: PhosphorIconsFill.arrowClockwise,
             color: textTertiary,
-            tooltip: t.common.refresh,
+            tooltip: AppCommands.tooltipFor(
+              t.common.refresh,
+              SftpShortcuts.refresh,
+            ),
             onTap: widget.refreshing ? null : widget.onRefresh,
           ),
-          tool(
-            icon: PhosphorIconsFill.sortAscending,
-            color: textTertiary,
-            onTap: widget.onSort,
-          ),
+          if (widget.onSort != null)
+            tool(
+              icon: PhosphorIconsFill.sortAscending,
+              color: textTertiary,
+              onTap: widget.onSort,
+            ),
           tool(
             icon: widget.showHidden
                 ? PhosphorIconsFill.eye
                 : PhosphorIconsFill.eyeSlash,
             color: widget.showHidden ? accent : textTertiary,
+            tooltip: AppCommands.tooltipFor(
+              t.sftp.showHidden,
+              SftpShortcuts.toggleHidden,
+            ),
             onTap: widget.onToggleHidden,
           ),
           if (widget.trailing != null) widget.trailing!,

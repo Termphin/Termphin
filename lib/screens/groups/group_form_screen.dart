@@ -15,9 +15,11 @@ import '../../widgets/profiles/profile_avatar.dart';
 import '../../widgets/ui/app_card.dart';
 import '../../widgets/ui/app_form_field.dart';
 import '../../widgets/ui/app_notifications.dart';
+import '../../widgets/ui/app_sheet.dart';
 import '../../widgets/ui/confirm_dialog.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
 import '../../widgets/ui/section_header.dart';
+import '../../widgets/ui/section_navigator.dart';
 import '../../widgets/ui/unsaved_changes_guard.dart';
 import 'groups_screen.dart';
 
@@ -27,14 +29,10 @@ Future<ProfileGroup?> showGroupFormScreen(
   ProfileGroup? existing,
   bool showManageGroups = false,
 }) {
-  return Navigator.of(context).push<ProfileGroup>(
-    MaterialPageRoute<ProfileGroup>(
-      builder: (_) => GroupFormScreen(
-        existing: existing,
-        showManageGroups: showManageGroups,
-      ),
-      fullscreenDialog: true,
-    ),
+  return pushAppForm<ProfileGroup>(
+    context,
+    builder: (_) =>
+        GroupFormScreen(existing: existing, showManageGroups: showManageGroups),
   );
 }
 
@@ -207,9 +205,11 @@ class _GroupFormScreenState extends ConsumerState<GroupFormScreen> {
         appBar: AppBar(
           elevation: 0,
           scrolledUnderElevation: 0,
-          title: Text(
-            _isEditing ? t.groups.editGroup : t.groups.newGroup,
-            style: Theme.of(context).textTheme.titleLarge,
+          title: AppWindowTitle(
+            child: Text(
+              _isEditing ? t.groups.editGroup : t.groups.newGroup,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
           ),
           leading: IconButton(
             tooltip: t.common.close,
@@ -221,8 +221,10 @@ class _GroupFormScreenState extends ConsumerState<GroupFormScreen> {
               IconButton(
                 tooltip: t.groups.manageGroups,
                 icon: const Icon(PhosphorIconsRegular.slidersHorizontal),
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(builder: (_) => const GroupsScreen()),
+                onPressed: () => pushAppPage<void>(
+                  context,
+                  title: Translations.of(context).groups.title,
+                  builder: (_) => const GroupsScreen(),
                 ),
               ),
             Padding(

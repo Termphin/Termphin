@@ -63,8 +63,8 @@ class AppCard extends StatelessWidget {
     this.padding,
   }) : clipChild = false,
        borderRadius = BorderRadius.vertical(
-         top: first ? const Radius.circular(AppTheme.radiusMd) : Radius.zero,
-         bottom: last ? const Radius.circular(AppTheme.radiusMd) : Radius.zero,
+         top: first ? Radius.circular(AppTheme.radiusMd) : Radius.zero,
+         bottom: last ? Radius.circular(AppTheme.radiusMd) : Radius.zero,
        ),
        _openBottom = !last;
 

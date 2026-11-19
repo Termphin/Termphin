@@ -8,6 +8,7 @@ import '../../theme/theme.dart';
 import '../../utils/format_size.dart';
 import '../../utils/sftp_error_handler.dart';
 import '../ui/context_bar.dart';
+import '../ui/motion_size.dart';
 import 'transfer_rate.dart';
 
 /// The session's transfers, pinned under the tab strip over both the terminal
@@ -352,7 +353,7 @@ class _Panel extends StatelessWidget {
         AppTheme.space8,
         AppTheme.space8,
       ),
-      child: AnimatedSize(
+      child: MotionSize(
         duration: MediaQuery.disableAnimationsOf(context)
             ? Duration.zero
             : AppTheme.motionSlow,

@@ -63,3 +63,27 @@ directory's Downloads folder, and tapping one opens a share sheet via
 announced by `LocalNotificationsService`; a multi-file selection announces once
 with a count, because local notifications carry a fixed id and one per entry
 would overwrite itself.
+
+## Drag and drop between file lists (desktop)
+
+On a desktop a row - or the selection, when the row is in it - can be dragged
+out of one `SftpBrowserView` and dropped on another (two sessions' files side
+by side in a split) or on a folder row in any list. `sftp_drag.dart` holds the
+payload and the rule, `sftpDropAction`:
+
+- **Two machines** (the lists' profile ids differ): always a copy, through the
+  app. The entries come down into a fresh temp folder (`_pullTree`, folders
+  recursively) as a download job, then go up through the target list's own
+  upload with its progress; a clash is asked about before anything is fetched.
+  The temp folder is deleted however it ends.
+- **One machine, another list:** a server-side copy (`cp`), or a move with
+  Shift held at the drop. It runs through `_transferInto`, the same code Copy
+  to / Move to reach after the folder picker, and a move refreshes the source
+  list too.
+- **One machine, a folder in the same list:** a move, or a copy with Ctrl
+  (Cmd) held - a file manager's default.
+
+A drop into the folder the rows are already in, or of a folder into itself or
+its own subtree, is refused (`sftpCanDropOnSameMachine`). Dropping a folder
+from the computer's own file manager uploads it with everything inside; it
+used to be skipped, since only files were looked for.

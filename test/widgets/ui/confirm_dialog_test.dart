@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:termphin/theme/theme.dart';
@@ -44,6 +45,28 @@ void main() {
 
     expect(find.text('false'), findsOneWidget);
   });
+
+  testWidgets('Enter confirms', (tester) async {
+    await pumpTestApp(tester, host());
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+
+    expect(find.text('true'), findsOneWidget);
+  }, variant: const TargetPlatformVariant({TargetPlatform.linux}));
+
+  testWidgets('Esc cancels', (tester) async {
+    await pumpTestApp(tester, host());
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+
+    expect(find.text('false'), findsOneWidget);
+  }, variant: const TargetPlatformVariant({TargetPlatform.linux}));
 
   testWidgets('a destructive confirm button is drawn in the error colour', (
     tester,

@@ -35,6 +35,7 @@ import '../../services/terminal/pty_resize_reporter.dart';
 import '../../services/terminal/terminal_text.dart';
 import '../../theme/theme.dart';
 import '../../utils/connection_error_text.dart';
+import '../../utils/platform_info.dart';
 import '../../utils/sftp_error_handler.dart';
 import '../../utils/sftp_path.dart';
 import '../settings/manual_link.dart';
@@ -106,6 +107,19 @@ class SessionViewState extends ConsumerState<SessionView> {
     _nativeController.focusTerminal();
   }
 
+  /// A desktop has no keyboard to pop up, so the tab on screen takes the keys
+  /// as soon as it can - otherwise the first thing typed into a session just
+  /// opened, or switched to, went nowhere until it was clicked. Not past a
+  /// dialog over it: a host key prompt keeps the keyboard it asked for.
+  void _focusOnDesktop() {
+    if (!isDesktopPlatform) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !widget.isActive || !_terminalReady) return;
+      if (!(ModalRoute.of(context)?.isCurrent ?? true)) return;
+      _nativeController.focusTerminal();
+    });
+  }
+
   void blurTerminal() {
     _nativeController.blurTerminal();
   }
@@ -133,6 +147,71 @@ class SessionViewState extends ConsumerState<SessionView> {
   /// the user types again, rather than offering the next thing at once.
   bool _suggestionsPaused = false;
 
+  /// The suggestion the keyboard is on, best first; back to the best one
+  /// whenever the list changes.
+  int _suggestionPick = 0;
+
+  bool get _suggestionsVisible =>
+      widget.isActive &&
+      !_scrollModeManual &&
+      !_suggestionsPaused &&
+      _suggestionRow != null &&
+      _cursorMenuContent == null &&
+      !_selectionPopupVisible &&
+      _completion.suggestions.value.isNotEmpty;
+
+  /// On a desktop the popup is worked from the keyboard: Ctrl+Up/Down move
+  /// through it, Ctrl+Right takes the one picked, as a click does, and Esc
+  /// closes it - Cmd on a Mac, whose Ctrl+arrows are the system's. Asked by
+  /// the terminal before it sends a key on, so a key used here never reaches
+  /// the shell; with the popup gone they are all the shell's again. The
+  /// release of a key used here is not the shell's either, and Esc closes
+  /// only this one popup - the next Esc is the shell's, and vim's, again.
+  /// Up and down go as drawn: above the line the best one is at the bottom.
+  KeyEventResult _onTerminalKey(FocusNode _, KeyEvent event) {
+    if (!isDesktopPlatform || !_suggestionsVisible) {
+      return KeyEventResult.ignored;
+    }
+    final key = event.logicalKey;
+    final keyboard = HardwareKeyboard.instance;
+    final mac = isMacOSPlatform;
+    final escape =
+        key == LogicalKeyboardKey.escape &&
+        !keyboard.isControlPressed &&
+        !keyboard.isMetaPressed &&
+        !keyboard.isAltPressed &&
+        !keyboard.isShiftPressed;
+    final held = mac
+        ? keyboard.isMetaPressed && !keyboard.isControlPressed
+        : keyboard.isControlPressed && !keyboard.isMetaPressed;
+    final arrow =
+        held &&
+        !keyboard.isShiftPressed &&
+        !keyboard.isAltPressed &&
+        (key == LogicalKeyboardKey.arrowUp ||
+            key == LogicalKeyboardKey.arrowDown ||
+            key == LogicalKeyboardKey.arrowRight);
+    if (!escape && !arrow) return KeyEventResult.ignored;
+    if (event is KeyUpEvent) return KeyEventResult.handled;
+    if (escape) {
+      if (event is KeyDownEvent) _dismissSuggestions();
+      return KeyEventResult.handled;
+    }
+    final suggestions = _completion.suggestions.value;
+    final count = suggestions.length < kMaxShownSuggestions
+        ? suggestions.length
+        : kMaxShownSuggestions;
+    final pick = _suggestionPick.clamp(0, count - 1);
+    if (key == LogicalKeyboardKey.arrowRight) {
+      if (event is KeyDownEvent) _acceptSuggestion(suggestions[pick]);
+      return KeyEventResult.handled;
+    }
+    final above = CommandSuggestionPopup.opensAbove(_suggestionRow!);
+    final step = (key == LogicalKeyboardKey.arrowUp) == above ? 1 : -1;
+    setState(() => _suggestionPick = (pick + step) % count);
+    return KeyEventResult.handled;
+  }
+
   void _acceptSuggestion(CommandSuggestion suggestion) {
     setState(() => _suggestionsPaused = true);
     writeRaw(
@@ -146,7 +225,7 @@ class SessionViewState extends ConsumerState<SessionView> {
   void _dismissSuggestions() => setState(() => _suggestionsPaused = true);
 
   void _onSuggestionsChanged() {
-    if (mounted) setState(() {});
+    if (mounted) setState(() => _suggestionPick = 0);
   }
 
   /// The screen changes on every write; the line is read once it settles.
@@ -246,6 +325,7 @@ class SessionViewState extends ConsumerState<SessionView> {
       _nativeController.pause();
       _dismissCursorMenu();
     }
+    if (widget.isActive && !oldWidget.isActive) _focusOnDesktop();
     if (widget.isActive != oldWidget.isActive) _onScreenChanged();
     if (_terminalShown &&
         (!oldWidget.isActive ||
@@ -340,6 +420,7 @@ class SessionViewState extends ConsumerState<SessionView> {
         .read(sshConnectionProvider(widget.sessionKey).notifier)
         .flushQueuedInput();
     if (mounted) setState(() {});
+    if (widget.isActive) _focusOnDesktop();
   }
 
   Timer? _fontSizeSaveDebounce;
@@ -387,12 +468,18 @@ class SessionViewState extends ConsumerState<SessionView> {
   /// uppercases (and shifts the symbols of) whatever the soft keyboard
   /// types. Alt sends the key prefixed with ESC, the standard xterm Meta
   /// encoding. Some keyboards/IMEs emit LF for Enter, which is normalized to
-  /// CR for interactive SSH shells.
+  /// CR for interactive SSH shells. Typing brings closed suggestions back -
+  /// but not a bare Esc, which is what closed them: pressed again it would
+  /// open them right back, a toggle where it is meant to be a way out.
   void _onInput(List<int> rawBytes) {
-    _inputSerial++;
+    _typing.hear(rawBytes);
     if (_cursorMenuContent != null) _dismissCursorMenu();
     if (isTypedInput(rawBytes)) _dismissLink();
-    if (_suggestionsPaused) setState(() => _suggestionsPaused = false);
+    if (_suggestionsPaused &&
+        isTypedInput(rawBytes) &&
+        !(rawBytes.length == 1 && rawBytes[0] == 0x1b)) {
+      setState(() => _suggestionsPaused = false);
+    }
     var bytes = rawBytes;
 
     if (shiftMode.value != ShiftMode.off && bytes.length == 1) {
@@ -458,7 +545,7 @@ class SessionViewState extends ConsumerState<SessionView> {
 
   /// Bumped by every keystroke, so a finished upload can tell whether the
   /// command line was touched while it ran.
-  var _inputSerial = 0;
+  final _typing = TypingCounter();
 
   /// Paths of an upload that finished while this terminal was out of sight,
   /// offered at the cursor the next time it is shown. A later upload
@@ -549,7 +636,7 @@ class SessionViewState extends ConsumerState<SessionView> {
     final total = sizes.contains(null)
         ? null
         : sizes.fold<int>(0, (sum, size) => sum + size!);
-    final typedBefore = _inputSerial;
+    final typedBefore = _typing.serial;
     final done = <String>[];
     var waited = false;
     try {
@@ -642,7 +729,7 @@ class SessionViewState extends ConsumerState<SessionView> {
       terminalShown: _terminalShown,
       autoPaste: uploadAutoPasteSetting.value,
       waited: waited,
-      typedMeanwhile: _inputSerial != typedBefore,
+      typedMeanwhile: _typing.serial != typedBefore,
     )) {
       case UploadPasteAction.paste:
         _paste(paste);
@@ -1232,6 +1319,9 @@ class SessionViewState extends ConsumerState<SessionView> {
   /// used to be, and Flutter would rebuild that whole subtree - a fresh pane,
   /// scrolled back to the end and without its selection or search - instead
   /// of keeping the one that is there.
+  ///
+  /// The bubble over a selection is a finger's copy button; a desktop copies
+  /// from the keys or a right click, so it never shows there.
   Widget _buildTerminal(
     SshConnectionState state,
     ActiveSessionView session,
@@ -1290,7 +1380,8 @@ class SessionViewState extends ConsumerState<SessionView> {
                           onTap: openDetails,
                         ),
                       ),
-                    if (_selectionPopupVisible)
+                    if (_selectionPopupVisible &&
+                        platformHas(PlatformFeature.touchControls))
                       Positioned.fill(
                         child: LayoutBuilder(
                           builder: (context, constraints) {
@@ -1327,16 +1418,12 @@ class SessionViewState extends ConsumerState<SessionView> {
                         onDismiss: _dismissCursorMenu,
                         child: _cursorMenuContent!,
                       ),
-                    if (widget.isActive &&
-                        !_scrollModeManual &&
-                        !_suggestionsPaused &&
-                        _suggestionRow != null &&
-                        _cursorMenuContent == null &&
-                        !_selectionPopupVisible &&
-                        _completion.suggestions.value.isNotEmpty)
+                    if (_suggestionsVisible)
                       CommandSuggestionPopup(
                         cursor: _suggestionRow!,
                         suggestions: _completion.suggestions.value,
+                        keyboard: isDesktopPlatform,
+                        selected: _suggestionPick,
                         onAccept: _acceptSuggestion,
                         onDismiss: _dismissSuggestions,
                       ),
@@ -1448,6 +1535,7 @@ class SessionViewState extends ConsumerState<SessionView> {
             }
           },
           onLinkDetected: _handleLinkDetected,
+          onKeyEvent: _onTerminalKey,
         ),
       ),
     );

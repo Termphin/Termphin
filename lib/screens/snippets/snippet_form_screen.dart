@@ -11,6 +11,7 @@ import '../../services/storage/group_storage.dart';
 import '../../theme/theme.dart';
 import '../../widgets/groups/group_picker_field.dart';
 import '../../widgets/ui/app_form_field.dart';
+import '../../widgets/ui/app_sheet.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
 import '../../widgets/ui/section_header.dart';
 import '../../widgets/ui/unsaved_changes_guard.dart';
@@ -21,12 +22,10 @@ Future<void> showSnippetFormScreen(
   Snippet? existing,
   String? initialGroup,
 }) {
-  return Navigator.of(context).push(
-    MaterialPageRoute<void>(
-      builder: (_) =>
-          SnippetFormScreen(existing: existing, initialGroup: initialGroup),
-      fullscreenDialog: true,
-    ),
+  return pushAppForm<void>(
+    context,
+    builder: (_) =>
+        SnippetFormScreen(existing: existing, initialGroup: initialGroup),
   );
 }
 
@@ -161,9 +160,11 @@ class _SnippetFormScreenState extends ConsumerState<SnippetFormScreen> {
         appBar: AppBar(
           elevation: 0,
           scrolledUnderElevation: 0,
-          title: Text(
-            isEditing ? t.snippets.editTitle : t.snippets.newTitle,
-            style: Theme.of(context).textTheme.titleLarge,
+          title: AppWindowTitle(
+            child: Text(
+              isEditing ? t.snippets.editTitle : t.snippets.newTitle,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
           ),
           leading: IconButton(
             tooltip: t.common.close,

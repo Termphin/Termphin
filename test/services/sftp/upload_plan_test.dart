@@ -3,6 +3,22 @@ import 'package:termphin/models/remote_shell.dart';
 import 'package:termphin/services/sftp/upload_plan.dart';
 
 void main() {
+  group('TypingCounter', () {
+    test('counts keys', () {
+      final typing = TypingCounter();
+      typing.hear('ls'.codeUnits);
+      expect(typing.serial, 1);
+    });
+
+    test('a focus report or a cursor position reply is not typing', () {
+      final typing = TypingCounter();
+      typing.hear('\x1b[I'.codeUnits);
+      typing.hear('\x1b[O'.codeUnits);
+      typing.hear('\x1b[12;5R'.codeUnits);
+      expect(typing.serial, 0);
+    });
+  });
+
   group('sanitizedUploadName', () {
     test('collapses anything that would split into extra arguments', () {
       expect(

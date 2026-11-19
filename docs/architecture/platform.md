@@ -34,9 +34,10 @@ Android's Live Updates (`Notification.ProgressStyle`) are for a user-initiated
 activity with a measurable end, which a session has not. `DownloadChannel.kt`
 stays on plain `NotificationCompat`. **Do not add either without being asked.**
 
-`LocalNotificationsService` is iOS-only and posts **only** finished or failed
-transfers, never sessions - without a foreground service a session notification
-would be a claim about nothing. Notification permissions are unified through
+`LocalNotificationsService` posts finished or failed transfers on iOS only.
+Terminal alerts and the dropped-session notice go out on Android, iOS, Linux,
+macOS and Windows. A Mac asks for the permission the first time there is
+something to post, since a desktop has no settings row that asks first. Notification permissions are unified through
 `ForegroundNotificationService`'s three methods, which on iOS delegate to it;
 that is why the Settings permission row is not hidden there.
 
@@ -123,3 +124,20 @@ sessions are never brought forward.
 - **Two copies of `SharedPreferences`.** Each isolate caches its own, so the
   main app reloads them on resume - otherwise a host key accepted in a share
   would be asked about again, or written back out of the known hosts.
+
+## Linux: C++ exceptions in plugins
+
+`libflutter_linux_gtk.so` exports its own `_Unwind_RaiseException` and
+`_Unwind_Resume`. The runner links before the engine in the dynamic linker's
+search order only what it lists first, so without help every `throw` in a
+plugin resolves to the engine's unwinder, which finds no `catch` in the
+plugin's code and calls `std::terminate`. `flutter_secure_storage_linux`
+throws on any keyring error - a locked collection, a default alias pointing
+nowhere - so a broken keyring aborted Termphin at launch instead of reaching
+the file fallback.
+
+`linux/runner/CMakeLists.txt` therefore links `libgcc_s` ahead of everything
+(`--no-as-needed -lgcc_s`), making it the first `NEEDED` entry of the
+executable and the unwinder every plugin gets. `readelf -d` on the bundle's
+`termphin` shows it on top; `test/security/platform_config_test.dart` pins
+the line.

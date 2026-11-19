@@ -14,6 +14,7 @@ import '../../widgets/sftp/code_editor_style.dart';
 import '../../widgets/terminal/pinch_font_zoom.dart';
 import '../../widgets/terminal/terminal_scheme_theme.dart';
 import '../../widgets/ui/app_card.dart';
+import '../../widgets/ui/app_sheet.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
 import '../../widgets/ui/section_header.dart';
 import '../../widgets/ui/settings_controls.dart';
@@ -72,7 +73,7 @@ class _EditorSettingsScreenState extends State<EditorSettingsScreen> {
     final t = Translations.of(context);
     final fontSize = _settings.fontSize.value;
     return Scaffold(
-      appBar: AppBar(title: Text(t.settings.textEditor)),
+      appBar: AppBar(title: AppWindowTitle(child: Text(t.settings.textEditor))),
       body: SafeArea(
         top: false,
         child: ContentGutter(

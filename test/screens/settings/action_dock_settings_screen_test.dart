@@ -22,13 +22,41 @@ void main() {
 
     expect(actionDockSettings.hidden.value, kDefaultHiddenDockActions);
     final visible = actionDockSettings.order.value
-        .where((a) => !actionDockSettings.hidden.value.contains(a))
+        .where(
+          (a) =>
+              dockActionAvailable(a) &&
+              !actionDockSettings.hidden.value.contains(a),
+        )
         .toList();
     expect(visible, [
       DockAction.insertSnippet,
       DockAction.uploadFile,
       DockAction.paste,
       DockAction.search,
+    ]);
+  });
+
+  test('desktop shows split and zoom in the default dock', () async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    SharedPreferences.setMockInitialValues({});
+
+    await actionDockSettings.load();
+
+    final visible = actionDockSettings.order.value
+        .where(
+          (a) =>
+              dockActionAvailable(a) &&
+              !actionDockSettings.hidden.value.contains(a),
+        )
+        .toList();
+    expect(visible, [
+      DockAction.insertSnippet,
+      DockAction.uploadFile,
+      DockAction.paste,
+      DockAction.search,
+      DockAction.split,
+      DockAction.zoom,
     ]);
   });
 
@@ -55,8 +83,10 @@ void main() {
 
     expect(
       find.byType(ActionDockTile),
-      findsNWidgets(DockAction.values.length),
+      findsNWidgets(DockAction.values.where(dockActionAvailable).length),
     );
+    expect(find.text(dockActionLabel(t, DockAction.split)), findsNothing);
+    expect(find.text(dockActionLabel(t, DockAction.zoom)), findsNothing);
     expect(
       find.text(t.settings.actionDockPreview.toUpperCase()),
       findsOneWidget,
@@ -254,6 +284,22 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(actionDockSettings.order.value.first, DockAction.search);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.linux));
+
+  testWidgets('on a desktop the editor shows split and zoom tiles', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+
+    await pumpTestApp(tester, const ActionDockSettingsScreen());
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byType(ActionDockTile),
+      findsNWidgets(DockAction.values.length),
+    );
+    expect(find.text(dockActionLabel(t, DockAction.split)), findsOneWidget);
+    expect(find.text(dockActionLabel(t, DockAction.zoom)), findsOneWidget);
   }, variant: TargetPlatformVariant.only(TargetPlatform.linux));
 
   testWidgets('reset brings back the default dock', (tester) async {

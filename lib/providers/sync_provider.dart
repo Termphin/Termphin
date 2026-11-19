@@ -12,6 +12,7 @@ import 'groups_provider.dart';
 import 'profiles_provider.dart';
 import 'snippets_provider.dart';
 import 'ssh_keys_provider.dart';
+import 'stored_data_reload.dart';
 
 /// Automatic sync for the app: one [SyncCoordinator] that hears every edit to
 /// machines, keys, snippets, groups and the synced preferences, reloads
@@ -23,12 +24,7 @@ import 'ssh_keys_provider.dart';
 final syncCoordinatorProvider = Provider<SyncCoordinator>((ref) {
   final coordinator = SyncCoordinator(
     service: SyncService.instance,
-    reload: () async {
-      await ref.read(profilesProvider.notifier).loadProfiles();
-      await ref.read(profileGroupsProvider.notifier).loadGroups();
-      await ref.read(snippetsProvider.notifier).loadSnippets();
-      ref.read(sshKeysRevisionProvider.notifier).bump();
-    },
+    reload: () => reloadStoredData(ref.read),
   );
   void changed(Object? _, Object? _) => coordinator.localChanged();
   ref.listen(profilesProvider, changed);

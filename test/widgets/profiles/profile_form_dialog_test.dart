@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -296,6 +299,34 @@ void main() {
     expect(profile.authMethod, AuthMethod.none);
     expect(profile.password, isNull);
   });
+
+  testWidgets('Ctrl+S saves, as the Save button does', (tester) async {
+    final storage = FakeProfileStorage();
+    final container = ProviderContainer.test(
+      overrides: [profileStorageProvider.overrideWithValue(storage)],
+    );
+    await pumpTestApp(tester, const SizedBox.expand(), container: container);
+    unawaited(
+      tester
+          .state<NavigatorState>(find.byType(Navigator))
+          .push(
+            MaterialPageRoute<void>(builder: (_) => const ProfileFormDialog()),
+          ),
+    );
+    await tester.pumpAndSettle();
+
+    await _enterField(tester, 'Host', 'server.example.com');
+    await _enterField(tester, 'Username', 'deploy');
+    await _tapInForm(tester, find.text(t.profileForm.noAuth));
+    await tester.tap(_formField('Username'));
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyS);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pumpAndSettle();
+
+    expect(storage.addCount, 1);
+    expect(storage.profiles.single.host, 'server.example.com');
+  }, variant: const TargetPlatformVariant({TargetPlatform.linux}));
 
   testWidgets('a key created from the form is picked for the machine', (
     tester,

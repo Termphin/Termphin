@@ -1,10 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../../i18n/strings.g.dart';
 import '../../utils/platform_info.dart';
+import 'desktop_window.dart';
 
-/// Local notifications on iOS, and the notification permission that goes with
-/// them.
+/// Local notifications on iOS and on a Linux or Windows desktop, and the
+/// notification permission that goes with them.
 ///
 /// Android posts its own: a transfer is reported by `DownloadChannel.kt`
 /// alongside the bytes it is writing, and the session notification belongs to
@@ -17,6 +20,12 @@ import '../../utils/platform_info.dart';
 /// thirty seconds of leaving the app the sessions it named are gone and the
 /// notification would be a claim about nothing. The agent is what survives
 /// that, and saying so belongs on a settings row rather than in a banner.
+///
+/// A desktop gets the terminal alerts and the dropped-session notice: with
+/// the window behind others or in the tray, the system notification is the
+/// only way a finished job reaches the user, and a click on it brings the
+/// window back on that session. Neither Linux nor Windows asks permission.
+/// macOS does, and waits for its own permission flow.
 class LocalNotificationsService {
   LocalNotificationsService._();
 
@@ -55,9 +64,27 @@ class LocalNotificationsService {
 
   bool get supported => isIOSPlatform;
 
+  /// Where terminal alerts and the dropped-session notice are posted.
+  bool get _postsAlerts =>
+      isAndroidPlatform ||
+      isIOSPlatform ||
+      isLinuxPlatform ||
+      isMacOSPlatform ||
+      isWindowsPlatform;
+
+  /// Identifies Termphin's notifications to Windows; it must never change,
+  /// or Windows treats a new install as another app.
+  static const _windowsGuid = '38931182-274b-4fd4-950b-cf39410b63fc';
+  static const _windowsAppUserModelId = 'Termphin.Termphin';
+
   AndroidFlutterLocalNotificationsPlugin? get _android => _plugin
       .resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin
+      >();
+
+  MacOSFlutterLocalNotificationsPlugin? get _macos => _plugin
+      .resolvePlatformSpecificImplementation<
+        MacOSFlutterLocalNotificationsPlugin
       >();
 
   IOSFlutterLocalNotificationsPlugin? get _ios => _plugin
@@ -70,17 +97,30 @@ class LocalNotificationsService {
   /// did not ask a question of. Called at startup, so a plugin that cannot
   /// start leaves the app without notifications rather than failing it.
   Future<void> init() async {
-    if (!isAndroidPlatform && !isIOSPlatform) return;
+    if (!_postsAlerts) return;
     if (_initialized) return;
     _initialized = true;
     try {
       await _plugin.initialize(
-        settings: const InitializationSettings(
-          android: AndroidInitializationSettings('ic_stat_termphin'),
-          iOS: DarwinInitializationSettings(
+        settings: InitializationSettings(
+          android: const AndroidInitializationSettings('ic_stat_termphin'),
+          iOS: const DarwinInitializationSettings(
             requestAlertPermission: false,
             requestSoundPermission: false,
             requestBadgePermission: false,
+          ),
+          macOS: const DarwinInitializationSettings(
+            requestAlertPermission: false,
+            requestSoundPermission: false,
+            requestBadgePermission: false,
+          ),
+          linux: LinuxInitializationSettings(
+            defaultActionName: t.notifications.openSession,
+          ),
+          windows: const WindowsInitializationSettings(
+            appName: 'Termphin',
+            appUserModelId: _windowsAppUserModelId,
+            guid: _windowsGuid,
           ),
         ),
         onDidReceiveNotificationResponse: (response) =>
@@ -95,6 +135,7 @@ class LocalNotificationsService {
 
   void _openFromPayload(String? payload) {
     if (payload == null || !payload.startsWith(_sessionPayloadPrefix)) return;
+    if (isDesktopPlatform) unawaited(DesktopWindow.instance.show());
     final sessionId = payload.substring(_sessionPayloadPrefix.length);
     final handler = _onOpenSession;
     if (handler == null) {
@@ -111,7 +152,7 @@ class LocalNotificationsService {
     required String title,
     required String body,
   }) async {
-    if (!isAndroidPlatform && !isIOSPlatform) return;
+    if (!_postsAlerts) return;
     await _show(
       id: terminalAlertId(sessionId),
       title: title,
@@ -126,6 +167,7 @@ class LocalNotificationsService {
           priority: Priority.high,
         ),
         iOS: const DarwinNotificationDetails(presentBadge: false),
+        macOS: const DarwinNotificationDetails(presentBadge: false),
       ),
     );
   }
@@ -135,7 +177,11 @@ class LocalNotificationsService {
   static int terminalAlertId(String sessionId) =>
       _terminalAlertBaseId + (sessionId.hashCode & 0xfff);
 
+  /// Whether this run has asked macOS for the permission yet.
+  bool _askedMacOS = false;
+
   Future<bool> hasPermission() async {
+    if (isMacOSPlatform) return _macOSPermission();
     if (isIOSPlatform) {
       final options = await _ios?.checkPermissions();
       return options?.isEnabled ?? false;
@@ -149,6 +195,21 @@ class LocalNotificationsService {
       }
     }
     return true;
+  }
+
+  /// A Mac asks the first time there is something to post - a desktop has
+  /// no settings row that raises it first, and a prompt beside the first
+  /// notification is asked in context. Once answered, macOS answers the same
+  /// again without showing anything, so asking each run costs nothing.
+  Future<bool> _macOSPermission() async {
+    final macos = _macos;
+    if (macos == null) return false;
+    if (!_askedMacOS) {
+      _askedMacOS = true;
+      return await macos.requestPermissions(alert: true, sound: true) ?? false;
+    }
+    final options = await macos.checkPermissions();
+    return options?.isEnabled ?? false;
   }
 
   /// A permission already answered cannot be asked for again, and the request
@@ -210,7 +271,7 @@ class LocalNotificationsService {
   }
 
   Future<void> showSessionDropped({required String name}) async {
-    if (!isAndroidPlatform && !isIOSPlatform) return;
+    if (!_postsAlerts) return;
     await _show(
       id: _sessionDroppedId,
       title: t.notifications.sessionDroppedTitle,
@@ -223,6 +284,7 @@ class LocalNotificationsService {
           importance: Importance.defaultImportance,
         ),
         iOS: const DarwinNotificationDetails(presentBadge: false),
+        macOS: const DarwinNotificationDetails(presentBadge: false),
       ),
     );
   }

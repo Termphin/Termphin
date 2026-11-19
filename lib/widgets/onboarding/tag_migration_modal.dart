@@ -5,6 +5,7 @@ import '../../services/app/tag_migration_service.dart';
 import '../../theme/theme.dart';
 import '../ui/app_divider.dart';
 import '../ui/confirm_dialog.dart';
+import '../ui/modal_actions.dart';
 import '../ui/settings_tile.dart';
 
 /// A ceiling, not a height: four tags are four rows tall. Past this the list
@@ -24,6 +25,7 @@ Future<void> showTagMigrationModal(
   if (plan.isEmpty) return Future.value();
   return showDialog<void>(
     context: context,
+    animationStyle: AppTheme.popUpAnimation,
     barrierDismissible: false,
     builder: (_) => TagMigrationModal(plan: plan, service: service),
   );
@@ -96,7 +98,7 @@ class _TagMigrationModalState extends State<TagMigrationModal> {
         vertical: AppTheme.space40,
       ),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppTheme.radiusXl),
+        borderRadius: BorderRadius.zero,
         side: BorderSide(color: colors.surfaceBorderStrong),
       ),
       child: ConstrainedBox(
@@ -180,31 +182,27 @@ class _TagMigrationModalState extends State<TagMigrationModal> {
                 AppTheme.space20,
                 AppTheme.space20,
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  FilledButton(
-                    onPressed: _busy ? null : _primary,
-                    child: _busy
-                        ? const SizedBox.square(
-                            dimension: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Text(
-                            _selected.isNotEmpty
-                                ? t.tagMigration.createGroups
-                                : t.tagMigration.startFresh,
-                          ),
-                  ),
-                  if (_selected.isNotEmpty) ...[
-                    const SizedBox(height: AppTheme.space4),
-                    TextButton(
-                      onPressed: _busy ? null : _skip,
-                      child: Text(t.tagMigration.startFresh),
-                    ),
-                  ],
-                ],
+              child: ModalActions(
+                gap: AppTheme.space4,
+                primary: FilledButton(
+                  onPressed: _busy ? null : _primary,
+                  child: _busy
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(
+                          _selected.isNotEmpty
+                              ? t.tagMigration.createGroups
+                              : t.tagMigration.startFresh,
+                        ),
+                ),
+                secondary: _selected.isNotEmpty
+                    ? TextButton(
+                        onPressed: _busy ? null : _skip,
+                        child: Text(t.tagMigration.startFresh),
+                      )
+                    : null,
               ),
             ),
           ],

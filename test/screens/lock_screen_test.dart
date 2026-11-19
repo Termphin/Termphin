@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
@@ -46,6 +47,27 @@ void main() {
     });
     await LockService.instance.setPin('1234');
   });
+
+  testWidgets('a desktop types the PIN on the keyboard', (tester) async {
+    var unlockCount = 0;
+    await pumpTestApp(tester, LockScreen(onUnlocked: () => unlockCount++));
+    await tester.pumpAndSettle();
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit1);
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit9);
+    await tester.sendKeyEvent(LogicalKeyboardKey.backspace);
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit2);
+    await tester.sendKeyEvent(LogicalKeyboardKey.numpad3);
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit4);
+    for (var attempt = 0; attempt < 100 && unlockCount == 0; attempt++) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 20)),
+      );
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+
+    expect(unlockCount, 1);
+  }, variant: const TargetPlatformVariant({TargetPlatform.linux}));
 
   testWidgets('unlocks after entering the saved PIN', (tester) async {
     var unlockCount = 0;

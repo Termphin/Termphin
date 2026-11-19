@@ -67,3 +67,9 @@ std::string Utf8FromUtf16(const wchar_t* utf16_string) {
   }
   return utf8_string;
 }
+
+UINT ShowExistingWindowMessage() {
+  static const UINT message =
+      ::RegisterWindowMessageW(L"dev.termphin.termphin.show");
+  return message;
+}

@@ -14,6 +14,7 @@ import '../../services/storage/known_hosts_store.dart';
 import '../../theme/theme.dart';
 import '../../widgets/ui/app_card.dart';
 import '../../widgets/ui/app_notifications.dart';
+import '../../widgets/ui/app_sheet.dart';
 import '../../widgets/ui/confirm_dialog.dart';
 import '../../widgets/ui/empty_state.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
@@ -81,7 +82,7 @@ class _KnownHostsScreenState extends ConsumerState<KnownHostsScreen> {
     final t = Translations.of(context);
     final hosts = _hosts;
     return Scaffold(
-      appBar: AppBar(title: Text(t.settings.knownHosts)),
+      appBar: AppBar(title: AppWindowTitle(child: Text(t.settings.knownHosts))),
       body: SafeArea(
         top: false,
         child: hosts == null

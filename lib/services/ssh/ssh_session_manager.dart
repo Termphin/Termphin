@@ -38,7 +38,16 @@ final Setting<bool> remoteAgentSetting = Setting.boolean(
 
 /// Two tabs sharing the screen, first of the two on top or on the left, and
 /// the share of the room the first one gets.
-typedef SavedSplit = ({String first, String second, double ratio});
+/// One saved split step: [first]'s pane split off from [second]'s, [first]
+/// keeping [ratio] of the room. [axis] is the split's direction where the
+/// layout fixes one - a desktop's - and null where the screen decides, as on
+/// a phone. A group of more than two panes is several, played back in order.
+typedef SavedSplit = ({
+  String first,
+  String second,
+  double ratio,
+  String? axis,
+});
 
 /// Owns SSH transports and persistent-session bookkeeping in Dart.
 ///
@@ -324,6 +333,23 @@ class SshSessionManager extends ChangeNotifier {
   /// at. Kept by `MainShell`. A change is announced to listeners, so what
   /// remembers which session was last looked at sees the user leave the
   /// terminal for the machine list too.
+  /// The panes of the tab in front on screen beside [activeSessionId] - its
+  /// whole split, or the zoomed one alone. Kept by the terminal screen.
+  Set<String> _panesOnScreen = const {};
+  set panesOnScreen(Set<String> value) {
+    if (setEquals(value, _panesOnScreen)) return;
+    _panesOnScreen = value;
+    notifyListeners();
+  }
+
+  /// The sessions whose output is on screen: none away from the terminal,
+  /// otherwise the tab in front and every pane beside it in a split.
+  Set<String> get sessionsOnScreen {
+    final active = activeSessionId;
+    if (!_terminalOnScreen || active == null) return const {};
+    return _panesOnScreen.contains(active) ? _panesOnScreen : {active};
+  }
+
   bool get terminalOnScreen => _terminalOnScreen;
   bool _terminalOnScreen = false;
   set terminalOnScreen(bool value) {
@@ -524,6 +550,7 @@ class SshSessionManager extends ChangeNotifier {
           first: json['first'] as String,
           second: json['second'] as String,
           ratio: (json['ratio'] as num).toDouble(),
+          axis: json['axis'] as String?,
         ));
       } catch (error) {
         debugPrint('[SshSessionManager] Invalid split record: $error');
@@ -568,6 +595,7 @@ class SshSessionManager extends ChangeNotifier {
           'first': split.first,
           'second': split.second,
           'ratio': split.ratio,
+          'axis': ?split.axis,
         }),
     ]);
     final lastActive = _lastActiveSessionId;

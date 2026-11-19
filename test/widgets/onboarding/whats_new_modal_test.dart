@@ -102,6 +102,20 @@ void main() {
     expect(find.text('Second feature'), findsNothing);
   });
 
+  testWidgets('on a desktop, where nothing animates, Next still pages', (
+    tester,
+  ) async {
+    await open(tester, _two);
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text(t.whatsNew.next));
+    await tester.pumpAndSettle();
+
+    expect(onPage('Second feature'), findsOneWidget);
+    expect(find.text(t.whatsNew.gotIt), findsOneWidget);
+  }, variant: const TargetPlatformVariant({TargetPlatform.macOS}));
+
   testWidgets('swiping back to an earlier page restores the Next button', (
     tester,
   ) async {

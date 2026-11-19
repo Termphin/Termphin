@@ -28,7 +28,7 @@ void main() {
   }) async {
     await pumpTestApp(
       tester,
-      OnboardingScreen(onComplete: onComplete ?? (_) {}),
+      OnboardingScreen(onComplete: (r) => onComplete?.call(r.answer)),
     );
     await tester.pumpAndSettle();
   }
@@ -143,7 +143,7 @@ void main() {
       await pumpTestApp(
         tester,
         OnboardingScreen(
-          onComplete: onComplete ?? (_) {},
+          onComplete: (r) => onComplete?.call(r.answer),
           accountsAvailable: true,
           signIn: (_) async => true,
           syncState: () async => state,

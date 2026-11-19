@@ -26,6 +26,7 @@ Future<bool> showHostKeyPrompt(HostKeyPromptRequest request) async {
   if (context == null) return false;
   final accepted = await showDialog<bool>(
     context: context,
+    animationStyle: AppTheme.popUpAnimation,
     barrierDismissible: false,
     builder: (ctx) => _HostKeyDialog(request: request),
   );

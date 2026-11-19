@@ -65,12 +65,12 @@ class _ActionDockSettingsScreenState extends State<ActionDockSettingsScreen> {
 
   List<DockAction> get _visible => [
     for (final a in _layout.order)
-      if (!_layout.hidden.contains(a)) a,
+      if (dockActionAvailable(a) && !_layout.hidden.contains(a)) a,
   ];
 
   List<DockAction> get _hiddenInOrder => [
     for (final a in _layout.order)
-      if (_layout.hidden.contains(a)) a,
+      if (dockActionAvailable(a) && _layout.hidden.contains(a)) a,
   ];
 
   /// The last write still in flight. Each one waits for the one before it, so
@@ -89,8 +89,16 @@ class _ActionDockSettingsScreenState extends State<ActionDockSettingsScreen> {
     );
   }
 
-  void _place(DockAction action, int index) =>
-      unawaited(_apply(placeDockAction(_layout, action, index)));
+  void _place(DockAction action, int index) => unawaited(
+    _apply(
+      placeDockAction(
+        _layout,
+        action,
+        index,
+        isAvailable: dockActionAvailable,
+      ),
+    ),
+  );
 
   void _hide(DockAction action) =>
       unawaited(_apply(hideDockAction(_layout, action)));

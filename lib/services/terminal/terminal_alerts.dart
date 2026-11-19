@@ -32,7 +32,7 @@ class TerminalAlerts {
     required this.allows,
     required this.quoteLines,
     required this.isForeground,
-    required this.activeSessionId,
+    required this.sessionsOnScreen,
     this.quietPeriod = const Duration(seconds: 3),
     this.quietSeen = const Duration(seconds: 10),
     this.finishedSeen = const Duration(seconds: 4),
@@ -42,22 +42,26 @@ class TerminalAlerts {
   final bool Function(TerminalNotification notification) allows;
   final bool Function() quoteLines;
   final bool Function() isForeground;
-  final String? Function() activeSessionId;
+  /// The sessions whose output is on screen: the tab in front, and every
+  /// pane beside it in a split.
+  final Set<String> Function() sessionsOnScreen;
   final Duration quietPeriod;
   final Duration quietSeen;
   final Duration finishedSeen;
 
   final _lastPosted = <String, DateTime>{};
   final _lastSeen = <String, DateTime>{};
-  String? _visible;
+  Set<String> _visible = const {};
 
-  /// Notes what is on screen now, after the app or the tabs changed. The
-  /// session that was on screen until now is stamped as seen at this moment.
+  /// Notes what is on screen now, after the app or the tabs changed. Each
+  /// session that was on screen until now and is not any more is stamped as
+  /// seen at this moment.
   void visibilityChanged() {
-    final visible = isForeground() ? activeSessionId() : null;
-    if (visible == _visible) return;
-    final previous = _visible;
-    if (previous != null) _lastSeen[previous] = clock.now();
+    final visible = isForeground() ? sessionsOnScreen() : const <String>{};
+    final now = clock.now();
+    for (final left in _visible.difference(visible)) {
+      _lastSeen[left] = now;
+    }
     _visible = visible;
   }
 
@@ -67,7 +71,7 @@ class TerminalAlerts {
     required TerminalNotification notification,
   }) {
     if (!allows(notification)) return;
-    if (isForeground() && activeSessionId() == sessionId) return;
+    if (isForeground() && sessionsOnScreen().contains(sessionId)) return;
     final now = clock.now();
     final kind = notification.kind;
     if (kind != null) {

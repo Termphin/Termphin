@@ -137,7 +137,7 @@ class _ActionDockMenu extends StatelessWidget {
       screen.height - safePadding.bottom - panelHeight - 12.0,
     );
 
-    return Stack(
+    final panel = Stack(
       children: [
         Positioned.fill(
           child: GestureDetector(
@@ -192,5 +192,6 @@ class _ActionDockMenu extends StatelessWidget {
         ),
       ],
     );
+    return panel;
   }
 }

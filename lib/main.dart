@@ -7,15 +7,18 @@ import 'app.dart';
 import 'screens/share/share_screen.dart';
 import 'services/account/account_service.dart';
 import 'services/analytics/analytics_service.dart';
+import 'services/app/app_commands.dart';
 import 'services/app/error_reports.dart';
 import 'services/app/font_licenses.dart';
 import 'services/app/identity_anonymizer.dart';
+import 'services/platform/desktop_window.dart';
 import 'services/platform/foreground_notification_service.dart';
 import 'services/platform/ios_background_task.dart';
 import 'services/platform/local_notifications_service.dart';
 import 'services/pro/pro_hints.dart';
 import 'services/pro/pro_service.dart';
 import 'services/push/push_service.dart';
+import 'services/security/secret_cipher.dart';
 import 'services/settings/anonymize_setting.dart';
 import 'services/settings/app_settings.dart';
 import 'services/settings/terminal_settings.dart';
@@ -44,6 +47,12 @@ bool _mainInitialized = false;
 /// Firebase is not started here: `AnalyticsService.init` starts it only when
 /// consent is on record. Analytics capture and crash reports are no-ops until
 /// then, so the `appOpened` event can be fired right after `init`.
+///
+/// On a desktop the window comes up first: the app's own title bar in place
+/// of the system's, the window where it was last time, and the keyboard
+/// shortcuts. Linux may have no keyring, so it is asked for the master key
+/// now rather than on the first save, which lets Settings say so before the
+/// user trusts it with a password.
 Future<void> main() async {
   if (_mainInitialized) {
     runApp(const SshClientApp());
@@ -57,6 +66,10 @@ Future<void> main() async {
 
   await loadAppSettings();
   await ErrorReports.instance.load();
+
+  await DesktopWindow.instance.init();
+  AppCommands.instance.install();
+  if (isLinuxPlatform) unawaited(SecretCipher.instance.masterKey());
 
   await SshSessionManager.instance.init();
   _bindConnectionPrompts();
@@ -81,6 +94,13 @@ Future<void> main() async {
   unawaited(AnalyticsService.instance.capture(AnalyticsEvent.appOpened));
   runApp(const SshClientApp());
 }
+
+/// Whether a desktop's window has the focus: one behind another app's, or
+/// hidden in the tray, still counts as in front for keeping sessions alive,
+/// but nobody is looking at it. A phone's app in front is looked at.
+bool _windowFocused() =>
+    !isDesktopPlatform ||
+    WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
 
 /// Posts what programs ask the terminal to announce, for sessions other than
 /// the one on screen; see [TerminalAlerts]. The notifications service is
@@ -111,9 +131,8 @@ TerminalAlerts _bindTerminalAlerts() {
       TerminalNoticeKind.quiet => terminalSettings.quietNotifications.value,
     },
     quoteLines: () => terminalSettings.noticeLines.value,
-    isForeground: () => manager.foreground,
-    activeSessionId: () =>
-        manager.terminalOnScreen ? manager.activeSessionId : null,
+    isForeground: () => manager.foreground && _windowFocused(),
+    sessionsOnScreen: () => manager.sessionsOnScreen,
   );
   manager.onTerminalNotification = (session, notification) => alerts.handle(
     sessionId: session.id,

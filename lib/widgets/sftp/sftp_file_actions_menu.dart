@@ -7,6 +7,8 @@ import '../../theme/theme.dart';
 import '../../utils/file_type.dart';
 import '../../utils/text_sniffer.dart';
 import '../ui/app_dropdown.dart';
+import '../ui/shortcut_hint.dart';
+import 'sftp_shortcuts.dart';
 
 /// What a row's `⋮` menu offers - directory and file entries share the shape,
 /// just not every entry.
@@ -101,6 +103,7 @@ class SftpFileActionsMenu extends StatelessWidget {
           child: AppDropdownItem(
             icon: PhosphorIconsFill.pencilSimple,
             label: t.common.rename,
+            trailing: ShortcutHint.of(SftpShortcuts.rename),
           ),
         ),
         if (copyAvailable)
@@ -136,6 +139,7 @@ class SftpFileActionsMenu extends StatelessWidget {
             icon: PhosphorIconsFill.trash,
             label: t.common.delete,
             color: colors.error,
+            trailing: ShortcutHint.of(SftpShortcuts.delete),
           ),
         ),
       ],
