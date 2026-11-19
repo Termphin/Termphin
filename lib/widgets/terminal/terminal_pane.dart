@@ -10,11 +10,13 @@ import 'package:terminal_view/terminal_view.dart';
 import '../../i18n/strings.g.dart';
 import '../../models/active_session.dart';
 import '../../services/completion/command_line_reader.dart';
+import '../../services/settings/terminal_settings.dart';
 import '../../services/terminal/predictive_echo.dart';
 import '../../services/terminal/session_terminal.dart';
 import '../../services/terminal/terminal_search.dart';
 import '../../services/terminal/terminal_text.dart';
 import '../../theme/theme.dart' as app_theme;
+import '../../utils/platform_info.dart';
 import '../ui/app_notifications.dart';
 import 'frame_stats_overlay.dart';
 import 'terminal_rendering.dart';
@@ -725,29 +727,50 @@ class _TerminalPaneState extends State<TerminalPane> {
     if (geometry != null) setState(() => _selection = geometry);
   }
 
-  /// A tap on a link leaves the keyboard as it was: raising it would push the
-  /// link out from under its preview, and so would closing it. The view
-  /// raises it on this same tap, right after this, so focus is shut off
-  /// until the next frame; [_onPointerUp] has already queued its blur.
+  /// A tap on a link or inside a mouse-reporting TUI leaves the keyboard as it
+  /// was: raising it would push a link out from under its preview or pop the
+  /// keyboard on every TUI button click, and closing it would fight typing
+  /// inside the TUI. The view raises it on this same tap, right after this,
+  /// so focus is shut off until the next frame; [_onPointerUp] has already
+  /// queued its blur.
   void _onTapUp(TapUpDetails details, CellOffset offset) {
-    if (offset.y >= _terminal.buffer.lines.length) return;
-    final (first, line) = _lineAround(_terminal.buffer, offset.y);
-    final url = linkAt(line, offset.y - first, offset.x);
-    if (url == null) return;
-    _tapWasLink = true;
+    final url = offset.y < _terminal.buffer.lines.length
+        ? () {
+            final (first, line) = _lineAround(_terminal.buffer, offset.y);
+            return linkAt(line, offset.y - first, offset.x);
+          }()
+        : null;
+    if (url != null) {
+      _suppressTapKeyboard();
+      widget.onLinkDetected?.call(url, details.localPosition.dy);
+      return;
+    }
+    if (terminalSettings.mouseKeyboardGuard.value &&
+        _terminal.mouseMode != MouseMode.none) {
+      _suppressTapKeyboard();
+    }
+  }
+
+  /// Prevents the view's own tap handler from raising the soft keyboard for
+  /// this tap, including stale focus left behind after the system Back button
+  /// hid the keyboard without unfocusing.
+  void _suppressTapKeyboard() {
+    _leaveKeyboardAlone = true;
+    if (!isDesktopPlatform && _focusNode.hasFocus && !_isKeyboardVisible) {
+      _focusNode.unfocus();
+    }
     if (!_focusNode.hasFocus) {
       _focusNode.canRequestFocus = false;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _focusNode.canRequestFocus = true;
       });
     }
-    widget.onLinkDetected?.call(url, details.localPosition.dy);
   }
 
   int? _tapPointer;
   Offset _tapDownPosition = Offset.zero;
   bool _tapDownKeyboardUp = false;
-  bool _tapWasLink = false;
+  bool _leaveKeyboardAlone = false;
 
   bool get _isKeyboardVisible {
     final view = View.maybeOf(context);
@@ -775,15 +798,20 @@ class _TerminalPaneState extends State<TerminalPane> {
   }
 
   /// The view requests the keyboard on this same pointer, so this closes
-  /// it after.
+  /// it after unless the tap landed on a link or a mouse-reporting TUI.
   void _onPointerUp(PointerUpEvent event) {
     if (event.pointer != _tapPointer) return;
     _tapPointer = null;
-    _tapWasLink = false;
+    _leaveKeyboardAlone = false;
     if (!_tapDownKeyboardUp) return;
     if (_terminalController.selection != null) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _tapWasLink) return;
+      if (!mounted ||
+          _leaveKeyboardAlone ||
+          (terminalSettings.mouseKeyboardGuard.value &&
+              _terminal.mouseMode != MouseMode.none)) {
+        return;
+      }
       blurTerminal();
     });
   }

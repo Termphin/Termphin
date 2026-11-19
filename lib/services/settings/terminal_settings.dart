@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import '../app/onboarding_service.dart';
 import 'setting.dart';
 
 const kTerminalSchemePrefsKey = 'terminal_scheme';
@@ -17,6 +19,9 @@ const kTerminalQuietNotificationsPrefsKey = 'terminal_quiet_notifications';
 const kTerminalNoticeLinesPrefsKey = 'terminal_notice_lines';
 const kTerminalOpenAppNoticesPrefsKey = 'terminal_open_app_notices';
 const kTerminalOpenAppNoticeStylePrefsKey = 'terminal_open_app_notice_style';
+const kTerminalMouseKeyboardGuardPrefsKey = 'terminal_mouse_keyboard_guard';
+const kTerminalMouseKeyboardGuardLegacyPinnedPrefsKey =
+    'terminal_mouse_keyboard_guard_legacy_pinned';
 
 /// [TerminalSettings.openAppNoticeStyle]: the app's own card.
 const kOpenAppNoticeInApp = 'app';
@@ -168,6 +173,16 @@ class TerminalSettings {
     allowed: kTerminalFontLabels.keys.toSet(),
   );
 
+  /// Leaves the soft keyboard as it was when tapping inside a TUI that
+  /// captures mouse clicks, exposing a tab-bar toggle instead.
+  ///
+  /// Defaults on for fresh installs; [pinLegacyMouseKeyboardGuard] pins it off
+  /// once for existing users so their tap behaviour does not change unasked.
+  final mouseKeyboardGuard = Setting.boolean(
+    kTerminalMouseKeyboardGuardPrefsKey,
+    fallback: true,
+  );
+
   List<Setting<Object?>> get all => [
     scheme,
     lineHeight,
@@ -183,6 +198,7 @@ class TerminalSettings {
     openAppNotices,
     openAppNoticeStyle,
     fontFamily,
+    mouseKeyboardGuard,
   ];
 
   /// Fires whenever any of them changes, so an open session can re-read the
@@ -200,3 +216,24 @@ class TerminalSettings {
 /// spelling out `TerminalSettings.instance` every time buries the field being
 /// read.
 TerminalSettings get terminalSettings => TerminalSettings.instance;
+
+/// Pins [TerminalSettings.mouseKeyboardGuard] off once for users who had
+/// already completed onboarding before the feature existed, while leaving
+/// fresh installs on its `true` default.
+Future<void> pinLegacyMouseKeyboardGuard() async {
+  final preferences = await SharedPreferences.getInstance();
+  if (preferences.getBool(kTerminalMouseKeyboardGuardLegacyPinnedPrefsKey) ??
+      false) {
+    return;
+  }
+  final existingUser =
+      preferences.getBool(kOnboardingCompletedPrefsKey) ?? false;
+  if (existingUser &&
+      !preferences.containsKey(kTerminalMouseKeyboardGuardPrefsKey)) {
+    await preferences.setBool(kTerminalMouseKeyboardGuardPrefsKey, false);
+  }
+  await preferences.setBool(
+    kTerminalMouseKeyboardGuardLegacyPinnedPrefsKey,
+    true,
+  );
+}

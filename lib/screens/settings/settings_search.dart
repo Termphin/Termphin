@@ -145,6 +145,11 @@ List<SettingsSearchEntry> settingsSearchIndex(
       t.settings.commandSuggestions,
       keywords: k.commandSuggestions,
     ),
+    inCategory(
+      SettingsCategory.terminal,
+      t.settings.mouseKeyboardGuard,
+      keywords: k.mouseKeyboardGuard,
+    ),
     category(SettingsCategory.files),
     inCategory(
       SettingsCategory.files,

@@ -42,6 +42,7 @@ Future<Map<String, dynamic>> exportTerminalSettings() async {
     'noticeLines': settings.noticeLines.value,
     'openAppNotices': settings.openAppNotices.value,
     'openAppNoticeStyle': settings.openAppNoticeStyle.value,
+    'mouseKeyboardGuard': settings.mouseKeyboardGuard.value,
   };
 }
 
@@ -137,6 +138,7 @@ Future<void> importTerminalSettings(Map<String, dynamic> ts) async {
   await restore<bool>(settings.noticeLines, ts['noticeLines']);
   await restore<bool>(settings.openAppNotices, ts['openAppNotices']);
   await restore<String>(settings.openAppNoticeStyle, ts['openAppNoticeStyle']);
+  await restore<bool>(settings.mouseKeyboardGuard, ts['mouseKeyboardGuard']);
   await settings.load();
 }
 

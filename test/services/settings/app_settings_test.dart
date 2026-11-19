@@ -213,6 +213,7 @@ final Map<Setting<Object?>, Object?> _alternatives = {
   terminalSettings.fontFamily: kTerminalFontLabels.keys.firstWhere(
     (name) => name != terminalSettings.fontFamily.fallback,
   ),
+  terminalSettings.mouseKeyboardGuard: false,
   editorSettings.fontSize: 16.5,
   editorSettings.fontFamily: kTerminalFontLabels.keys.firstWhere(
     (name) => name != editorSettings.fontFamily.fallback,

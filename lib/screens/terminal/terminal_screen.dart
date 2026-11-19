@@ -29,6 +29,7 @@ import '../../services/settings/tab_bar_settings.dart';
 import '../../services/settings/terminal_settings.dart';
 import '../../services/snippets/snippet_launcher.dart';
 import '../../services/ssh/ssh_session_manager.dart';
+import '../../services/terminal/session_terminal.dart';
 import '../../theme/theme.dart';
 import '../../utils/platform_info.dart';
 import '../../widgets/profiles/profile_avatar.dart';
@@ -243,6 +244,8 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
 
   final GlobalKey _dockButtonKey = GlobalKey();
   late bool _floatingDockEnabled;
+  SessionTerminal? _watchedTerminal;
+  bool _wasMouseReporting = false;
   late bool _toolbarEnabled;
   late TabBarPosition _tabBarPosition;
 
@@ -381,6 +384,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
     _controller.dispose();
     toolbarSettings.enabled.removeListener(_onToolbarEnabledChanged);
     floatingDockSettings.enabled.removeListener(_onFloatingDockSettingChanged);
+    _watchedTerminal?.mouseReporting.removeListener(_onMouseReportingChanged);
     _manager.removeListener(_onManagerChanged);
     super.dispose();
   }
@@ -1148,6 +1152,12 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
               padding: const EdgeInsets.only(left: AppTheme.space2),
               child: _buildQuickSettingsButton(),
             ),
+            _buildKeyboardButtonSlot(
+              wrap: (button) => Padding(
+                padding: const EdgeInsets.only(left: AppTheme.space2),
+                child: button,
+              ),
+            ),
           ],
           Padding(
             padding: const EdgeInsets.only(
@@ -1260,6 +1270,14 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               _buildQuickSettingsButton(),
+                              _buildKeyboardButtonSlot(
+                                wrap: (button) => Padding(
+                                  padding: const EdgeInsets.only(
+                                    top: AppTheme.space2,
+                                  ),
+                                  child: button,
+                                ),
+                              ),
                               const SizedBox(height: AppTheme.space2),
                               _buildAddTabButton(),
                             ],
@@ -1268,6 +1286,14 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               _buildAddTabButton(),
+                              _buildKeyboardButtonSlot(
+                                wrap: (button) => Padding(
+                                  padding: const EdgeInsets.only(
+                                    left: AppTheme.space6,
+                                  ),
+                                  child: button,
+                                ),
+                              ),
                               const SizedBox(width: AppTheme.space6),
                               _buildQuickSettingsButton(),
                             ],
@@ -1704,6 +1730,58 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
     );
   }
 
+  /// Opens or dismisses the soft keyboard for the active terminal, so
+  /// mouse-reporting TUIs can take taps without fighting the keyboard.
+  bool _isKeyboardOpen() =>
+      MediaQuery.viewInsetsOf(context).bottom > 0 ||
+      (View.maybeOf(context)?.viewInsets.bottom ?? 0) > 0;
+
+  void _toggleKeyboard() {
+    if (_sessions.isEmpty) return;
+    final sessionState = _sessionKeys[_sessions[_activeIndex].$1]?.currentState;
+    if (sessionState == null) return;
+    if (_isKeyboardOpen()) {
+      sessionState.blurTerminal();
+    } else {
+      sessionState.focusTerminal();
+    }
+  }
+
+  /// Shows the tab-bar keyboard toggle only when the mouse-keyboard guard is
+  /// enabled and the active terminal is actually reporting mouse events.
+  Widget _buildKeyboardButtonSlot({
+    required Widget Function(Widget button) wrap,
+  }) {
+    if (!_terminalLive()) return const SizedBox.shrink();
+    final session = _manager.getSession(_sessions[_activeIndex].$1);
+    if (session == null) return const SizedBox.shrink();
+    return ValueListenableBuilder<bool>(
+      valueListenable: terminalSettings.mouseKeyboardGuard,
+      builder: (context, guardEnabled, _) {
+        if (!guardEnabled) return const SizedBox.shrink();
+        return ValueListenableBuilder<bool>(
+          valueListenable: session.terminal.mouseReporting,
+          builder: (context, mouseActive, _) {
+            if (!mouseActive) return const SizedBox.shrink();
+            return wrap(_buildKeyboardButton());
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildKeyboardButton() {
+    final t = Translations.of(context);
+    final open = _isKeyboardOpen();
+    return _buildTabBarAction(
+      key: const ValueKey('tabBarKeyboardButton'),
+      tooltip: open ? t.toolbar.hideKeyboard : t.toolbar.showKeyboard,
+      icon: open ? PhosphorIconsFill.keyboard : PhosphorIconsRegular.keyboard,
+      active: open,
+      onTap: _toggleKeyboard,
+    );
+  }
+
   Widget _buildAddTabButton() {
     return _buildTabBarAction(
       key: const ValueKey('tabBarAddButton'),
@@ -1718,16 +1796,18 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
     required String tooltip,
     required IconData icon,
     required VoidCallback? onTap,
+    bool active = false,
   }) {
+    final colors = context.colors;
     final shape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-      side: BorderSide(color: context.colors.surfaceBorder),
+      side: BorderSide(color: active ? colors.primary : colors.surfaceBorder),
     );
     return Tooltip(
       message: tooltip,
       child: Material(
         key: key,
-        color: context.colors.surfaceOffset,
+        color: active ? colors.primaryHighlight : colors.surfaceOffset,
         shape: shape,
         child: InkWell(
           onTap: onTap,
@@ -1737,7 +1817,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
             child: Icon(
               icon,
               size: AppTheme.icon18,
-              color: context.colors.textSecondary,
+              color: active ? colors.primary : colors.textSecondary,
             ),
           ),
         ),
@@ -1843,6 +1923,36 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
             state.status == ConnectionStatus.reconnecting);
   }
 
+  void _syncMouseWatcher(bool terminalLive) {
+    final next = terminalLive
+        ? _manager.getSession(_sessions[_activeIndex].$1)?.terminal
+        : null;
+    if (identical(next, _watchedTerminal)) return;
+    _watchedTerminal?.mouseReporting.removeListener(_onMouseReportingChanged);
+    _watchedTerminal = next;
+    _wasMouseReporting = next?.mouseReporting.value ?? false;
+    next?.mouseReporting.addListener(_onMouseReportingChanged);
+  }
+
+  /// Raises a brief toast when the active live session turns mouse reporting
+  /// on while the keyboard guard is enabled, so the tap-to-type change is
+  /// explained in the moment.
+  void _onMouseReportingChanged() {
+    final terminal = _watchedTerminal;
+    if (terminal == null) return;
+    final active = terminal.mouseReporting.value;
+    final entered = active && !_wasMouseReporting;
+    _wasMouseReporting = active;
+    if (!entered || !mounted) return;
+    if (!terminalSettings.mouseKeyboardGuard.value) return;
+    if (terminal.replaying) return;
+    if (!(ModalRoute.of(context)?.isCurrent ?? true)) return;
+    AppNotifications.info(
+      context,
+      Translations.of(context).terminal.mouseModeActive,
+    );
+  }
+
   bool _toolbarShown() => _terminalLive() && _toolbarEnabled;
 
   @override
@@ -1851,6 +1961,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
 
     final activeKey = _sessions[_activeIndex];
     final terminalLive = _terminalLive();
+    _syncMouseWatcher(terminalLive);
     final showToolbar = _toolbarShown();
     final tabsAtBottom =
         _tabBarPosition == TabBarPosition.bottom && !isWideLayout(context);
