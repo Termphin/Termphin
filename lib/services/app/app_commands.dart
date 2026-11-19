@@ -28,6 +28,17 @@ enum AppCommand {
   showShortcuts,
   openManual,
   quit,
+  splitRight,
+  splitDown,
+  focusPaneLeft,
+  focusPaneRight,
+  focusPaneUp,
+  focusPaneDown,
+  resizePaneLeft,
+  resizePaneRight,
+  resizePaneUp,
+  resizePaneDown,
+  zoomPane,
 }
 
 /// Runs [AppCommand]s for whoever registered to handle them, and owns the
@@ -62,6 +73,26 @@ class AppCommands {
     list.add(handler);
     return () => list.remove(handler);
   }
+
+  final _availability = <AppCommand, bool Function()>{};
+
+  /// Says when [command]'s keys are its own. Until then they go on to
+  /// whatever has focus, the way a key no shortcut uses does: Alt and an
+  /// arrow move between split panes, but where there is no pane that way
+  /// they are the shell's, which moves by a word with them.
+  VoidCallback registerAvailability(
+    AppCommand command,
+    bool Function() available,
+  ) {
+    _availability[command] = available;
+    return () {
+      if (identical(_availability[command], available)) {
+        _availability.remove(command);
+      }
+    };
+  }
+
+  bool _available(AppCommand command) => _availability[command]?.call() ?? true;
 
   final _escapeHandlers = <bool Function()>[];
 
@@ -140,6 +171,7 @@ class AppCommands {
     if (!_installed) return false;
     final keyboard = HardwareKeyboard.instance;
     for (final command in AppCommand.values) {
+      if (!_available(command)) continue;
       for (final activator in activatorsFor(command)) {
         if (activator.accepts(event, keyboard)) return true;
       }
@@ -154,7 +186,7 @@ class AppCommands {
     if (_modalDepth > 0) return false;
     final keyboard = HardwareKeyboard.instance;
     for (final command in AppCommand.values) {
-      if (command == AppCommand.selectTab) continue;
+      if (command == AppCommand.selectTab || !_available(command)) continue;
       for (final activator in activatorsFor(command)) {
         if (activator.accepts(event, keyboard)) {
           if (event is KeyRepeatEvent && !_repeats(command)) return false;
@@ -183,6 +215,10 @@ class AppCommands {
 
   /// The commands a held key repeats: only what is meant to be held down.
   static bool _repeats(AppCommand command) =>
+      command == AppCommand.resizePaneLeft ||
+      command == AppCommand.resizePaneRight ||
+      command == AppCommand.resizePaneUp ||
+      command == AppCommand.resizePaneDown ||
       command == AppCommand.zoomIn ||
       command == AppCommand.zoomOut ||
       command == AppCommand.nextTab ||
@@ -223,6 +259,17 @@ class AppCommands {
   /// Off a Mac, a shortcut that holds Shift over a symbol key is also listed
   /// under the symbol Shift makes: a Linux keyboard reports Ctrl+Shift+, as
   /// Ctrl+Shift+<, and the comma activator alone never matches there.
+  /// The panes' arrows: Alt and an arrow off a Mac, as Windows Terminal and
+  /// Tilix have them; Cmd and Alt on a Mac, as iTerm does. Shift added moves
+  /// the divider instead of the focus.
+  static SingleActivator _pane(
+    LogicalKeyboardKey arrow,
+    bool mac, {
+    bool shift = false,
+  }) => mac
+      ? SingleActivator(arrow, meta: true, alt: true, shift: shift)
+      : SingleActivator(arrow, alt: true, shift: shift);
+
   static List<SingleActivator> activatorsFor(AppCommand command) {
     final mac = isMacOSPlatform;
     SingleActivator primary(LogicalKeyboardKey key, {bool shift = false}) => mac
@@ -337,6 +384,58 @@ class AppCommands {
       ],
       AppCommand.openManual => [const SingleActivator(LogicalKeyboardKey.f1)],
       AppCommand.quit => [primary(LogicalKeyboardKey.keyQ)],
+      AppCommand.splitRight => [
+        mac
+            ? const SingleActivator(LogicalKeyboardKey.keyD, meta: true)
+            : const SingleActivator(
+                LogicalKeyboardKey.keyD,
+                control: true,
+                shift: true,
+              ),
+      ],
+      AppCommand.splitDown => [
+        mac
+            ? const SingleActivator(
+                LogicalKeyboardKey.keyD,
+                meta: true,
+                shift: true,
+              )
+            : const SingleActivator(
+                LogicalKeyboardKey.keyD,
+                control: true,
+                shift: true,
+                alt: true,
+              ),
+      ],
+      AppCommand.focusPaneLeft => [_pane(LogicalKeyboardKey.arrowLeft, mac)],
+      AppCommand.focusPaneRight => [_pane(LogicalKeyboardKey.arrowRight, mac)],
+      AppCommand.focusPaneUp => [_pane(LogicalKeyboardKey.arrowUp, mac)],
+      AppCommand.focusPaneDown => [_pane(LogicalKeyboardKey.arrowDown, mac)],
+      AppCommand.resizePaneLeft => [
+        _pane(LogicalKeyboardKey.arrowLeft, mac, shift: true),
+      ],
+      AppCommand.resizePaneRight => [
+        _pane(LogicalKeyboardKey.arrowRight, mac, shift: true),
+      ],
+      AppCommand.resizePaneUp => [
+        _pane(LogicalKeyboardKey.arrowUp, mac, shift: true),
+      ],
+      AppCommand.resizePaneDown => [
+        _pane(LogicalKeyboardKey.arrowDown, mac, shift: true),
+      ],
+      AppCommand.zoomPane => [
+        mac
+            ? const SingleActivator(
+                LogicalKeyboardKey.enter,
+                meta: true,
+                shift: true,
+              )
+            : const SingleActivator(
+                LogicalKeyboardKey.keyZ,
+                control: true,
+                shift: true,
+              ),
+      ],
     };
   }
 
@@ -426,6 +525,17 @@ class AppCommands {
     AppCommand.showShortcuts => t.commands.showShortcuts,
     AppCommand.openManual => t.commands.openManual,
     AppCommand.quit => t.commands.quit,
+    AppCommand.splitRight => t.commands.splitRight,
+    AppCommand.splitDown => t.commands.splitDown,
+    AppCommand.focusPaneLeft => t.commands.focusPaneLeft,
+    AppCommand.focusPaneRight => t.commands.focusPaneRight,
+    AppCommand.focusPaneUp => t.commands.focusPaneUp,
+    AppCommand.focusPaneDown => t.commands.focusPaneDown,
+    AppCommand.resizePaneLeft => t.commands.resizePaneLeft,
+    AppCommand.resizePaneRight => t.commands.resizePaneRight,
+    AppCommand.resizePaneUp => t.commands.resizePaneUp,
+    AppCommand.resizePaneDown => t.commands.resizePaneDown,
+    AppCommand.zoomPane => t.commands.zoomPane,
   };
 }
 

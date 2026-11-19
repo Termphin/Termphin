@@ -885,6 +885,27 @@ class Translations$terminal$en {
 
 	/// en: 'Resize split'
 	String get splitDivider => 'Resize split';
+
+	/// en: 'Layouts'
+	String get splitLayouts => 'Layouts';
+
+	/// en: 'Columns'
+	String get splitPresetColumns => 'Columns';
+
+	/// en: 'Rows'
+	String get splitPresetRows => 'Rows';
+
+	/// en: 'Grid'
+	String get splitPresetGrid => 'Grid';
+
+	/// en: 'Main and stack'
+	String get splitPresetMainAndStack => 'Main and stack';
+
+	/// en: 'Not enough room to split this pane.'
+	String get splitTooSmall => 'Not enough room to split this pane.';
+
+	/// en: 'A group can hold at most {count} panes.'
+	String splitLimitReached({required Object count}) => 'A group can hold at most ${count} panes.';
 }
 
 // Path: sftp
@@ -3338,6 +3359,12 @@ class Translations$actionDock$en {
 
 	/// en: 'The terminal is empty.'
 	String get nothingToCopy => 'The terminal is empty.';
+
+	/// en: 'Split'
+	String get split => 'Split';
+
+	/// en: 'Zoom pane'
+	String get zoom => 'Zoom pane';
 }
 
 // Path: share
@@ -4037,6 +4064,42 @@ class Translations$commands$en {
 
 	/// en: 'Quit Termphin'
 	String get quit => 'Quit Termphin';
+
+	/// en: 'Split right'
+	String get splitRight => 'Split right';
+
+	/// en: 'Split down'
+	String get splitDown => 'Split down';
+
+	/// en: 'Pane to the left'
+	String get focusPaneLeft => 'Pane to the left';
+
+	/// en: 'Pane to the right'
+	String get focusPaneRight => 'Pane to the right';
+
+	/// en: 'Pane above'
+	String get focusPaneUp => 'Pane above';
+
+	/// en: 'Pane below'
+	String get focusPaneDown => 'Pane below';
+
+	/// en: 'Move the divider left'
+	String get resizePaneLeft => 'Move the divider left';
+
+	/// en: 'Move the divider right'
+	String get resizePaneRight => 'Move the divider right';
+
+	/// en: 'Move the divider up'
+	String get resizePaneUp => 'Move the divider up';
+
+	/// en: 'Move the divider down'
+	String get resizePaneDown => 'Move the divider down';
+
+	/// en: 'Zoom the pane'
+	String get zoomPane => 'Zoom the pane';
+
+	/// en: 'Split panes'
+	String get shortcutsPanes => 'Split panes';
 }
 
 // Path: window
@@ -5392,6 +5455,13 @@ extension on Translations {
 			'terminal.splitNewConnection' => 'New connection',
 			'terminal.unsplit' => 'Move out of split',
 			'terminal.splitDivider' => 'Resize split',
+			'terminal.splitLayouts' => 'Layouts',
+			'terminal.splitPresetColumns' => 'Columns',
+			'terminal.splitPresetRows' => 'Rows',
+			'terminal.splitPresetGrid' => 'Grid',
+			'terminal.splitPresetMainAndStack' => 'Main and stack',
+			'terminal.splitTooSmall' => 'Not enough room to split this pane.',
+			'terminal.splitLimitReached' => ({required Object count}) => 'A group can hold at most ${count} panes.',
 			'sftp.deleteTitle' => 'Delete?',
 			'sftp.deleteConfirm' => ({required Object filename}) => 'Are you sure you want to delete ${filename}?',
 			'sftp.deleteSelectedTitle' => ({required Object count}) => 'Delete ${count} items?',
@@ -5660,6 +5730,8 @@ extension on Translations {
 			'settings.biometricSubtitle' => 'Use fingerprint or face as alternative',
 			'settings.biometricUnavailable' => 'Not available on this device',
 			'settings.enablePinFirst' => 'Enable PIN lock first',
+			_ => null,
+		} ?? switch (path) {
 			'settings.changePin' => 'Change PIN',
 			'settings.dataBackup' => 'Data & Backup',
 			'settings.exportImportSubtitle' => 'Backup profiles, SSH keys and settings to JSON',
@@ -5667,8 +5739,6 @@ extension on Translations {
 			'settings.organization' => 'Organization',
 			'settings.analytics' => 'Analytics',
 			'settings.analyticsToggle' => 'Share usage analytics',
-			_ => null,
-		} ?? switch (path) {
 			'settings.analyticsToggleSubtitle' => 'Anonymous usage and crash reports',
 			'settings.terminalControls' => 'On-screen controls',
 			'settings.keyToolbar' => 'Key toolbar',
@@ -6174,6 +6244,8 @@ extension on Translations {
 			'toolbar.manageLayouts' => 'Manage layouts',
 			'toolbar.emptyLayout' => 'No keys yet',
 			'toolbar.escape' => 'Escape',
+			_ => null,
+		} ?? switch (path) {
 			'toolbar.tab' => 'Tab',
 			'toolbar.backTab' => 'Back tab',
 			'toolbar.home' => 'Home',
@@ -6181,8 +6253,6 @@ extension on Translations {
 			'toolbar.control' => 'Control',
 			'toolbar.alt' => 'Alt',
 			'toolbar.shift' => 'Shift',
-			_ => null,
-		} ?? switch (path) {
 			'toolbar.enter' => 'Enter',
 			'toolbar.delete' => 'Delete',
 			'toolbar.backspace' => 'Backspace',
@@ -6232,6 +6302,8 @@ extension on Translations {
 			'actionDock.outputSaved' => 'Terminal output saved',
 			'actionDock.saveOutputFailed' => ({required Object error}) => 'Couldn\'t save the output: ${error}',
 			'actionDock.nothingToCopy' => 'The terminal is empty.',
+			'actionDock.split' => 'Split',
+			'actionDock.zoom' => 'Zoom pane',
 			'share.uploadTo' => 'Upload to',
 			'share.uploadManyTo' => ({required Object count}) => 'Upload ${count} files to',
 			'share.searchHint' => 'Search machines',
@@ -6410,6 +6482,18 @@ extension on Translations {
 			'commands.shortcutsPaste' => 'Paste',
 			'commands.shortcutsSelectAll' => 'Select all',
 			'commands.quit' => 'Quit Termphin',
+			'commands.splitRight' => 'Split right',
+			'commands.splitDown' => 'Split down',
+			'commands.focusPaneLeft' => 'Pane to the left',
+			'commands.focusPaneRight' => 'Pane to the right',
+			'commands.focusPaneUp' => 'Pane above',
+			'commands.focusPaneDown' => 'Pane below',
+			'commands.resizePaneLeft' => 'Move the divider left',
+			'commands.resizePaneRight' => 'Move the divider right',
+			'commands.resizePaneUp' => 'Move the divider up',
+			'commands.resizePaneDown' => 'Move the divider down',
+			'commands.zoomPane' => 'Zoom the pane',
+			'commands.shortcutsPanes' => 'Split panes',
 			'window.minimize' => 'Minimize',
 			'window.maximize' => 'Maximize',
 			'window.restore' => 'Restore',

@@ -265,7 +265,14 @@
     "splitWithTitle": "Split screen with",
     "splitNewConnection": "New connection",
     "unsplit": "Move out of split",
-    "splitDivider": "Resize split"
+    "splitDivider": "Resize split",
+    "splitLayouts": "Layouts",
+    "splitPresetColumns": "Columns",
+    "splitPresetRows": "Rows",
+    "splitPresetGrid": "Grid",
+    "splitPresetMainAndStack": "Main and stack",
+    "splitTooSmall": "Not enough room to split this pane.",
+    "splitLimitReached": "A group can hold at most {count} panes."
   },
   "sftp": {
     "deleteTitle": "Delete?",
@@ -1174,7 +1181,9 @@
     "saveOutputDialogTitle": "Save terminal output",
     "outputSaved": "Terminal output saved",
     "saveOutputFailed": "Couldn't save the output: {error}",
-    "nothingToCopy": "The terminal is empty."
+    "nothingToCopy": "The terminal is empty.",
+    "split": "Split",
+    "zoom": "Zoom pane"
   },
   "share": {
     "uploadTo": "Upload to",
@@ -1412,7 +1421,19 @@
     "shortcutsCopy": "Copy the selection",
     "shortcutsPaste": "Paste",
     "shortcutsSelectAll": "Select all",
-    "quit": "Quit Termphin"
+    "quit": "Quit Termphin",
+    "splitRight": "Split right",
+    "splitDown": "Split down",
+    "focusPaneLeft": "Pane to the left",
+    "focusPaneRight": "Pane to the right",
+    "focusPaneUp": "Pane above",
+    "focusPaneDown": "Pane below",
+    "resizePaneLeft": "Move the divider left",
+    "resizePaneRight": "Move the divider right",
+    "resizePaneUp": "Move the divider up",
+    "resizePaneDown": "Move the divider down",
+    "zoomPane": "Zoom the pane",
+    "shortcutsPanes": "Split panes"
   },
   "window": {
     "minimize": "Minimize",

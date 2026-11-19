@@ -150,4 +150,69 @@ void main() {
       expect(splits.saved(order).single.axis, isNull);
     });
   });
+
+  group('ready-made layouts', () {
+    test('three columns are three thirds', () {
+      final rects = splitRects(
+        presetLayout(['a', 'b', 'c'], SplitPreset.columns),
+      );
+      for (final id in ['a', 'b', 'c']) {
+        expect(rects[id]!.width, closeTo(1 / 3, 1e-9));
+        expect(rects[id]!.height, 1);
+      }
+    });
+
+    test('four panes make a 2x2 grid', () {
+      final rects = splitRects(
+        presetLayout(['a', 'b', 'c', 'd'], SplitPreset.grid),
+      );
+      expect(rects['a'], const Rect.fromLTWH(0, 0, 0.5, 0.5));
+      expect(rects['b'], const Rect.fromLTWH(0.5, 0, 0.5, 0.5));
+      expect(rects['c'], const Rect.fromLTWH(0, 0.5, 0.5, 0.5));
+      expect(rects['d'], const Rect.fromLTWH(0.5, 0.5, 0.5, 0.5));
+    });
+
+    test('five panes fill the grid row by row', () {
+      final rects = splitRects(
+        presetLayout(['a', 'b', 'c', 'd', 'e'], SplitPreset.grid),
+      );
+      expect(rects['a']!.height, closeTo(0.5, 1e-9));
+      expect(rects['d']!.top, closeTo(0.5, 1e-9));
+      expect(rects['e']!.width, closeTo(0.5, 1e-9));
+    });
+
+    test('main and stack keeps the first pane large on the left', () {
+      final rects = splitRects(
+        presetLayout(['main', 'x', 'y'], SplitPreset.mainAndStack),
+      );
+      expect(rects['main'], const Rect.fromLTWH(0, 0, 0.6, 1));
+      expect(rects['x']!.left, closeTo(0.6, 1e-9));
+      expect(rects['y']!.top, closeTo(0.5, 1e-9));
+    });
+  });
+
+  group('arranging a group', () {
+    test('a preset rearranges the panes it has', () {
+      final splits = TabSplits(maxPanes: 4);
+      var order = splits.join(['a', 'b', 'c', 'd'], 'b', 'a');
+      order = splits.join(order, 'c', 'b');
+      order = splits.join(order, 'd', 'c');
+      order = splits.applyPreset(order, 'a', SplitPreset.grid);
+
+      expect(
+        splitRects(splits.layoutOf('a')!)['d'],
+        const Rect.fromLTWH(0.5, 0.5, 0.5, 0.5),
+      );
+      expect(order, ['a', 'b', 'c', 'd']);
+    });
+
+    test('an arrow pushes the divider beside the pane, and only that way', () {
+      final splits = TabSplits(maxPanes: 4);
+      splits.join(['a', 'b'], 'b', 'a');
+
+      expect(splits.nudge('a', SplitDirection.right), isTrue);
+      expect(splits.ratioOf('a'), closeTo(0.55, 1e-9));
+      expect(splits.nudge('a', SplitDirection.down), isFalse);
+    });
+  });
 }

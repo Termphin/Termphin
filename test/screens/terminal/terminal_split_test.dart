@@ -8,6 +8,7 @@ import 'package:termphin/providers/ssh_session_manager_provider.dart';
 import 'package:termphin/screens/terminal/terminal_screen.dart';
 import 'package:termphin/services/ssh/ssh_session_manager.dart';
 import 'package:termphin/widgets/terminal/session_view.dart';
+import 'package:termphin/widgets/terminal/split_tab_layout.dart';
 
 import '../../support/fakes.dart';
 import '../../support/fixtures.dart';
@@ -160,18 +161,29 @@ void main() {
   });
 
   testWidgets('on a desktop a pane is dragged without a hold', (tester) async {
-    await openTwoTabs(tester);
-    tester.view.physicalSize = const Size(1200, 800);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-    final other = secondId(tester);
+    final profile = profileFixture();
+    final swapped = <String>[];
 
-    await splitViaMenu(tester, other);
-
-    final left = tester.getRect(
-      find.byKey(const ValueKey('splitPane-session-1')),
+    await pumpTestApp(
+      tester,
+      SplitTabLayout(
+        entry: const ['a', 'b'],
+        paneBuilder: (id) => SizedBox.expand(child: Text('pane-$id')),
+        ratioOfFirst: 0.5,
+        focusedId: 'a',
+        profileFor: (_) => profile,
+        labelFor: (id) => 'pane-$id',
+        onFocusPane: (id, {keyboardUp = false}) {},
+        onSwap: swapped.add,
+        onRatioChanged: (_) {},
+        onDividerHeldChanged: (_) {},
+      ),
     );
-    final bar = tester.getCenter(find.byKey(ValueKey('splitHeader-$other')));
+    tester.view.physicalSize = const Size(1200, 800);
+    await tester.pumpAndSettle();
+
+    final left = tester.getRect(find.byKey(const ValueKey('splitPane-a')));
+    final bar = tester.getCenter(find.byKey(const ValueKey('splitHeader-b')));
     final gesture = await tester.startGesture(
       bar,
       kind: PointerDeviceKind.mouse,
@@ -183,12 +195,8 @@ void main() {
     }
     await gesture.up();
     await tester.pumpAndSettle();
-    expect(
-      tester.getRect(find.byKey(ValueKey('splitPane-$other'))).right,
-      lessThanOrEqualTo(
-        tester.getRect(find.byKey(const ValueKey('splitPane-session-1'))).left,
-      ),
-    );
+
+    expect(swapped, ['a']);
   }, variant: TargetPlatformVariant.only(TargetPlatform.linux));
 
   testWidgets('a bar runs the whole length between the panes', (tester) async {

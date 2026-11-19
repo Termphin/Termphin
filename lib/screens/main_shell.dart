@@ -45,6 +45,7 @@ import 'keys/key_manager_screen.dart';
 import 'search/global_search_launcher.dart';
 import 'settings/settings_screen.dart';
 import 'snippets/snippets_screen.dart';
+import 'terminal/state/split_layout.dart';
 import 'terminal/terminal_screen.dart';
 
 class MainShell extends ConsumerStatefulWidget {
@@ -209,6 +210,11 @@ class _MainShellState extends ConsumerState<MainShell>
           AppCommands.instance.register(command, handler),
         );
 
+    void available(AppCommand command, bool Function() check) =>
+        _unregisterCommands.add(
+          AppCommands.instance.registerAvailability(command, check),
+        );
+
     TerminalScreenState? liveTerminal() =>
         _terminalVisible ? _terminalKey.currentState : null;
 
@@ -309,6 +315,78 @@ class _MainShellState extends ConsumerState<MainShell>
       unawaited(terminalSettings.fontSize.set(kTerminalDefaultFontSize));
       return true;
     });
+    on(AppCommand.splitRight, (_) => terminal((s) => s.splitRight()));
+    on(AppCommand.splitDown, (_) => terminal((s) => s.splitDown()));
+    on(
+      AppCommand.focusPaneLeft,
+      (_) => terminal((s) => s.focusPane(SplitDirection.left)),
+    );
+    on(
+      AppCommand.focusPaneRight,
+      (_) => terminal((s) => s.focusPane(SplitDirection.right)),
+    );
+    on(
+      AppCommand.focusPaneUp,
+      (_) => terminal((s) => s.focusPane(SplitDirection.up)),
+    );
+    on(
+      AppCommand.focusPaneDown,
+      (_) => terminal((s) => s.focusPane(SplitDirection.down)),
+    );
+    on(
+      AppCommand.resizePaneLeft,
+      (_) => terminal((s) => s.nudgePane(SplitDirection.left)),
+    );
+    on(
+      AppCommand.resizePaneRight,
+      (_) => terminal((s) => s.nudgePane(SplitDirection.right)),
+    );
+    on(
+      AppCommand.resizePaneUp,
+      (_) => terminal((s) => s.nudgePane(SplitDirection.up)),
+    );
+    on(
+      AppCommand.resizePaneDown,
+      (_) => terminal((s) => s.nudgePane(SplitDirection.down)),
+    );
+    on(AppCommand.zoomPane, (_) => terminal((s) => s.toggleZoomPane()));
+
+    available(
+      AppCommand.focusPaneLeft,
+      () => liveTerminal()?.canFocusPane(SplitDirection.left) ?? false,
+    );
+    available(
+      AppCommand.focusPaneRight,
+      () => liveTerminal()?.canFocusPane(SplitDirection.right) ?? false,
+    );
+    available(
+      AppCommand.focusPaneUp,
+      () => liveTerminal()?.canFocusPane(SplitDirection.up) ?? false,
+    );
+    available(
+      AppCommand.focusPaneDown,
+      () => liveTerminal()?.canFocusPane(SplitDirection.down) ?? false,
+    );
+    available(
+      AppCommand.resizePaneLeft,
+      () => liveTerminal()?.canResizePane(SplitDirection.left) ?? false,
+    );
+    available(
+      AppCommand.resizePaneRight,
+      () => liveTerminal()?.canResizePane(SplitDirection.right) ?? false,
+    );
+    available(
+      AppCommand.resizePaneUp,
+      () => liveTerminal()?.canResizePane(SplitDirection.up) ?? false,
+    );
+    available(
+      AppCommand.resizePaneDown,
+      () => liveTerminal()?.canResizePane(SplitDirection.down) ?? false,
+    );
+    available(
+      AppCommand.zoomPane,
+      () => liveTerminal()?.canZoomPane() ?? false,
+    );
   }
 
   bool _zoomTerminal(double delta) {

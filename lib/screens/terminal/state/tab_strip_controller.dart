@@ -77,10 +77,17 @@ class TabStripController extends ChangeNotifier {
   /// The tree [id]'s group is laid out as, or null when it stands alone.
   SplitNode? layoutOf(String id) => _splits.layoutOf(id);
 
+  int get maxPanes => _splits.maxPanes;
+
   int panesWith(String id) => _splits.panesWith(id);
+
+  bool canSplit(String id) => panesWith(id) < maxPanes;
 
   String? neighbor(String id, SplitDirection direction) =>
       _splits.neighbor(id, direction);
+
+  bool canNudge(String id, SplitDirection direction) =>
+      _splits.canNudge(id, direction);
 
   /// Every split among [ids], for the caller to persist.
   List<SavedSplit> saved(List<String> ids) => _splits.saved(ids);
@@ -128,14 +135,20 @@ class TabStripController extends ChangeNotifier {
   }
 
   /// Adds [profile] as a new tab, optionally reusing [sessionId] and
-  /// optionally landing it split with [splitWith]. Returns the id used.
-  String add(SshProfile profile, {String? sessionId, String? splitWith}) {
+  /// optionally landing it split with [splitWith] along [axis]. Returns the id
+  /// used.
+  String add(
+    SshProfile profile, {
+    String? sessionId,
+    String? splitWith,
+    SplitAxis axis = SplitAxis.sideBySide,
+  }) {
     final id = sessionId ?? _uuid.v4();
     noteFocus(id);
     _sessions.add((id, profile));
     _activeIndex = _sessions.length - 1;
     if (splitWith != null && _sessions.any((s) => s.$1 == splitWith)) {
-      _applyOrder(_splits.join(sessionIds, id, splitWith));
+      _applyOrder(_splits.join(sessionIds, id, splitWith, axis: axis));
     }
     notifyListeners();
     return id;
@@ -238,6 +251,22 @@ class TabStripController extends ChangeNotifier {
   void setRatio(String id, double ratio) {
     _splits.setRatio(id, ratio);
     notifyListeners();
+  }
+
+  /// Lays [id]'s group out as [preset].
+  List<String> applyPreset(String id, SplitPreset preset) {
+    final ids = _splits.applyPreset(sessionIds, id, preset);
+    _applyOrder(ids);
+    notifyListeners();
+    return ids;
+  }
+
+  /// Pushes the divider beside [id] toward [direction]; false when there is
+  /// none that way.
+  bool nudge(String id, SplitDirection direction) {
+    final moved = _splits.nudge(id, direction);
+    if (moved) notifyListeners();
+    return moved;
   }
 
   void setBranchRatio(SplitBranch branch, double ratio) {

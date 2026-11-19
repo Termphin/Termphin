@@ -46,6 +46,20 @@ class _ShortcutsList extends StatelessWidget {
     AppCommand.zoomReset,
   ];
 
+  static const _panes = [
+    AppCommand.splitRight,
+    AppCommand.splitDown,
+    AppCommand.focusPaneLeft,
+    AppCommand.focusPaneRight,
+    AppCommand.focusPaneUp,
+    AppCommand.focusPaneDown,
+    AppCommand.resizePaneLeft,
+    AppCommand.resizePaneRight,
+    AppCommand.resizePaneUp,
+    AppCommand.resizePaneDown,
+    AppCommand.zoomPane,
+  ];
+
   /// Lists the terminal's own clipboard keys too, which it handles itself.
   /// Off a Mac Ctrl+C copies only with something selected; without, it is
   /// the shell's interrupt as ever.
@@ -103,6 +117,14 @@ class _ShortcutsList extends StatelessWidget {
           label: t.commands.shortcutsSelectAll,
           keys: terminalKey(LogicalKeyboardKey.keyA),
         ),
+        const SizedBox(height: AppTheme.space16),
+        SectionHeader(t.commands.shortcutsPanes),
+        const SizedBox(height: AppTheme.space6),
+        for (final command in _panes)
+          _Row(
+            label: AppCommands.label(t, command),
+            keys: AppCommands.shortcutLabel(command) ?? '',
+          ),
         const SizedBox(height: AppTheme.space16),
         SectionHeader(t.commands.shortcutsFiles),
         const SizedBox(height: AppTheme.space6),

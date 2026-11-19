@@ -129,6 +129,45 @@ class TabSplits {
     return _normalize(order);
   }
 
+  /// Rearranges the panes of [id]'s group as [preset], in the order they
+  /// read now.
+  List<String> applyPreset(List<String> order, String id, SplitPreset preset) {
+    final group = _groupOf[id];
+    if (group == null) return order;
+    group.root = presetLayout(group.root.leaves, preset);
+    return _normalize(order);
+  }
+
+  /// Moves the nearest divider beside [id] that runs across [direction] by
+  /// [step] of its split's room, the way an arrow key pushes it. False when
+  /// there is none that way.
+  bool nudge(String id, SplitDirection direction, {double step = 0.05}) {
+    final branch = _nudgeBranch(id, direction);
+    if (branch == null) return false;
+    final forward =
+        direction == SplitDirection.right || direction == SplitDirection.down;
+    setBranchRatio(branch, branch.ratio + (forward ? step : -step));
+    return true;
+  }
+
+  /// Whether a divider exists beside [id] that runs across [direction], so
+  /// resizing in that direction would actually move something.
+  bool canNudge(String id, SplitDirection direction) =>
+      _nudgeBranch(id, direction) != null;
+
+  SplitBranch? _nudgeBranch(String id, SplitDirection direction) {
+    final root = _groupOf[id]?.root;
+    if (root == null) return null;
+    final axis = switch (direction) {
+      SplitDirection.left || SplitDirection.right => SplitAxis.sideBySide,
+      SplitDirection.up || SplitDirection.down => SplitAxis.stacked,
+    };
+    for (final branch in ancestorsOf(root, id)) {
+      if (branch.axis == axis) return branch;
+    }
+    return null;
+  }
+
   /// The pane [direction] of [id] in its group, if there is one.
   String? neighbor(String id, SplitDirection direction) {
     final root = _groupOf[id]?.root;

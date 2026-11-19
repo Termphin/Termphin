@@ -217,3 +217,72 @@ List<({String first, String second, double ratio, SplitAxis axis})> splitSteps(
     ...splitSteps(root.second),
   ];
 }
+
+/// A ready-made arrangement of a group's panes.
+enum SplitPreset {
+  /// Side by side, each as wide as the next.
+  columns,
+
+  /// One over another, each as tall as the next.
+  rows,
+
+  /// As square as the count allows: rows of columns, filled row by row.
+  grid,
+
+  /// The first pane large on the left, the rest stacked beside it.
+  mainAndStack,
+}
+
+/// [ids], in that order, laid out as [preset] - the way the panes a group
+/// already has are rearranged, nothing added or closed.
+SplitNode presetLayout(List<String> ids, SplitPreset preset) {
+  assert(ids.isNotEmpty);
+  switch (preset) {
+    case SplitPreset.columns:
+      return _even(ids, SplitAxis.sideBySide);
+    case SplitPreset.rows:
+      return _even(ids, SplitAxis.stacked);
+    case SplitPreset.grid:
+      final perRow = math.sqrt(ids.length).ceil();
+      final rows = [
+        for (var i = 0; i < ids.length; i += perRow)
+          _even(
+            ids.sublist(i, math.min(i + perRow, ids.length)),
+            SplitAxis.sideBySide,
+          ),
+      ];
+      return _evenNodes(rows, SplitAxis.stacked);
+    case SplitPreset.mainAndStack:
+      if (ids.length == 1) return SplitLeaf(ids.single);
+      return SplitBranch(
+        axis: SplitAxis.sideBySide,
+        ratio: 0.6,
+        first: SplitLeaf(ids.first),
+        second: _even(ids.sublist(1), SplitAxis.stacked),
+      );
+  }
+}
+
+SplitNode _even(List<String> ids, SplitAxis axis) =>
+    _evenNodes([for (final id in ids) SplitLeaf(id)], axis);
+
+/// [nodes] along [axis], each given the same share: the first takes 1/n and
+/// the rest split what is left among themselves the same way.
+SplitNode _evenNodes(List<SplitNode> nodes, SplitAxis axis) {
+  if (nodes.length == 1) return nodes.single;
+  return SplitBranch(
+    axis: axis,
+    ratio: 1 / nodes.length,
+    first: nodes.first,
+    second: _evenNodes(nodes.sublist(1), axis),
+  );
+}
+
+/// The splits [id] sits under in [root], nearest first.
+List<SplitBranch> ancestorsOf(SplitNode root, String id) {
+  if (root is! SplitBranch) return const [];
+  for (final child in [root.first, root.second]) {
+    if (child.leaves.contains(id)) return [...ancestorsOf(child, id), root];
+  }
+  return const [];
+}
