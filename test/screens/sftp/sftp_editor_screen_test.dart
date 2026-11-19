@@ -55,6 +55,7 @@ void main() {
     String content = 'hello\nworld\n',
     int? modifyTime = 1000,
     int lines = 0,
+    VoidCallback? onSaved,
   }) async {
     final text = lines > 0
         ? List.generate(lines, (i) => 'line $i').join('\n')
@@ -82,6 +83,7 @@ void main() {
         fileItem: sftpFile('notes.txt', size: text.length),
         path: _path,
         sftp: sftp,
+        onSaved: onSaved,
       ),
     );
     await settleLoad(tester);
@@ -170,6 +172,19 @@ void main() {
       await tapSave(tester);
       expect(tree.contents[_path], 'after');
       expect(find.text(t.editor.savedSuccess), findsOneWidget);
+    });
+
+    testWidgets('tells the file list, so it shows the new size and date', (
+      tester,
+    ) async {
+      var saved = 0;
+      await open(tester, content: 'before', onSaved: () => saved++);
+      type(tester, 'after');
+      await tester.pumpAndSettle();
+
+      await tapSave(tester);
+
+      expect(saved, 1);
     });
 
     testWidgets('is not offered while nothing has been changed', (

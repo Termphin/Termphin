@@ -59,12 +59,17 @@ class SftpEditorScreen extends StatefulWidget {
   final String path;
   final SftpService? sftp;
 
+  /// Called after each save that reached the server, so the file list
+  /// behind the editor can show the new size and date.
+  final VoidCallback? onSaved;
+
   const SftpEditorScreen({
     super.key,
     required this.session,
     required this.fileItem,
     required this.path,
     this.sftp,
+    this.onSaved,
   });
 
   @override
@@ -428,6 +433,7 @@ class _SftpEditorScreenState extends State<SftpEditorScreen> {
           ? _allLines.join('\n')
           : _ctrl!.text;
       await _sftp.writeStringToFile(widget.path, contentToSave);
+      widget.onSaved?.call();
       if (mounted) {
         _originalContent = contentToSave;
         if (_isLargeFileMode) {

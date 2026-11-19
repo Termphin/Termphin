@@ -1569,7 +1569,10 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
   /// A pushed route carries no ambient theme with it, unlike a dialog or a
   /// sheet - the editor is still part of the session, so it is wrapped back
   /// into the session's colours by hand.
+  /// The list is read again once the editor closes after a save, so the
+  /// row shows the size and date the file has now.
   void _openEditor(SftpName item) {
+    var saved = false;
     pushAppWindow<void>(
       context,
       builder: (_) => TerminalSchemeTheme(
@@ -1578,9 +1581,12 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
           fileItem: item,
           path: _joinPath(item.filename),
           sftp: _sftp,
+          onSaved: () => saved = true,
         ),
       ),
-    );
+    ).then((_) {
+      if (saved && mounted) _loadDirectory();
+    });
   }
 
   /// When the file is not text, its actions menu still offers opening it,
