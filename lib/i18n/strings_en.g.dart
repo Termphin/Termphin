@@ -4077,6 +4077,15 @@ class Translations$window$en {
 	/// en: 'Machines'
 	String get menuMachines => 'Machines';
 
+	/// en: 'Snippets'
+	String get menuSnippets => 'Snippets';
+
+	/// en: 'Keys'
+	String get menuKeys => 'Keys';
+
+	/// en: 'Settings'
+	String get menuSettings => 'Settings';
+
 	/// en: 'What's new'
 	String get releaseNotes => 'What\'s new';
 
@@ -6411,6 +6420,9 @@ extension on Translations {
 			'window.menuSession' => 'Session',
 			'window.menuFiles' => 'Files',
 			'window.menuMachines' => 'Machines',
+			'window.menuSnippets' => 'Snippets',
+			'window.menuKeys' => 'Keys',
+			'window.menuSettings' => 'Settings',
 			'window.releaseNotes' => 'What\'s new',
 			'window.reportIssue' => 'Report an issue',
 			'window.quit' => 'Quit Termphin',

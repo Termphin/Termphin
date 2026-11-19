@@ -28,6 +28,7 @@ import '../../widgets/ui/empty_state.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
 import '../../widgets/ui/section_navigator.dart';
 import '../../widgets/ui/selection_action_bar.dart';
+import '../../widgets/window/app_menu.dart';
 import '../search/global_search_launcher.dart';
 import 'snippet_form_screen.dart';
 import 'snippet_run_screen.dart';
@@ -346,162 +347,180 @@ class _SnippetsScreenState extends ConsumerState<SnippetsScreen> {
         .where((g) => snippets.any((s) => isSameGroup(s.group, g.name)))
         .toList();
 
-    return GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: LargeTitleScaffold(
-        title: t.snippets.title,
-        resizeToAvoidBottomInset: false,
-        actions: [
-          IconButton(
-            tooltip: t.snippets.runsTitle,
-            onPressed: () => _openRuns(context),
-            icon: const Icon(PhosphorIconsRegular.playCircle),
-          ),
-        ],
-        bodyBuilder: (context, scrollController, gutter) {
-          final scrollView = CustomScrollView(
-            controller: scrollController,
-            slivers: [
-              SliverPadding(
-                padding: gutter,
-                sliver: SliverMainAxisGroup(
-                  slivers: [
-                    SliverToBoxAdapter(
-                      child: LargeTitleHeader(
-                        title: t.snippets.title,
-                        subtitle: t.snippets.subtitle,
-                      ),
-                    ),
-                    if (snippets.isNotEmpty) ...[
-                      const SliverPadding(
-                        padding: EdgeInsets.fromLTRB(
-                          AppTheme.space16,
-                          AppTheme.space16,
-                          AppTheme.space16,
-                          AppTheme.space12,
+    return SectionMenus(
+      menus: (t) => [
+        AppMenu(t.window.menuSnippets, [
+          [
+            AppMenuItem(
+              label: t.snippets.newTitle,
+              icon: PhosphorIconsRegular.plus,
+              onSelected: () => showSnippetFormScreen(context),
+            ),
+            AppMenuItem(
+              label: t.snippets.runsTitle,
+              icon: PhosphorIconsRegular.playCircle,
+              onSelected: () => _openRuns(context),
+            ),
+          ],
+        ]),
+      ],
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: LargeTitleScaffold(
+          title: t.snippets.title,
+          resizeToAvoidBottomInset: false,
+          actions: [
+            IconButton(
+              tooltip: t.snippets.runsTitle,
+              onPressed: () => _openRuns(context),
+              icon: const Icon(PhosphorIconsRegular.playCircle),
+            ),
+          ],
+          bodyBuilder: (context, scrollController, gutter) {
+            final scrollView = CustomScrollView(
+              controller: scrollController,
+              slivers: [
+                SliverPadding(
+                  padding: gutter,
+                  sliver: SliverMainAxisGroup(
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: LargeTitleHeader(
+                          title: t.snippets.title,
+                          subtitle: t.snippets.subtitle,
                         ),
-                        sliver: SliverToBoxAdapter(
-                          child: GlobalSearchLauncher(
-                            heroTag: 'globalSearch-snippets',
+                      ),
+                      if (snippets.isNotEmpty) ...[
+                        const SliverPadding(
+                          padding: EdgeInsets.fromLTRB(
+                            AppTheme.space16,
+                            AppTheme.space16,
+                            AppTheme.space16,
+                            AppTheme.space12,
+                          ),
+                          sliver: SliverToBoxAdapter(
+                            child: GlobalSearchLauncher(
+                              heroTag: 'globalSearch-snippets',
+                            ),
                           ),
                         ),
-                      ),
-                      SliverToBoxAdapter(
-                        child: GroupFilterChips(
-                          groups: populatedGroups,
-                          selected: _selectedGroup,
-                          onChanged: (group) =>
-                              setState(() => _selectedGroup = group),
+                        SliverToBoxAdapter(
+                          child: GroupFilterChips(
+                            groups: populatedGroups,
+                            selected: _selectedGroup,
+                            onChanged: (group) =>
+                                setState(() => _selectedGroup = group),
+                          ),
                         ),
-                      ),
-                    ],
-                    if (snippets.isEmpty)
-                      SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: EmptyStatePanel(
-                          icon: PhosphorIconsFill.codeBlock,
-                          title: t.snippets.emptyTitle,
-                          subtitle: t.snippets.emptySubtitle,
-                          action: Tooltip(
-                            message: t.snippets.newTitle,
-                            child: ElevatedButton.icon(
-                              onPressed: () => showSnippetFormScreen(context),
-                              icon: const Icon(
-                                PhosphorIconsRegular.plus,
-                                size: AppTheme.icon18,
-                              ),
-                              label: Text(t.snippets.newTitle),
-                              style: ElevatedButton.styleFrom(
-                                minimumSize: const Size(0, 46),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: AppTheme.space16,
+                      ],
+                      if (snippets.isEmpty)
+                        SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: EmptyStatePanel(
+                            icon: PhosphorIconsFill.codeBlock,
+                            title: t.snippets.emptyTitle,
+                            subtitle: t.snippets.emptySubtitle,
+                            action: Tooltip(
+                              message: t.snippets.newTitle,
+                              child: ElevatedButton.icon(
+                                onPressed: () => showSnippetFormScreen(context),
+                                icon: const Icon(
+                                  PhosphorIconsRegular.plus,
+                                  size: AppTheme.icon18,
+                                ),
+                                label: Text(t.snippets.newTitle),
+                                style: ElevatedButton.styleFrom(
+                                  minimumSize: const Size(0, 46),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: AppTheme.space16,
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                      )
-                    else ...[
-                      for (final (i, group) in displayGroups.indexed) ...[
-                        GroupSectionHeader.sliver(
-                          group: group,
-                          count: snippetsByGroup[group.name]?.length ?? 0,
-                          onAdd: () => showSnippetFormScreen(
-                            context,
-                            initialGroup: group.name,
+                        )
+                      else ...[
+                        for (final (i, group) in displayGroups.indexed) ...[
+                          GroupSectionHeader.sliver(
+                            group: group,
+                            count: snippetsByGroup[group.name]?.length ?? 0,
+                            onAdd: () => showSnippetFormScreen(
+                              context,
+                              initialGroup: group.name,
+                            ),
+                            addTooltip: t.snippets.newTitle,
+                            padding: EdgeInsets.fromLTRB(
+                              AppTheme.space16,
+                              i == 0 ? AppTheme.space4 : AppTheme.space16,
+                              AppTheme.space16,
+                              AppTheme.space4,
+                            ),
                           ),
-                          addTooltip: t.snippets.newTitle,
-                          padding: EdgeInsets.fromLTRB(
-                            AppTheme.space16,
-                            i == 0 ? AppTheme.space4 : AppTheme.space16,
-                            AppTheme.space16,
-                            AppTheme.space4,
+                          SliverPadding(
+                            padding: const EdgeInsets.fromLTRB(
+                              AppTheme.space16,
+                              AppTheme.space4,
+                              AppTheme.space16,
+                              AppTheme.space12,
+                            ),
+                            sliver: SliverList.separated(
+                              itemCount: snippetsByGroup[group.name]!.length,
+                              separatorBuilder: (_, _) =>
+                                  const SizedBox(height: AppTheme.space10),
+                              itemBuilder: (context, index) {
+                                final snippet =
+                                    snippetsByGroup[group.name]![index];
+                                return ContextMenuRegion(
+                                  entries: () => _snippetMenu(snippet),
+                                  child: _SnippetCard(
+                                    snippet: snippet,
+                                    selected: _selectedIds.contains(snippet.id),
+                                    selectionMode: _selectedIds.isNotEmpty,
+                                    onTap: () => _onSnippetTap(snippet),
+                                    onLongPress: () =>
+                                        _onSnippetLongPress(snippet),
+                                    onAction: (action) =>
+                                        _onAction(action, snippet),
+                                  ),
+                                );
+                              },
+                            ),
                           ),
-                        ),
-                        SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(
-                            AppTheme.space16,
-                            AppTheme.space4,
-                            AppTheme.space16,
-                            AppTheme.space12,
-                          ),
-                          sliver: SliverList.separated(
-                            itemCount: snippetsByGroup[group.name]!.length,
-                            separatorBuilder: (_, _) =>
-                                const SizedBox(height: AppTheme.space10),
-                            itemBuilder: (context, index) {
-                              final snippet =
-                                  snippetsByGroup[group.name]![index];
-                              return ContextMenuRegion(
-                                entries: () => _snippetMenu(snippet),
-                                child: _SnippetCard(
-                                  snippet: snippet,
-                                  selected: _selectedIds.contains(snippet.id),
-                                  selectionMode: _selectedIds.isNotEmpty,
-                                  onTap: () => _onSnippetTap(snippet),
-                                  onLongPress: () =>
-                                      _onSnippetLongPress(snippet),
-                                  onAction: (action) =>
-                                      _onAction(action, snippet),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
+                        ],
                       ],
                     ],
-                  ],
-                ),
-              ),
-            ],
-          );
-
-          return SelectionActionHost(
-            bar: _selectedIds.isEmpty
-                ? null
-                : SelectionActionBar(
-                    count: _selectedIds.length,
-                    onMove: _moveSelected,
-                    onDelete: _deleteSelected,
-                    onClear: _clearSelection,
-                    onSelectAll:
-                        visibleSnippets.isNotEmpty &&
-                            visibleSnippets.any(
-                              (s) => !_selectedIds.contains(s.id),
-                            )
-                        ? () {
-                            setState(() {
-                              _selectedIds.addAll(
-                                visibleSnippets.map((s) => s.id),
-                              );
-                            });
-                          }
-                        : null,
                   ),
-            child: scrollView,
-          );
-        },
+                ),
+              ],
+            );
+
+            return SelectionActionHost(
+              bar: _selectedIds.isEmpty
+                  ? null
+                  : SelectionActionBar(
+                      count: _selectedIds.length,
+                      onMove: _moveSelected,
+                      onDelete: _deleteSelected,
+                      onClear: _clearSelection,
+                      onSelectAll:
+                          visibleSnippets.isNotEmpty &&
+                              visibleSnippets.any(
+                                (s) => !_selectedIds.contains(s.id),
+                              )
+                          ? () {
+                              setState(() {
+                                _selectedIds.addAll(
+                                  visibleSnippets.map((s) => s.id),
+                                );
+                              });
+                            }
+                          : null,
+                    ),
+              child: scrollView,
+            );
+          },
+        ),
       ),
     );
   }

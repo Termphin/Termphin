@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../i18n/strings.g.dart';
 import '../../services/app/app_commands.dart';
+import '../../utils/platform_info.dart';
 
 /// One entry of the app's menus, shared by the title bar's and the Mac's
 /// menu bar so the two list the same things.
@@ -102,6 +103,25 @@ class ContextMenus extends ChangeNotifier {
       notifyListeners();
     });
   }
+}
+
+/// Publishes [menus] while the section this sits in is the one on screen.
+///
+/// The shell keeps every section mounted and turns [TickerMode] on only for
+/// the one in front, uncovered by a terminal; a list's menus follow that, so
+/// a section in the background never adds its menu to the bar.
+class SectionMenus extends StatelessWidget {
+  const SectionMenus({super.key, required this.menus, required this.child});
+
+  final List<AppMenu> Function(Translations t) menus;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => ContextMenuScope(
+    active: isDesktopPlatform && TickerMode.valuesOf(context).enabled,
+    menus: menus,
+    child: child,
+  );
 }
 
 /// Publishes [menus] to the title bar for as long as it is mounted and

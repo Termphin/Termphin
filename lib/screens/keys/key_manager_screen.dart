@@ -30,6 +30,7 @@ import '../../widgets/ui/list_key_navigation.dart';
 import '../../widgets/ui/list_section_header.dart';
 import '../../widgets/ui/selection_action_bar.dart';
 import '../../widgets/ui/text_input_dialog.dart';
+import '../../widgets/window/app_menu.dart';
 import '../../widgets/window/page_bar.dart';
 import '../search/global_search_launcher.dart';
 import 'key_form_screen.dart';
@@ -381,254 +382,278 @@ class _KeyManagerScreenState extends ConsumerState<KeyManagerScreen> {
         .where((g) => (keysByGroup[g.name] ?? const []).isNotEmpty)
         .toList();
 
-    return GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: Scaffold(
-        appBar: DesktopPageHeader.replacesAppBar(context)
-            ? null
-            : AppBar(
-                shape: collapsed
-                    ? Border(
-                        bottom: BorderSide(
-                          color: context.colors.surfaceBorder,
-                          width: AppTheme.hairline,
-                        ),
-                      )
-                    : const Border(),
-                title: AnimatedOpacity(
-                  duration: AppTheme.interactiveDuration,
-                  opacity: collapsed ? 1 : 0,
-                  child: Text(
-                    t.keys.title,
-                    style: Theme.of(context).textTheme.titleLarge,
+    return SectionMenus(
+      menus: (t) => [
+        AppMenu(t.window.menuKeys, [
+          [
+            AppMenuItem(
+              label: t.keys.addKey,
+              icon: PhosphorIconsRegular.plus,
+              onSelected: () async {
+                await showKeyFormScreen(context);
+                if (mounted) await _loadKeys(showLoading: false);
+              },
+            ),
+          ],
+        ]),
+      ],
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Scaffold(
+          appBar: DesktopPageHeader.replacesAppBar(context)
+              ? null
+              : AppBar(
+                  shape: collapsed
+                      ? Border(
+                          bottom: BorderSide(
+                            color: context.colors.surfaceBorder,
+                            width: AppTheme.hairline,
+                          ),
+                        )
+                      : const Border(),
+                  title: AnimatedOpacity(
+                    duration: AppTheme.interactiveDuration,
+                    opacity: collapsed ? 1 : 0,
+                    child: Text(
+                      t.keys.title,
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
                   ),
                 ),
-              ),
-        body: DesktopPageHeader(
-          title: t.keys.title,
-          child: ListKeyNavigation(
-            child: SelectionActionHost(
-              bar: _isSelectionMode
-                  ? SelectionActionBar(
-                      count: _selectedKeyIds.length,
-                      onMove: _moveSelectedKeys,
-                      onDelete: _deleteSelectedKeys,
-                      onClear: () => setState(() => _selectedKeyIds.clear()),
-                      onSelectAll:
-                          visibleKeys.isNotEmpty &&
-                              visibleKeys.every(
-                                (k) => _selectedKeyIds.contains(k.id),
-                              )
-                          ? null
-                          : () {
-                              setState(() {
-                                _selectedKeyIds.addAll(
-                                  visibleKeys.map((k) => k.id),
-                                );
-                              });
-                            },
-                    )
-                  : null,
-              child: SafeArea(
-                top: false,
-                child: _loading
-                    ? const Center(child: CircularProgressIndicator())
-                    : ContentGutter(
-                        builder: (context, gutter) => CustomScrollView(
-                          controller: _scrollController,
-                          slivers: [
-                            SliverPadding(
-                              padding: gutter,
-                              sliver: SliverMainAxisGroup(
-                                slivers: [
-                                  SliverToBoxAdapter(
-                                    child: LargeTitleHeader(
-                                      title: t.keys.title,
-                                      subtitle: t.keys.subtitle,
-                                    ),
-                                  ),
-                                  if (_keys.isNotEmpty) ...[
-                                    const SliverPadding(
-                                      padding: EdgeInsets.fromLTRB(
-                                        AppTheme.space16,
-                                        AppTheme.space16,
-                                        AppTheme.space16,
-                                        AppTheme.space12,
-                                      ),
-                                      sliver: SliverToBoxAdapter(
-                                        child: GlobalSearchLauncher(
-                                          heroTag: 'globalSearch-keys',
-                                        ),
-                                      ),
-                                    ),
+          body: DesktopPageHeader(
+            title: t.keys.title,
+            child: ListKeyNavigation(
+              child: SelectionActionHost(
+                bar: _isSelectionMode
+                    ? SelectionActionBar(
+                        count: _selectedKeyIds.length,
+                        onMove: _moveSelectedKeys,
+                        onDelete: _deleteSelectedKeys,
+                        onClear: () => setState(() => _selectedKeyIds.clear()),
+                        onSelectAll:
+                            visibleKeys.isNotEmpty &&
+                                visibleKeys.every(
+                                  (k) => _selectedKeyIds.contains(k.id),
+                                )
+                            ? null
+                            : () {
+                                setState(() {
+                                  _selectedKeyIds.addAll(
+                                    visibleKeys.map((k) => k.id),
+                                  );
+                                });
+                              },
+                      )
+                    : null,
+                child: SafeArea(
+                  top: false,
+                  child: _loading
+                      ? const Center(child: CircularProgressIndicator())
+                      : ContentGutter(
+                          builder: (context, gutter) => CustomScrollView(
+                            controller: _scrollController,
+                            slivers: [
+                              SliverPadding(
+                                padding: gutter,
+                                sliver: SliverMainAxisGroup(
+                                  slivers: [
                                     SliverToBoxAdapter(
-                                      child: GroupFilterChips(
-                                        groups: populatedGroups,
-                                        selected: _selectedGroup,
-                                        onChanged: (group) => setState(
-                                          () => _selectedGroup = group,
-                                        ),
+                                      child: LargeTitleHeader(
+                                        title: t.keys.title,
+                                        subtitle: t.keys.subtitle,
                                       ),
                                     ),
-                                  ],
-                                  if (_localKeys.isNotEmpty)
-                                    SliverToBoxAdapter(
-                                      child: _LocalKeysSection(
-                                        keys: _localKeys,
-                                        importing: _importingLocal,
-                                        onImport: _importOneLocalKey,
-                                        onImportAll: _importAllLocalKeys,
-                                      ),
-                                    ),
-                                  if (_keys.isEmpty)
-                                    SliverFillRemaining(
-                                      hasScrollBody: false,
-                                      child: _buildEmptyState(),
-                                    )
-                                  else ...[
-                                    for (final (i, group)
-                                        in displayGroups.indexed) ...[
-                                      GroupSectionHeader.sliver(
-                                        group: group,
-                                        count:
-                                            keysByGroup[group.name]?.length ??
-                                            0,
-                                        onAdd: () async {
-                                          await showKeyFormScreen(
-                                            context,
-                                            initialGroup: group.name,
-                                          );
-                                          if (mounted) {
-                                            await _loadKeys(showLoading: false);
-                                          }
-                                        },
-                                        addTooltip: t.keys.addKey,
+                                    if (_keys.isNotEmpty) ...[
+                                      const SliverPadding(
                                         padding: EdgeInsets.fromLTRB(
                                           AppTheme.space16,
-                                          i == 0
-                                              ? AppTheme.space4
-                                              : AppTheme.space16,
                                           AppTheme.space16,
-                                          AppTheme.space4,
-                                        ),
-                                      ),
-                                      SliverPadding(
-                                        padding: const EdgeInsets.fromLTRB(
-                                          AppTheme.space16,
-                                          AppTheme.space4,
                                           AppTheme.space16,
                                           AppTheme.space12,
                                         ),
-                                        sliver: SliverList.separated(
-                                          itemCount:
-                                              keysByGroup[group.name]!.length,
-                                          separatorBuilder: (_, _) =>
-                                              const SizedBox(
-                                                height: AppTheme.space10,
-                                              ),
-                                          itemBuilder: (context, index) {
-                                            final key =
-                                                keysByGroup[group.name]![index];
-                                            final selected = _selectedKeyIds
-                                                .contains(key.id);
-                                            Future<void> edit() async {
-                                              await showKeyFormScreen(
-                                                context,
-                                                existing: key,
-                                              );
-                                              if (mounted) {
-                                                await _loadKeys(
-                                                  showLoading: false,
-                                                );
-                                              }
-                                            }
-
-                                            return ContextMenuRegion(
-                                              entries: () => [
-                                                ContextMenuEntry(
-                                                  label: t.contextMenu.edit,
-                                                  icon: PhosphorIconsRegular
-                                                      .pencilSimple,
-                                                  onSelected: () =>
-                                                      unawaited(edit()),
-                                                ),
-                                                ContextMenuEntry(
-                                                  label: t.keys.copyPublicKey,
-                                                  icon:
-                                                      PhosphorIconsRegular.copy,
-                                                  onSelected: () =>
-                                                      _copyPublicKey(key),
-                                                ),
-                                                ContextMenuEntry(
-                                                  label: t.contextMenu.select,
-                                                  icon: PhosphorIconsRegular
-                                                      .checkSquare,
-                                                  onSelected: () =>
-                                                      _toggleSelection(key.id),
-                                                ),
-                                                null,
-                                                ContextMenuEntry(
-                                                  label: t.contextMenu.delete,
-                                                  icon: PhosphorIconsRegular
-                                                      .trash,
-                                                  destructive: true,
-                                                  onSelected: () =>
-                                                      _deleteKey(key),
-                                                ),
-                                              ],
-                                              child: _KeyTile(
-                                                sshKey: key,
-                                                selected: selected,
-                                                isSelectionMode:
-                                                    _isSelectionMode,
-                                                onTap: () {
-                                                  if (_isSelectionMode ||
-                                                      selectionModifierPressed) {
-                                                    _toggleSelection(key.id);
-                                                  }
-                                                },
-                                                onLongPress: () {
-                                                  if (!_isSelectionMode) {
-                                                    setState(() {
-                                                      _selectedKeyIds.add(
-                                                        key.id,
-                                                      );
-                                                    });
-                                                  } else {
-                                                    _toggleSelection(key.id);
-                                                  }
-                                                },
-                                                onDelete: () => _deleteKey(key),
-                                                onEdit: () async {
-                                                  await showKeyFormScreen(
-                                                    context,
-                                                    existing: key,
-                                                  );
-                                                  if (mounted) {
-                                                    await _loadKeys(
-                                                      showLoading: false,
-                                                    );
-                                                  }
-                                                },
-                                                onCopyPublicKey: () =>
-                                                    _copyPublicKey(key),
-                                              ),
-                                            );
-                                          },
+                                        sliver: SliverToBoxAdapter(
+                                          child: GlobalSearchLauncher(
+                                            heroTag: 'globalSearch-keys',
+                                          ),
+                                        ),
+                                      ),
+                                      SliverToBoxAdapter(
+                                        child: GroupFilterChips(
+                                          groups: populatedGroups,
+                                          selected: _selectedGroup,
+                                          onChanged: (group) => setState(
+                                            () => _selectedGroup = group,
+                                          ),
                                         ),
                                       ),
                                     ],
-                                    const SliverToBoxAdapter(
-                                      child: SizedBox(height: AppTheme.space32),
-                                    ),
+                                    if (_localKeys.isNotEmpty)
+                                      SliverToBoxAdapter(
+                                        child: _LocalKeysSection(
+                                          keys: _localKeys,
+                                          importing: _importingLocal,
+                                          onImport: _importOneLocalKey,
+                                          onImportAll: _importAllLocalKeys,
+                                        ),
+                                      ),
+                                    if (_keys.isEmpty)
+                                      SliverFillRemaining(
+                                        hasScrollBody: false,
+                                        child: _buildEmptyState(),
+                                      )
+                                    else ...[
+                                      for (final (i, group)
+                                          in displayGroups.indexed) ...[
+                                        GroupSectionHeader.sliver(
+                                          group: group,
+                                          count:
+                                              keysByGroup[group.name]?.length ??
+                                              0,
+                                          onAdd: () async {
+                                            await showKeyFormScreen(
+                                              context,
+                                              initialGroup: group.name,
+                                            );
+                                            if (mounted) {
+                                              await _loadKeys(
+                                                showLoading: false,
+                                              );
+                                            }
+                                          },
+                                          addTooltip: t.keys.addKey,
+                                          padding: EdgeInsets.fromLTRB(
+                                            AppTheme.space16,
+                                            i == 0
+                                                ? AppTheme.space4
+                                                : AppTheme.space16,
+                                            AppTheme.space16,
+                                            AppTheme.space4,
+                                          ),
+                                        ),
+                                        SliverPadding(
+                                          padding: const EdgeInsets.fromLTRB(
+                                            AppTheme.space16,
+                                            AppTheme.space4,
+                                            AppTheme.space16,
+                                            AppTheme.space12,
+                                          ),
+                                          sliver: SliverList.separated(
+                                            itemCount:
+                                                keysByGroup[group.name]!.length,
+                                            separatorBuilder: (_, _) =>
+                                                const SizedBox(
+                                                  height: AppTheme.space10,
+                                                ),
+                                            itemBuilder: (context, index) {
+                                              final key =
+                                                  keysByGroup[group
+                                                      .name]![index];
+                                              final selected = _selectedKeyIds
+                                                  .contains(key.id);
+                                              Future<void> edit() async {
+                                                await showKeyFormScreen(
+                                                  context,
+                                                  existing: key,
+                                                );
+                                                if (mounted) {
+                                                  await _loadKeys(
+                                                    showLoading: false,
+                                                  );
+                                                }
+                                              }
+
+                                              return ContextMenuRegion(
+                                                entries: () => [
+                                                  ContextMenuEntry(
+                                                    label: t.contextMenu.edit,
+                                                    icon: PhosphorIconsRegular
+                                                        .pencilSimple,
+                                                    onSelected: () =>
+                                                        unawaited(edit()),
+                                                  ),
+                                                  ContextMenuEntry(
+                                                    label: t.keys.copyPublicKey,
+                                                    icon: PhosphorIconsRegular
+                                                        .copy,
+                                                    onSelected: () =>
+                                                        _copyPublicKey(key),
+                                                  ),
+                                                  ContextMenuEntry(
+                                                    label: t.contextMenu.select,
+                                                    icon: PhosphorIconsRegular
+                                                        .checkSquare,
+                                                    onSelected: () =>
+                                                        _toggleSelection(
+                                                          key.id,
+                                                        ),
+                                                  ),
+                                                  null,
+                                                  ContextMenuEntry(
+                                                    label: t.contextMenu.delete,
+                                                    icon: PhosphorIconsRegular
+                                                        .trash,
+                                                    destructive: true,
+                                                    onSelected: () =>
+                                                        _deleteKey(key),
+                                                  ),
+                                                ],
+                                                child: _KeyTile(
+                                                  sshKey: key,
+                                                  selected: selected,
+                                                  isSelectionMode:
+                                                      _isSelectionMode,
+                                                  onTap: () {
+                                                    if (_isSelectionMode ||
+                                                        selectionModifierPressed) {
+                                                      _toggleSelection(key.id);
+                                                    }
+                                                  },
+                                                  onLongPress: () {
+                                                    if (!_isSelectionMode) {
+                                                      setState(() {
+                                                        _selectedKeyIds.add(
+                                                          key.id,
+                                                        );
+                                                      });
+                                                    } else {
+                                                      _toggleSelection(key.id);
+                                                    }
+                                                  },
+                                                  onDelete: () =>
+                                                      _deleteKey(key),
+                                                  onEdit: () async {
+                                                    await showKeyFormScreen(
+                                                      context,
+                                                      existing: key,
+                                                    );
+                                                    if (mounted) {
+                                                      await _loadKeys(
+                                                        showLoading: false,
+                                                      );
+                                                    }
+                                                  },
+                                                  onCopyPublicKey: () =>
+                                                      _copyPublicKey(key),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                      const SliverToBoxAdapter(
+                                        child: SizedBox(
+                                          height: AppTheme.space32,
+                                        ),
+                                      ),
+                                    ],
                                   ],
-                                ],
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
+                ),
               ),
             ),
           ),

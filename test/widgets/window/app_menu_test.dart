@@ -72,4 +72,38 @@ void main() {
     await tester.pump();
     expect(notified, greaterThan(before));
   });
+
+  testWidgets('a section adds its menu only while it is the one on screen', (
+    tester,
+  ) async {
+    Widget section({required bool onScreen}) => Scaffold(
+      body: TickerMode(
+        enabled: onScreen,
+        child: SectionMenus(
+          menus: (_) => [_menu('Snippets')],
+          child: const SizedBox.shrink(),
+        ),
+      ),
+    );
+
+    await pumpTestApp(tester, section(onScreen: true));
+    expect(_labels(tester), ['Termphin', 'Snippets', 'View', 'Help']);
+
+    await pumpTestApp(tester, section(onScreen: false));
+    expect(_labels(tester), ['Termphin', 'View', 'Help']);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.linux));
+
+  testWidgets('a phone gets no section menus', (tester) async {
+    await pumpTestApp(
+      tester,
+      Scaffold(
+        body: SectionMenus(
+          menus: (_) => [_menu('Snippets')],
+          child: const SizedBox.shrink(),
+        ),
+      ),
+    );
+
+    expect(_labels(tester), ['Termphin', 'View', 'Help']);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 }
