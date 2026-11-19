@@ -112,4 +112,60 @@ void main() {
     await expectLater(service.openSettings(), completes);
     expect(recordedCalls, isEmpty);
   });
+
+  group('on a Linux desktop', () {
+    late _RecordingLinuxNotifications linux;
+    late FlutterLocalNotificationsPlatform previous;
+
+    setUp(() {
+      debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+      previous = FlutterLocalNotificationsPlatform.instance;
+      linux = _RecordingLinuxNotifications();
+      FlutterLocalNotificationsPlatform.instance = linux;
+    });
+
+    tearDown(() {
+      FlutterLocalNotificationsPlatform.instance = previous;
+    });
+
+    test('posts a terminal alert, which opens its session', () async {
+      await service.showTerminalAlert(
+        sessionId: 'session-7',
+        title: 'build',
+        body: 'done',
+      );
+
+      expect(linux.shown.single, ('build', 'done', 'session:session-7'));
+    });
+
+    test('posts a dropped session', () async {
+      await service.showSessionDropped(name: 'prod');
+
+      expect(linux.shown, hasLength(1));
+    });
+  });
+}
+
+class _RecordingLinuxNotifications
+    extends LinuxFlutterLocalNotificationsPlugin {
+  final shown = <(String?, String?, String?)>[];
+
+  @override
+  Future<bool?> initialize({
+    required LinuxInitializationSettings settings,
+    DidReceiveNotificationResponseCallback? onDidReceiveNotificationResponse,
+  }) async => true;
+
+  @override
+  Future<NotificationAppLaunchDetails?>
+  getNotificationAppLaunchDetails() async => null;
+
+  @override
+  Future<void> show({
+    required int id,
+    String? title,
+    String? body,
+    LinuxNotificationDetails? notificationDetails,
+    String? payload,
+  }) async => shown.add((title, body, payload));
 }
