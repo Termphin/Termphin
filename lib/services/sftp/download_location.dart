@@ -126,13 +126,22 @@ class DownloadLocation {
   }
 
   /// Where a desktop download lands: the chosen folder, else the user's own
-  /// Downloads folder, else - on a system that reports none - one under the
-  /// app's documents.
+  /// Downloads folder, else `Downloads` in the home folder.
+  ///
+  /// A Linux session without XDG user directories - no `user-dirs.dirs`, as
+  /// on a server or a bare window manager - reports neither Downloads nor
+  /// Documents, and asking for the latter throws; the home folder is always
+  /// there, and `~/Downloads` is where every other app puts files then.
   Future<Directory> desktopTarget() async {
     final folder = await current();
     if (folder != null) return Directory(folder.uri);
-    final downloads = await getDownloadsDirectory();
-    if (downloads != null) return downloads;
+    try {
+      final downloads = await getDownloadsDirectory();
+      if (downloads != null) return downloads;
+    } catch (_) {}
+    final home =
+        Platform.environment[isWindowsPlatform ? 'USERPROFILE' : 'HOME'];
+    if (home != null && home.isNotEmpty) return Directory('$home/Downloads');
     final docs = await getApplicationDocumentsDirectory();
     return Directory('${docs.path}/Downloads');
   }
