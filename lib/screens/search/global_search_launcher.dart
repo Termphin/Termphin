@@ -5,6 +5,7 @@ import '../../i18n/strings.g.dart';
 import '../../models/ssh_profile.dart';
 import '../../theme/theme.dart';
 import '../../utils/platform_info.dart';
+import '../../widgets/terminal/terminal_scheme_theme.dart';
 import '../../widgets/ui/app_sheet.dart';
 import 'global_search_screen.dart';
 
@@ -162,24 +163,26 @@ Future<void> openGlobalSearch(
       context: context,
       builder: (ctx) {
         final window = MediaQuery.sizeOf(ctx);
-        return AppModalScope(
-          presentation: ModalPresentation.dialog,
-          child: EscapeToPop(
-            child: Dialog(
-              alignment: const Alignment(0, -0.55),
-              clipBehavior: Clip.antiAlias,
-              insetPadding: const EdgeInsets.all(AppTheme.space32),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 720),
-                child: SizedBox(
-                  height: appDialogMaxHeight(window.height) * 0.8,
-                  child: GlobalSearchScreen(
-                    heroTag: heroTag,
-                    hint: hint,
-                    pickFrom: pickFrom,
-                    onPick: onPick,
-                    header: header,
-                    initialQuery: initialQuery,
+        return followTerminalOnScreen(
+          AppModalScope(
+            presentation: ModalPresentation.dialog,
+            child: EscapeToPop(
+              child: Dialog(
+                alignment: const Alignment(0, -0.55),
+                clipBehavior: Clip.antiAlias,
+                insetPadding: const EdgeInsets.all(AppTheme.space32),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 720),
+                  child: SizedBox(
+                    height: appDialogMaxHeight(window.height) * 0.8,
+                    child: GlobalSearchScreen(
+                      heroTag: heroTag,
+                      hint: hint,
+                      pickFrom: pickFrom,
+                      onPick: onPick,
+                      header: header,
+                      initialQuery: initialQuery,
+                    ),
                   ),
                 ),
               ),

@@ -12,6 +12,7 @@ import 'package:termphin/services/platform/tray_menu.dart';
 import 'package:termphin/services/settings/app_settings.dart';
 import 'package:termphin/services/settings/desktop_settings.dart';
 import 'package:termphin/services/ssh/ssh_session_manager.dart';
+import 'package:termphin/widgets/terminal/terminal_scheme_theme.dart';
 import 'package:termphin/widgets/window/desktop_tray_host.dart';
 
 import '../../support/fakes.dart';
@@ -223,6 +224,28 @@ void main() {
       await tester.tap(find.text(t.window.quitConfirm));
       await tester.pumpAndSettle();
       expect(window.quits, 1);
+    });
+
+    testWidgets('over a session the question takes the session colours', (
+      tester,
+    ) async {
+      terminalOnScreen.value = true;
+      addTearDown(() => terminalOnScreen.value = false);
+      await manager.startSession(profileFixture(), sessionId: 'live');
+      await mount(tester);
+
+      AppCommands.instance.run(AppCommand.quit);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.ancestor(
+          of: find.text(t.window.quitConfirmBody(n: 1)),
+          matching: find.byType(TerminalSchemeTheme),
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.text(t.common.cancel));
+      await tester.pumpAndSettle();
     });
 
     testWidgets('with nothing connected, just quits', (tester) async {

@@ -18,6 +18,15 @@ final ValueNotifier<TerminalColorScheme?> terminalChromeScheme = ValueNotifier(
 /// rest of it.
 final ValueNotifier<bool> terminalOnScreen = ValueNotifier(false);
 
+/// [child] in the session's colours while a session is on screen, as it is.
+///
+/// A dialog opened from above the terminal's own subtree - the window's
+/// close button, a shortcut handled by the shell - is themed from the app,
+/// not from the page under it, and would come up light over a dark
+/// terminal.
+Widget followTerminalOnScreen(Widget child) =>
+    terminalOnScreen.value ? TerminalSchemeTheme(child: child) : child;
+
 bool _listening = false;
 
 /// Starts tracking the setting, once per process. Safe to call from anywhere

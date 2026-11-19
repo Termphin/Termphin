@@ -14,6 +14,7 @@ import 'package:termphin/screens/search/global_search_launcher.dart';
 import 'package:termphin/screens/search/global_search_screen.dart';
 import 'package:termphin/services/app/identity_anonymizer.dart';
 import 'package:termphin/services/settings/anonymize_setting.dart';
+import 'package:termphin/widgets/terminal/terminal_scheme_theme.dart';
 
 import '../../support/fakes.dart';
 import '../../support/fixtures.dart';
@@ -101,6 +102,34 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();
     expect(find.byType(GlobalSearchScreen), findsNothing);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.linux));
+
+  testWidgets('over a session the palette takes the session colours', (
+    tester,
+  ) async {
+    terminalOnScreen.value = true;
+    addTearDown(() => terminalOnScreen.value = false);
+    await open(tester);
+
+    expect(
+      find.ancestor(
+        of: find.byType(GlobalSearchScreen),
+        matching: find.byType(TerminalSchemeTheme),
+      ),
+      findsOneWidget,
+    );
+  }, variant: TargetPlatformVariant.only(TargetPlatform.linux));
+
+  testWidgets('away from a session it keeps the app colours', (tester) async {
+    await open(tester);
+
+    expect(
+      find.ancestor(
+        of: find.byType(GlobalSearchScreen),
+        matching: find.byType(TerminalSchemeTheme),
+      ),
+      findsNothing,
+    );
   }, variant: TargetPlatformVariant.only(TargetPlatform.linux));
 
   testWidgets('the box flies up into a focused field', (tester) async {

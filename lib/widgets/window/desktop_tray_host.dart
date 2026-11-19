@@ -18,6 +18,7 @@ import '../../services/platform/desktop_window.dart';
 import '../../services/platform/tray_menu.dart';
 import '../../services/settings/desktop_settings.dart';
 import '../../services/ssh/ssh_session_manager.dart';
+import '../terminal/terminal_scheme_theme.dart';
 
 /// Whether the first close has asked what closing should do. Device state:
 /// the answer itself is [closeToTraySetting], which is backed up.
@@ -182,19 +183,21 @@ class _DesktopTrayHostState extends ConsumerState<DesktopTrayHost> {
     final t = Translations.of(ctx);
     return showDialog<bool>(
       context: ctx,
-      builder: (dialog) => AlertDialog(
-        title: Text(t.window.closeAskTitle),
-        content: Text(t.window.closeAskBody),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialog).pop(false),
-            child: Text(t.window.closeAskQuit),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialog).pop(true),
-            child: Text(t.window.closeAskKeep),
-          ),
-        ],
+      builder: (dialog) => followTerminalOnScreen(
+        AlertDialog(
+          title: Text(t.window.closeAskTitle),
+          content: Text(t.window.closeAskBody),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialog).pop(false),
+              child: Text(t.window.closeAskQuit),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialog).pop(true),
+              child: Text(t.window.closeAskKeep),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -210,19 +213,21 @@ class _DesktopTrayHostState extends ConsumerState<DesktopTrayHost> {
       final t = Translations.of(ctx);
       final ok = await showDialog<bool>(
         context: ctx,
-        builder: (dialog) => AlertDialog(
-          title: Text(t.window.quitConfirmTitle),
-          content: Text(t.window.quitConfirmBody(n: live)),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialog).pop(false),
-              child: Text(t.common.cancel),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(dialog).pop(true),
-              child: Text(t.window.quitConfirm),
-            ),
-          ],
+        builder: (dialog) => followTerminalOnScreen(
+          AlertDialog(
+            title: Text(t.window.quitConfirmTitle),
+            content: Text(t.window.quitConfirmBody(n: live)),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialog).pop(false),
+                child: Text(t.common.cancel),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(dialog).pop(true),
+                child: Text(t.window.quitConfirm),
+              ),
+            ],
+          ),
         ),
       );
       if (ok != true) return;
