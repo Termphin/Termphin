@@ -239,4 +239,39 @@ void main() {
       ]);
     });
   });
+
+  group('macOS', () {
+    /// The keys set to true in an entitlements file.
+    Set<String> granted(String path) => RegExp(
+      r'<key>([^<]+)</key>\s*<true/>',
+    ).allMatches(File(path).readAsStringSync()).map((m) => m.group(1)!).toSet();
+
+    for (final build in ['DebugProfile', 'Release']) {
+      test('$build is sandboxed and may still open an SSH connection', () {
+        final keys = granted('macos/Runner/$build.entitlements');
+        expect(keys, contains('com.apple.security.app-sandbox'));
+        expect(
+          keys,
+          contains('com.apple.security.network.client'),
+          reason: 'without it the sandbox blocks every outgoing connection',
+        );
+        expect(
+          keys,
+          contains('com.apple.security.files.user-selected.read-write'),
+        );
+        expect(
+          keys.where((k) => k.contains('temporary-exception')),
+          isEmpty,
+          reason: 'App Review refuses temporary exceptions',
+        );
+      });
+    }
+
+    test('only a debug build may listen for connections', () {
+      expect(
+        granted('macos/Runner/Release.entitlements'),
+        isNot(contains('com.apple.security.network.server')),
+      );
+    });
+  });
 }
