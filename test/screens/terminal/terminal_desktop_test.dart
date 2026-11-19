@@ -98,8 +98,9 @@ void main() {
     expect(find.byType(FloatingActionDock), findsNothing);
   }, variant: _linux);
 
-  testWidgets('the dock is a toolbar over the terminal, on its own '
-      'switch', (tester) async {
+  testWidgets('the dock is a toolbar over the terminal, always there', (
+    tester,
+  ) async {
     await _pumpDesktopScreen(tester);
 
     final bar = find.byKey(const ValueKey('desktopActionBar'));
@@ -119,6 +120,6 @@ void main() {
 
     await floatingDockSettings.enabled.set(false);
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('desktopActionBar')), findsNothing);
+    expect(find.byKey(const ValueKey('desktopActionBar')), findsOneWidget);
   }, variant: _linux);
 }

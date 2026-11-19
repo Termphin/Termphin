@@ -48,10 +48,44 @@ class AppModalScope extends InheritedWidget {
 /// let Esc reach the route. Keys bubble up from the focused field, so this,
 /// sitting above the page, hears Esc before anything the page holds. It
 /// pops with `maybePop`, so a form with unsaved edits still gets to ask.
-class EscapeToPop extends StatelessWidget {
-  const EscapeToPop({super.key, required this.child});
+///
+/// [onEscape] replaces that pop - closing a whole chain of windows - and
+/// then Esc is heard before the focus system, while the route is the top
+/// one: with nothing inside focused, the route's own scope has the focus,
+/// sits above this, and would pop just its one route.
+class EscapeToPop extends StatefulWidget {
+  const EscapeToPop({super.key, this.onEscape, required this.child});
 
+  final Future<void> Function(NavigatorState navigator)? onEscape;
   final Widget child;
+
+  @override
+  State<EscapeToPop> createState() => _EscapeToPopState();
+}
+
+class _EscapeToPopState extends State<EscapeToPop> {
+  @override
+  void initState() {
+    super.initState();
+    HardwareKeyboard.instance.addHandler(_onKey);
+  }
+
+  @override
+  void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onKey);
+    super.dispose();
+  }
+
+  bool _isEscape(KeyEvent event) =>
+      event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape;
+
+  bool _onKey(KeyEvent event) {
+    final escape = widget.onEscape;
+    if (escape == null || !_isEscape(event)) return false;
+    if (!(ModalRoute.of(context)?.isCurrent ?? false)) return false;
+    unawaited(escape(Navigator.of(context)));
+    return true;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,14 +93,11 @@ class EscapeToPop extends StatelessWidget {
       canRequestFocus: false,
       skipTraversal: true,
       onKeyEvent: (node, event) {
-        if (event is! KeyDownEvent ||
-            event.logicalKey != LogicalKeyboardKey.escape) {
-          return KeyEventResult.ignored;
-        }
+        if (!_isEscape(event)) return KeyEventResult.ignored;
         unawaited(Navigator.of(context).maybePop());
         return KeyEventResult.handled;
       },
-      child: child,
+      child: widget.child,
     );
   }
 }
@@ -122,6 +153,7 @@ Future<T?> showAppSheet<T>({
   if (isDesktopPlatform) {
     return showDialog<T>(
       context: context,
+      animationStyle: AppTheme.popUpAnimation,
       barrierDismissible: isDismissible,
       builder: (ctx) => AppModalScope(
         presentation: ModalPresentation.dialog,
@@ -267,18 +299,119 @@ class AppDialogRoute<T> extends DialogRoute<T> {
     required super.context,
     required super.builder,
     super.settings,
+    super.barrierColor,
   }) : super(barrierDismissible: true);
 
-  /// Shorter than Material's own: a window opened by a click or a key should
-  /// be there, not arrive.
+  /// None at all: a window opened by a click or a key should be there, not
+  /// arrive.
   @override
-  Duration get transitionDuration => const Duration(milliseconds: 90);
+  Duration get transitionDuration => Duration.zero;
 
   @override
-  Duration get reverseTransitionDuration => const Duration(milliseconds: 70);
+  Duration get reverseTransitionDuration => Duration.zero;
 }
 
-/// Pushes [builder] as a dialog over the whole window.
+/// The windows open on top of each other, the newest last: one window that
+/// a page inside it was opened in, rather than a window over a window.
+///
+/// Each step is the same size as the first, over it exactly and with no
+/// second scrim, so going in reads as the window changing page. Its app bar
+/// gets the back arrow, and its title the path to it ([AppWindowTitle]),
+/// each step a way back; Esc closes them all, as it would close the one
+/// window.
+class _AppWindowChain {
+  const _AppWindowChain({
+    required this.route,
+    required this.title,
+    required this.parent,
+    required this.maxWidth,
+    required this.height,
+  });
+
+  final Route<Object?> route;
+  final String? title;
+  final _AppWindowChain? parent;
+  final double maxWidth;
+  final double Function(Size window) height;
+
+  /// The window [context] is in, if it is one of a chain.
+  static _AppWindowChain? of(BuildContext context) =>
+      context.getInheritedWidgetOfExactType<_AppWindowChainScope>()?.chain;
+
+  /// This window and the ones it was opened from, the first one first.
+  List<_AppWindowChain> get path => [...?parent?.path, this];
+
+  /// Pops every window of the chain, newest first, stopping at one that
+  /// will not go - a form with unsaved edits asking first.
+  Future<void> closeAll(NavigatorState navigator) async {
+    for (_AppWindowChain? step = this; step != null; step = step.parent) {
+      if (!step.route.isCurrent) return;
+      await navigator.maybePop();
+      if (step.route.isActive) return;
+    }
+  }
+}
+
+class _AppWindowChainScope extends InheritedWidget {
+  const _AppWindowChainScope({required this.chain, required super.child});
+
+  final _AppWindowChain chain;
+
+  @override
+  bool updateShouldNotify(_AppWindowChainScope oldWidget) =>
+      chain != oldWidget.chain;
+}
+
+/// An app bar's title, which in a window opened from another window (see
+/// [_AppWindowChain]) is the path to it: the titles of the windows it came
+/// through, each a click back to that one, then [child]. Anywhere else it is
+/// just [child].
+class AppWindowTitle extends StatelessWidget {
+  const AppWindowTitle({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final chain = _AppWindowChain.of(context);
+    final before = [
+      for (final step in chain?.path ?? const <_AppWindowChain>[])
+        if (!identical(step, chain) && step.title != null) step,
+    ];
+    if (before.isEmpty) return child;
+    final colors = context.colors;
+    final style = DefaultTextStyle.of(
+      context,
+    ).style.copyWith(color: colors.textSecondary);
+    return Row(
+      children: [
+        for (final step in before) ...[
+          MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: () => Navigator.of(
+                context,
+              ).popUntil((route) => route == step.route),
+              child: Text(step.title!, style: style, maxLines: 1),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppTheme.space6),
+            child: Icon(
+              PhosphorIconsRegular.caretRight,
+              size: AppTheme.icon14,
+              color: colors.textTertiary,
+            ),
+          ),
+        ],
+        Flexible(child: child),
+      ],
+    );
+  }
+}
+
+/// Pushes [builder] as a dialog over the whole window - or, from inside one
+/// already open, as the next page of that window (see [_AppWindowChain]).
 ///
 /// An opaque detector covers the window, so a click beside the dialog lands
 /// on it and not on the barrier that would close it. A `Scaffold` sizes
@@ -289,41 +422,58 @@ Future<T?> _pushDesktopDialog<T>(
   required WidgetBuilder builder,
   required double maxWidth,
   required double Function(Size window) height,
+  String? title,
 }) {
-  return Navigator.of(context, rootNavigator: true).push<T>(
-    AppDialogRoute<T>(
-      context: context,
-      builder: (ctx) {
-        final window = MediaQuery.sizeOf(ctx);
-        return AppModalScope(
+  final parent = _AppWindowChain.of(context);
+  final width = parent?.maxWidth ?? maxWidth;
+  final heightOf = parent?.height ?? height;
+  late final AppDialogRoute<T> route;
+  late final _AppWindowChain chain;
+  route = AppDialogRoute<T>(
+    context: context,
+    barrierColor: parent == null ? null : AppTheme.scrim.invisible,
+    builder: (ctx) {
+      final window = MediaQuery.sizeOf(ctx);
+      Widget page = Builder(builder: builder);
+      if (parent == null) {
+        page = ActionIconTheme(
+          data: ActionIconThemeData(
+            backButtonIconBuilder: (_) => const Icon(PhosphorIconsRegular.x),
+          ),
+          child: page,
+        );
+      }
+      return _AppWindowChainScope(
+        chain: chain,
+        child: AppModalScope(
           presentation: ModalPresentation.dialog,
           child: EscapeToPop(
+            onEscape: (navigator) => chain.closeAll(navigator),
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () {},
               child: Dialog(
                 clipBehavior: Clip.antiAlias,
                 insetPadding: const EdgeInsets.all(AppTheme.space32),
-                child: ActionIconTheme(
-                  data: ActionIconThemeData(
-                    backButtonIconBuilder: (_) =>
-                        const Icon(PhosphorIconsRegular.x),
-                  ),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: maxWidth),
-                    child: SizedBox(
-                      height: height(window),
-                      child: Builder(builder: builder),
-                    ),
-                  ),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: width),
+                  child: SizedBox(height: heightOf(window), child: page),
                 ),
               ),
             ),
           ),
-        );
-      },
-    ),
+        ),
+      );
+    },
   );
+  chain = _AppWindowChain(
+    route: route,
+    title: title,
+    parent: parent,
+    maxWidth: width,
+    height: heightOf,
+  );
+  return Navigator.of(context, rootNavigator: true).push<T>(route);
 }
 
 /// Opens a form: a full-screen page with a close button on a phone, a dialog
@@ -362,11 +512,14 @@ Future<T?> pushAppForm<T>(
 /// open it in, such as a session. A page over everything on a phone; on a
 /// desktop a large window over the app, so the sidebar and the session it
 /// came from are still there behind it.
+///
+/// [title] names it in the path a window opened from inside it shows.
 Future<T?> pushAppWindow<T>(
   BuildContext context, {
   required WidgetBuilder builder,
   AppWindowSize size = AppWindowSize.large,
   bool rootNavigator = false,
+  String? title,
 }) {
   if (isDesktopPlatform) {
     return switch (size) {
@@ -375,12 +528,14 @@ Future<T?> pushAppWindow<T>(
         builder: builder,
         maxWidth: 1280,
         height: (window) => window.height * 0.9,
+        title: title,
       ),
       AppWindowSize.medium => _pushDesktopDialog<T>(
         context,
         builder: builder,
         maxWidth: kAppSettingsWindowMaxWidth,
         height: (window) => appDialogMaxHeight(window.height),
+        title: title,
       ),
     };
   }

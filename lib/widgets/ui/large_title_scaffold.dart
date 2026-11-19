@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../theme/theme.dart';
 import '../../utils/platform_info.dart';
+import '../../widgets/ui/app_sheet.dart';
 import '../window/page_bar.dart';
 import 'list_key_navigation.dart';
 
@@ -219,12 +220,14 @@ class _LargeTitleScaffoldState extends State<LargeTitleScaffold> {
                         ),
                       )
                     : const Border(),
-                title: AnimatedOpacity(
-                  duration: AppTheme.interactiveDuration,
-                  opacity: collapsed ? 1 : 0,
-                  child: Text(
-                    widget.title,
-                    style: Theme.of(context).textTheme.titleLarge,
+                title: AppWindowTitle(
+                  child: AnimatedOpacity(
+                    duration: AppTheme.interactiveDuration,
+                    opacity: collapsed ? 1 : 0,
+                    child: Text(
+                      widget.title,
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
                   ),
                 ),
                 actions: widget.actions,

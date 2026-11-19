@@ -69,6 +69,7 @@ class LocalNotificationsService {
       isAndroidPlatform ||
       isIOSPlatform ||
       isLinuxPlatform ||
+      isMacOSPlatform ||
       isWindowsPlatform;
 
   /// Identifies Termphin's notifications to Windows; it must never change,
@@ -79,6 +80,11 @@ class LocalNotificationsService {
   AndroidFlutterLocalNotificationsPlugin? get _android => _plugin
       .resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin
+      >();
+
+  MacOSFlutterLocalNotificationsPlugin? get _macos => _plugin
+      .resolvePlatformSpecificImplementation<
+        MacOSFlutterLocalNotificationsPlugin
       >();
 
   IOSFlutterLocalNotificationsPlugin? get _ios => _plugin
@@ -99,6 +105,11 @@ class LocalNotificationsService {
         settings: InitializationSettings(
           android: const AndroidInitializationSettings('ic_stat_termphin'),
           iOS: const DarwinInitializationSettings(
+            requestAlertPermission: false,
+            requestSoundPermission: false,
+            requestBadgePermission: false,
+          ),
+          macOS: const DarwinInitializationSettings(
             requestAlertPermission: false,
             requestSoundPermission: false,
             requestBadgePermission: false,
@@ -156,6 +167,7 @@ class LocalNotificationsService {
           priority: Priority.high,
         ),
         iOS: const DarwinNotificationDetails(presentBadge: false),
+        macOS: const DarwinNotificationDetails(presentBadge: false),
       ),
     );
   }
@@ -165,7 +177,11 @@ class LocalNotificationsService {
   static int terminalAlertId(String sessionId) =>
       _terminalAlertBaseId + (sessionId.hashCode & 0xfff);
 
+  /// Whether this run has asked macOS for the permission yet.
+  bool _askedMacOS = false;
+
   Future<bool> hasPermission() async {
+    if (isMacOSPlatform) return _macOSPermission();
     if (isIOSPlatform) {
       final options = await _ios?.checkPermissions();
       return options?.isEnabled ?? false;
@@ -179,6 +195,21 @@ class LocalNotificationsService {
       }
     }
     return true;
+  }
+
+  /// A Mac asks the first time there is something to post - a desktop has
+  /// no settings row that raises it first, and a prompt beside the first
+  /// notification is asked in context. Once answered, macOS answers the same
+  /// again without showing anything, so asking each run costs nothing.
+  Future<bool> _macOSPermission() async {
+    final macos = _macos;
+    if (macos == null) return false;
+    if (!_askedMacOS) {
+      _askedMacOS = true;
+      return await macos.requestPermissions(alert: true, sound: true) ?? false;
+    }
+    final options = await macos.checkPermissions();
+    return options?.isEnabled ?? false;
   }
 
   /// A permission already answered cannot be asked for again, and the request
@@ -253,6 +284,7 @@ class LocalNotificationsService {
           importance: Importance.defaultImportance,
         ),
         iOS: const DarwinNotificationDetails(presentBadge: false),
+        macOS: const DarwinNotificationDetails(presentBadge: false),
       ),
     );
   }

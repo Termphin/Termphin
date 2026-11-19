@@ -253,10 +253,12 @@ class _CustomKeyBuilderScreenState extends State<_CustomKeyBuilderScreen> {
           icon: const Icon(PhosphorIconsRegular.x),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: Text(
-          widget.initial == null
-              ? t.toolbar.newCustomKey
-              : t.toolbar.editCustomKey,
+        title: AppWindowTitle(
+          child: Text(
+            widget.initial == null
+                ? t.toolbar.newCustomKey
+                : t.toolbar.editCustomKey,
+          ),
         ),
       ),
       body: Column(

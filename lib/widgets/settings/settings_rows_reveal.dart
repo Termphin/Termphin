@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../theme/theme.dart';
+import '../ui/motion_size.dart';
 
 /// Rows a card shows only in some states - the PIN's own rows while there
 /// is one - grown and shrunk into place rather than popped in.
@@ -16,7 +17,7 @@ class SettingsRowsReveal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedSize(
+    return MotionSize(
       duration: AppTheme.motionSlow,
       curve: Curves.easeOutCubic,
       alignment: Alignment.topCenter,

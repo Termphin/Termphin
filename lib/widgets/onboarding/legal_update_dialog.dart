@@ -11,6 +11,7 @@ import '../ui/legal_links.dart';
 Future<void> showLegalUpdateDialog(BuildContext context, LegalUpdate update) =>
     showDialog<void>(
       context: context,
+      animationStyle: AppTheme.popUpAnimation,
       barrierDismissible: false,
       builder: (_) => LegalUpdateDialog(update: update),
     );

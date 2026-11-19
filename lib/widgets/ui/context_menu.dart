@@ -40,6 +40,7 @@ Future<void> showAppContextMenu(
   final colors = context.colors;
   final index = await showMenu<int>(
     context: context,
+    popUpAnimationStyle: AppTheme.popUpAnimation,
     useRootNavigator: true,
     position: RelativeRect.fromRect(
       Rect.fromLTWH(at.dx, at.dy, 0, 0),

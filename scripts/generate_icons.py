@@ -10,7 +10,7 @@ Produces:
   assets/icons/termphin_foreground.png    512 glyph on transparent, adaptive fg
   assets/icons/termphin_background.png    512 gradient, adaptive bg
   assets/icons/termphin_monochrome.png    512 silhouette, adaptive monochrome
-  macos/Runner/Assets.xcassets/...        the AppIcon set
+  macos/Runner/Assets.xcassets/...        the AppIcon set, on Apple's macOS grid
   android/.../drawable-*/ic_stat_termphin.png  the notification small icon
   assets/icons/tray.png                   64 tile, the tray icon
   assets/icons/tray_template.png          36 silhouette, the menu bar template
@@ -48,6 +48,15 @@ STATUS_SCALE = 0.9
 SPLASH_SIZE = 120
 SPLASH_CORNER = 0.2237
 SPLASH_DENSITIES = {"mdpi": 1, "hdpi": 1.5, "xhdpi": 2, "xxhdpi": 3, "xxxhdpi": 4}
+
+# Apple's macOS icon grid: on a 1024 canvas the body is 824 square, centred,
+# its corners continuous (a superellipse rather than a circular arc), with a
+# soft shadow below it in the margin left around it. A tile drawn edge to
+# edge sits larger than every other icon in the Dock, with square corners.
+MAC_CANVAS = 1024
+MAC_BODY = 824
+MAC_SUPERELLIPSE = 5
+MAC_SHADOW = {"dy": 10, "blur": 5, "opacity": 0.3}
 
 # Android's canonical notification icon is 24dp.
 STATUS_DENSITIES = {"mdpi": 24, "hdpi": 36, "xhdpi": 48, "xxhdpi": 72, "xxxhdpi": 96}
@@ -142,6 +151,39 @@ def rounded(full_svg):
     )
 
 
+def mac_icon(full_svg):
+    """The full tile shaped and placed on Apple's macOS icon grid."""
+    import math
+
+    inner = full_svg.split(">", 1)[1].rsplit("</svg>", 1)[0]
+    margin = (MAC_CANVAS - MAC_BODY) / 2
+    half = MAC_BODY / 2
+    centre = margin + half
+    points = []
+    for i in range(720):
+        t = 2 * math.pi * i / 720
+        c, s_ = math.cos(t), math.sin(t)
+        x = centre + half * math.copysign(abs(c) ** (2 / MAC_SUPERELLIPSE), c)
+        y = centre + half * math.copysign(abs(s_) ** (2 / MAC_SUPERELLIPSE), s_)
+        points.append(f"{x:.2f},{y:.2f}")
+    shape = "M" + " L".join(points) + " Z"
+    shadow = MAC_SHADOW
+    return (
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{MAC_CANVAS}" '
+        f'height="{MAC_CANVAS}" viewBox="0 0 {MAC_CANVAS} {MAC_CANVAS}">'
+        '<defs>'
+        f'<clipPath id="body"><path d="{shape}"/></clipPath>'
+        '<filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">'
+        f'<feDropShadow dx="0" dy="{shadow["dy"]}" stdDeviation="{shadow["blur"]}" '
+        f'flood-color="#000" flood-opacity="{shadow["opacity"]}"/></filter>'
+        '</defs>'
+        f'<path d="{shape}" fill="#000" filter="url(#shadow)"/>'
+        '<g clip-path="url(#body)">'
+        f'<g transform="translate({margin},{margin}) scale({MAC_BODY / 360})">{inner}</g>'
+        '</g></svg>'
+    )
+
+
 def emit_splash(full_svg, written):
     """The launch screen tile: Android's drawables and iOS's image set."""
     with tempfile.TemporaryDirectory() as tmp:
@@ -178,7 +220,9 @@ def main():
         tmp = pathlib.Path(tmp)
         tile, fg, bg = tmp / "tile.png", tmp / "fg.png", tmp / "bg.png"
         stat, mono = tmp / "stat.png", tmp / "mono.png"
+        mac = tmp / "mac.png"
         render(full, 1024, tile)
+        render(mac_icon(full), MAC_CANVAS, mac)
         render(padded(glyph, 1024, FOREGROUND_SCALE), 1024, fg)
         render(backdrop, 1024, bg)
         render(silhouette(1024), 1024, stat)
@@ -223,7 +267,7 @@ def main():
             )
 
         for size in (16, 32, 64, 128, 256, 512, 1024):
-            emit(tile, f"macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_{size}.png", size)
+            emit(mac, f"macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_{size}.png", size)
 
         emit(tile, "assets/icons/tray.png", 64)
         emit_status("assets/icons/tray_template.png", 36)

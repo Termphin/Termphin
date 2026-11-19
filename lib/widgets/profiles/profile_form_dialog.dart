@@ -479,9 +479,11 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
           appBar: AppBar(
             elevation: 0,
             scrolledUnderElevation: 0,
-            title: Text(
-              isNew ? t.profileForm.newTitle : t.profileForm.editTitle,
-              style: Theme.of(context).textTheme.titleLarge,
+            title: AppWindowTitle(
+              child: Text(
+                isNew ? t.profileForm.newTitle : t.profileForm.editTitle,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
             ),
             leading: IconButton(
               tooltip: t.common.close,

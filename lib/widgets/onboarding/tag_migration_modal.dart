@@ -25,6 +25,7 @@ Future<void> showTagMigrationModal(
   if (plan.isEmpty) return Future.value();
   return showDialog<void>(
     context: context,
+    animationStyle: AppTheme.popUpAnimation,
     barrierDismissible: false,
     builder: (_) => TagMigrationModal(plan: plan, service: service),
   );

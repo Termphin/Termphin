@@ -533,15 +533,27 @@ class AppTheme {
   static const double icon48 = 48;
   static const double icon56 = 56;
 
-  static const Duration motionFast = Duration(milliseconds: 120);
-  static const Duration motionMedium = Duration(milliseconds: 250);
-  static const Duration interactiveDuration = Duration(milliseconds: 160);
-  static const Duration motionSlow = Duration(milliseconds: 200);
-  static const Duration motionPage = Duration(milliseconds: 320);
-  static const Duration motionPageReverse = Duration(milliseconds: 220);
+  /// Every duration below is zero on a desktop, where a window, a menu or a
+  /// page answering a click or a key is expected to be there at once - an
+  /// animation reads as lag under a mouse.
+  static Duration get motionFast => _motion(120);
+  static Duration get motionMedium => _motion(250);
+  static Duration get interactiveDuration => _motion(160);
+  static Duration get motionSlow => _motion(200);
+  static Duration get motionPage => _motion(320);
+  static Duration get motionPageReverse => _motion(220);
 
   /// The wrong-PIN shake: long enough to read as a shake, not a flinch.
-  static const Duration motionShake = Duration(milliseconds: 420);
+  static Duration get motionShake => _motion(420);
+
+  /// What a dialog or a popup menu opens and closes with: nothing on a
+  /// desktop, Material's own elsewhere.
+  static AnimationStyle? get popUpAnimation =>
+      isDesktopPlatform ? AnimationStyle.noAnimation : null;
+
+  static Duration _motion(int milliseconds) =>
+      isDesktopPlatform ? Duration.zero : Duration(milliseconds: milliseconds);
+
   static const Curve interactiveCurve = Cubic(0.16, 1, 0.3, 1);
 
   /// Black at 35%, the one shadow colour: black reads as depth on either
@@ -808,6 +820,7 @@ class AppTheme {
       useMaterial3: true,
       visualDensity: desktop ? VisualDensity.compact : null,
       materialTapTargetSize: desktop ? MaterialTapTargetSize.shrinkWrap : null,
+      pageTransitionsTheme: desktop ? _instantPageTransitions : null,
       listTileTheme: ListTileThemeData(dense: desktop ? true : null),
       scrollbarTheme: desktop
           ? ScrollbarThemeData(
@@ -1142,4 +1155,33 @@ class AppTheme {
       dividerColor: c.surfaceDivider,
     );
   }
+}
+
+/// Pages on a desktop change at once, on every platform a desktop build runs
+/// on.
+const _instantPageTransitions = PageTransitionsTheme(
+  builders: {
+    TargetPlatform.linux: _InstantPageTransitionsBuilder(),
+    TargetPlatform.windows: _InstantPageTransitionsBuilder(),
+    TargetPlatform.macOS: _InstantPageTransitionsBuilder(),
+  },
+);
+
+class _InstantPageTransitionsBuilder extends PageTransitionsBuilder {
+  const _InstantPageTransitionsBuilder();
+
+  @override
+  Duration get transitionDuration => Duration.zero;
+
+  @override
+  Duration get reverseTransitionDuration => Duration.zero;
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) => child;
 }

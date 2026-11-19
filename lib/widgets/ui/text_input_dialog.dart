@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../i18n/strings.g.dart';
+import '../../theme/theme.dart';
 
 /// Asks for one line of text - a new name, a folder, a file. Returns the
 /// trimmed text when [confirmLabel] is pressed or the field is submitted and
@@ -36,6 +37,7 @@ Future<String?> showTextInputDialog(
 
   final result = await showDialog<String>(
     context: context,
+    animationStyle: AppTheme.popUpAnimation,
     builder: (ctx) => AlertDialog(
       title: Text(title),
       content: Form(

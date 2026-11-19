@@ -22,6 +22,7 @@ import '../ui/app_badge.dart';
 import '../ui/app_card.dart';
 import '../ui/app_divider.dart';
 import '../ui/app_notifications.dart';
+import '../ui/motion_size.dart';
 import '../ui/new_badge.dart';
 import '../ui/segmented_switch.dart';
 import '../ui/settings_tile.dart';
@@ -293,7 +294,7 @@ class _OpenAppNotices extends StatelessWidget {
             value: enabled.value,
             onChanged: (on) => unawaited(enabled.set(on)),
           ),
-          AnimatedSize(
+          MotionSize(
             duration: AppTheme.motionSlow,
             curve: Curves.easeOutCubic,
             alignment: Alignment.topCenter,

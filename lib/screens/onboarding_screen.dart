@@ -8,10 +8,9 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../i18n/strings.g.dart';
 import '../models/ssh_profile.dart';
 import '../providers/anonymize_provider.dart';
-import '../providers/groups_provider.dart';
 import '../providers/profiles_provider.dart';
-import '../providers/snippets_provider.dart';
 import '../providers/ssh_keys_provider.dart';
+import '../providers/stored_data_reload.dart';
 import '../providers/sync_provider.dart';
 import '../services/account/account_service.dart';
 import '../services/app/identity_anonymizer.dart';
@@ -32,6 +31,8 @@ import '../widgets/ui/app_divider.dart';
 import '../widgets/ui/app_form_field.dart';
 import '../widgets/ui/clipboard_and_links.dart';
 import '../widgets/ui/key_caps.dart';
+import '../widgets/ui/motion_page.dart';
+import '../widgets/ui/motion_size.dart';
 import '../widgets/ui/permission_tile.dart';
 import '../widgets/ui/section_navigator.dart';
 import 'settings/account_screen.dart';
@@ -216,14 +217,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   };
 
   void _next() {
-    _pageController.nextPage(
+    _pageController.goToNextPage(
       duration: AppTheme.motionSlow,
       curve: AppTheme.interactiveCurve,
     );
   }
 
   void _back() {
-    _pageController.previousPage(
+    _pageController.goToPreviousPage(
       duration: AppTheme.motionSlow,
       curve: AppTheme.interactiveCurve,
     );
@@ -427,10 +428,7 @@ class _UnlockSyncPageState extends ConsumerState<_UnlockSyncPage> {
     });
     try {
       await widget.unlock(_passphrase.text);
-      await ref.read(profilesProvider.notifier).loadProfiles();
-      await ref.read(profileGroupsProvider.notifier).loadGroups();
-      await ref.read(snippetsProvider.notifier).loadSnippets();
-      ref.read(sshKeysRevisionProvider.notifier).bump();
+      await reloadStoredData(ref.read);
       unawaited(ref.read(syncCoordinatorProvider).start());
     } on SyncException catch (error) {
       _fail(error.failure);
@@ -588,7 +586,7 @@ class _ServerPage extends StatelessWidget {
             selected: answer == ServerAnswer.notYet,
             onTap: () => onChanged(ServerAnswer.notYet),
           ),
-          AnimatedSize(
+          MotionSize(
             duration: AppTheme.motionSlow,
             curve: AppTheme.interactiveCurve,
             alignment: Alignment.topCenter,

@@ -852,6 +852,7 @@ class _TerminalPaneState extends State<TerminalPane> {
 
     final choice = await showMenu<String>(
       context: context,
+      popUpAnimationStyle: app_theme.AppTheme.popUpAnimation,
       position: RelativeRect.fromRect(
         Rect.fromLTWH(at.dx, at.dy, 0, 0),
         Offset.zero & overlay.size,

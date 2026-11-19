@@ -307,9 +307,11 @@ class _KeyFormScreenState extends ConsumerState<KeyFormScreen> {
         appBar: AppBar(
           elevation: 0,
           scrolledUnderElevation: 0,
-          title: Text(
-            _isEditing ? t.keys.editKeyTitle : t.keys.newKeyTitle,
-            style: Theme.of(context).textTheme.titleLarge,
+          title: AppWindowTitle(
+            child: Text(
+              _isEditing ? t.keys.editKeyTitle : t.keys.newKeyTitle,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
           ),
           leading: IconButton(
             tooltip: t.common.close,

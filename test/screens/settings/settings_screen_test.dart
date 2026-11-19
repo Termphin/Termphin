@@ -317,8 +317,15 @@ void main() {
     expect(find.text(t.settings.keyToolbar), findsNothing);
     expect(find.text(t.settings.actionDock), findsNothing);
     expect(
-      find.text(t.settings.actionBar, skipOffstage: false),
-      findsOneWidget,
+      find.text(t.settings.actionDockLayout, skipOffstage: false),
+      findsNothing,
+    );
+    expect(
+      find.byKey(
+        const ValueKey('mouseKeyboardGuardSwitch'),
+        skipOffstage: false,
+      ),
+      findsNothing,
     );
     expect(
       find.byKey(const ValueKey('keyboardShortcutsRow'), skipOffstage: false),

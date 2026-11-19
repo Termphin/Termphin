@@ -14,6 +14,7 @@ import '../../services/app/identity_anonymizer.dart';
 import '../../theme/theme.dart';
 import '../../utils/platform_info.dart';
 import '../../widgets/ui/app_card.dart';
+import '../../widgets/ui/app_sheet.dart';
 import '../../widgets/ui/clipboard_and_links.dart';
 import '../../widgets/ui/confirm_dialog.dart';
 import '../../widgets/ui/empty_state.dart';
@@ -114,7 +115,7 @@ class ErrorReportsScreen extends ConsumerWidget {
         final empty = items.isEmpty;
         return Scaffold(
           appBar: AppBar(
-            title: Text(t.settings.errorReports),
+            title: AppWindowTitle(child: Text(t.settings.errorReports)),
             actions: [
               IconButton(
                 tooltip: t.errorReports.sendEmail,

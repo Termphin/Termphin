@@ -9,6 +9,7 @@ import '../../services/completion/command_completion.dart';
 import '../../services/settings/setting.dart';
 import '../../theme/theme.dart';
 import '../ui/modal_actions.dart';
+import '../ui/motion_page.dart';
 import '../ui/section_header.dart';
 import '../ui/settings_tile.dart';
 
@@ -64,6 +65,7 @@ Future<void> showWhatsNewModal(
   if (highlights.isEmpty) return Future.value();
   return showDialog<void>(
     context: context,
+    animationStyle: AppTheme.popUpAnimation,
     barrierDismissible: false,
     builder: (_) => WhatsNewModal(highlights: highlights),
   );
@@ -78,6 +80,7 @@ Future<void> showFeatureExplainer(BuildContext context, String id) async {
   if (highlight == null || !context.mounted) return;
   return showDialog<void>(
     context: context,
+    animationStyle: AppTheme.popUpAnimation,
     builder: (_) => WhatsNewModal(highlights: [highlight], announce: false),
   );
 }
@@ -156,7 +159,7 @@ class _WhatsNewModalState extends State<WhatsNewModal> {
       Navigator.of(context).pop();
       return;
     }
-    _controller.nextPage(
+    _controller.goToNextPage(
       duration: AppTheme.motionSlow,
       curve: Curves.easeOutCubic,
     );

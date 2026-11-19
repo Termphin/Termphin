@@ -79,7 +79,9 @@
     },
     "tooManyAttempts": "Too many attempts. Try again in {time}.",
     "pinLengthHint": "4 to 6 digits",
-    "pinNext": "Next"
+    "pinLengthHintDesktop": "4 to 6 digits - type it, Enter to go on with fewer than 6",
+    "pinNext": "Next",
+    "typePinHint": "Type your PIN"
   },
   "profiles": {
     "title": "Termphin",
@@ -553,6 +555,7 @@
     "pinLockDisabled": "Disabled",
     "biometricUnlock": "Biometric unlock",
     "biometricSubtitle": "Use fingerprint or face as alternative",
+    "biometricSubtitleDesktop": "Unlock with the computer's own sign-in, a fingerprint or face, instead of the PIN",
     "biometricUnavailable": "Not available on this device",
     "enablePinFirst": "Enable PIN lock first",
     "changePin": "Change PIN",
@@ -700,9 +703,6 @@
     "terminalTyping": "Controls",
     "noKeyringTitle": "No system keyring",
     "noKeyringSubtitle": "Saved passwords and keys are encrypted with a key kept in a file only your user can read. Start a Secret Service keyring, such as GNOME Keyring or KeePassXC, and Termphin moves the key into it on the next launch.",
-    "actionBar": "Action bar",
-    "actionBarSwitchSubtitle": "Session actions in a toolbar above the terminal",
-    "actionBarLayout": "Actions on the bar",
     "closeToTray": "Keep running in the tray",
     "closeToTraySubtitle": "Closing the window leaves your sessions connected",
     "closeToTrayUnavailable": "This desktop has no tray to keep Termphin in",

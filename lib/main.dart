@@ -95,6 +95,13 @@ Future<void> main() async {
   runApp(const SshClientApp());
 }
 
+/// Whether a desktop's window has the focus: one behind another app's, or
+/// hidden in the tray, still counts as in front for keeping sessions alive,
+/// but nobody is looking at it. A phone's app in front is looked at.
+bool _windowFocused() =>
+    !isDesktopPlatform ||
+    WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
+
 /// Posts what programs ask the terminal to announce, for sessions other than
 /// the one on screen; see [TerminalAlerts]. The notifications service is
 /// started here rather than on first use so a tap that launched the app is
@@ -124,9 +131,8 @@ TerminalAlerts _bindTerminalAlerts() {
       TerminalNoticeKind.quiet => terminalSettings.quietNotifications.value,
     },
     quoteLines: () => terminalSettings.noticeLines.value,
-    isForeground: () => manager.foreground,
-    activeSessionId: () =>
-        manager.terminalOnScreen ? manager.activeSessionId : null,
+    isForeground: () => manager.foreground && _windowFocused(),
+    sessionsOnScreen: () => manager.sessionsOnScreen,
   );
   manager.onTerminalNotification = (session, notification) => alerts.handle(
     sessionId: session.id,

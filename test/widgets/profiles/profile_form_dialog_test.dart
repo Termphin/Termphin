@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -303,7 +305,14 @@ void main() {
     final container = ProviderContainer.test(
       overrides: [profileStorageProvider.overrideWithValue(storage)],
     );
-    await pumpTestApp(tester, const ProfileFormDialog(), container: container);
+    await pumpTestApp(tester, const SizedBox.expand(), container: container);
+    unawaited(
+      tester
+          .state<NavigatorState>(find.byType(Navigator))
+          .push(
+            MaterialPageRoute<void>(builder: (_) => const ProfileFormDialog()),
+          ),
+    );
     await tester.pumpAndSettle();
 
     await _enterField(tester, 'Host', 'server.example.com');

@@ -125,9 +125,11 @@ class _PortForwardingRuleScreenState extends State<_PortForwardingRuleScreen> {
       appBar: AppBar(
         elevation: 0,
         scrolledUnderElevation: 0,
-        title: Text(
-          widget.title,
-          style: Theme.of(context).textTheme.titleLarge,
+        title: AppWindowTitle(
+          child: Text(
+            widget.title,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
         ),
         leading: IconButton(
           tooltip: t.common.close,

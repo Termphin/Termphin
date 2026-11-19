@@ -451,10 +451,12 @@ class _SftpFolderPickerState extends State<SftpFolderPicker> {
     if (widget.onChoose != null) {
       return Scaffold(
         appBar: AppBar(
-          title: Text(
-            widget.title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          title: AppWindowTitle(
+            child: Text(
+              widget.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ),
         body: SafeArea(

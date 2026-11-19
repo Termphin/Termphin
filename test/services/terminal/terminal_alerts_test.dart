@@ -10,6 +10,7 @@ void main() {
   late bool lines;
   late bool foreground;
   late String? active;
+  late Set<String> beside;
   late DateTime now;
   late TerminalAlerts alerts;
 
@@ -20,6 +21,7 @@ void main() {
     lines = true;
     foreground = true;
     active = 'front';
+    beside = {};
     now = DateTime(2026, 11, 13, 20);
     alerts = TerminalAlerts(
       post: posted.add,
@@ -30,7 +32,7 @@ void main() {
       },
       quoteLines: () => lines,
       isForeground: () => foreground,
-      activeSessionId: () => active,
+      sessionsOnScreen: () => {?active, ...beside},
     );
   });
 
@@ -96,6 +98,14 @@ void main() {
       expect(posted, hasLength(1));
     },
   );
+
+  test('a pane beside the one in front in a split is seen too', () {
+    beside = {'right'};
+
+    handle('right', done);
+
+    expect(posted, isEmpty);
+  });
 
   test('a title and a body are kept as the program gave them', () {
     handle('back', const TerminalNotification(title: 'Build', body: 'failed'));

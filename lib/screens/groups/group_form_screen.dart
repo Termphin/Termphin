@@ -205,9 +205,11 @@ class _GroupFormScreenState extends ConsumerState<GroupFormScreen> {
         appBar: AppBar(
           elevation: 0,
           scrolledUnderElevation: 0,
-          title: Text(
-            _isEditing ? t.groups.editGroup : t.groups.newGroup,
-            style: Theme.of(context).textTheme.titleLarge,
+          title: AppWindowTitle(
+            child: Text(
+              _isEditing ? t.groups.editGroup : t.groups.newGroup,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
           ),
           leading: IconButton(
             tooltip: t.common.close,

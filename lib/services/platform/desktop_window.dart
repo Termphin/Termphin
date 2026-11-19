@@ -42,9 +42,15 @@ class DesktopWindow with WindowListener {
   /// Hides the system's title bar for the app's own. The traffic lights stay
   /// on a Mac, drawn by the system over the space the title bar leaves for
   /// them.
+  ///
+  /// The close button is taken over first, before anything that waits on the
+  /// window: set last, a close that came before the rest had run went
+  /// straight to the system, which on a Mac quits the app with its last
+  /// window instead of putting it in the menu bar.
   Future<void> init() async {
     if (!platformHas(PlatformFeature.customWindowChrome)) return;
     await windowManager.ensureInitialized();
+    await windowManager.setPreventClose(true);
     final prefs = await SharedPreferences.getInstance();
     final saved = _decode(prefs.getString(kWindowBoundsPrefsKey));
     final bounds = saved == null
@@ -69,7 +75,6 @@ class DesktopWindow with WindowListener {
       _ready = true;
     });
     windowManager.addListener(this);
-    await windowManager.setPreventClose(true);
   }
 
   /// The usable area of every connected display, in the window's own

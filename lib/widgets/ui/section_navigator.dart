@@ -45,10 +45,11 @@ Future<T?> pushAppPage<T>(
         context,
         builder: builder,
         size: AppWindowSize.medium,
+        title: title,
       );
     }
     if (navigator == Navigator.of(context, rootNavigator: true)) {
-      return pushAppWindow<T>(context, builder: builder);
+      return pushAppWindow<T>(context, builder: builder, title: title);
     }
     return navigator.push<T>(
       DesktopPageRoute<T>(builder: builder, title: title),
@@ -62,8 +63,8 @@ Future<T?> pushAppPage<T>(
   );
 }
 
-/// A page on a desktop: no implied back arrow, and a short fade rather than
-/// a phone's slide in from the edge.
+/// A page on a desktop: no implied back arrow, and there at once rather than
+/// sliding in from the edge as on a phone.
 class DesktopPageRoute<T> extends MaterialPageRoute<T> {
   DesktopPageRoute({required super.builder, required String title})
     : super(settings: RouteSettings(name: title));
@@ -72,10 +73,10 @@ class DesktopPageRoute<T> extends MaterialPageRoute<T> {
   bool get impliesAppBarDismissal => false;
 
   @override
-  Duration get transitionDuration => const Duration(milliseconds: 90);
+  Duration get transitionDuration => Duration.zero;
 
   @override
-  Duration get reverseTransitionDuration => const Duration(milliseconds: 70);
+  Duration get reverseTransitionDuration => Duration.zero;
 
   @override
   Widget buildTransitions(

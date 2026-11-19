@@ -15,6 +15,7 @@ import '../../widgets/ui/app_card.dart';
 import '../../widgets/ui/app_divider.dart';
 import '../../widgets/ui/app_form_field.dart';
 import '../../widgets/ui/app_notifications.dart';
+import '../../widgets/ui/app_sheet.dart';
 import '../../widgets/ui/backup_action_bar.dart';
 import '../../widgets/ui/confirm_dialog.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
@@ -166,7 +167,9 @@ class _BackupExportScreenState extends State<BackupExportScreen> {
     final t = Translations.of(context);
     final options = _options;
     return Scaffold(
-      appBar: AppBar(title: Text(t.exportScreen.exportSection)),
+      appBar: AppBar(
+        title: AppWindowTitle(child: Text(t.exportScreen.exportSection)),
+      ),
       body: SafeArea(
         child: ContentGutter(
           builder: (context, gutter) => Column(

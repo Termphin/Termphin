@@ -13,7 +13,6 @@ import '../../providers/groups_provider.dart';
 import '../../providers/snippets_provider.dart';
 import '../../theme/theme.dart';
 import '../../utils/group_match.dart';
-import '../../utils/platform_info.dart';
 import '../groups/group_filter_chips.dart';
 import '../terminal/terminal_scheme_theme.dart';
 import '../ui/app_card.dart';
@@ -40,9 +39,7 @@ Future<void> showSnippetSpotlight(
     barrierDismissible: true,
     barrierLabel: Translations.of(context).commandPalette.insertSnippetTitle,
     barrierColor: AppTheme.scrim,
-    transitionDuration: isDesktopPlatform
-        ? const Duration(milliseconds: 110)
-        : AppTheme.motionMedium,
+    transitionDuration: AppTheme.motionMedium,
     transitionBuilder: (ctx, animation, _, child) {
       final curved = CurvedAnimation(
         parent: animation,
@@ -363,7 +360,8 @@ class _SnippetPickerPanelState extends ConsumerState<SnippetPickerPanel> {
                         ),
                       ),
                     ),
-                    if (selected) _EnterHint(label: t.commandPalette.enterToRun),
+                    if (selected)
+                      _EnterHint(label: t.commandPalette.enterToRun),
                   ],
                 ),
                 const SizedBox(height: AppTheme.space2),

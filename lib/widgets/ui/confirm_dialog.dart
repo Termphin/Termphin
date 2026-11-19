@@ -25,6 +25,7 @@ Future<bool> showConfirmDialog(
   final t = Translations.of(context);
   final confirmed = await showDialog<bool>(
     context: context,
+    animationStyle: AppTheme.popUpAnimation,
     builder: (ctx) => AlertDialog(
       title: Text(title),
       content: Text(message),
@@ -33,7 +34,7 @@ Future<bool> showConfirmDialog(
           onPressed: () => Navigator.pop(ctx, false),
           child: Text(cancelLabel ?? t.common.cancel),
         ),
-                TextButton(
+        TextButton(
           autofocus: true,
           onPressed: () => Navigator.pop(ctx, true),
           child: Text(

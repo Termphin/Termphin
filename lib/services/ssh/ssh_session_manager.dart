@@ -333,6 +333,23 @@ class SshSessionManager extends ChangeNotifier {
   /// at. Kept by `MainShell`. A change is announced to listeners, so what
   /// remembers which session was last looked at sees the user leave the
   /// terminal for the machine list too.
+  /// The panes of the tab in front on screen beside [activeSessionId] - its
+  /// whole split, or the zoomed one alone. Kept by the terminal screen.
+  Set<String> _panesOnScreen = const {};
+  set panesOnScreen(Set<String> value) {
+    if (setEquals(value, _panesOnScreen)) return;
+    _panesOnScreen = value;
+    notifyListeners();
+  }
+
+  /// The sessions whose output is on screen: none away from the terminal,
+  /// otherwise the tab in front and every pane beside it in a split.
+  Set<String> get sessionsOnScreen {
+    final active = activeSessionId;
+    if (!_terminalOnScreen || active == null) return const {};
+    return _panesOnScreen.contains(active) ? _panesOnScreen : {active};
+  }
+
   bool get terminalOnScreen => _terminalOnScreen;
   bool _terminalOnScreen = false;
   set terminalOnScreen(bool value) {

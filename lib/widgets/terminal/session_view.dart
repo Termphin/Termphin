@@ -472,7 +472,7 @@ class SessionViewState extends ConsumerState<SessionView> {
   /// but not a bare Esc, which is what closed them: pressed again it would
   /// open them right back, a toggle where it is meant to be a way out.
   void _onInput(List<int> rawBytes) {
-    _inputSerial++;
+    _typing.hear(rawBytes);
     if (_cursorMenuContent != null) _dismissCursorMenu();
     if (isTypedInput(rawBytes)) _dismissLink();
     if (_suggestionsPaused &&
@@ -545,7 +545,7 @@ class SessionViewState extends ConsumerState<SessionView> {
 
   /// Bumped by every keystroke, so a finished upload can tell whether the
   /// command line was touched while it ran.
-  var _inputSerial = 0;
+  final _typing = TypingCounter();
 
   /// Paths of an upload that finished while this terminal was out of sight,
   /// offered at the cursor the next time it is shown. A later upload
@@ -636,7 +636,7 @@ class SessionViewState extends ConsumerState<SessionView> {
     final total = sizes.contains(null)
         ? null
         : sizes.fold<int>(0, (sum, size) => sum + size!);
-    final typedBefore = _inputSerial;
+    final typedBefore = _typing.serial;
     final done = <String>[];
     var waited = false;
     try {
@@ -729,7 +729,7 @@ class SessionViewState extends ConsumerState<SessionView> {
       terminalShown: _terminalShown,
       autoPaste: uploadAutoPasteSetting.value,
       waited: waited,
-      typedMeanwhile: _inputSerial != typedBefore,
+      typedMeanwhile: _typing.serial != typedBefore,
     )) {
       case UploadPasteAction.paste:
         _paste(paste);

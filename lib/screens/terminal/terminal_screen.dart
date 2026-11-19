@@ -378,9 +378,9 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
       ]),
       builder: (context, _) {
         final builders = _dockActionsFor(session);
-        final hidden = actionDockSettings.hidden.value;
+        const hidden = kDefaultHiddenDockActions;
         final actions = [
-          for (final action in actionDockSettings.order.value)
+          for (final action in DockAction.values)
             if (dockActionAvailable(action) &&
                 !hidden.contains(action) &&
                 builders[action] != null)
@@ -440,11 +440,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
       key: ValueKey('actionBar-${action.name}'),
       onPressed: enabled ? onPressed : null,
       icon: Icon(icon, size: AppTheme.icon14),
-      label: Text(
-        _desktopActionLabel(t, action),
-        maxLines: 1,
-        softWrap: false,
-      ),
+      label: Text(_desktopActionLabel(t, action), maxLines: 1, softWrap: false),
       style: TextButton.styleFrom(
         foregroundColor: active ? colors.primary : colors.textSecondary,
         textStyle: colors.uiSmall.copyWith(fontSize: AppTheme.font12),
@@ -2430,16 +2426,30 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
 
   bool _toolbarShown() => _terminalLive() && _toolbarEnabled && _touchControls;
 
-  /// The dock's actions as a toolbar along the top on a desktop - the same
-  /// switch turns it on and off, and the same editor picks what is on it.
-  bool _actionBarShown() =>
-      _terminalLive() && _floatingDockEnabled && !_touchControls;
+  /// The dock's actions as a toolbar along the top on a desktop - always
+  /// there, with the dock's default actions: a desktop has no setting for
+  /// it, since it is where splitting and zooming panes live.
+  bool _actionBarShown() => _terminalLive() && !_touchControls;
+
+  /// Tells the manager which panes of [activeId]'s split are on screen, so
+  /// a notification from one of them is not news. After the frame: the
+  /// manager's listeners rebuild widgets, which a build may not do.
+  void _reportPanesOnScreen(String activeId) {
+    final zoomed = _zoomedId;
+    final panes = zoomed != null
+        ? {zoomed}
+        : {...?_controller.layoutOf(activeId)?.leaves};
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _manager.panesOnScreen = panes;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     if (_sessions.isEmpty) return const SizedBox.shrink();
 
     final activeKey = _sessions[_activeIndex];
+    _reportPanesOnScreen(activeKey.$1);
     final terminalLive = _terminalLive();
     _syncMouseWatcher(terminalLive);
     final showToolbar = _toolbarShown();

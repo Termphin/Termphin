@@ -337,8 +337,14 @@ class Translations$lock$en {
 	/// en: '4 to 6 digits'
 	String get pinLengthHint => '4 to 6 digits';
 
+	/// en: '4 to 6 digits - type it, Enter to go on with fewer than 6'
+	String get pinLengthHintDesktop => '4 to 6 digits - type it, Enter to go on with fewer than 6';
+
 	/// en: 'Next'
 	String get pinNext => 'Next';
+
+	/// en: 'Type your PIN'
+	String get typePinHint => 'Type your PIN';
 }
 
 // Path: profiles
@@ -1569,6 +1575,9 @@ class Translations$settings$en {
 	/// en: 'Use fingerprint or face as alternative'
 	String get biometricSubtitle => 'Use fingerprint or face as alternative';
 
+	/// en: 'Unlock with the computer's own sign-in, a fingerprint or face, instead of the PIN'
+	String get biometricSubtitleDesktop => 'Unlock with the computer\'s own sign-in, a fingerprint or face, instead of the PIN';
+
 	/// en: 'Not available on this device'
 	String get biometricUnavailable => 'Not available on this device';
 
@@ -2009,15 +2018,6 @@ class Translations$settings$en {
 
 	/// en: 'Saved passwords and keys are encrypted with a key kept in a file only your user can read. Start a Secret Service keyring, such as GNOME Keyring or KeePassXC, and Termphin moves the key into it on the next launch.'
 	String get noKeyringSubtitle => 'Saved passwords and keys are encrypted with a key kept in a file only your user can read. Start a Secret Service keyring, such as GNOME Keyring or KeePassXC, and Termphin moves the key into it on the next launch.';
-
-	/// en: 'Action bar'
-	String get actionBar => 'Action bar';
-
-	/// en: 'Session actions in a toolbar above the terminal'
-	String get actionBarSwitchSubtitle => 'Session actions in a toolbar above the terminal';
-
-	/// en: 'Actions on the bar'
-	String get actionBarLayout => 'Actions on the bar';
 
 	/// en: 'Keep running in the tray'
 	String get closeToTray => 'Keep running in the tray';
@@ -5288,7 +5288,9 @@ extension on Translations {
 			'lock.incorrectPinTriesLeft' => ({required num n, required Object count}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: 'Incorrect PIN. One more try before a short wait.', other: 'Incorrect PIN. ${count} more tries before a short wait.', ), 
 			'lock.tooManyAttempts' => ({required Object time}) => 'Too many attempts. Try again in ${time}.',
 			'lock.pinLengthHint' => '4 to 6 digits',
+			'lock.pinLengthHintDesktop' => '4 to 6 digits - type it, Enter to go on with fewer than 6',
 			'lock.pinNext' => 'Next',
+			'lock.typePinHint' => 'Type your PIN',
 			'profiles.title' => 'Termphin',
 			'profiles.machines' => 'Machines',
 			'profiles.keys' => 'Keys',
@@ -5728,10 +5730,11 @@ extension on Translations {
 			'settings.pinLockDisabled' => 'Disabled',
 			'settings.biometricUnlock' => 'Biometric unlock',
 			'settings.biometricSubtitle' => 'Use fingerprint or face as alternative',
-			'settings.biometricUnavailable' => 'Not available on this device',
-			'settings.enablePinFirst' => 'Enable PIN lock first',
 			_ => null,
 		} ?? switch (path) {
+			'settings.biometricSubtitleDesktop' => 'Unlock with the computer\'s own sign-in, a fingerprint or face, instead of the PIN',
+			'settings.biometricUnavailable' => 'Not available on this device',
+			'settings.enablePinFirst' => 'Enable PIN lock first',
 			'settings.changePin' => 'Change PIN',
 			'settings.dataBackup' => 'Data & Backup',
 			'settings.exportImportSubtitle' => 'Backup profiles, SSH keys and settings to JSON',
@@ -5877,9 +5880,6 @@ extension on Translations {
 			'settings.terminalTyping' => 'Controls',
 			'settings.noKeyringTitle' => 'No system keyring',
 			'settings.noKeyringSubtitle' => 'Saved passwords and keys are encrypted with a key kept in a file only your user can read. Start a Secret Service keyring, such as GNOME Keyring or KeePassXC, and Termphin moves the key into it on the next launch.',
-			'settings.actionBar' => 'Action bar',
-			'settings.actionBarSwitchSubtitle' => 'Session actions in a toolbar above the terminal',
-			'settings.actionBarLayout' => 'Actions on the bar',
 			'settings.closeToTray' => 'Keep running in the tray',
 			'settings.closeToTraySubtitle' => 'Closing the window leaves your sessions connected',
 			'settings.closeToTrayUnavailable' => 'This desktop has no tray to keep Termphin in',

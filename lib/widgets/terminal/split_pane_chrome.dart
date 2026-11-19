@@ -13,7 +13,7 @@ const kSplitHeaderHeight = 30.0;
 
 /// About as long as the system keyboard takes to slide in, so a stacked
 /// split folds while it does.
-const kSplitFoldDuration = AppTheme.motionMedium;
+Duration get kSplitFoldDuration => AppTheme.motionMedium;
 
 /// Mirrors the drag feedback the old LongPressDraggable ghost used - a
 /// lifted, bordered pill - so a dragged tab or split header looks lifted

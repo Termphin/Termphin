@@ -18,6 +18,7 @@ import '../../services/platform/desktop_window.dart';
 import '../../services/platform/tray_menu.dart';
 import '../../services/settings/desktop_settings.dart';
 import '../../services/ssh/ssh_session_manager.dart';
+import '../../theme/theme.dart';
 import '../terminal/terminal_scheme_theme.dart';
 
 /// Whether the first close has asked what closing should do. Device state:
@@ -183,6 +184,7 @@ class _DesktopTrayHostState extends ConsumerState<DesktopTrayHost> {
     final t = Translations.of(ctx);
     return showDialog<bool>(
       context: ctx,
+      animationStyle: AppTheme.popUpAnimation,
       builder: (dialog) => followTerminalOnScreen(
         AlertDialog(
           title: Text(t.window.closeAskTitle),
@@ -213,6 +215,7 @@ class _DesktopTrayHostState extends ConsumerState<DesktopTrayHost> {
       final t = Translations.of(ctx);
       final ok = await showDialog<bool>(
         context: ctx,
+        animationStyle: AppTheme.popUpAnimation,
         builder: (dialog) => followTerminalOnScreen(
           AlertDialog(
             title: Text(t.window.quitConfirmTitle),

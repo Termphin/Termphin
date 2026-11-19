@@ -181,7 +181,10 @@ prints nothing: `OSC 9` (iTerm2's; Claude Code sends it with
   after. A replay never raises one again.
 - **News is what the user is not looking at.** `TerminalAlerts` posts unless
   the app is in front with the terminal shown (`MainShell` keeps
-  `SshSessionManager.terminalOnScreen`) on that very session. One per session
+  `SshSessionManager.terminalOnScreen`) on that very session, or on a pane
+  beside it in a split (`SshSessionManager.sessionsOnScreen`). On a desktop
+  "in front" also needs the window to have the focus: one behind another
+  app's, or hidden in the tray, is not being looked at. One per session
   every 3 s, the newest replacing the last (`terminalAlertId`), and a
   notification with only a title takes the machine's name as its title
   (anonymised when `anonymizeSetting` is on).

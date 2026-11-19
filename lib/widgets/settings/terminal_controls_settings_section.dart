@@ -79,34 +79,30 @@ class TerminalControlsSettingsSection extends StatelessWidget {
               ),
               const AppDivider(),
             ],
-            ValueListenableBuilder<bool>(
-              valueListenable: floatingDockSettings.enabled,
-              builder: (context, enabled, _) => Column(
-                children: [
-                  SettingsSwitchTile(
-                    key: const ValueKey('actionDockEnabledSwitch'),
-                    title: isDesktopPlatform
-                        ? t.settings.actionBar
-                        : t.settings.actionDock,
-                    subtitle: isDesktopPlatform
-                        ? t.settings.actionBarSwitchSubtitle
-                        : t.settings.actionDockSwitchSubtitle,
-                    value: enabled,
-                    onChanged: (value) =>
-                        floatingDockSettings.enabled.set(value),
-                  ),
-                  if (enabled) ...[
-                    const AppDivider(),
-                    SettingsTile(
-                      title: isDesktopPlatform
-                          ? t.settings.actionBarLayout
-                          : t.settings.actionDockLayout,
-                      destination: () => const ActionDockSettingsScreen(),
+            if (touch) ...[
+              ValueListenableBuilder<bool>(
+                valueListenable: floatingDockSettings.enabled,
+                builder: (context, enabled, _) => Column(
+                  children: [
+                    SettingsSwitchTile(
+                      key: const ValueKey('actionDockEnabledSwitch'),
+                      title: t.settings.actionDock,
+                      subtitle: t.settings.actionDockSwitchSubtitle,
+                      value: enabled,
+                      onChanged: (value) =>
+                          floatingDockSettings.enabled.set(value),
                     ),
+                    if (enabled) ...[
+                      const AppDivider(),
+                      SettingsTile(
+                        title: t.settings.actionDockLayout,
+                        destination: () => const ActionDockSettingsScreen(),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
+            ],
             if (touch) ...[
               const AppDivider(),
               ValueListenableBuilder<TabBarPosition>(
@@ -126,7 +122,7 @@ class TerminalControlsSettingsSection extends StatelessWidget {
                 ),
               ),
             ],
-            const AppDivider(),
+            if (touch) const AppDivider(),
             ValueListenableBuilder<bool>(
               valueListenable: commandSuggestionsSetting,
               builder: (context, enabled, _) => SettingsSwitchTile(
@@ -146,17 +142,19 @@ class TerminalControlsSettingsSection extends StatelessWidget {
                 onChanged: commandSuggestionsSetting.set,
               ),
             ),
-            const AppDivider(),
-            ValueListenableBuilder<bool>(
-              valueListenable: terminalSettings.mouseKeyboardGuard,
-              builder: (context, enabled, _) => SettingsSwitchTile(
-                key: const ValueKey('mouseKeyboardGuardSwitch'),
-                title: t.settings.mouseKeyboardGuard,
-                subtitle: t.settings.mouseKeyboardGuardSubtitle,
-                value: enabled,
-                onChanged: terminalSettings.mouseKeyboardGuard.set,
+            if (touch) ...[
+              const AppDivider(),
+              ValueListenableBuilder<bool>(
+                valueListenable: terminalSettings.mouseKeyboardGuard,
+                builder: (context, enabled, _) => SettingsSwitchTile(
+                  key: const ValueKey('mouseKeyboardGuardSwitch'),
+                  title: t.settings.mouseKeyboardGuard,
+                  subtitle: t.settings.mouseKeyboardGuardSubtitle,
+                  value: enabled,
+                  onChanged: terminalSettings.mouseKeyboardGuard.set,
+                ),
               ),
-            ),
+            ],
             if (isDesktopPlatform) ...[
               const AppDivider(),
               SettingsTile(

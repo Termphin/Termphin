@@ -10,6 +10,7 @@ import '../../theme/theme.dart';
 import '../../widgets/backup/backup_import_options.dart' show formatBackupDate;
 import '../../widgets/ui/app_card.dart';
 import '../../widgets/ui/app_divider.dart';
+import '../../widgets/ui/app_sheet.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
 import '../../widgets/ui/settings_tile.dart';
 import 'backup_export_screen.dart';
@@ -39,7 +40,7 @@ class _ExportScreenState extends State<ExportScreen> {
   Widget build(BuildContext context) {
     final t = Translations.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(t.exportScreen.title)),
+      appBar: AppBar(title: AppWindowTitle(child: Text(t.exportScreen.title))),
       body: SafeArea(
         top: false,
         child: ContentGutter(

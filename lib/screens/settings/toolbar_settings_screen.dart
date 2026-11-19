@@ -704,7 +704,9 @@ class _ToolbarSettingsScreenState extends ConsumerState<ToolbarSettingsScreen> {
     final scheme = toolbarSchemeFromTheme(context);
     if (_loading) {
       return Scaffold(
-        appBar: AppBar(title: Text(t.settings.toolbarLayout)),
+        appBar: AppBar(
+          title: AppWindowTitle(child: Text(t.settings.toolbarLayout)),
+        ),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
@@ -712,7 +714,7 @@ class _ToolbarSettingsScreenState extends ConsumerState<ToolbarSettingsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_title),
+        title: AppWindowTitle(child: Text(_title)),
         actions: [
           AppActionDropdown<_ScreenAction>(
             width: 220,

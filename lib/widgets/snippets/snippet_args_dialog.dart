@@ -17,6 +17,7 @@ Future<Map<String, String>?> showSnippetArgsDialog(
 ) {
   return showDialog<Map<String, String>>(
     context: context,
+    animationStyle: AppTheme.popUpAnimation,
     builder: (_) => SnippetArgsDialog(snippet: snippet),
   );
 }

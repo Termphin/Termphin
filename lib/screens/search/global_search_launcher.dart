@@ -161,6 +161,7 @@ Future<void> openGlobalSearch(
   if (isDesktopPlatform) {
     return showDialog<void>(
       context: context,
+      animationStyle: AppTheme.popUpAnimation,
       builder: (ctx) {
         final window = MediaQuery.sizeOf(ctx);
         return followTerminalOnScreen(

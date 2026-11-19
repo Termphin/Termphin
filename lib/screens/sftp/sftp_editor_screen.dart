@@ -24,6 +24,7 @@ import '../../widgets/sftp/editor_find_bar.dart';
 import '../../widgets/sftp/editor_selection_toolbar.dart';
 import '../../widgets/terminal/pinch_font_zoom.dart';
 import '../../widgets/ui/app_notifications.dart';
+import '../../widgets/ui/app_sheet.dart';
 import '../../widgets/ui/confirm_dialog.dart';
 import '../../widgets/ui/empty_state.dart';
 import '../../widgets/ui/save_shortcuts.dart';
@@ -499,21 +500,23 @@ class _SftpEditorScreenState extends State<SftpEditorScreen> {
                 color: context.colors.surfaceBorder,
               ),
             ),
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.fileItem.filename,
-                  style: const TextStyle(fontSize: AppTheme.font16),
-                ),
-                Text(
-                  sftpPathToDisplay(widget.path),
-                  style: context.colors.monoSmall.copyWith(
-                    color: context.colors.textTertiary,
+            title: AppWindowTitle(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.fileItem.filename,
+                    style: const TextStyle(fontSize: AppTheme.font16),
                   ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+                  Text(
+                    sftpPathToDisplay(widget.path),
+                    style: context.colors.monoSmall.copyWith(
+                      color: context.colors.textTertiary,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
             ),
             actions: [
               if (_find != null)

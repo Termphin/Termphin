@@ -77,6 +77,7 @@ class _SecuritySettingsSectionState extends State<SecuritySettingsSection> {
   Future<String?> _showPinSetupDialog() async {
     return showDialog<String>(
       context: context,
+      animationStyle: AppTheme.popUpAnimation,
       barrierDismissible: false,
       builder: (ctx) => const PinSetupDialog(),
     );
@@ -136,7 +137,9 @@ class _SecuritySettingsSectionState extends State<SecuritySettingsSection> {
                 subtitle: !_lockEnabled
                     ? t.settings.enablePinFirst
                     : _biometricAvailable
-                    ? t.settings.biometricSubtitle
+                    ? (isDesktopPlatform
+                          ? t.settings.biometricSubtitleDesktop
+                          : t.settings.biometricSubtitle)
                     : t.settings.biometricUnavailable,
                 value: _biometricEnabled,
                 onChanged: (_lockEnabled && _biometricAvailable)
