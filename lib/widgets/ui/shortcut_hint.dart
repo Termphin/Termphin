@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../services/app/app_commands.dart';
 import '../../theme/theme.dart';
@@ -26,11 +26,11 @@ class ShortcutHint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(left: 12),
+    padding: const EdgeInsets.only(left: AppTheme.space12),
     child: Text(
       keys,
       style: context.colors.uiSmall.copyWith(
-        fontSize: 12,
+        fontSize: AppTheme.font12,
         color: context.colors.textTertiary,
       ),
     ),

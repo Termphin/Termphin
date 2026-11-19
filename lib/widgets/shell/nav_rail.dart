@@ -218,7 +218,7 @@ class SidebarNavItem extends StatelessWidget {
         : context.colors.textSecondary;
     final icon = Icon(
       selected ? data.selectedIcon : data.icon,
-      size: 20,
+      size: AppTheme.icon20,
       color: foreground,
     );
 
@@ -232,8 +232,8 @@ class SidebarNavItem extends StatelessWidget {
           duration: AppTheme.interactiveDuration,
           curve: AppTheme.interactiveCurve,
           padding: EdgeInsets.symmetric(
-            horizontal: collapsed ? 0 : 14,
-            vertical: 11,
+            horizontal: collapsed ? 0 : AppTheme.space14,
+            vertical: AppTheme.space10,
           ),
           decoration: BoxDecoration(
             color: selected
@@ -246,7 +246,7 @@ class SidebarNavItem extends StatelessWidget {
               : Row(
                   children: [
                     icon,
-                    const SizedBox(width: 12),
+                    const SizedBox(width: AppTheme.space12),
                     Flexible(
                       child: Text(
                         data.label,
@@ -282,16 +282,24 @@ class SidebarSectionLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     if (collapsed) {
       return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppTheme.space14,
+          vertical: AppTheme.space8,
+        ),
         child: Divider(height: 1, color: context.colors.surfaceDivider),
       );
     }
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 6),
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.space14,
+        AppTheme.space12,
+        AppTheme.space14,
+        AppTheme.space6,
+      ),
       child: Text(
         label.toUpperCase(),
         style: context.colors.uiSmall.copyWith(
-          fontSize: 11,
+          fontSize: AppTheme.font11,
           letterSpacing: 0.6,
           fontWeight: FontWeight.w600,
           color: context.colors.textTertiary,

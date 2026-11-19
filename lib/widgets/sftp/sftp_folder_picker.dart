@@ -431,7 +431,7 @@ class _SftpFolderPickerState extends State<SftpFolderPicker> {
                 onPressed: () => Navigator.of(context).pop(),
                 child: Text(t.common.cancel),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppTheme.space8),
             ],
             Tooltip(
               message: AppCommands.tooltipFor(

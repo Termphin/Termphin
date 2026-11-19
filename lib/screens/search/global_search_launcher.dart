@@ -167,7 +167,7 @@ Future<void> openGlobalSearch(
             child: Dialog(
               alignment: const Alignment(0, -0.55),
               clipBehavior: Clip.antiAlias,
-              insetPadding: const EdgeInsets.all(32),
+              insetPadding: const EdgeInsets.all(AppTheme.space32),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 720),
                 child: SizedBox(

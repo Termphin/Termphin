@@ -178,14 +178,17 @@ class AppDialogFrame extends StatelessWidget {
     final height = MediaQuery.sizeOf(context).height;
     return Dialog(
       clipBehavior: Clip.antiAlias,
-      insetPadding: const EdgeInsets.all(32),
+      insetPadding: const EdgeInsets.all(AppTheme.space32),
       child: ConstrainedBox(
         constraints: BoxConstraints(
           maxWidth: maxWidth,
           maxHeight: appDialogMaxHeight(height),
         ),
         child: Padding(
-          padding: const EdgeInsets.only(top: 8, bottom: 8),
+          padding: const EdgeInsets.only(
+            top: AppTheme.space8,
+            bottom: AppTheme.space8,
+          ),
           child: child,
         ),
       ),
@@ -300,7 +303,7 @@ Future<T?> _pushDesktopDialog<T>(
               onTap: () {},
               child: Dialog(
                 clipBehavior: Clip.antiAlias,
-                insetPadding: const EdgeInsets.all(32),
+                insetPadding: const EdgeInsets.all(AppTheme.space32),
                 child: ActionIconTheme(
                   data: ActionIconThemeData(
                     backButtonIconBuilder: (_) =>
@@ -363,6 +366,7 @@ Future<T?> pushAppWindow<T>(
   BuildContext context, {
   required WidgetBuilder builder,
   AppWindowSize size = AppWindowSize.large,
+  bool rootNavigator = false,
 }) {
   if (isDesktopPlatform) {
     return switch (size) {
@@ -380,7 +384,10 @@ Future<T?> pushAppWindow<T>(
       ),
     };
   }
-  return Navigator.of(context).push<T>(MaterialPageRoute<T>(builder: builder));
+  return Navigator.of(
+    context,
+    rootNavigator: rootNavigator,
+  ).push<T>(MaterialPageRoute<T>(builder: builder));
 }
 
 /// How much of the window a desktop window takes: [large] for somewhere to

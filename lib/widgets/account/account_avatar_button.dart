@@ -7,6 +7,7 @@ import '../../providers/anonymize_provider.dart';
 import '../../screens/settings/account_screen.dart';
 import '../../services/account/account_service.dart';
 import '../../theme/theme.dart';
+import '../ui/section_navigator.dart';
 import 'account_avatar.dart';
 
 /// The account, in the corner of the machine list: the first letter of the
@@ -32,8 +33,11 @@ class AccountAvatarButton extends ConsumerWidget {
         message: t.account.title,
         child: InkResponse(
           radius: AppTheme.icon36 / 2 + AppTheme.space4,
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute<void>(builder: (_) => const AccountScreen()),
+          onTap: () => pushAppPage<void>(
+            context,
+            window: true,
+            title: t.account.title,
+            builder: (_) => const AccountScreen(),
           ),
           child: AccountAvatar(
             user: user,

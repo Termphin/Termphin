@@ -17,6 +17,7 @@ import '../../widgets/ui/app_search_field.dart';
 import '../../widgets/ui/empty_state.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
 import '../../widgets/ui/new_badge.dart';
+import '../../widgets/ui/section_navigator.dart';
 import '../../widgets/ui/settings_tile.dart';
 import '../backup/export_screen.dart';
 import '../groups/groups_screen.dart';
@@ -85,7 +86,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _clearSearch();
       return;
     }
-    Navigator.push(context, MaterialPageRoute<void>(builder: (_) => open()));
+    pushAppPage<void>(
+      context,
+      window: true,
+      title: entry.title,
+      builder: (_) => open(),
+    );
   }
 
   @override
@@ -267,11 +273,11 @@ class _ConnectionRowState extends State<_ConnectionRow>
 
   Future<void> _open() async {
     final t = Translations.of(context);
-    await Navigator.push(
+    await pushAppPage<void>(
       context,
-      MaterialPageRoute<void>(
-        builder: (_) => SettingsCategory.connection.screen(t),
-      ),
+      window: true,
+      title: t.settings.connection,
+      builder: (_) => SettingsCategory.connection.screen(t),
     );
     await _refresh();
   }

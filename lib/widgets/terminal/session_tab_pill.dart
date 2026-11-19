@@ -80,7 +80,7 @@ class SessionTabPill extends StatelessWidget {
         shape: BoxShape.circle,
         border: Border.all(color: statusColor, width: 1.25),
       ),
-      padding: const EdgeInsets.all(1),
+      padding: const EdgeInsets.all(AppTheme.space2),
       child: ProfileAvatar(
         iconName: profile.iconName,
         colorHex: profile.colorHex,
@@ -101,8 +101,8 @@ class SessionTabPill extends StatelessWidget {
         key: ValueKey('sessionTabContent-$sessionId'),
         duration: AppTheme.motionFast,
         padding: EdgeInsets.only(
-          left: collapsed ? 4 : 14,
-          right: 4,
+          left: collapsed ? AppTheme.space4 : AppTheme.space14,
+          right: AppTheme.space4,
           top: kSessionTabPillPaddingY,
           bottom: kSessionTabPillPaddingY,
         ),
@@ -125,7 +125,7 @@ class SessionTabPill extends StatelessWidget {
                 mainAxisSize: stretch ? MainAxisSize.max : MainAxisSize.min,
                 children: [
                   avatar,
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppTheme.space8),
                   if (stretch)
                     Expanded(child: name)
                   else
@@ -133,7 +133,7 @@ class SessionTabPill extends StatelessWidget {
                       constraints: const BoxConstraints(maxWidth: 170),
                       child: name,
                     ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: AppTheme.space6),
                   ...trailing,
                 ],
               ),

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../theme/theme.dart';
 
@@ -17,14 +17,17 @@ class KeyCaps extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         for (final (i, key) in keys.indexed) ...[
-          if (i > 0) const SizedBox(width: 3),
+          if (i > 0) const SizedBox(width: AppTheme.space2),
           Container(
             constraints: const BoxConstraints(minWidth: 18),
-            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppTheme.space4,
+              vertical: AppTheme.space2,
+            ),
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: colors.fieldFill,
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(AppTheme.radiusXs),
               border: Border(
                 top: BorderSide(color: colors.surfaceBorderStrong),
                 left: BorderSide(color: colors.surfaceBorderStrong),
@@ -35,7 +38,7 @@ class KeyCaps extends StatelessWidget {
             child: Text(
               key,
               style: colors.uiSmall.copyWith(
-                fontSize: 10.5,
+                fontSize: AppTheme.font10,
                 height: 1.3,
                 fontWeight: FontWeight.w600,
                 color: colors.textSecondary,

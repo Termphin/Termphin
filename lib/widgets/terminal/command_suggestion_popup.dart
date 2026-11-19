@@ -230,7 +230,12 @@ class _Card extends StatelessWidget {
               Divider(height: 1, color: colors.surfaceDivider),
               Container(
                 color: colors.fieldFill,
-                padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
+                padding: const EdgeInsets.fromLTRB(
+                  AppTheme.space10,
+                  AppTheme.space6,
+                  AppTheme.space10,
+                  AppTheme.space6,
+                ),
                 child: const FittedBox(
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
@@ -258,14 +263,14 @@ class SuggestionKeys extends StatelessWidget {
     final colors = context.colors;
     final modifier = isMacOSPlatform ? '⌘' : 'Ctrl';
     final label = colors.uiSmall.copyWith(
-      fontSize: 11.5,
+      fontSize: AppTheme.font11,
       color: colors.textTertiary,
     );
     Widget pair(List<String> keys, String does) => Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         KeyCaps(keys),
-        const SizedBox(width: 5),
+        const SizedBox(width: AppTheme.space4),
         Text(does, style: label),
       ],
     );
@@ -273,9 +278,9 @@ class SuggestionKeys extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         pair([modifier, '↑↓'], t.terminal.suggestionPick),
-        const SizedBox(width: 12),
+        const SizedBox(width: AppTheme.space12),
         pair([modifier, '→'], t.terminal.suggestionInsert),
-        const SizedBox(width: 12),
+        const SizedBox(width: AppTheme.space12),
         pair(const ['Esc'], t.terminal.suggestionClose),
       ],
     );

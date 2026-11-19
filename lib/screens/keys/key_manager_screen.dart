@@ -451,10 +451,10 @@ class _KeyManagerScreenState extends ConsumerState<KeyManagerScreen> {
                                   if (_keys.isNotEmpty) ...[
                                     const SliverPadding(
                                       padding: EdgeInsets.fromLTRB(
-                                        16,
-                                        16,
-                                        16,
-                                        12,
+                                        AppTheme.space16,
+                                        AppTheme.space16,
+                                        AppTheme.space16,
+                                        AppTheme.space12,
                                       ),
                                       sliver: SliverToBoxAdapter(
                                         child: GlobalSearchLauncher(
@@ -505,24 +505,28 @@ class _KeyManagerScreenState extends ConsumerState<KeyManagerScreen> {
                                         },
                                         addTooltip: t.keys.addKey,
                                         padding: EdgeInsets.fromLTRB(
-                                          16,
-                                          i == 0 ? 4 : 16,
-                                          16,
-                                          4,
+                                          AppTheme.space16,
+                                          i == 0
+                                              ? AppTheme.space4
+                                              : AppTheme.space16,
+                                          AppTheme.space16,
+                                          AppTheme.space4,
                                         ),
                                       ),
                                       SliverPadding(
                                         padding: const EdgeInsets.fromLTRB(
-                                          16,
-                                          4,
-                                          16,
-                                          12,
+                                          AppTheme.space16,
+                                          AppTheme.space4,
+                                          AppTheme.space16,
+                                          AppTheme.space12,
                                         ),
                                         sliver: SliverList.separated(
                                           itemCount:
                                               keysByGroup[group.name]!.length,
                                           separatorBuilder: (_, _) =>
-                                              const SizedBox(height: 10),
+                                              const SizedBox(
+                                                height: AppTheme.space10,
+                                              ),
                                           itemBuilder: (context, index) {
                                             final key =
                                                 keysByGroup[group.name]![index];
@@ -836,29 +840,50 @@ class _LocalKeysSection extends StatelessWidget {
         ListSectionHeader(
           title: t.keys.localTitle,
           count: keys.length,
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          padding: const EdgeInsets.fromLTRB(
+            AppTheme.space16,
+            AppTheme.space12,
+            AppTheme.space16,
+            0,
+          ),
           actions: [
             if (keys.length > 1)
               TextButton.icon(
                 onPressed: busy ? null : onImportAll,
-                icon: const Icon(PhosphorIconsRegular.downloadSimple, size: 16),
+                icon: const Icon(
+                  PhosphorIconsRegular.downloadSimple,
+                  size: AppTheme.icon16,
+                ),
                 label: Text(t.keys.localImportAll),
               ),
           ],
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 2, 16, 8),
+          padding: const EdgeInsets.fromLTRB(
+            AppTheme.space16,
+            AppTheme.space2,
+            AppTheme.space16,
+            AppTheme.space8,
+          ),
           child: Text(
             t.keys.localSubtitle,
-            style: TextStyle(color: colors.textTertiary, fontSize: 12),
+            style: TextStyle(
+              color: colors.textTertiary,
+              fontSize: AppTheme.font12,
+            ),
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          padding: const EdgeInsets.fromLTRB(
+            AppTheme.space16,
+            0,
+            AppTheme.space16,
+            AppTheme.space12,
+          ),
           child: Column(
             children: [
               for (final (i, key) in keys.indexed) ...[
-                if (i > 0) const SizedBox(height: 10),
+                if (i > 0) const SizedBox(height: AppTheme.space10),
                 _LocalKeyTile(
                   localKey: key,
                   importing: importing.contains(key.name),
@@ -898,7 +923,12 @@ class _LocalKeyTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: colors.surfaceBorder),
       ),
-      padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.space16,
+        AppTheme.space12,
+        AppTheme.space12,
+        AppTheme.space12,
+      ),
       child: Row(
         children: [
           Expanded(
@@ -916,7 +946,7 @@ class _LocalKeyTile extends StatelessWidget {
                       ),
                     ),
                     if (algorithm != null) ...[
-                      const SizedBox(width: 8),
+                      const SizedBox(width: AppTheme.space8),
                       _KeyTypeBadge(
                         label: algorithm,
                         color: algorithm == 'ed25519'
@@ -925,32 +955,32 @@ class _LocalKeyTile extends StatelessWidget {
                       ),
                     ],
                     if (localKey.encrypted) ...[
-                      const SizedBox(width: 8),
+                      const SizedBox(width: AppTheme.space8),
                       Tooltip(
                         message: t.keys.localEncrypted,
                         child: Icon(
                           PhosphorIconsRegular.lockKey,
-                          size: 15,
+                          size: AppTheme.icon14,
                           color: colors.textTertiary,
                         ),
                       ),
                     ],
                   ],
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: AppTheme.space4),
                 Text(
                   localKey.displayPath,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: colors.monoStyle.copyWith(
                     color: colors.textTertiary,
-                    fontSize: 12,
+                    fontSize: AppTheme.font12,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: AppTheme.space12),
           FilledButton.icon(
             key: ValueKey('importLocalKey-${localKey.name}'),
             onPressed: onImport,
@@ -962,7 +992,10 @@ class _LocalKeyTile extends StatelessWidget {
                       color: colors.onPrimary,
                     ),
                   )
-                : const Icon(PhosphorIconsRegular.downloadSimple, size: 16),
+                : const Icon(
+                    PhosphorIconsRegular.downloadSimple,
+                    size: AppTheme.icon16,
+                  ),
             label: Text(t.keys.localImport),
           ),
         ],

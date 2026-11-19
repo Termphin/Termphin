@@ -1748,7 +1748,7 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
                 child: IgnorePointer(
                   child: Container(
                     key: const ValueKey('sftpDropTarget'),
-                    margin: const EdgeInsets.all(8),
+                    margin: const EdgeInsets.all(AppTheme.space8),
                     decoration: BoxDecoration(
                       color: _accent.withValues(alpha: 0.08),
                       border: Border.all(color: _accent, width: 1.5),
@@ -1761,7 +1761,7 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
                       ),
                       style: TextStyle(
                         color: _accent,
-                        fontSize: 14,
+                        fontSize: AppTheme.font14,
                         fontWeight: FontWeight.w600,
                       ),
                     ),

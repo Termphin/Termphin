@@ -147,7 +147,7 @@ class _ColumnLabel extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 7),
+        padding: const EdgeInsets.symmetric(vertical: AppTheme.space6),
         child: Row(
           mainAxisAlignment: alignEnd
               ? MainAxisAlignment.end
@@ -160,18 +160,18 @@ class _ColumnLabel extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: color,
-                  fontSize: 12,
+                  fontSize: AppTheme.font12,
                   fontWeight: FontWeight.w600,
                 ),
               ),
             ),
             if (sorted) ...[
-              const SizedBox(width: 4),
+              const SizedBox(width: AppTheme.space4),
               Icon(
                 descending
                     ? PhosphorIconsRegular.caretDown
                     : PhosphorIconsRegular.caretUp,
-                size: 12,
+                size: AppTheme.icon12,
                 color: color,
               ),
             ],
@@ -359,7 +359,7 @@ class SftpFileRow extends StatelessWidget {
     final accent = colors.primary;
     final detail = TextStyle(
       color: colors.textSecondary,
-      fontSize: 12,
+      fontSize: AppTheme.font12,
       fontFeatures: const [FontFeature.tabularFigures()],
     );
     final Widget icon;
@@ -367,7 +367,7 @@ class SftpFileRow extends StatelessWidget {
       icon = SizedBox.square(
         dimension: _kColumnIconSize,
         child: Padding(
-          padding: const EdgeInsets.all(2),
+          padding: const EdgeInsets.all(AppTheme.space2),
           child: CircularProgressIndicator(strokeWidth: 2, color: accent),
         ),
       );
@@ -411,7 +411,7 @@ class SftpFileRow extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: colors.textPrimary,
-                    fontSize: 13,
+                    fontSize: AppTheme.font13,
                     fontWeight: FontWeight.w500,
                   ),
                 ),

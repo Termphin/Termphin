@@ -33,6 +33,7 @@ import '../widgets/ui/app_form_field.dart';
 import '../widgets/ui/clipboard_and_links.dart';
 import '../widgets/ui/key_caps.dart';
 import '../widgets/ui/permission_tile.dart';
+import '../widgets/ui/section_navigator.dart';
 import 'settings/account_screen.dart';
 
 /// The permissions page asks for what the system gates. A desktop gates none
@@ -174,10 +175,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Future<bool> _pushSignIn(BuildContext context) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => const AccountScreen(closeOnSignIn: true),
-      ),
+    await pushAppPage<void>(
+      context,
+      window: true,
+      title: Translations.of(context).account.title,
+      builder: (_) => const AccountScreen(closeOnSignIn: true),
     );
     return AccountService.instance.user != null;
   }
@@ -1190,10 +1192,7 @@ class _DesktopOnboardingState extends ConsumerState<_DesktopOnboarding> {
   Widget build(BuildContext context) {
     final t = Translations.of(context);
     final colors = context.colors;
-    final steps = [
-      t.onboarding.stepWelcome,
-      t.onboarding.stepServer,
-    ];
+    final steps = [t.onboarding.stepWelcome, t.onboarding.stepServer];
     return Scaffold(
       backgroundColor: colors.backgroundPrimary,
       body: Focus(
@@ -1202,7 +1201,7 @@ class _DesktopOnboardingState extends ConsumerState<_DesktopOnboarding> {
         onKeyEvent: _onKey,
         child: Center(
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(AppTheme.space24),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 820, maxHeight: 560),
               child: Container(
@@ -1256,11 +1255,16 @@ class _DesktopOnboardingState extends ConsumerState<_DesktopOnboarding> {
   Widget _footer(Translations t) {
     final colors = context.colors;
     final hint = colors.uiSmall.copyWith(
-      fontSize: 11.5,
+      fontSize: AppTheme.font11,
       color: colors.textTertiary,
     );
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.space20,
+        AppTheme.space12,
+        AppTheme.space20,
+        AppTheme.space12,
+      ),
       child: Row(
         children: [
           if (_step > _welcome) ...[
@@ -1269,26 +1273,24 @@ class _DesktopOnboardingState extends ConsumerState<_DesktopOnboarding> {
               onPressed: _finishing ? null : _back,
               child: Text(t.onboarding.back),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: AppTheme.space6),
             const KeyCaps(['Esc']),
           ],
           const Spacer(),
           const KeyCaps(['Enter']),
-          const SizedBox(width: 6),
+          const SizedBox(width: AppTheme.space6),
           Text(
             _step == _server
                 ? t.onboarding.keyFinish
                 : t.onboarding.keyContinue,
             style: hint,
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: AppTheme.space14),
           FilledButton(
             key: const ValueKey('onboardingContinue'),
             onPressed: _canContinue && !_finishing ? _continue : null,
             child: Text(
-              _step == _welcome
-                  ? t.onboarding.getStarted
-                  : t.onboarding.finish,
+              _step == _welcome ? t.onboarding.getStarted : t.onboarding.finish,
             ),
           ),
         ],
@@ -1299,7 +1301,12 @@ class _DesktopOnboardingState extends ConsumerState<_DesktopOnboarding> {
   Widget _serverStep(Translations t) {
     final colors = context.colors;
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(28, 26, 28, 20),
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.space24,
+        AppTheme.space24,
+        AppTheme.space24,
+        AppTheme.space20,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1309,14 +1316,14 @@ class _DesktopOnboardingState extends ConsumerState<_DesktopOnboarding> {
               context,
             ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppTheme.space8),
           Text(
             t.onboarding.serverBody,
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(color: colors.textSecondary),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: AppTheme.space16),
           _ChoiceTile(
             icon: PhosphorIconsRegular.checkCircle,
             title: t.onboarding.serverYes,
@@ -1325,7 +1332,7 @@ class _DesktopOnboardingState extends ConsumerState<_DesktopOnboarding> {
             keyHint: '1',
             onTap: () => _answerWith(ServerAnswer.hasServer),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppTheme.space10),
           _ChoiceTile(
             icon: PhosphorIconsRegular.question,
             title: t.onboarding.serverNotYet,
@@ -1335,16 +1342,16 @@ class _DesktopOnboardingState extends ConsumerState<_DesktopOnboarding> {
             onTap: () => _answerWith(ServerAnswer.notYet),
           ),
           if (_answer == ServerAnswer.hasServer) ...[
-            const SizedBox(height: 18),
+            const SizedBox(height: AppTheme.space16),
             Text(t.onboarding.targetLabel, style: colors.itemTitle),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppTheme.space8),
             TextField(
               key: const ValueKey('onboardingTarget'),
               controller: _target,
               focusNode: _targetFocus,
               autocorrect: false,
               enableSuggestions: false,
-              style: colors.monoStyle.copyWith(fontSize: 14),
+              style: colors.monoStyle.copyWith(fontSize: AppTheme.font14),
               decoration: InputDecoration(
                 isDense: true,
                 hintText: t.profiles.quickAddHint,
@@ -1357,13 +1364,13 @@ class _DesktopOnboardingState extends ConsumerState<_DesktopOnboarding> {
               onSubmitted: (_) => _continue(),
             ),
             if (_candidates.isNotEmpty) ...[
-              const SizedBox(height: 20),
+              const SizedBox(height: AppTheme.space20),
               _sshConfigList(t),
             ],
           ],
           if (_answer == ServerAnswer.notYet)
             const Padding(
-              padding: EdgeInsets.only(top: 16),
+              padding: EdgeInsets.only(top: AppTheme.space16),
               child: ServerGuideList(),
             ),
           const SizedBox(height: AppTheme.space24),
@@ -1401,12 +1408,12 @@ class _DesktopOnboardingState extends ConsumerState<_DesktopOnboarding> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(t.onboarding.sshConfigTitle, style: colors.itemTitle),
-        const SizedBox(height: 3),
+        const SizedBox(height: AppTheme.space2),
         Text(
           t.onboarding.sshConfigSubtitle,
           style: colors.uiSmall.copyWith(color: colors.textSecondary),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppTheme.space8),
         AppCard(
           clipChild: true,
           child: Material(
@@ -1419,9 +1426,11 @@ class _DesktopOnboardingState extends ConsumerState<_DesktopOnboarding> {
                     key: ValueKey('sshConfigHost-${c.host.alias}'),
                     dense: true,
                     controlAffinity: ListTileControlAffinity.leading,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AppTheme.space8,
+                    ),
                     value: c.importable && _picked.contains(c.host.alias),
-                    checkColor: Colors.white,
+                    checkColor: colors.onPrimary,
                     fillColor: WidgetStateProperty.resolveWith(
                       (s) => s.contains(WidgetState.selected)
                           ? colors.primary
@@ -1439,7 +1448,7 @@ class _DesktopOnboardingState extends ConsumerState<_DesktopOnboarding> {
                           ? IdentityAnonymizer.name(c.host.alias)
                           : c.host.alias,
                       style: colors.itemTitle.copyWith(
-                        fontSize: 14,
+                        fontSize: AppTheme.font14,
                         color: c.importable ? null : colors.textTertiary,
                       ),
                     ),
@@ -1484,17 +1493,22 @@ class _StepRail extends StatelessWidget {
     return Container(
       width: 212,
       color: colors.backgroundPrimary,
-      padding: const EdgeInsets.fromLTRB(22, 26, 18, 22),
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.space20,
+        AppTheme.space24,
+        AppTheme.space16,
+        AppTheme.space20,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               ClipRRect(
-                borderRadius: BorderRadius.circular(7),
+                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                 child: Image.asset('assets/logo.png', width: 28, height: 28),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: AppTheme.space10),
               Expanded(
                 child: Text(
                   Translations.of(context).window.menuApp,
@@ -1505,10 +1519,10 @@ class _StepRail extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: AppTheme.space24),
           for (final (i, label) in steps.indexed)
             Padding(
-              padding: const EdgeInsets.only(bottom: 14),
+              padding: const EdgeInsets.only(bottom: AppTheme.space14),
               child: Row(
                 children: [
                   AnimatedContainer(
@@ -1530,13 +1544,13 @@ class _StepRail extends StatelessWidget {
                     child: i < current
                         ? Icon(
                             PhosphorIconsRegular.check,
-                            size: 12,
+                            size: AppTheme.icon12,
                             color: onPrimary,
                           )
                         : Text(
                             '${i + 1}',
                             style: colors.uiSmall.copyWith(
-                              fontSize: 11,
+                              fontSize: AppTheme.font11,
                               fontWeight: FontWeight.w700,
                               color: i == current
                                   ? onPrimary
@@ -1544,7 +1558,7 @@ class _StepRail extends StatelessWidget {
                             ),
                           ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: AppTheme.space10),
                   Expanded(
                     child: Text(
                       label,
@@ -1580,7 +1594,7 @@ class _DesktopWelcome extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = Translations.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 36),
+      padding: const EdgeInsets.symmetric(horizontal: AppTheme.space32),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1589,14 +1603,14 @@ class _DesktopWelcome extends StatelessWidget {
             borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             child: Image.asset('assets/logo.png', width: 64, height: 64),
           ),
-          const SizedBox(height: 22),
+          const SizedBox(height: AppTheme.space20),
           Text(
             t.onboarding.welcomeTitle,
             style: Theme.of(
               context,
             ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppTheme.space10),
           Text(
             body,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(

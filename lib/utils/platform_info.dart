@@ -34,6 +34,10 @@ bool get isLinuxPlatform =>
 bool get isDesktopPlatform =>
     isLinuxPlatform || isMacOSPlatform || isWindowsPlatform;
 
+/// Short name of the current [defaultTargetPlatform], for diagnostics such as
+/// exported error reports.
+String get platformName => defaultTargetPlatform.name;
+
 /// Something the system either can or cannot do. One table, [platformHas],
 /// answers for every platform - a new platform is one pass down this list,
 /// and a new feature is a compile error until every platform has an answer.

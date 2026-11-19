@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../theme/theme.dart';
 import '../../utils/platform_info.dart';
@@ -57,12 +57,12 @@ Future<void> showAppContextMenu(
                 if (entry.icon != null) ...[
                   Icon(
                     entry.icon,
-                    size: 16,
+                    size: AppTheme.icon16,
                     color: entry.destructive
                         ? colors.error
                         : colors.textSecondary,
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: AppTheme.space10),
                 ],
                 Expanded(
                   child: Text(
@@ -75,7 +75,7 @@ Future<void> showAppContextMenu(
                   ),
                 ),
                 if (entry.shortcut != null) ...[
-                  const SizedBox(width: 24),
+                  const SizedBox(width: AppTheme.space24),
                   Text(
                     entry.shortcut!,
                     style: colors.uiSmall.copyWith(color: colors.textTertiary),

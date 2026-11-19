@@ -15,15 +15,9 @@ Future<void> openManual(BuildContext context, ManualPage page) async {
     await openExternalUrl(context, page.url);
     return;
   }
-  if (isDesktopPlatform) {
-    await pushAppWindow<void>(
-      context,
-      builder: (_) => ManualScreen(page: page),
-    );
-    return;
-  }
-  await Navigator.of(
+  await pushAppWindow<void>(
     context,
     rootNavigator: true,
-  ).push(MaterialPageRoute<void>(builder: (_) => ManualScreen(page: page)));
+    builder: (_) => ManualScreen(page: page),
+  );
 }

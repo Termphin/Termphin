@@ -342,7 +342,7 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
                             onPressed: () => Navigator.of(context).pop(),
                           )
                         else
-                          const SizedBox(width: 12),
+                          const SizedBox(width: AppTheme.space12),
                         Expanded(child: _field(t, results)),
                       ],
                     ),

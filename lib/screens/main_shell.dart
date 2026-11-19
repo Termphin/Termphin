@@ -443,7 +443,9 @@ class _MainShellState extends ConsumerState<MainShell>
       body: Stack(
         children: [
           _AnimatedNavBody(currentIndex: _currentIndex, children: _screens),
-          _AnalyticsAskOverlay(visible: _currentIndex == 0 && !_terminalVisible),
+          _AnalyticsAskOverlay(
+            visible: _currentIndex == 0 && !_terminalVisible,
+          ),
         ],
       ),
       bottomNavigationBar: ListenableBuilder(
@@ -674,9 +676,7 @@ class _MainShellState extends ConsumerState<MainShell>
                           siblingScope: _siblingScope,
                           onClose: _onTerminalClose,
                           onHide: _hideTerminal,
-                          navItems: isDesktopPlatform
-                              ? _navItems(t)
-                              : const [],
+                          navItems: isDesktopPlatform ? _navItems(t) : const [],
                           onNavigate: _selectSection,
                         ),
                       ),
@@ -1178,7 +1178,9 @@ class _Sidebar extends StatelessWidget {
                         ),
                         for (final session in sessions)
                           Padding(
-                            padding: const EdgeInsets.only(bottom: 3),
+                            padding: const EdgeInsets.only(
+                              bottom: AppTheme.space2,
+                            ),
                             child: _SidebarSessionRow(
                               session: session,
                               collapsed: collapsed,
@@ -1258,7 +1260,6 @@ class _SidebarSessionRow extends ConsumerWidget {
   }
 }
 
-
 /// The card asking to share anonymous stats, over the home screen just above
 /// the navigation bar, while [AnalyticsService.asking] is up. It belongs to
 /// the home screen only: [visible] is false on any other tab or behind the
@@ -1284,8 +1285,7 @@ class _AnalyticsAskOverlay extends StatelessWidget {
             bottom: false,
             child: DesktopContentWidth(
               child: AnalyticsAskCard(
-                onAnswer: (granted) =>
-                    unawaited(service.setConsent(granted)),
+                onAnswer: (granted) => unawaited(service.setConsent(granted)),
               ),
             ),
           ),

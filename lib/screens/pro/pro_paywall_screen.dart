@@ -14,8 +14,10 @@ import '../../theme/theme.dart';
 import '../../utils/platform_info.dart';
 import '../../widgets/ui/app_badge.dart';
 import '../../widgets/ui/app_notifications.dart';
+import '../../widgets/ui/app_sheet.dart';
 import '../../widgets/ui/clipboard_and_links.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
+import '../../widgets/ui/section_navigator.dart';
 import '../settings/account_screen.dart';
 
 /// Buying Pro: what it brings, the plans side by side, and one button.
@@ -52,11 +54,9 @@ class ProPaywallScreen extends ConsumerStatefulWidget {
         properties: {AnalyticsProperty.source: source.id},
       ),
     );
-    return Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        fullscreenDialog: true,
-        builder: (_) => ProPaywallScreen(source: source),
-      ),
+    return pushAppForm<void>(
+      context,
+      builder: (_) => ProPaywallScreen(source: source),
     );
   }
 
@@ -252,9 +252,12 @@ class _ProPaywallScreenState extends ConsumerState<ProPaywallScreen> {
   }
 
   Future<void> _signIn() async {
-    await Navigator.of(
+    await pushAppPage<void>(
       context,
-    ).push(MaterialPageRoute<void>(builder: (_) => const AccountScreen()));
+      window: true,
+      title: Translations.of(context).account.title,
+      builder: (_) => const AccountScreen(),
+    );
     if (!mounted) return;
     if (ref.read(accountProvider) != null) unawaited(_load());
   }

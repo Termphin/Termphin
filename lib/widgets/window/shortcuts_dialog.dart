@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../i18n/strings.g.dart';
 import '../../services/app/app_commands.dart';
@@ -64,23 +64,28 @@ class _ShortcutsList extends StatelessWidget {
     );
     return ListView(
       shrinkWrap: true,
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.space20,
+        AppTheme.space12,
+        AppTheme.space20,
+        AppTheme.space16,
+      ),
       children: [
         Text(
           t.commands.shortcutsTitle,
           style: Theme.of(context).textTheme.titleMedium,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: AppTheme.space16),
         SectionHeader(t.commands.shortcutsGeneral),
-        const SizedBox(height: 6),
+        const SizedBox(height: AppTheme.space6),
         for (final command in _general)
           _Row(
             label: AppCommands.label(t, command),
             keys: AppCommands.shortcutLabel(command) ?? '',
           ),
-        const SizedBox(height: 16),
+        const SizedBox(height: AppTheme.space16),
         SectionHeader(t.commands.shortcutsTerminal),
-        const SizedBox(height: 6),
+        const SizedBox(height: AppTheme.space6),
         for (final command in _terminal)
           _Row(
             label: AppCommands.label(t, command),
@@ -98,9 +103,9 @@ class _ShortcutsList extends StatelessWidget {
           label: t.commands.shortcutsSelectAll,
           keys: terminalKey(LogicalKeyboardKey.keyA),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: AppTheme.space16),
         SectionHeader(t.commands.shortcutsFiles),
-        const SizedBox(height: 6),
+        const SizedBox(height: AppTheme.space6),
         for (final (label, activator) in [
           (t.sftp.openItem, SftpShortcuts.open),
           (t.sftp.parentFolder, SftpShortcuts.parentFolder),
@@ -132,7 +137,7 @@ class _Row extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
+      padding: const EdgeInsets.symmetric(vertical: AppTheme.space4),
       child: Row(
         children: [
           Expanded(
@@ -142,10 +147,13 @@ class _Row extends StatelessWidget {
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppTheme.space8,
+              vertical: AppTheme.space2,
+            ),
             decoration: BoxDecoration(
               color: colors.fieldFill,
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
               border: Border.all(color: colors.surfaceBorder),
             ),
             child: Text(

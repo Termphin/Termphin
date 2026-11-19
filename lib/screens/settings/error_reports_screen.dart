@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -13,6 +12,7 @@ import '../../providers/profiles_provider.dart';
 import '../../services/app/error_reports.dart';
 import '../../services/app/identity_anonymizer.dart';
 import '../../theme/theme.dart';
+import '../../utils/platform_info.dart';
 import '../../widgets/ui/app_card.dart';
 import '../../widgets/ui/clipboard_and_links.dart';
 import '../../widgets/ui/confirm_dialog.dart';
@@ -48,7 +48,7 @@ class ErrorReportsScreen extends ConsumerWidget {
     final info = await PackageInfo.fromPlatform();
     final header =
         'Termphin ${info.version} (${info.buildNumber}), '
-        '${defaultTargetPlatform.name}';
+        '$platformName';
     return _scrub(reports.export(header: header), scrubFor);
   }
 

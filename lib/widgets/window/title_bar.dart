@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:window_manager/window_manager.dart';
@@ -62,16 +62,19 @@ class DesktopTitleBar extends StatelessWidget {
               if (mac)
                 const _DragArea(width: _kMacTrafficLightsWidth)
               else ...[
-                const SizedBox(width: 12),
+                const SizedBox(width: AppTheme.space12),
                 Image.asset('assets/logo.png', width: 16, height: 16),
-                const SizedBox(width: 6),
+                const SizedBox(width: AppTheme.space6),
                 _TitleMenus(navigatorContext: navigatorContext),
               ],
               const Expanded(child: _DragArea(child: _Breadcrumb())),
               const _PageActions(),
               const _SearchButton(),
-              const SizedBox(width: 8),
-              if (!mac) const WindowButtons() else const SizedBox(width: 6),
+              const SizedBox(width: AppTheme.space8),
+              if (!mac)
+                const WindowButtons()
+              else
+                const SizedBox(width: AppTheme.space6),
             ],
           ),
         ),
@@ -112,7 +115,7 @@ class _Breadcrumb extends StatelessWidget {
       builder: (context, entries, _) {
         if (entries.isEmpty) return const _PageTitle();
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsets.symmetric(horizontal: AppTheme.space12),
           child: Align(
             alignment: Alignment.centerLeft,
             child: SingleChildScrollView(
@@ -124,10 +127,12 @@ class _Breadcrumb extends StatelessWidget {
                   for (var i = 0; i < entries.length; i++) ...[
                     if (i > 0)
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppTheme.space4,
+                        ),
                         child: Icon(
                           PhosphorIconsRegular.caretRight,
-                          size: 12,
+                          size: AppTheme.icon12,
                           color: colors.textTertiary,
                         ),
                       ),
@@ -161,7 +166,7 @@ class _PageTitle extends StatelessWidget {
         final page = DesktopPageBar.instance.current;
         if (page == null) return const SizedBox.expand();
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsets.symmetric(horizontal: AppTheme.space12),
           child: Align(
             alignment: Alignment.centerLeft,
             child: Text(
@@ -170,7 +175,7 @@ class _PageTitle extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: colors.uiSmall.copyWith(
-                fontSize: 12.5,
+                fontSize: AppTheme.font12,
                 fontWeight: FontWeight.w600,
                 color: colors.textPrimary,
               ),
@@ -198,7 +203,7 @@ class _PageActions extends StatelessWidget {
         return IconButtonTheme(
           data: IconButtonThemeData(
             style: IconButton.styleFrom(
-              iconSize: 16,
+              iconSize: AppTheme.icon16,
               minimumSize: const Size.square(28),
               fixedSize: const Size.square(28),
               padding: EdgeInsets.zero,
@@ -207,7 +212,7 @@ class _PageActions extends StatelessWidget {
             ),
           ),
           child: Padding(
-            padding: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.only(right: AppTheme.space8),
             child: Row(
               key: const ValueKey('desktopPageActions'),
               mainAxisSize: MainAxisSize.min,
@@ -230,7 +235,7 @@ class _CrumbButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final style = context.colors.uiSmall.copyWith(
-      fontSize: 12.5,
+      fontSize: AppTheme.font12,
       fontWeight: last ? FontWeight.w600 : FontWeight.w500,
       color: last ? colors.textPrimary : colors.textSecondary,
     );
@@ -282,7 +287,7 @@ class _HoverBoxState extends State<_HoverBox> {
         child: AnimatedContainer(
           duration: AppTheme.interactiveDuration,
           height: 28,
-          padding: const EdgeInsets.symmetric(horizontal: 9),
+          padding: const EdgeInsets.symmetric(horizontal: AppTheme.space8),
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: _hovered
@@ -321,19 +326,19 @@ class _SearchButton extends StatelessWidget {
           children: [
             Icon(
               PhosphorIconsRegular.magnifyingGlass,
-              size: 13,
+              size: AppTheme.icon12,
               color: colors.textTertiary,
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppTheme.space8),
             Text(
               t.window.search,
               style: colors.uiSmall.copyWith(color: colors.textTertiary),
             ),
-            const SizedBox(width: 18),
+            const SizedBox(width: AppTheme.space16),
             Text(
               shortcut,
               style: colors.uiSmall.copyWith(
-                fontSize: 11,
+                fontSize: AppTheme.font11,
                 color: colors.textTertiary,
                 fontFeatures: const [FontFeature.tabularFigures()],
               ),
@@ -379,7 +384,7 @@ class _TitleMenus extends StatelessWidget {
                 backgroundColor: WidgetStatePropertyAll(colors.surfaceCard),
                 elevation: const WidgetStatePropertyAll(6),
                 padding: const WidgetStatePropertyAll(
-                  EdgeInsets.symmetric(vertical: 4),
+                  EdgeInsets.symmetric(vertical: AppTheme.space4),
                 ),
               ),
               menuChildren: [
@@ -395,19 +400,26 @@ class _TitleMenus extends StatelessWidget {
                       style: MenuItemButton.styleFrom(
                         shape: const RoundedRectangleBorder(),
                         minimumSize: const Size(240, 30),
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        iconSize: 16,
-                        textStyle: colors.uiSmall.copyWith(fontSize: 13.5),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppTheme.space12,
+                        ),
+                        iconSize: AppTheme.icon16,
+                        textStyle: colors.uiSmall.copyWith(
+                          fontSize: AppTheme.font13,
+                        ),
                         foregroundColor: colors.textPrimary,
                         iconColor: colors.textSecondary,
                         disabledForegroundColor: colors.textTertiary,
                         disabledIconColor: colors.textTertiary,
                       ),
                       leadingIcon: item.checked == true
-                          ? const Icon(PhosphorIconsRegular.check, size: 16)
+                          ? const Icon(
+                              PhosphorIconsRegular.check,
+                              size: AppTheme.icon16,
+                            )
                           : item.icon == null || item.checked == false
-                          ? const SizedBox(width: 16)
-                          : Icon(item.icon, size: 16),
+                          ? const SizedBox(width: AppTheme.space16)
+                          : Icon(item.icon, size: AppTheme.icon16),
                       shortcut: item.shortcut,
                       onPressed: item.enabled ? item.onSelected : null,
                       child: Text(item.label),
@@ -428,7 +440,7 @@ class _TitleMenus extends StatelessWidget {
                 child: Text(
                   menu.label,
                   style: colors.uiSmall.copyWith(
-                    fontSize: 13.5,
+                    fontSize: AppTheme.font13,
                     fontWeight: FontWeight.w500,
                     color: colors.textSecondary,
                   ),

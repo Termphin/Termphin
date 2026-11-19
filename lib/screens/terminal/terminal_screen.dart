@@ -363,19 +363,21 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
           ),
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 6),
+            padding: const EdgeInsets.symmetric(horizontal: AppTheme.space6),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 for (final action in actions)
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppTheme.space4,
+                    ),
                     child: TextButton.icon(
                       key: ValueKey('actionBar-${action.name}'),
                       onPressed: _dockActionEnabled(session, action)
                           ? builders[action]
                           : null,
-                      icon: Icon(dockActionIcon(action), size: 15),
+                      icon: Icon(dockActionIcon(action), size: AppTheme.icon14),
                       label: Text(
                         _desktopActionLabel(t, action),
                         maxLines: 1,
@@ -383,8 +385,12 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
                       ),
                       style: TextButton.styleFrom(
                         foregroundColor: colors.textSecondary,
-                        textStyle: colors.uiSmall.copyWith(fontSize: 12.5),
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        textStyle: colors.uiSmall.copyWith(
+                          fontSize: AppTheme.font12,
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppTheme.space10,
+                        ),
                         minimumSize: const Size(0, 30),
                         shape: const RoundedRectangleBorder(),
                         visualDensity: VisualDensity.compact,
@@ -1327,7 +1333,12 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
             child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppTheme.space12,
+                    AppTheme.space12,
+                    AppTheme.space12,
+                    AppTheme.space4,
+                  ),
                   child: Align(
                     alignment: collapsed
                         ? Alignment.center
@@ -1336,12 +1347,19 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
                   ),
                 ),
                 Padding(
-                  padding: EdgeInsets.fromLTRB(itemInset, 4, itemInset, 0),
+                  padding: EdgeInsets.fromLTRB(
+                    itemInset,
+                    AppTheme.space4,
+                    itemInset,
+                    0,
+                  ),
                   child: Column(
                     children: [
                       for (var i = 0; i < widget.navItems.length; i++)
                         Padding(
-                          padding: const EdgeInsets.only(bottom: 4),
+                          padding: const EdgeInsets.only(
+                            bottom: AppTheme.space4,
+                          ),
                           child: SidebarNavItem(
                             data: widget.navItems[i],
                             selected: false,
@@ -1369,14 +1387,19 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
                 Expanded(
                   child: _buildTabList(
                     axis: Axis.vertical,
-                    padding: EdgeInsets.fromLTRB(itemInset, 3, itemInset, 12),
+                    padding: EdgeInsets.fromLTRB(
+                      itemInset,
+                      AppTheme.space2,
+                      itemInset,
+                      AppTheme.space12,
+                    ),
                     stretch: !collapsed,
                     collapsed: collapsed,
                   ),
                 ),
                 if (collapsed)
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.only(bottom: AppTheme.space8),
                     child: _buildAddTabButton(),
                   ),
               ],
