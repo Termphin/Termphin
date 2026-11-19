@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
+import 'package:screen_retriever/screen_retriever.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -44,12 +46,15 @@ class DesktopWindow with WindowListener {
     if (!platformHas(PlatformFeature.customWindowChrome)) return;
     await windowManager.ensureInitialized();
     final prefs = await SharedPreferences.getInstance();
-    final bounds = _decode(prefs.getString(kWindowBoundsPrefsKey));
+    final saved = _decode(prefs.getString(kWindowBoundsPrefsKey));
+    final bounds = saved == null
+        ? null
+        : restorableWindowBounds(saved, await _displayAreas());
     final wasMaximized = prefs.getBool(kWindowMaximizedPrefsKey) ?? false;
 
     final options = WindowOptions(
       title: 'Termphin',
-      size: bounds?.size ?? kDefaultWindowSize,
+      size: bounds?.size ?? saved?.size ?? kDefaultWindowSize,
       minimumSize: kMinimumWindowSize,
       center: bounds == null,
       titleBarStyle: TitleBarStyle.hidden,
@@ -65,6 +70,22 @@ class DesktopWindow with WindowListener {
     });
     windowManager.addListener(this);
     await windowManager.setPreventClose(true);
+  }
+
+  /// The usable area of every connected display, in the window's own
+  /// coordinates. None when the system will not say, which leaves the
+  /// saved bounds alone.
+  static Future<List<Rect>> _displayAreas() async {
+    try {
+      final displays = await screenRetriever.getAllDisplays();
+      return [
+        for (final display in displays)
+          (display.visiblePosition ?? Offset.zero) &
+              (display.visibleSize ?? display.size),
+      ];
+    } catch (_) {
+      return const [];
+    }
   }
 
   /// What closing the window does, set by whoever owns the tray. Unset, it
@@ -170,4 +191,34 @@ class DesktopWindow with WindowListener {
     }
     return rect;
   }
+}
+
+/// How much of a window's top edge - the title bar it is dragged by - has to
+/// be on a display for the window to count as reachable there.
+const double _gripHeight = 40;
+const double _minGripWidth = 100;
+
+/// Where a window saved at [saved] goes back to among the [displays]
+/// connected now: there when enough of its title bar is on one of them, cut
+/// down to that display's size if it has outgrown it; null when none shows
+/// it, and the window is centred instead.
+///
+/// A window saved on a monitor that has since been unplugged otherwise came
+/// back where that monitor was - off every screen, with nothing to grab. No
+/// displays reported means nothing to judge by, and [saved] stands.
+Rect? restorableWindowBounds(Rect saved, List<Rect> displays) {
+  if (displays.isEmpty) return saved;
+  final grip = Rect.fromLTWH(saved.left, saved.top, saved.width, _gripHeight);
+  for (final display in displays) {
+    final visible = grip.intersect(display);
+    if (visible.width >= _minGripWidth && visible.height >= _gripHeight / 2) {
+      return Rect.fromLTWH(
+        saved.left,
+        saved.top,
+        math.min(saved.width, display.width),
+        math.min(saved.height, display.height),
+      );
+    }
+  }
+  return null;
 }
