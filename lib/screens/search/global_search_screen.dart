@@ -64,6 +64,7 @@ class GlobalSearchScreen extends ConsumerStatefulWidget {
     this.pickFrom,
     this.onPick,
     this.header,
+    this.initialQuery = '',
   });
 
   final Object heroTag;
@@ -72,6 +73,10 @@ class GlobalSearchScreen extends ConsumerStatefulWidget {
   final ValueChanged<SshProfile>? onPick;
   final Widget? header;
 
+  /// Already in the field when the search opens - the first keys typed
+  /// before it did, so they are not lost on the way.
+  final String initialQuery;
+
   @override
   ConsumerState<GlobalSearchScreen> createState() => _GlobalSearchScreenState();
 }
@@ -79,9 +84,14 @@ class GlobalSearchScreen extends ConsumerStatefulWidget {
 class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
   late final SshSessionManager _manager = ref.read(sshSessionManagerProvider);
 
-  final _controller = TextEditingController();
+  late final _controller = TextEditingController.fromValue(
+    TextEditingValue(
+      text: widget.initialQuery,
+      selection: TextSelection.collapsed(offset: widget.initialQuery.length),
+    ),
+  );
   final _focusNode = FocusNode();
-  String _query = '';
+  late String _query = widget.initialQuery;
   ProfileGroup? _scope;
   List<SshKey> _keys = const [];
   Animation<double>? _routeAnimation;
@@ -110,7 +120,9 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
 
   /// Waits for the route's hero flight to land before opening the keyboard:
   /// opening it mid-flight resizes the page under the hero and the flight
-  /// ends somewhere else. The animation is read after the first frame, since
+  /// ends somewhere else. A desktop opens the search as a palette, with no
+  /// flight and no keyboard to resize anything, so the field takes the keys
+  /// at once - typed while the palette fades in, they would land elsewhere. The animation is read after the first frame, since
   /// before the route is installed it is a stand-in that already reads as
   /// completed.
   @override
@@ -119,7 +131,7 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
     if (_routeAnimation != null) return;
     final animation = ModalRoute.of(context)?.animation;
     _routeAnimation = animation;
-    if (animation == null) {
+    if (animation == null || isDesktopPlatform) {
       _focusNode.requestFocus();
       return;
     }
@@ -414,6 +426,7 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
                   onKeyEvent: _onFieldKey,
                   child: TextField(
                     key: const ValueKey('globalSearchField'),
+                    selectAllOnFocus: false,
                     controller: _controller,
                     focusNode: _focusNode,
                     onChanged: _setQuery,

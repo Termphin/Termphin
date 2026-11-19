@@ -155,6 +155,7 @@ Future<void> openGlobalSearch(
   List<SshProfile>? pickFrom,
   ValueChanged<SshProfile>? onPick,
   Widget? header,
+  String initialQuery = '',
 }) {
   if (isDesktopPlatform) {
     return showDialog<void>(
@@ -178,6 +179,7 @@ Future<void> openGlobalSearch(
                     pickFrom: pickFrom,
                     onPick: onPick,
                     header: header,
+                    initialQuery: initialQuery,
                   ),
                 ),
               ),
@@ -197,6 +199,7 @@ Future<void> openGlobalSearch(
         pickFrom: pickFrom,
         onPick: onPick,
         header: header,
+        initialQuery: initialQuery,
       ),
       transitionsBuilder: (context, animation, _, child) => FadeTransition(
         opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),

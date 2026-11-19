@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
@@ -17,6 +18,7 @@ import '../../services/ssh/ssh_session_manager.dart';
 import '../../services/storage/group_storage.dart';
 import '../../theme/theme.dart';
 import '../../utils/group_match.dart';
+import '../../utils/platform_info.dart';
 import '../../utils/profile_sort.dart';
 import '../groups/group_filter_chips.dart';
 import '../profiles/profile_avatar.dart';
@@ -25,6 +27,7 @@ import '../ui/app_dropdown.dart';
 import '../ui/app_notifications.dart';
 import '../ui/app_sheet.dart';
 import '../ui/confirm_dialog.dart';
+import '../ui/list_key_navigation.dart';
 import '../ui/sheet_handle.dart';
 import 'new_session_row.dart';
 import 'rename_session_dialog.dart';
@@ -81,6 +84,34 @@ class _AddSessionSheetContentState
     return sortProfiles(filtered);
   }
 
+  /// On a desktop, a key typed while the picker is open starts the search
+  /// with it, the way a command palette does - the box above the list only
+  /// opens on a click, and the key would otherwise go nowhere.
+  KeyEventResult _typeToSearch(BuildContext context, KeyEvent event) {
+    final character = event.character;
+    final keyboard = HardwareKeyboard.instance;
+    if (!isDesktopPlatform ||
+        event is! KeyDownEvent ||
+        character == null ||
+        character.trim().isEmpty ||
+        keyboard.isControlPressed ||
+        keyboard.isMetaPressed ||
+        keyboard.isAltPressed) {
+      return KeyEventResult.ignored;
+    }
+    unawaited(
+      openGlobalSearch(
+        context,
+        heroTag: 'globalSearch-addSession',
+        hint: Translations.of(context).terminal.searchDevices,
+        pickFrom: widget.profiles,
+        onPick: widget.onSelect,
+        initialQuery: character,
+      ),
+    );
+    return KeyEventResult.handled;
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = Translations.of(context);
@@ -108,80 +139,87 @@ class _AddSessionSheetContentState
       minChildSize: 0.4,
       maxChildSize: 0.9,
       builder: (context, scrollController) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SheetHandle(topPadding: AppTheme.space8),
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppTheme.space20,
-                vertical: AppTheme.space14,
-              ),
-              child: Text(
-                t.terminal.selectDevice,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppTheme.space16),
-              child: GlobalSearchLauncher(
-                heroTag: 'globalSearch-addSession',
-                hint: t.terminal.searchDevices,
-                pickFrom: widget.profiles,
-                onPick: widget.onSelect,
-              ),
-            ),
-            GroupFilterChips(
-              groups: allGroups,
-              selected: _selectedGroup,
-              padding: const EdgeInsets.fromLTRB(
-                AppTheme.space16,
-                AppTheme.space10,
-                AppTheme.space16,
-                0,
-              ),
-              onChanged: (group) => setState(() => _selectedGroup = group),
-            ),
-            if (filtered.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: AppTheme.space24,
-                  horizontal: AppTheme.space20,
+        return Focus(
+          onKeyEvent: (_, event) => _typeToSearch(context, event),
+          child: ListKeyNavigation(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SheetHandle(topPadding: AppTheme.space8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppTheme.space20,
+                    vertical: AppTheme.space14,
+                  ),
+                  child: Text(
+                    t.terminal.selectDevice,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                 ),
-                child: Text(
-                  t.terminal.noDevices,
-                  style: TextStyle(color: context.colors.textTertiary),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppTheme.space16,
+                  ),
+                  child: GlobalSearchLauncher(
+                    heroTag: 'globalSearch-addSession',
+                    hint: t.terminal.searchDevices,
+                    pickFrom: widget.profiles,
+                    onPick: widget.onSelect,
+                  ),
                 ),
-              )
-            else
-              Expanded(
-                child: ListView.separated(
-                  key: const ValueKey('addSessionProfileList'),
-                  controller: scrollController,
+                GroupFilterChips(
+                  groups: allGroups,
+                  selected: _selectedGroup,
                   padding: const EdgeInsets.fromLTRB(
                     AppTheme.space16,
-                    AppTheme.space12,
+                    AppTheme.space10,
                     AppTheme.space16,
-                    AppTheme.space16,
+                    0,
                   ),
-                  itemCount: filtered.length,
-                  separatorBuilder: (_, _) =>
-                      const SizedBox(height: AppTheme.space12),
-                  itemBuilder: (context, index) {
-                    final p = filtered[index];
-                    return _ProfileRow(
-                      key: ValueKey('addSessionProfile:${p.id}'),
-                      profile: p,
-                      anonymize: anonymize,
-                      resumable: widget.resumableFor(p.id),
-                      onSelect: () => widget.onSelect(p),
-                      onAttachTab: (tabId) => widget.onAttach(tabId, p),
-                    );
-                  },
+                  onChanged: (group) => setState(() => _selectedGroup = group),
                 ),
-              ),
-          ],
+                if (filtered.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppTheme.space24,
+                      horizontal: AppTheme.space20,
+                    ),
+                    child: Text(
+                      t.terminal.noDevices,
+                      style: TextStyle(color: context.colors.textTertiary),
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: ListView.separated(
+                      key: const ValueKey('addSessionProfileList'),
+                      controller: scrollController,
+                      padding: const EdgeInsets.fromLTRB(
+                        AppTheme.space16,
+                        AppTheme.space12,
+                        AppTheme.space16,
+                        AppTheme.space16,
+                      ),
+                      itemCount: filtered.length,
+                      separatorBuilder: (_, _) =>
+                          const SizedBox(height: AppTheme.space12),
+                      itemBuilder: (context, index) {
+                        final p = filtered[index];
+                        return _ProfileRow(
+                          key: ValueKey('addSessionProfile:${p.id}'),
+                          profile: p,
+                          anonymize: anonymize,
+                          resumable: widget.resumableFor(p.id),
+                          onSelect: () => widget.onSelect(p),
+                          onAttachTab: (tabId) => widget.onAttach(tabId, p),
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          ),
         );
       },
     );
