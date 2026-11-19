@@ -487,6 +487,7 @@
       "licenses": "open source licences"
     },
     "terminalRowSubtitle": "Look, key toolbar, action dock and tabs",
+    "terminalRowSubtitleDesktop": "Look, tabs, split screen and keyboard shortcuts",
     "filesRow": "Files",
     "filesRowSubtitle": "Downloads, hidden files and the text editor",
     "connectionRowSubtitle": "The Termphin helper, running in the background and permissions",

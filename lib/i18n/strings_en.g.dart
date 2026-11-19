@@ -1371,6 +1371,9 @@ class Translations$settings$en {
 	/// en: 'Look, key toolbar, action dock and tabs'
 	String get terminalRowSubtitle => 'Look, key toolbar, action dock and tabs';
 
+	/// en: 'Look, tabs, split screen and keyboard shortcuts'
+	String get terminalRowSubtitleDesktop => 'Look, tabs, split screen and keyboard shortcuts';
+
 	/// en: 'Files'
 	String get filesRow => 'Files';
 
@@ -5587,6 +5590,7 @@ extension on Translations {
 			'settings.searchKeywords.reportBug' => 'bug issue problem',
 			'settings.searchKeywords.licenses' => 'open source licences',
 			'settings.terminalRowSubtitle' => 'Look, key toolbar, action dock and tabs',
+			'settings.terminalRowSubtitleDesktop' => 'Look, tabs, split screen and keyboard shortcuts',
 			'settings.filesRow' => 'Files',
 			'settings.filesRowSubtitle' => 'Downloads, hidden files and the text editor',
 			'settings.connectionRowSubtitle' => 'The Termphin helper, running in the background and permissions',
@@ -5654,9 +5658,9 @@ extension on Translations {
 			'settings.organization' => 'Organization',
 			'settings.analytics' => 'Analytics',
 			'settings.analyticsToggle' => 'Share usage analytics',
-			'settings.analyticsToggleSubtitle' => 'Anonymous usage and crash reports',
 			_ => null,
 		} ?? switch (path) {
+			'settings.analyticsToggleSubtitle' => 'Anonymous usage and crash reports',
 			'settings.terminalControls' => 'On-screen controls',
 			'settings.keyToolbar' => 'Key toolbar',
 			'settings.keyToolbarSubtitle' => 'Esc, Tab, Ctrl, arrows above the keyboard',
@@ -6168,9 +6172,9 @@ extension on Translations {
 			'toolbar.control' => 'Control',
 			'toolbar.alt' => 'Alt',
 			'toolbar.shift' => 'Shift',
-			'toolbar.enter' => 'Enter',
 			_ => null,
 		} ?? switch (path) {
+			'toolbar.enter' => 'Enter',
 			'toolbar.delete' => 'Delete',
 			'toolbar.backspace' => 'Backspace',
 			'toolbar.pageUp' => 'Page up',

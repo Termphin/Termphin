@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../i18n/strings.g.dart';
 import '../../services/analytics/analytics_service.dart';
+import '../../utils/platform_info.dart';
 import '../../widgets/settings/about_settings_section.dart';
 import '../../widgets/settings/analytics_settings_section.dart';
 import '../../widgets/settings/connection_settings_section.dart';
@@ -35,7 +36,10 @@ enum SettingsCategory {
   };
 
   String subtitle(Translations t) => switch (this) {
-    terminal => t.settings.terminalRowSubtitle,
+    terminal =>
+      isDesktopPlatform
+          ? t.settings.terminalRowSubtitleDesktop
+          : t.settings.terminalRowSubtitle,
     files => t.settings.filesRowSubtitle,
     connection => t.settings.connectionRowSubtitle,
     privacy => t.settings.privacySecurityRowSubtitle,
