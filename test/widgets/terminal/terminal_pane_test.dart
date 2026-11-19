@@ -863,6 +863,62 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
     });
 
+    Future<void> middleClick(WidgetTester tester) async {
+      await tester.tapAt(
+        tester.getCenter(find.byType(TerminalPane)),
+        kind: PointerDeviceKind.mouse,
+        buttons: kTertiaryButton,
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('the middle button pastes the selection, as on Linux', (
+      tester,
+    ) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+      await mount(tester);
+      await dragAcrossFirstLine(tester);
+
+      await middleClick(tester);
+
+      expect(sent, hasLength(1));
+      expect(sent.single, isNot('pasted'));
+      expect('hello world', contains(sent.single));
+      expect(find.text(t.contextMenu.paste), findsNothing);
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    testWidgets('the middle button pastes the clipboard with no selection', (
+      tester,
+    ) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+      await mount(tester);
+
+      await middleClick(tester);
+
+      expect(sent, ['pasted']);
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    testWidgets('select all copies the lines with text, not the empty screen', (
+      tester,
+    ) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+      await mount(tester);
+      await focusTerminal(tester);
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyC);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.pumpAndSettle();
+
+      expect(clipboardWrites.last, 'hello world');
+      debugDefaultTargetPlatformOverride = null;
+    });
+
     testWidgets('Ctrl+V pastes after a click that cleared a selection', (
       tester,
     ) async {

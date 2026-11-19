@@ -787,6 +787,20 @@ class _TerminalPaneState extends State<TerminalPane> {
   /// The right-click menu, the desktop's way to the clipboard. The keys it
   /// shows are what [desktopTerminalShortcuts] binds: Cmd on a Mac;
   /// elsewhere plain Ctrl for copy and paste, Ctrl+Shift for select-all.
+  /// The middle button pastes, as it does in every terminal on Linux: the
+  /// text selected in this terminal, the closest the app gets to the X
+  /// primary selection, or the clipboard when nothing is selected. A program
+  /// with mouse reporting on gets the click instead and never calls this.
+  Future<void> _onMiddleClick(TapDownDetails details, CellOffset offset) async {
+    final selected = selectedText;
+    final text = selected != null && selected.isNotEmpty
+        ? selected
+        : (await Clipboard.getData(Clipboard.kTextPlain))?.text;
+    if (!mounted || text == null || text.isEmpty) return;
+    focusTerminal();
+    _terminal.paste(text);
+  }
+
   Future<void> _onSecondaryTapDown(
     TapDownDetails details,
     CellOffset offset,
@@ -889,14 +903,7 @@ class _TerminalPaneState extends State<TerminalPane> {
           clearSelection();
         }
       case 'selectAll':
-        _terminalController.setSelection(
-          _terminal.buffer.createAnchor(0, 0),
-          _terminal.buffer.createAnchor(
-            _terminal.viewWidth,
-            _terminal.buffer.height - 1,
-          ),
-          mode: SelectionMode.line,
-        );
+        _terminalController.selectAll(_terminal.buffer);
       case 'find':
         openSearch();
       case 'clear':
@@ -1144,6 +1151,7 @@ class _TerminalPaneState extends State<TerminalPane> {
       simulateScroll: true,
       onTapUp: _onTapUp,
       onSecondaryTapDown: _desktop ? _onSecondaryTapDown : null,
+      onTertiaryTapDown: _desktop ? _onMiddleClick : null,
       shortcuts: _desktop ? desktopTerminalShortcuts() : null,
       foregroundPainter: _linkUnderlines(
         _terminal,
@@ -1378,6 +1386,7 @@ TerminalForegroundPainter _linkUnderlines(Terminal terminal, Color color) =>
 }
 
 const _maxLineRows = 16;
+
 /// Copies the terminal's selection - and only claims the key when there is
 /// one, so a Ctrl+C with nothing selected still reaches the shell as the
 /// interrupt it has always been there.
