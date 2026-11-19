@@ -161,4 +161,68 @@ void main() {
       );
     }
   });
+
+  testWidgets('a shifted symbol key runs its shortcut as the GTK keyboard '
+      'reports it', (tester) async {
+    final ran = <AppCommand>[];
+    for (final command in [
+      AppCommand.openSettings,
+      AppCommand.showShortcuts,
+      AppCommand.zoomIn,
+    ]) {
+      unregister.add(
+        AppCommands.instance.register(command, (_) {
+          ran.add(command);
+          return true;
+        }),
+      );
+    }
+    await _pumpApp(tester);
+
+    final keyboard = HardwareKeyboard.instance;
+    void key(
+      bool down,
+      PhysicalKeyboardKey physical,
+      LogicalKeyboardKey logical,
+    ) => keyboard.handleKeyEvent(
+      down
+          ? KeyDownEvent(
+              physicalKey: physical,
+              logicalKey: logical,
+              timeStamp: Duration.zero,
+            )
+          : KeyUpEvent(
+              physicalKey: physical,
+              logicalKey: logical,
+              timeStamp: Duration.zero,
+            ),
+    );
+    for (final (logical, physical) in [
+      (LogicalKeyboardKey.less, PhysicalKeyboardKey.comma),
+      (LogicalKeyboardKey.question, PhysicalKeyboardKey.slash),
+      (LogicalKeyboardKey.add, PhysicalKeyboardKey.equal),
+    ]) {
+      key(
+        true,
+        PhysicalKeyboardKey.controlLeft,
+        LogicalKeyboardKey.controlLeft,
+      );
+      key(true, PhysicalKeyboardKey.shiftLeft, LogicalKeyboardKey.shiftLeft);
+      key(true, physical, logical);
+      key(false, physical, logical);
+      key(false, PhysicalKeyboardKey.shiftLeft, LogicalKeyboardKey.shiftLeft);
+      key(
+        false,
+        PhysicalKeyboardKey.controlLeft,
+        LogicalKeyboardKey.controlLeft,
+      );
+    }
+    await tester.pump();
+
+    expect(ran, [
+      AppCommand.openSettings,
+      AppCommand.showShortcuts,
+      AppCommand.zoomIn,
+    ]);
+  }, variant: _linux);
 }

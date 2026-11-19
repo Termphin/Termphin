@@ -219,6 +219,10 @@ class AppCommands {
   /// mnemonic, but IBus takes it for Unicode input before the app hears it.
   /// Zoom is Ctrl and the zoom keys, with no Shift, as every terminal on
   /// these systems has them - a shell has no use for Ctrl+= or Ctrl+0.
+  ///
+  /// Off a Mac, a shortcut that holds Shift over a symbol key is also listed
+  /// under the symbol Shift makes: a Linux keyboard reports Ctrl+Shift+, as
+  /// Ctrl+Shift+<, and the comma activator alone never matches there.
   static List<SingleActivator> activatorsFor(AppCommand command) {
     final mac = isMacOSPlatform;
     SingleActivator primary(LogicalKeyboardKey key, {bool shift = false}) => mac
@@ -282,6 +286,12 @@ class AppCommands {
           shift: true,
         ),
         SingleActivator(LogicalKeyboardKey.numpadAdd, control: !mac, meta: mac),
+        if (!mac)
+          const SingleActivator(
+            LogicalKeyboardKey.add,
+            control: true,
+            shift: true,
+          ),
       ],
       AppCommand.zoomOut => [
         SingleActivator(LogicalKeyboardKey.minus, control: !mac, meta: mac),
@@ -302,6 +312,12 @@ class AppCommands {
                 control: true,
                 shift: true,
               ),
+        if (!mac)
+          const SingleActivator(
+            LogicalKeyboardKey.less,
+            control: true,
+            shift: true,
+          ),
       ],
       AppCommand.toggleSidebar => [primary(LogicalKeyboardKey.keyB)],
       AppCommand.showShortcuts => [
@@ -312,6 +328,12 @@ class AppCommands {
                 control: true,
                 shift: true,
               ),
+        if (!mac)
+          const SingleActivator(
+            LogicalKeyboardKey.question,
+            control: true,
+            shift: true,
+          ),
       ],
       AppCommand.openManual => [const SingleActivator(LogicalKeyboardKey.f1)],
       AppCommand.quit => [primary(LogicalKeyboardKey.keyQ)],
