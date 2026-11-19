@@ -628,7 +628,9 @@ void main() {
 
     await manager.init();
 
-    expect(manager.savedSplits, [(first: 'one', second: 'two', ratio: 0.3)]);
+    expect(manager.savedSplits, [
+      (first: 'one', second: 'two', ratio: 0.3, axis: null),
+    ]);
     await pumpEventQueue();
     final preferences = await SharedPreferences.getInstance();
     expect(preferences.getStringList('session_splits'), hasLength(1));
@@ -638,12 +640,20 @@ void main() {
     for (final id in ['a', 'b', 'c', 'd']) {
       await manager.startSession(profileFixture(), sessionId: id);
     }
-    manager.saveSplits(['a', 'b'], [(first: 'a', second: 'b', ratio: 0.5)]);
-    manager.saveSplits(['c', 'd'], [(first: 'd', second: 'c', ratio: 0.4)]);
+    manager.saveSplits(
+      ['a', 'b'],
+      [(first: 'a', second: 'b', ratio: 0.5, axis: null)],
+    );
+    manager.saveSplits(
+      ['c', 'd'],
+      [(first: 'd', second: 'c', ratio: 0.4, axis: null)],
+    );
     manager.saveSplits(['a', 'b'], const []);
     await pumpEventQueue();
 
-    expect(manager.savedSplits, [(first: 'd', second: 'c', ratio: 0.4)]);
+    expect(manager.savedSplits, [
+      (first: 'd', second: 'c', ratio: 0.4, axis: null),
+    ]);
     final preferences = await SharedPreferences.getInstance();
     expect(
       preferences

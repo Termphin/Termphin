@@ -262,7 +262,7 @@ void main() {
     test('restores a saved split between two open tabs', () {
       final controller = controllerWith(['a', 'b', 'c']);
       final changed = controller.restoreSplits([
-        (first: 'a', second: 'c', ratio: 0.4),
+        (first: 'a', second: 'c', ratio: 0.4, axis: null),
       ]);
 
       expect(changed, isTrue);
@@ -276,7 +276,7 @@ void main() {
     test('ignores a pair naming an id that is not open', () {
       final controller = controllerWith(['a', 'b']);
       final changed = controller.restoreSplits([
-        (first: 'a', second: 'missing', ratio: 0.4),
+        (first: 'a', second: 'missing', ratio: 0.4, axis: null),
       ]);
 
       expect(changed, isFalse);
@@ -289,7 +289,9 @@ void main() {
       var notifications = 0;
       controller.addListener(() => notifications++);
 
-      controller.restoreSplits([(first: 'a', second: 'missing', ratio: 0.4)]);
+      controller.restoreSplits([
+        (first: 'a', second: 'missing', ratio: 0.4, axis: null),
+      ]);
 
       expect(notifications, 0);
     });

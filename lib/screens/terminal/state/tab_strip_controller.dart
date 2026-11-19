@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 import '../../../models/ssh_profile.dart';
 import '../../../services/ssh/ssh_session_manager.dart' show SavedSplit;
 import '../../../widgets/terminal/session_view.dart' show SessionViewMode;
+import 'split_layout.dart';
 import 'tab_splits.dart';
 
 const _uuid = Uuid();
@@ -26,8 +27,10 @@ class TabStripController extends ChangeNotifier {
   TabStripController({
     required List<(String, SshProfile)> sessions,
     required int activeIndex,
+    int maxPanes = 2,
   }) : _sessions = List.of(sessions),
-       _activeIndex = activeIndex;
+       _activeIndex = activeIndex,
+       _splits = TabSplits(maxPanes: maxPanes);
 
   final List<(String, SshProfile)> _sessions;
   int _activeIndex;
@@ -42,7 +45,7 @@ class TabStripController extends ChangeNotifier {
   final Map<String, int> _focusedAt = {};
   int _focusClock = 0;
 
-  final TabSplits _splits = TabSplits();
+  final TabSplits _splits;
 
   List<(String, SshProfile)> get sessions => UnmodifiableListView(_sessions);
 
@@ -70,6 +73,14 @@ class TabStripController extends ChangeNotifier {
   bool isSplit(String id) => _splits.isSplit(id);
 
   bool canJoin(String other, String target) => _splits.canJoin(other, target);
+
+  /// The tree [id]'s group is laid out as, or null when it stands alone.
+  SplitNode? layoutOf(String id) => _splits.layoutOf(id);
+
+  int panesWith(String id) => _splits.panesWith(id);
+
+  String? neighbor(String id, SplitDirection direction) =>
+      _splits.neighbor(id, direction);
 
   /// Every split among [ids], for the caller to persist.
   List<SavedSplit> saved(List<String> ids) => _splits.saved(ids);
@@ -193,9 +204,20 @@ class TabStripController extends ChangeNotifier {
     return ids;
   }
 
-  /// Splits [target] with [other], which lands beside it.
-  List<String> split(String other, String target) {
-    final ids = _splits.join(sessionIds, other, target);
+  /// Splits [target] with [other], which lands beside it along [axis].
+  List<String> split(
+    String other,
+    String target, {
+    SplitAxis axis = SplitAxis.sideBySide,
+    bool before = false,
+  }) {
+    final ids = _splits.join(
+      sessionIds,
+      other,
+      target,
+      axis: axis,
+      before: before,
+    );
     _applyOrder(ids);
     notifyListeners();
     return ids;
@@ -218,6 +240,11 @@ class TabStripController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setBranchRatio(SplitBranch branch, double ratio) {
+    _splits.setBranchRatio(branch, ratio);
+    notifyListeners();
+  }
+
   /// Puts back the splits the strip last had, where both tabs made it back.
   /// A pair naming an id that is not open is left alone. Returns whether the
   /// session order actually changed, which is when the caller has to tell
@@ -227,8 +254,16 @@ class TabStripController extends ChangeNotifier {
     for (final split in savedSplits) {
       final ids = sessionIds;
       if (!ids.contains(split.first) || !ids.contains(split.second)) continue;
-      _applyOrder(_splits.join(ids, split.second, split.first));
-      _splits.setRatio(split.first, split.ratio);
+      _applyOrder(
+        _splits.join(
+          ids,
+          split.second,
+          split.first,
+          axis:
+              SplitAxis.values.asNameMap()[split.axis] ?? SplitAxis.sideBySide,
+          ratio: split.ratio,
+        ),
+      );
     }
     final changed = !listEquals(before, sessionIds);
     if (changed) notifyListeners();
