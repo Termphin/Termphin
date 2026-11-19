@@ -3915,6 +3915,12 @@ class Translations$account$en {
 	/// en: 'Sign out'
 	String get signOut => 'Sign out';
 
+	/// en: 'Manage on the web'
+	String get manageOnWeb => 'Manage on the web';
+
+	/// en: 'Your account, Pro, sync and servers, from any browser'
+	String get manageOnWebSubtitle => 'Your account, Pro, sync and servers, from any browser';
+
 	/// en: 'Delete account'
 	String get deleteAccount => 'Delete account';
 
@@ -5980,6 +5986,8 @@ extension on Translations {
 			'account.providerGitHub' => 'GitHub',
 			'account.providerPassword' => 'email and password',
 			'account.signOut' => 'Sign out',
+			'account.manageOnWeb' => 'Manage on the web',
+			'account.manageOnWebSubtitle' => 'Your account, Pro, sync and servers, from any browser',
 			'account.deleteAccount' => 'Delete account',
 			'account.deleteTitle' => 'Delete your account?',
 			'account.deleteMessage' => 'Your account and everything stored with it are deleted for good. Machines and keys on this device stay.',

@@ -9,6 +9,7 @@ import '../../i18n/strings.g.dart';
 import '../../providers/account_provider.dart';
 import '../../providers/anonymize_provider.dart';
 import '../../services/account/account_service.dart';
+import '../../services/app/project_urls.dart';
 import '../../services/pro/pro_service.dart';
 import '../../theme/theme.dart';
 import '../../widgets/account/account_avatar.dart';
@@ -279,6 +280,18 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
       AppCard(
         child: Column(
           children: [
+            SettingsTile(
+              icon: PhosphorIconsRegular.globe,
+              title: t.account.manageOnWeb,
+              subtitle: t.account.manageOnWebSubtitle,
+              trailing: SettingsTileTrailing.external,
+              onTap: _busy
+                  ? null
+                  : () => openExternalUrl(
+                      context,
+                      Uri.parse(ProjectUrls.accountPage),
+                    ),
+            ),
             SettingsTile(
               icon: PhosphorIconsRegular.signOut,
               title: t.account.signOut,

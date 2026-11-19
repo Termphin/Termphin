@@ -11,4 +11,8 @@ class ProjectUrls {
   static const issues = '$repository/issues';
   static const contributing = '$repository/blob/main/CONTRIBUTING.md';
   static const license = '$repository/blob/main/LICENSE';
+
+  /// The web account page, where the account can be managed and deleted from
+  /// a browser too.
+  static const accountPage = 'https://app.termphin.dev';
 }

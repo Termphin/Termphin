@@ -1,12 +1,12 @@
 # Privacy Policy
 
-**Last updated: 17 November 2026**
+**Last updated: 19 November 2026**
 
 ## Summary
 
 Termphin is an SSH client. It is built so that there is as little as possible
 for us to collect, and what it does need is described here. This policy covers
-the app and the website at termphin.dev.
+the app, the website at termphin.dev and the account page at app.termphin.dev.
 
 - **Your sessions never pass through us.** SSH and SFTP connections go straight
   from your device to your server. We cannot see terminal output, commands,
@@ -210,7 +210,8 @@ advertising identifier and ad personalisation are switched off.
 ## 9. The website
 
 termphin.dev is a static site: pages, screenshots, the changelog and this
-document. There are no accounts and nothing to sign in to.
+document. There are no accounts on it and nothing to sign in to; that is the
+account page, below.
 
 **No cookies, no tracking.** The site sets no cookies and runs no analytics
 or tracking scripts. The one thing it keeps in your browser is a list, in
@@ -224,6 +225,23 @@ logs - IP address, time, requested address, user agent - for a short period,
 for security and abuse handling. It shows us traffic only in aggregate, such
 as request counts per page and country; we never look at individual visitors.
 
+**The account page.** app.termphin.dev is your Termphin account in a browser:
+you can create an account, see your Pro status and what is synced, revoke a
+server's notification key, change your email address or password, and delete
+the synced copy or the whole account. It works with the same account data the
+app does (sections 4 to 7) and keeps nothing of its own. Your browser stores
+the sign-in session and your choice of light or dark theme; both are strictly
+needed for what you asked for, so there is no cookie banner here either. The
+page runs no analytics. Its request logs are kept as described above.
+
+Before you sign in, create an account or ask for a password reset with an
+email address, Cloudflare Turnstile checks that you are a person and not an
+automated script. For that check Cloudflare looks at signals from your
+browser and connection, under its own privacy policy; it is not used to track
+you and is not linked to your account. Deleting the synced copy from the page
+passes through a small Cloudflare service that hands the request to our
+backend and keeps nothing.
+
 ## 10. Legal basis for processing
 
 - **Your account, sync, push notifications and purchases** (sections 4 to 7)
@@ -233,8 +251,9 @@ as request counts per page and country; we never look at individual visitors.
   **consent**, Article 6(1)(a) GDPR. Withdrawing it in Settings does not
   affect processing before.
 - **Keeping the relay from being abused** - limiting how often a key can
-  send - is in our **legitimate interest** in a service that works for
-  everyone, Article 6(1)(f) GDPR.
+  send - and **keeping automated sign-ins off the account page** (the
+  Turnstile check, section 9) are in our **legitimate interest** in a service
+  that works for everyone, Article 6(1)(f) GDPR.
 
 ## 11. How long it is kept
 
@@ -262,7 +281,7 @@ on your device stays there until you delete it or uninstall the app.
 | Resend | Sending the one email we send: the notice before a synced copy is deleted | United States |
 | Google Play, App Store | Selling Pro; their own terms apply | - |
 | GitHub | Signing in with GitHub, if you choose it; its own terms apply | United States |
-| Cloudflare | Website hosting, CDN and DNS | Global |
+| Cloudflare | Hosting, CDN and DNS for the website and the account page; the Turnstile check on the account page | Global |
 
 Where data goes to the United States, the transfer relies on the EU-US Data
 Privacy Framework where the provider is certified under it, and otherwise on
