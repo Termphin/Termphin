@@ -577,8 +577,8 @@ class Translations$profileForm$en {
 	/// en: 'Test connection'
 	String get testConnection => 'Test connection';
 
-	/// en: 'Connecting… tap to stop'
-	String get testingConnection => 'Connecting… tap to stop';
+	/// en: 'Connecting… press to stop'
+	String get testingConnection => 'Connecting… press to stop';
 
 	/// en: 'It works - the server let you in.'
 	String get testSucceeded => 'It works - the server let you in.';
@@ -814,8 +814,8 @@ class Translations$terminal$en {
 
 	// Translations
 
-	/// en: 'Select device to connect'
-	String get selectDevice => 'Select device to connect';
+	/// en: 'Pick a machine to connect to'
+	String get selectDevice => 'Pick a machine to connect to';
 
 	/// en: 'Hide suggestion'
 	String get suggestionDismiss => 'Hide suggestion';
@@ -859,11 +859,11 @@ class Translations$terminal$en {
 	/// en: 'Scroll to bottom'
 	String get scrollToBottom => 'Scroll to bottom';
 
-	/// en: 'Search devices…'
-	String get searchDevices => 'Search devices…';
+	/// en: 'Search machines…'
+	String get searchDevices => 'Search machines…';
 
-	/// en: 'No devices found'
-	String get noDevices => 'No devices found';
+	/// en: 'No machines found'
+	String get noDevices => 'No machines found';
 
 	/// en: 'Remote host copied to clipboard.'
 	String get remoteCopied => 'Remote host copied to clipboard.';
@@ -5279,7 +5279,7 @@ extension on Translations {
 			'profileForm.linkPrefilled' => 'Filled in from the link. Check it before saving.',
 			'profileForm.linkInvalid' => 'That link is not a valid ssh:// address.',
 			'profileForm.testConnection' => 'Test connection',
-			'profileForm.testingConnection' => 'Connecting… tap to stop',
+			'profileForm.testingConnection' => 'Connecting… press to stop',
 			'profileForm.testSucceeded' => 'It works - the server let you in.',
 			'profileForm.noAuthHint' => 'The server lets anyone in with just the username. Rare - mostly test machines.',
 			'profileForm.passwordHint' => 'The account\'s password on the server. The simplest way to start; it is stored encrypted on this device.',
@@ -5350,7 +5350,7 @@ extension on Translations {
 			'keys.inUseTitle' => 'Key is in use',
 			'keys.inUseBody' => ({required num n, required Object count}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '1 machine uses this key and will stop connecting:', other: '${count} machines use this key and will stop connecting:', ), 
 			'keys.deleteAnyway' => 'Delete anyway',
-			'terminal.selectDevice' => 'Select device to connect',
+			'terminal.selectDevice' => 'Pick a machine to connect to',
 			'terminal.suggestionDismiss' => 'Hide suggestion',
 			'terminal.suggestionPick' => 'pick',
 			'terminal.suggestionInsert' => 'insert',
@@ -5365,8 +5365,8 @@ extension on Translations {
 			'terminal.paste' => 'Paste',
 			'terminal.openInBrowser' => 'Open in Browser',
 			'terminal.scrollToBottom' => 'Scroll to bottom',
-			'terminal.searchDevices' => 'Search devices…',
-			'terminal.noDevices' => 'No devices found',
+			'terminal.searchDevices' => 'Search machines…',
+			'terminal.noDevices' => 'No machines found',
 			'terminal.remoteCopied' => 'Remote host copied to clipboard.',
 			'terminal.mouseModeActive' => 'Mouse mode: tap keyboard icon to type.',
 			'terminal.splitWith' => 'Split screen with…',

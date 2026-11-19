@@ -161,7 +161,7 @@
     "linkPrefilled": "Filled in from the link. Check it before saving.",
     "linkInvalid": "That link is not a valid ssh:// address.",
     "testConnection": "Test connection",
-    "testingConnection": "Connecting… tap to stop",
+    "testingConnection": "Connecting… press to stop",
     "testSucceeded": "It works - the server let you in.",
     "noAuthHint": "The server lets anyone in with just the username. Rare - mostly test machines.",
     "passwordHint": "The account's password on the server. The simplest way to start; it is stored encrypted on this device.",
@@ -242,7 +242,7 @@
     "deleteAnyway": "Delete anyway"
   },
   "terminal": {
-    "selectDevice": "Select device to connect",
+    "selectDevice": "Pick a machine to connect to",
     "suggestionDismiss": "Hide suggestion",
     "suggestionPick": "pick",
     "suggestionInsert": "insert",
@@ -257,8 +257,8 @@
     "paste": "Paste",
     "openInBrowser": "Open in Browser",
     "scrollToBottom": "Scroll to bottom",
-    "searchDevices": "Search devices…",
-    "noDevices": "No devices found",
+    "searchDevices": "Search machines…",
+    "noDevices": "No machines found",
     "remoteCopied": "Remote host copied to clipboard.",
     "mouseModeActive": "Mouse mode: tap keyboard icon to type.",
     "splitWith": "Split screen with…",
