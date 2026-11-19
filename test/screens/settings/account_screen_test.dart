@@ -138,6 +138,16 @@ void main() {
     await tester.pumpAndSettle();
   });
 
+  testWidgets('a signed-in account can be managed on the web', (tester) async {
+    await AccountService.instance.signInWithEmail('me@example.com', 'secret');
+    await open(tester);
+
+    expect(find.text(t.account.manageOnWeb), findsOneWidget);
+    expect(find.text(t.account.manageOnWebSubtitle), findsOneWidget);
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('a cancelled sign-in sheet says nothing', (tester) async {
     await open(tester);
     backend.failNext = AccountFailure.cancelled;

@@ -1370,6 +1370,8 @@
     "providerGitHub": "GitHub",
     "providerPassword": "email and password",
     "signOut": "Sign out",
+    "manageOnWeb": "Manage on the web",
+    "manageOnWebSubtitle": "Your account, Pro, sync and servers, from any browser",
     "deleteAccount": "Delete account",
     "deleteTitle": "Delete your account?",
     "deleteMessage": "Your account and everything stored with it are deleted for good. Machines and keys on this device stay.",
