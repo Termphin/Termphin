@@ -46,6 +46,19 @@ Termphin is a Flutter SSH client (package `termphin`).
 | `docs/` | Developer documentation and the source of the legal pages (`docs/legal/`). |
 | `branding/` | The logo and the store graphics built from it, covered by `TRADEMARKS.md`. |
 | `repos/` | Sibling repositories as git submodules (`terminal_view`, `termphin-agent`, `tray_kit`), for working on them alongside the app. The app builds without them. |
+| `memories/` | Daily work log, one `YYYY-MM-DD.md` per day. Ignored by git, never committed. |
+
+## Work log
+
+`memories/` holds one Markdown file per working day, named `YYYY-MM-DD.md`.
+It is in `.gitignore` and never gets committed.
+
+- **At the start of a session** read the newest file or two to pick up open
+  threads.
+- **During and at the end of a session** append to today's file (create it
+  if missing) under `## Done`, `## Blocked / open` and `## Next`: what changed
+  and why, what failed and the exact error, decisions made, what is left.
+  Facts only, short lines, no restating the git log.
 
 ## Documentation index
 
@@ -59,7 +72,7 @@ Termphin is a Flutter SSH client (package `termphin`).
 | `docs/architecture/transfers.md` | SFTP transfers, copy and move, download location |
 | `docs/architecture/ui.md` | Screens, terminal widgets, toolbar, dock, notifications, sheets, layout, theme |
 | `docs/architecture/desktop.md` | Anything that differs off a phone: hiding by platform, dialogs vs sheets, the title bar, shortcuts, Esc, right click |
-| `docs/architecture/analytics.md` | Anything that reaches PostHog |
+| `docs/architecture/analytics.md` | Anything that reaches Firebase Analytics or Crashlytics |
 | `docs/architecture/onboarding.md` | First run, review prompt, changelog and what's new |
 | `docs/release.md` | Building, what a release ships, signing, export compliance, the Android toolchain |
 
@@ -130,10 +143,19 @@ after editing the JSON.
   non-`const`; drop the `const`. Fade to `someColor.invisible`, never
   `Colors.transparent`. Both palettes are pinned by
   `test/theme/palette_contrast_test.dart`.
-- **Use the shared kit in `lib/widgets/ui/`** instead of hand-rolling:
+- **Sizes come from the tokens on `AppTheme`**: `spaceN` for paddings and
+  spacers, `fontN`, `iconN`, `radius*`, the shadow constants and `scrim` -
+  never a literal. `test/theme/design_tokens_test.dart` enforces it
+  (`docs/architecture/ui.md`).
+- **Use the shared kit in `lib/widgets/ui/`** instead of hand-rolling - `AppCard`,
+  `AppBadge`, `TagChip`, `SectionHeader`, `EmptyStatePanel`, `AppSearchField`,
   `showConfirmDialog` (`destructive: true` for anything that loses data),
   `showTextInputDialog`, `SettingsTile`/`SettingsSwitchTile`,
   `copyToClipboard`, `openExternalUrl`.
+- **Material comes from `package:material_ui`**, never
+  `package:flutter/material.dart` (deprecated since Flutter 3.50). A widget
+  from a package still on the framework's Material library (`dropdown_button2`)
+  goes inside `LegacyMaterial`, or it finds no `Material` ancestor and throws.
 - **Transient feedback is `AppNotifications`, sheets are `showAppSheet`.** Do not
   use `ScaffoldMessenger`/`SnackBar` or `showModalBottomSheet`.
 - **Pages, forms and windows open through `pushAppPage`, `pushAppForm` and
@@ -160,10 +182,13 @@ after editing the JSON.
   `DesktopContentWidth`, which boxes the scroll view.
 - **Anything that shows a machine name, host or username honours
   `anonymizeProvider`.**
-- **Analytics names are closed enums** (`AnalyticsEvent`, `AnalyticsProperty`);
-  a name added to either must also be added to the privacy policy's §4 tables
-  (`docs/architecture/analytics.md`). The PostHog key comes in at build time
-  (`--dart-define=POSTHOG_API_KEY`); a build without it sends nothing.
+- **Analytics names are closed enums** (`AnalyticsEvent`, `AnalyticsProperty`).
+  The privacy policy describes them by category and links to that file as the
+  complete list, so a new name needs no policy edit - but a new *kind* of data,
+  or a new provider the app sends anything to, does
+  (`docs/architecture/analytics.md`). The Firebase config comes in at build
+  time from outside the repository (`docs/release.md`); a build without it
+  sends nothing, and **no Firebase config file is ever committed**.
 - **`ITSAppUsesNonExemptEncryption` stays absent** from `Info.plist`; neither
   `true` nor `false` is right (`docs/release.md`).
 

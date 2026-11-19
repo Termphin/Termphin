@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Background of the terminal chrome. The terminal keeps its own colours
 /// rather than following the app palette; built-in schemes and `AppTheme`

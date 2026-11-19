@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
@@ -9,6 +9,7 @@ import '../../services/sftp/remote_path.dart';
 import '../../theme/theme.dart';
 import '../../utils/sftp_path.dart';
 import '../ui/clipboard_and_links.dart';
+import '../ui/context_bar.dart';
 import 'sftp_shortcuts.dart';
 
 /// The breadcrumb row above the listing: where the current folder is, and the
@@ -103,16 +104,43 @@ class _SftpPathBarState extends State<SftpPathBar> {
     final isWindowsPath = isWindowsSftpPath(widget.currentPath);
     final segments = remotePathSegments(widget.currentPath);
 
+    Widget tool({
+      required IconData icon,
+      required Color color,
+      required VoidCallback? onTap,
+      String? tooltip,
+    }) {
+      final button = GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: SizedBox.square(
+          dimension: 40,
+          child: Icon(icon, color: color, size: AppTheme.icon20),
+        ),
+      );
+      return tooltip == null
+          ? button
+          : Tooltip(message: tooltip, child: button);
+    }
+
     return Container(
-      color: colors.surfaceCard,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      height: ContextBar.height,
+      decoration: BoxDecoration(
+        color: colors.surfaceCard,
+        border: Border(bottom: BorderSide(color: colors.surfaceBorder)),
+      ),
+      padding: const EdgeInsets.only(
+        left: AppTheme.space4,
+        right: AppTheme.space4,
+      ),
       child: Row(
         children: [
-          GestureDetector(
+          tool(
+            icon: PhosphorIconsFill.folderOpen,
+            color: accent,
             onTap: widget.onNavigateToRoot,
-            child: Icon(PhosphorIconsFill.folderOpen, color: accent, size: 16),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppTheme.space2),
           Expanded(
             child: _editingPath
                 ? TextField(
@@ -122,7 +150,7 @@ class _SftpPathBarState extends State<SftpPathBar> {
                     onTapOutside: (_) => _pathFocusNode.unfocus(),
                     style: colors.monoStyle.copyWith(
                       color: textPrimary,
-                      fontSize: 12,
+                      fontSize: AppTheme.font14,
                       fontWeight: FontWeight.w600,
                     ),
                     decoration: const InputDecoration(
@@ -164,7 +192,7 @@ class _SftpPathBarState extends State<SftpPathBar> {
                                 isWindowsPath ? r' \ ' : ' / ',
                                 style: colors.monoStyle.copyWith(
                                   color: textTertiary,
-                                  fontSize: 12,
+                                  fontSize: AppTheme.font14,
                                 ),
                               ),
                             GestureDetector(
@@ -175,7 +203,7 @@ class _SftpPathBarState extends State<SftpPathBar> {
                                   color: i == segments.length - 1
                                       ? textPrimary
                                       : textSecondary,
-                                  fontSize: 12,
+                                  fontSize: AppTheme.font14,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -186,54 +214,32 @@ class _SftpPathBarState extends State<SftpPathBar> {
                     ),
                   ),
           ),
-          const SizedBox(width: 4),
-          Tooltip(
-            message: AppCommands.tooltipFor(
+          const SizedBox(width: AppTheme.space4),
+          tool(
+            icon: PhosphorIconsFill.arrowClockwise,
+            color: textTertiary,
+            tooltip: AppCommands.tooltipFor(
               t.common.refresh,
               SftpShortcuts.refresh,
             ),
-            child: GestureDetector(
-              onTap: widget.refreshing ? null : widget.onRefresh,
-              child: Padding(
-                padding: const EdgeInsets.all(4),
-                child: Icon(
-                  PhosphorIconsFill.arrowClockwise,
-                  color: textTertiary,
-                  size: 18,
-                ),
-              ),
-            ),
+            onTap: widget.refreshing ? null : widget.onRefresh,
           ),
           if (widget.onSort != null)
-            GestureDetector(
+            tool(
+              icon: PhosphorIconsFill.sortAscending,
+              color: textTertiary,
               onTap: widget.onSort,
-              child: Padding(
-                padding: const EdgeInsets.all(4),
-                child: Icon(
-                  PhosphorIconsFill.sortAscending,
-                  color: textTertiary,
-                  size: 18,
-                ),
-              ),
             ),
-          Tooltip(
-            message: AppCommands.tooltipFor(
+          tool(
+            icon: widget.showHidden
+                ? PhosphorIconsFill.eye
+                : PhosphorIconsFill.eyeSlash,
+            color: widget.showHidden ? accent : textTertiary,
+            tooltip: AppCommands.tooltipFor(
               t.sftp.showHidden,
               SftpShortcuts.toggleHidden,
             ),
-            child: GestureDetector(
-              onTap: widget.onToggleHidden,
-              child: Padding(
-                padding: const EdgeInsets.all(4),
-                child: Icon(
-                  widget.showHidden
-                      ? PhosphorIconsFill.eye
-                      : PhosphorIconsFill.eyeSlash,
-                  color: widget.showHidden ? accent : textTertiary,
-                  size: 18,
-                ),
-              ),
-            ),
+            onTap: widget.onToggleHidden,
           ),
           if (widget.trailing != null) widget.trailing!,
         ],

@@ -22,9 +22,9 @@ reference a group **by name**, which is why `GroupStorage.updateGroup` rewrites
 that string on all three stores when a group is renamed, and `deleteGroup`
 moves them to `General`.
 
-- **`General` is the floor.** It is always index 0, cannot be renamed or
-  deleted, and is where every delete reassigns to - which is also why the groups
-  screen gives it no drag handle. Its colour is editable.
+- **`General` is the floor.** It always exists, cannot be renamed or deleted,
+  and is where every delete reassigns to. It is not pinned first: it reorders
+  like any other group, and its colour is editable.
 - **The group list is seeded once, never merged.** `loadGroups` is a plain read;
   a one-shot migration behind `app_groups_migrated_v1` adopts the legacy
   `profile_groups` key plus whatever groups already stand on records, and that is

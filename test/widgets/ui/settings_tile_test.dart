@@ -1,7 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
-
 import 'package:termphin/widgets/ui/settings_tile.dart';
 
 import '../../support/test_app.dart';
@@ -51,7 +50,8 @@ void main() {
 
     expect(
       find.byWidgetPredicate(
-        (widget) => widget is Icon && widget.icon == PhosphorIconsFill.caretRight,
+        (widget) =>
+            widget is Icon && widget.icon == PhosphorIconsRegular.caretRight,
       ),
       findsOneWidget,
     );
@@ -72,7 +72,8 @@ void main() {
     expect(
       find.byWidgetPredicate(
         (widget) =>
-            widget is Icon && widget.icon == PhosphorIconsFill.arrowSquareOut,
+            widget is Icon &&
+            widget.icon == PhosphorIconsRegular.arrowSquareOut,
       ),
       findsOneWidget,
     );

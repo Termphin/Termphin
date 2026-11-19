@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import '../app/onboarding_service.dart';
 import 'setting.dart';
 
 const kTerminalSchemePrefsKey = 'terminal_scheme';
@@ -10,6 +12,22 @@ const kTerminalCursorStylePrefsKey = 'terminal_cursor_style';
 const kTerminalCursorBlinkPrefsKey = 'terminal_cursor_blink';
 const kTerminalFontFamilyPrefsKey = 'terminal_font_family';
 const kTerminalPredictiveEchoPrefsKey = 'terminal_predictive_echo';
+const kTerminalProgramNotificationsPrefsKey = 'terminal_program_notifications';
+const kTerminalFinishedNotificationsPrefsKey =
+    'terminal_finished_notifications';
+const kTerminalQuietNotificationsPrefsKey = 'terminal_quiet_notifications';
+const kTerminalNoticeLinesPrefsKey = 'terminal_notice_lines';
+const kTerminalOpenAppNoticesPrefsKey = 'terminal_open_app_notices';
+const kTerminalOpenAppNoticeStylePrefsKey = 'terminal_open_app_notice_style';
+const kTerminalMouseKeyboardGuardPrefsKey = 'terminal_mouse_keyboard_guard';
+const kTerminalMouseKeyboardGuardLegacyPinnedPrefsKey =
+    'terminal_mouse_keyboard_guard_legacy_pinned';
+
+/// [TerminalSettings.openAppNoticeStyle]: the app's own card.
+const kOpenAppNoticeInApp = 'app';
+
+/// [TerminalSettings.openAppNoticeStyle]: the system's notification.
+const kOpenAppNoticeSystem = 'system';
 
 /// Dark first, then the light ones - several are the light flavour of a dark
 /// scheme above (Tokyo Night Day, Alucard, Latte), which is why they are
@@ -104,10 +122,65 @@ class TerminalSettings {
     fallback: true,
   );
 
+  /// Shows what a program asks the terminal to announce - Claude Code done
+  /// or waiting, `termphin notify` at the end of a build - as a system
+  /// notification, when its session is not the one on screen.
+  final programNotifications = Setting.boolean(
+    kTerminalProgramNotificationsPrefsKey,
+    fallback: true,
+  );
+
+  /// Shows a command the agent saw run for a long time as finished, when its
+  /// session is not the one on screen.
+  final finishedNotifications = Setting.boolean(
+    kTerminalFinishedNotificationsPrefsKey,
+    fallback: true,
+  );
+
+  /// Shows a program the agent saw stop and wait as possibly needing the
+  /// user, when its session is not the one on screen.
+  final quietNotifications = Setting.boolean(
+    kTerminalQuietNotificationsPrefsKey,
+    fallback: true,
+  );
+
+  /// Whether the agent's notifications quote the last line a command printed,
+  /// which then passes through the relay and shows on the lock screen.
+  final noticeLines = Setting.boolean(
+    kTerminalNoticeLinesPrefsKey,
+    fallback: true,
+  );
+
+  /// Whether a session that is not on screen notifies at all while
+  /// Termphin is in front. In the background it always does.
+  final openAppNotices = Setting.boolean(
+    kTerminalOpenAppNoticesPrefsKey,
+    fallback: true,
+  );
+
+  /// How [openAppNotices] shows them: [kOpenAppNoticeInApp], the app's own
+  /// card at the top of the screen with a buzz, or [kOpenAppNoticeSystem],
+  /// the system's notification as in the background.
+  final openAppNoticeStyle = Setting.text(
+    kTerminalOpenAppNoticeStylePrefsKey,
+    fallback: kOpenAppNoticeInApp,
+    allowed: const {kOpenAppNoticeInApp, kOpenAppNoticeSystem},
+  );
+
   final fontFamily = Setting.text(
     kTerminalFontFamilyPrefsKey,
     fallback: 'HackNerdFontMono',
     allowed: kTerminalFontLabels.keys.toSet(),
+  );
+
+  /// Leaves the soft keyboard as it was when tapping inside a TUI that
+  /// captures mouse clicks, exposing a tab-bar toggle instead.
+  ///
+  /// Defaults on for fresh installs; [pinLegacyMouseKeyboardGuard] pins it off
+  /// once for existing users so their tap behaviour does not change unasked.
+  final mouseKeyboardGuard = Setting.boolean(
+    kTerminalMouseKeyboardGuardPrefsKey,
+    fallback: true,
   );
 
   List<Setting<Object?>> get all => [
@@ -118,7 +191,14 @@ class TerminalSettings {
     cursorStyle,
     cursorBlink,
     predictiveEcho,
+    programNotifications,
+    finishedNotifications,
+    quietNotifications,
+    noticeLines,
+    openAppNotices,
+    openAppNoticeStyle,
     fontFamily,
+    mouseKeyboardGuard,
   ];
 
   /// Fires whenever any of them changes, so an open session can re-read the
@@ -136,3 +216,24 @@ class TerminalSettings {
 /// spelling out `TerminalSettings.instance` every time buries the field being
 /// read.
 TerminalSettings get terminalSettings => TerminalSettings.instance;
+
+/// Pins [TerminalSettings.mouseKeyboardGuard] off once for users who had
+/// already completed onboarding before the feature existed, while leaving
+/// fresh installs on its `true` default.
+Future<void> pinLegacyMouseKeyboardGuard() async {
+  final preferences = await SharedPreferences.getInstance();
+  if (preferences.getBool(kTerminalMouseKeyboardGuardLegacyPinnedPrefsKey) ??
+      false) {
+    return;
+  }
+  final existingUser =
+      preferences.getBool(kOnboardingCompletedPrefsKey) ?? false;
+  if (existingUser &&
+      !preferences.containsKey(kTerminalMouseKeyboardGuardPrefsKey)) {
+    await preferences.setBool(kTerminalMouseKeyboardGuardPrefsKey, false);
+  }
+  await preferences.setBool(
+    kTerminalMouseKeyboardGuardLegacyPinnedPrefsKey,
+    true,
+  );
+}

@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET"/>
     <!-- From Android 17, INTERNET alone no longer reaches the LAN: a connection
          to a local address is dropped as a timeout without this. Asked for when
@@ -12,9 +13,17 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
+    <!-- Firebase Analytics merges in the advertising ID permissions, Google
+         Play services' and Android's own ad services. The app never reads
+         an advertising ID (collection is off below, and Play's declaration
+         says so), so they are taken back out. -->
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove"/>
+    <uses-permission android:name="android.permission.ACCESS_ADSERVICES_AD_ID" tools:node="remove"/>
+    <uses-permission android:name="android.permission.ACCESS_ADSERVICES_ATTRIBUTION" tools:node="remove"/>
     <application
         android:label="@string/app_name"
         android:name="${applicationName}"
@@ -23,6 +32,26 @@
         android:enableOnBackInvokedCallback="true"
         android:fullBackupContent="false"
         android:dataExtractionRules="@xml/data_extraction_rules">
+        <!-- Firebase collects nothing until the user says yes: analytics and
+             crash reports are switched on at runtime by AnalyticsService
+             after consent, and a push token is only made once notifications
+             are turned on. No advertising id, no automatic screen views. These
+             hold even once something else has started Firebase. -->
+        <meta-data android:name="firebase_analytics_collection_enabled" android:value="false" />
+        <meta-data android:name="google_analytics_adid_collection_enabled" android:value="false" />
+        <meta-data android:name="google_analytics_ssaid_collection_enabled" android:value="false" />
+        <meta-data android:name="google_analytics_default_allow_ad_personalization_signals" android:value="false" />
+        <meta-data android:name="google_analytics_automatic_screen_reporting_enabled" android:value="false" />
+        <meta-data android:name="firebase_crashlytics_collection_enabled" android:value="false" />
+        <meta-data android:name="firebase_messaging_auto_init_enabled" android:value="false" />
+        <!-- Firebase does not start with the process: its provider would bring
+             it up on every launch and write installation ids to the device
+             before anyone was asked. FirebaseService starts it from Dart once
+             there is a reason - consent to analytics, an account, push. -->
+        <provider
+            android:name="com.google.firebase.provider.FirebaseInitProvider"
+            android:authorities="${applicationId}.firebaseinitprovider"
+            tools:node="remove" />
         <!-- windowSoftInputMode is stateAlwaysHidden, not stateHidden:
              stateHidden only applies when the activity is first entered, so a
              window coming back from the background still restores whatever
@@ -108,6 +137,12 @@
              the system throws its colours away. -->
         <meta-data
             android:name="dev.termphin.notification_icon"
+            android:resource="@drawable/ic_stat_termphin" />
+        <!-- The same icon for a push the system draws while the app is
+             closed, which otherwise takes the launcher icon too and shows
+             the dolphin tiny inside its adaptive margin. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
             android:resource="@drawable/ic_stat_termphin" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

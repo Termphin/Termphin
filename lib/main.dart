@@ -1,19 +1,33 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
 import 'screens/share/share_screen.dart';
+import 'services/account/account_service.dart';
 import 'services/analytics/analytics_service.dart';
 import 'services/app/app_commands.dart';
+import 'services/app/error_reports.dart';
+import 'services/app/font_licenses.dart';
+import 'services/app/identity_anonymizer.dart';
 import 'services/platform/desktop_window.dart';
 import 'services/platform/foreground_notification_service.dart';
+import 'services/platform/ios_background_task.dart';
+import 'services/platform/local_notifications_service.dart';
+import 'services/pro/pro_hints.dart';
+import 'services/pro/pro_service.dart';
+import 'services/push/push_service.dart';
 import 'services/security/secret_cipher.dart';
+import 'services/settings/anonymize_setting.dart';
 import 'services/settings/app_settings.dart';
+import 'services/settings/terminal_settings.dart';
 import 'services/ssh/network_monitor.dart';
 import 'services/ssh/ssh_prompts.dart';
 import 'services/ssh/ssh_session_manager.dart';
+import 'services/terminal/in_app_alerts.dart';
+import 'services/terminal/terminal_alerts.dart';
+import 'services/terminal/terminal_notification.dart';
 import 'utils/platform_info.dart';
 import 'widgets/ssh/host_key_dialog.dart';
 import 'widgets/ssh/keyboard_interactive_dialog.dart';
@@ -30,8 +44,9 @@ bool _mainInitialized = false;
 /// so the UI has live sessions and connectivity state on first render. A
 /// socket bound to an interface that left goes silent rather than erroring,
 /// so a handover re-probes sessions instead of waiting out the keepalive.
-/// Analytics capture is a no-op until consent is answered, so the
-/// `appOpened` event can be fired right after `init`.
+/// Firebase is not started here: `AnalyticsService.init` starts it only when
+/// consent is on record. Analytics capture and crash reports are no-ops until
+/// then, so the `appOpened` event can be fired right after `init`.
 ///
 /// On a desktop the window comes up first: the app's own title bar in place
 /// of the system's, the window where it was last time, and the keyboard
@@ -46,8 +61,11 @@ Future<void> main() async {
   _mainInitialized = true;
 
   WidgetsFlutterBinding.ensureInitialized();
+  ErrorReports.instance.install();
+  registerFontLicenses();
 
   await loadAppSettings();
+  await ErrorReports.instance.load();
 
   await DesktopWindow.instance.init();
   AppCommands.instance.install();
@@ -55,6 +73,7 @@ Future<void> main() async {
 
   await SshSessionManager.instance.init();
   _bindConnectionPrompts();
+  final alerts = _bindTerminalAlerts();
   await ForegroundNotificationService.instance.init();
   _bindForegroundService();
   await NetworkMonitor.instance.init();
@@ -63,12 +82,96 @@ Future<void> main() async {
   );
   AppLifecycleListener(
     onResume: _onResume,
-    onPause: () => SshSessionManager.instance.setForeground(false),
+    onPause: _onPause,
+    onStateChange: (_) => alerts.visibilityChanged(),
   );
 
   await AnalyticsService.instance.init();
+  AnalyticsService.instance.installErrorHandlers();
+  await AccountService.instance.init();
+  unawaited(PushService.instance.init());
+  _bindPushEnrollment();
   unawaited(AnalyticsService.instance.capture(AnalyticsEvent.appOpened));
   runApp(const SshClientApp());
+}
+
+/// Posts what programs ask the terminal to announce, for sessions other than
+/// the one on screen; see [TerminalAlerts]. The notifications service is
+/// started here rather than on first use so a tap that launched the app is
+/// still there to be read.
+TerminalAlerts _bindTerminalAlerts() {
+  final manager = SshSessionManager.instance;
+  final notifications = LocalNotificationsService.instance;
+  unawaited(notifications.init());
+  final alerts = TerminalAlerts(
+    post: (alert) {
+      manager.noteUnread(alert.sessionId);
+      if (!InAppAlerts.instance.handle(alert)) {
+        unawaited(
+          notifications.showTerminalAlert(
+            sessionId: alert.sessionId,
+            title: alert.title,
+            body: alert.body,
+          ),
+        );
+      }
+      unawaited(ProHints.instance.offer(ProHint.longCommand));
+    },
+    allows: (notification) => switch (notification.kind) {
+      null => terminalSettings.programNotifications.value,
+      TerminalNoticeKind.finished =>
+        terminalSettings.finishedNotifications.value,
+      TerminalNoticeKind.quiet => terminalSettings.quietNotifications.value,
+    },
+    quoteLines: () => terminalSettings.noticeLines.value,
+    isForeground: () => manager.foreground,
+    activeSessionId: () =>
+        manager.terminalOnScreen ? manager.activeSessionId : null,
+  );
+  manager.onTerminalNotification = (session, notification) => alerts.handle(
+    sessionId: session.id,
+    sessionName: anonymizeSetting.value
+        ? IdentityAnonymizer.name(session.profile.id)
+        : session.profile.name,
+    notification: notification,
+  );
+  manager.addListener(alerts.visibilityChanged);
+  return alerts;
+}
+
+/// Hands every machine that finishes connecting to [PushService], which
+/// gives it a relay key, or takes one away, as the machine's settings say.
+/// The service remembers what it set up, so this can fire on every change -
+/// and it fires on Pro being confirmed and push being switched on too, since
+/// a machine met before either is set up only then.
+void _bindPushEnrollment() {
+  final manager = SshSessionManager.instance;
+  void enroll() {
+    for (final session in manager.activeSessions) {
+      if (session.isRun ||
+          session.dropped ||
+          session.connecting ||
+          session.sshService == null) {
+        continue;
+      }
+      unawaited(
+        PushService.instance.ensureOnServer(
+          manager: manager,
+          sessionId: session.id,
+          profile: session.profile,
+        ),
+      );
+    }
+  }
+
+  manager.addListener(enroll);
+  ProService.instance.confirmed.addListener(enroll);
+  PushService.instance.enabledNotifier.addListener(enroll);
+  void syncNotices() => unawaited(PushService.instance.syncNoticePrefs());
+  terminalSettings.finishedNotifications.addListener(syncNotices);
+  terminalSettings.quietNotifications.addListener(syncNotices);
+  terminalSettings.noticeLines.addListener(syncNotices);
+  ProService.instance.confirmed.addListener(syncNotices);
 }
 
 /// What `ShareActivity` runs instead of [main]: an engine of its own that
@@ -91,6 +194,23 @@ void _onResume() {
   SshSessionManager.instance.dropDeadSessions();
   SshSessionManager.instance.probeSessions();
   SshSessionManager.instance.setForeground(true);
+  if (isIOSPlatform) SshSessionManager.instance.comeBack();
+}
+
+/// iOS freezes the app moments after this without closing its connections,
+/// so the masters are told the phone went away while there is still time:
+/// under a background grant, held a moment so the bytes leave. Android's
+/// foreground service keeps the app running and its notifications working,
+/// so it says nothing and nothing changes there.
+void _onPause() {
+  SshSessionManager.instance.setForeground(false);
+  if (!isIOSPlatform) return;
+  unawaited(
+    IOSBackgroundTask.guard('presence', () async {
+      SshSessionManager.instance.goAway();
+      await Future<void>.delayed(const Duration(seconds: 1));
+    }),
+  );
 }
 
 /// Gives the SSH layer a way to ask the user something mid-handshake.

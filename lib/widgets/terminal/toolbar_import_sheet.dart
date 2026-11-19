@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:uuid/uuid.dart';
 
@@ -9,6 +9,8 @@ import '../../i18n/strings.g.dart';
 import '../../services/settings/toolbar_layout.dart';
 import '../../services/settings/toolbar_share_link.dart';
 import '../../theme/theme.dart';
+import '../ui/app_badge.dart';
+import '../ui/app_divider.dart';
 import '../ui/app_notifications.dart';
 import '../ui/app_sheet.dart';
 import '../ui/modal_actions.dart';
@@ -84,14 +86,24 @@ class _ToolbarImportSheetState extends State<ToolbarImportSheet> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 2),
+            padding: const EdgeInsets.fromLTRB(
+              AppTheme.space20,
+              AppTheme.space14,
+              AppTheme.space20,
+              AppTheme.space2,
+            ),
             child: Text(
               t.toolbar.importTitle,
               style: Theme.of(context).textTheme.titleMedium,
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+            padding: const EdgeInsets.fromLTRB(
+              AppTheme.space20,
+              0,
+              AppTheme.space20,
+              AppTheme.space12,
+            ),
             child: Text(
               share.name.isEmpty ? t.toolbar.importUnnamed : share.name,
               maxLines: 1,
@@ -103,13 +115,13 @@ class _ToolbarImportSheetState extends State<ToolbarImportSheet> {
           ),
           Flexible(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: AppTheme.space16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _PagedPreview(layout: share.layout),
                   if (textKeys.isNotEmpty) ...[
-                    const SizedBox(height: 12),
+                    const SizedBox(height: AppTheme.space12),
                     _TextKeys(
                       keys: textKeys,
                       expanded: _showKeys,
@@ -118,7 +130,12 @@ class _ToolbarImportSheetState extends State<ToolbarImportSheet> {
                   ],
                   if (share.droppedKeys > 0)
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(4, 10, 4, 0),
+                      padding: const EdgeInsets.fromLTRB(
+                        AppTheme.space4,
+                        AppTheme.space10,
+                        AppTheme.space4,
+                        0,
+                      ),
                       child: Text(
                         t.toolbar.importDropped(count: share.droppedKeys),
                         style: context.colors.uiSmall.copyWith(
@@ -131,7 +148,12 @@ class _ToolbarImportSheetState extends State<ToolbarImportSheet> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+            padding: const EdgeInsets.fromLTRB(
+              AppTheme.space16,
+              AppTheme.space16,
+              AppTheme.space16,
+              AppTheme.space12,
+            ),
             child: ModalActions(
               layout: ModalActionsLayout.sideBySide,
               secondary: OutlinedButton(
@@ -199,11 +221,11 @@ class _PagedPreviewState extends State<_PagedPreview> {
           ),
         ),
         if (pages.length > 1) ...[
-          const SizedBox(height: 6),
+          const SizedBox(height: AppTheme.space6),
           Row(
             children: [
               for (var i = 0; i < pages.length; i++) ...[
-                if (i > 0) const SizedBox(width: 6),
+                if (i > 0) const SizedBox(width: AppTheme.space6),
                 Expanded(
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
@@ -216,7 +238,9 @@ class _PagedPreviewState extends State<_PagedPreview> {
                       );
                     },
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppTheme.space4,
+                      ),
                       child: AnimatedContainer(
                         duration: AppTheme.motionFast,
                         height: 2,
@@ -273,19 +297,24 @@ class _TextKeys extends StatelessWidget {
             key: const ValueKey('toolbarImportTextKeys'),
             onTap: onToggle,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+              padding: const EdgeInsets.fromLTRB(
+                AppTheme.space14,
+                AppTheme.space12,
+                AppTheme.space12,
+                AppTheme.space12,
+              ),
               child: Row(
                 children: [
                   Icon(
                     entering > 0
                         ? PhosphorIconsRegular.warningCircle
                         : PhosphorIconsRegular.textT,
-                    size: 18,
+                    size: AppTheme.icon18,
                     color: entering > 0
                         ? context.colors.warning
                         : context.colors.textSecondary,
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: AppTheme.space10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -296,13 +325,13 @@ class _TextKeys extends StatelessWidget {
                                     '${t.toolbar.importPressEnter(n: entering)}'
                               : t.toolbar.importTextKeys(n: keys.length),
                           style: context.colors.uiStyle.copyWith(
-                            fontSize: 13,
+                            fontSize: AppTheme.font13,
                             fontWeight: FontWeight.w600,
                             color: context.colors.textPrimary,
                           ),
                         ),
                         if (entering > 0) ...[
-                          const SizedBox(height: 2),
+                          const SizedBox(height: AppTheme.space2),
                           Text(
                             t.toolbar.importEnterNote,
                             style: context.colors.uiSmall.copyWith(
@@ -313,13 +342,13 @@ class _TextKeys extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppTheme.space8),
                   AnimatedRotation(
                     turns: expanded ? 0.5 : 0,
                     duration: AppTheme.motionFast,
                     child: Icon(
                       PhosphorIconsRegular.caretDown,
-                      size: 16,
+                      size: AppTheme.icon16,
                       color: context.colors.textTertiary,
                     ),
                   ),
@@ -336,10 +365,7 @@ class _TextKeys extends StatelessWidget {
                 : Column(
                     children: [
                       for (final key in keys) ...[
-                        Divider(
-                          height: 1,
-                          color: context.colors.surfaceDivider,
-                        ),
+                        const AppDivider(),
                         _TextKeyRow(action: key),
                       ],
                     ],
@@ -364,7 +390,10 @@ class _TextKeyRow extends StatelessWidget {
     final text = action.payload ?? action.label;
     final named = action.label != text;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppTheme.space14,
+        vertical: AppTheme.space8,
+      ),
       child: Row(
         children: [
           Expanded(
@@ -372,13 +401,13 @@ class _TextKeyRow extends StatelessWidget {
               _visible(text),
               style: TextStyle(
                 fontFamily: 'JetBrainsMonoNerdFontMono',
-                fontSize: 12.5,
+                fontSize: AppTheme.font12,
                 color: context.colors.textPrimary,
               ),
             ),
           ),
           if (named) ...[
-            const SizedBox(width: 8),
+            const SizedBox(width: AppTheme.space8),
             Text(
               action.label,
               style: context.colors.uiSmall.copyWith(
@@ -387,22 +416,8 @@ class _TextKeyRow extends StatelessWidget {
             ),
           ],
           if (action.appendEnter) ...[
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-              decoration: BoxDecoration(
-                color: context.colors.warningHighlight,
-                borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-              ),
-              child: Text(
-                t.toolbar.importEnter,
-                style: context.colors.uiSmall.copyWith(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: context.colors.warning,
-                ),
-              ),
-            ),
+            const SizedBox(width: AppTheme.space8),
+            AppBadge(t.toolbar.importEnter, tone: BadgeTone.warning),
           ],
         ],
       ),

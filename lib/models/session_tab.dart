@@ -74,6 +74,13 @@ class SessionTab {
       ? muxName.substring(ownedPrefix.length)
       : muxName;
 
+  /// Whether [muxName] is one [generateMuxName] made and nobody renamed:
+  /// its visible part is then six random hex digits that tell a person
+  /// nothing, so lists show it as an untitled session with the digits only
+  /// to tell two apart.
+  static bool isGeneratedName(String muxName) =>
+      RegExp('^${RegExp.escape(ownedPrefix)}[0-9a-f]{6}\$').hasMatch(muxName);
+
   static String _randomSuffix() =>
       List.generate(6, (_) => _random.nextInt(16).toRadixString(16)).join();
 

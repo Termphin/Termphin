@@ -135,7 +135,10 @@ void main() {
     expect(completionQuery('./te'), 'ls ./');
     expect(completionQuery('ls -l'), 'ls -');
     expect(completionQuery('git commit --am'), 'git commit --');
-    expect(completionQuery(r'cd C:\Us', windows: true), r'cd C:\');
+    expect(
+      completionQuery(r'cd C:\Us', engine: CompletionEngine.powershell),
+      r'cd C:\',
+    );
   });
 
   test('history ranks the most recent command first', () {
@@ -386,5 +389,255 @@ void main() {
         expect(_labels(c.suggestions.value), ['git frob now']);
       },
     );
+  });
+
+  group('multi-line history', () {
+    test('is dropped, so taking it never runs its first line', () {
+      final data = parseProbe(
+        _bytes(
+          '@@termphin:shell zsh\n'
+          '@@termphin:history .zsh_history\n'
+          ': 1:0;for f in *; do\\\n'
+          'echo \$f\\\n'
+          'done\n'
+          ': 2:0;ls\n'
+          '@@termphin:history fish_history\n'
+          r'- cmd: begin\n  date\nend'
+          '\n'
+          '- cmd: pwd\n',
+        ),
+      );
+
+      expect(data.history, ['pwd', 'ls']);
+    });
+
+    test('is neither remembered nor suggested', () {
+      final data = _host();
+      data.remember('echo a\necho b');
+      expect(data.history, isEmpty);
+
+      expect(suggest('echo', _host(), ranked: ['echo a\nrm -rf x']), isEmpty);
+    });
+  });
+
+  group('quoted words', () {
+    test('a name with a blank is escaped when typed', () {
+      final s = suggest('cat My', _host(), words: ['My Docs/', 'My (1).txt']);
+
+      expect(s.map((x) => x.insert), [r'\ Docs/', r'\ \(1\).txt ']);
+      expect(_labels(s), ['My Docs/', 'My (1).txt']);
+    });
+
+    test('an escaped word is matched by what it means', () {
+      final s = suggest(r'cat My\ D', _host(), words: ['My Docs/']);
+
+      expect(s.single.insert, 'ocs/');
+      expect(completionQuery(r'cat My\ Docs/a'), r'cat My\ Docs/');
+    });
+
+    test('a quoted word is finished inside its quote and closed', () {
+      final s = suggest("cat 'My D", _host(), words: ["My Doc's.txt"]);
+
+      expect(s.single.insert, r"oc'\''s.txt' ");
+    });
+  });
+
+  group('option values', () {
+    test('bash answers for what follows the =, and it is matched so', () {
+      final s = suggest('tar --file=sr', _host(), words: ['src/', 'x.tar']);
+
+      expect(s.single.label, 'src/');
+      expect(s.single.insert, 'c/');
+      expect(completionQuery('tar --file=sr'), 'tar --file=');
+      expect(completionQuery('scp host:/et'), 'scp host:/');
+    });
+
+    test('fish answers with the whole word', () {
+      final data = HostCompletionData(
+        history: const [],
+        commands: const {},
+        engine: CompletionEngine.fish,
+      );
+
+      expect(
+        suggest('ls --color=al', data, words: ['--color=always']).single.insert,
+        'ways ',
+      );
+    });
+  });
+
+  group('loose matches', () {
+    test('a word in the wrong case is rewritten', () {
+      final s = suggest('Git', _host(commands: {'git'}));
+
+      expect(s.single.label, 'git');
+      expect(s.single.erase, 3);
+      expect(s.single.insert, 'git ');
+    });
+
+    test('a command one typo away is offered when nothing starts so', () {
+      final s = suggest('gti', _host(commands: {'git', 'grep'}));
+
+      expect(_labels(s), ['git']);
+      expect(s.single.erase, 3);
+    });
+
+    test('a subcommand one typo away is offered too', () {
+      final s = suggest('git chekc', _host(), words: ['checkout', 'clone']);
+
+      expect(s.single.label, 'checkout');
+      expect(s.single.erase, 5);
+      expect(s.single.insert, 'checkout ');
+    });
+
+    test('no more than three typo rewrites are offered', () {
+      const near = ['abd', 'abe', 'abf', 'abg', 'abh'];
+
+      expect(suggest('cd abc', _host(), words: near), hasLength(3));
+      expect(
+        suggest('abc', _host(), ranked: [for (final n in near) '$n x']),
+        hasLength(3),
+      );
+    });
+
+    test('an exact match keeps the loose ones away', () {
+      final s = suggest('gi', _host(commands: {'git', 'Gimp'}));
+
+      expect(_labels(s), ['git']);
+    });
+  });
+
+  test('history run in this directory ranks first', () {
+    expect(rankHistory(['make test', 'make build'], here: ['make test']), [
+      'make test',
+      'make build',
+    ]);
+  });
+
+  group('session', () {
+    late List<String> asked;
+    late String directory;
+
+    setUp(() {
+      HostCompletionCache.clear();
+      HostCompletionCache.now = DateTime.now;
+      asked = [];
+      directory = '/a';
+    });
+
+    tearDown(() => HostCompletionCache.now = DateTime.now);
+
+    var probes = 0;
+    CommandCompletion completion({bool failProbe = false}) => CommandCompletion(
+      hostKey: 'host',
+      windows: () => false,
+      location: () => '.cache/cwd',
+      run: (command) async {
+        if (command == probeCommand()) {
+          probes++;
+          if (failProbe) throw StateError('down');
+          return _bytes(
+            '@@termphin:shell bash\n@@termphin:has bash\n'
+            '@@termphin:commands\ngit\nmake\n',
+          );
+        }
+        asked.add(command);
+        return _bytes('@@termphin:cwd $directory\ntest\nbuild\n');
+      },
+    );
+
+    Future<void> settle() =>
+        Future<void>.delayed(const Duration(milliseconds: 300));
+
+    test('a command ranks first where it was run', () async {
+      final c = completion();
+      c.update('make t');
+      await settle();
+      c.remember('make test');
+      await settle();
+
+      directory = '/b';
+      c.update('');
+      c.update('make b');
+      await settle();
+      c.update('make bu');
+      await settle();
+      c.remember('make build');
+      await settle();
+
+      directory = '/a';
+      c.update('');
+      c.update('ma');
+      await settle();
+      c.update('mak');
+      await settle();
+
+      expect(_labels(c.suggestions.value).first, 'make test');
+    });
+
+    test('an answer is kept for the line, not asked again', () async {
+      final c = completion();
+      c.update('cd src/a');
+      await settle();
+      c.update('cd lib/b');
+      await settle();
+      final before = asked.length;
+      c.update('cd src/ab');
+      await settle();
+
+      expect(asked.length, before);
+    });
+
+    test('a finished word is asked about without the pause', () async {
+      final c = completion();
+      c.update('gi');
+      await settle();
+      final before = asked.length;
+      c.update('git ');
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      expect(asked.length, before + 1);
+    });
+
+    test(
+      'host data is read again once stale, keeping what was typed',
+      () async {
+        probes = 0;
+        var now = DateTime(2026);
+        HostCompletionCache.now = () => now;
+        final c = completion();
+        c.update('ma');
+        await settle();
+        c.remember('make deploy');
+        await settle();
+        expect(probes, 1);
+
+        now = now.add(HostCompletionCache.freshFor);
+        c.update('mak');
+        await settle();
+        c.update('make d');
+        await settle();
+
+        expect(probes, 2);
+        expect(_labels(c.suggestions.value), contains('make deploy'));
+      },
+    );
+
+    test('a failed probe is retried after a minute, not at once', () async {
+      probes = 0;
+      var now = DateTime(2026);
+      HostCompletionCache.now = () => now;
+      final c = completion(failProbe: true);
+      c.update('ma');
+      await settle();
+      c.update('mak');
+      await settle();
+      expect(probes, 1);
+
+      now = now.add(HostCompletionCache.retryAfter);
+      c.update('make');
+      await settle();
+      expect(probes, 2);
+    });
   });
 }

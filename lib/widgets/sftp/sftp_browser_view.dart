@@ -6,8 +6,8 @@ import 'package:dartssh2/dartssh2.dart';
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/gestures.dart' show kDoubleTapTimeout;
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
@@ -21,6 +21,7 @@ import '../../services/sftp/download_service.dart';
 import '../../services/sftp/remote_path.dart';
 import '../../services/sftp/sftp_remote_ops.dart';
 import '../../services/sftp/sftp_service.dart';
+import '../../services/sftp/transfer_queue.dart';
 import '../../theme/theme.dart';
 import '../../utils/file_type.dart';
 import '../../utils/platform_info.dart';
@@ -28,6 +29,7 @@ import '../../utils/sftp_error_handler.dart';
 import '../../utils/sftp_path.dart';
 import '../../utils/text_sniffer.dart';
 import '../terminal/terminal_scheme_theme.dart';
+import '../ui/app_divider.dart';
 import '../ui/app_dropdown.dart';
 import '../ui/app_notifications.dart';
 import '../ui/app_sheet.dart';
@@ -45,7 +47,6 @@ import 'sftp_selection_bar.dart';
 import 'sftp_shortcuts.dart';
 import 'sftp_sort_sheet.dart';
 import 'transfer_conflict_dialog.dart';
-import 'transfer_progress_dialog.dart';
 
 enum _AddAction { upload, newFolder, newFile }
 
@@ -53,9 +54,15 @@ class SftpBrowserView extends StatefulWidget {
   const SftpBrowserView({
     super.key,
     required this.session,
+    this.transferQueue,
     this.terminalDirectory,
   });
   final ActiveSessionView session;
+
+  /// Where uploads, downloads, copies and moves wait their turn - the
+  /// session's, so they outlive the browser being out of sight. Without one
+  /// the browser keeps a queue of its own.
+  final TransferQueue? transferQueue;
 
   /// The directory the session's shell is in, in SFTP form, or null when it
   /// is not known or not wanted. Opened first, then again by
@@ -110,9 +117,10 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
   @visibleForTesting
   static void clearRecentDestinations() => _recentDestinations.clear();
 
-  /// What the server is doing for a copy or move, shown under the path bar.
-  String? _busyLabel;
-  bool get _transferring => _busyLabel != null;
+  TransferQueue? _ownQueue;
+
+  TransferQueue get _queue =>
+      widget.transferQueue ?? (_ownQueue ??= TransferQueue());
 
   /// A copy runs `cp` on the server; an account locked to SFTP has no way to.
   bool get _copyAvailable => _sftp?.canRunCommands != false;
@@ -135,11 +143,6 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
 
   Color get _background => Theme.of(context).scaffoldBackgroundColor;
   Color get _surface => Theme.of(context).colorScheme.surface;
-  Color get _border => Theme.of(context).dividerColor;
-  Color get _textPrimary => Theme.of(context).colorScheme.onSurface;
-  Color get _textSecondary =>
-      Theme.of(context).textTheme.bodyMedium?.color ??
-      _textPrimary.withValues(alpha: 0.75);
   Color get _accent => Theme.of(context).colorScheme.primary;
   Color get _errorColor => Theme.of(context).colorScheme.error;
 
@@ -209,6 +212,7 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
       opener.dispose();
     }
     unawaited(_sftp?.close());
+    _ownQueue?.dispose();
     super.dispose();
   }
 
@@ -857,58 +861,88 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
     }
     if (planned.isEmpty || !mounted) return;
 
-    final session = TransferSession(
-      kind: TransferKind.upload,
-      initialLabel: planned.first.name,
-    )..show(context);
-
     var knownTotal = 0;
     for (final file in planned) {
       knownTotal += file.size ?? 0;
     }
-    var bytesBefore = 0;
+    final sftp = _sftp;
+    if (sftp == null || !mounted) return;
+    final directory = _currentPath;
     var uploadedAny = false;
     try {
-      for (var i = 0; i < planned.length; i++) {
-        session.cancel.throwIfCancelled();
-        final file = planned[i];
-        var sent = 0;
-        await _sftp?.uploadFile(
-          file.path,
-          _joinPath(file.name),
-          cancel: session.cancel,
-          onProgress: (uploaded, _) {
-            sent = uploaded;
-            final overall = bytesBefore + uploaded;
-            session.update(
-              TransferProgress(
-                label: file.name,
-                itemIndex: i + 1,
-                itemCount: planned.length,
-                bytes: overall,
-                totalBytes: knownTotal > 0 ? knownTotal : null,
-                fraction: knownTotal > 0
-                    ? (overall / knownTotal).clamp(0.0, 1.0)
-                    : null,
-              ),
-            );
-          },
-        );
-        bytesBefore += sent;
-        uploadedAny = true;
-      }
-      session.close();
+      await _queue.add<void>(
+        kind: TransferJobKind.upload,
+        label: planned.first.name,
+        run: (job) async {
+          await TransferNotification.runUpload(
+            label: planned.first.name,
+            completeTarget: planned.length == 1
+                ? planned.single.name
+                : (remotePathSegments(directory).lastOrNull ??
+                      sftpPathToDisplay(directory)),
+            fileCount: planned.length,
+            cancel: job.cancel,
+            showAndroidComplete: false,
+            body: (reportNotification) async {
+              var bytesBefore = 0;
+              for (var i = 0; i < planned.length; i++) {
+                job.cancel.throwIfCancelled();
+                final file = planned[i];
+                final startFraction = knownTotal > 0
+                    ? (bytesBefore / knownTotal).clamp(0.0, 1.0)
+                    : null;
+                reportNotification(
+                  startFraction,
+                  label: file.name,
+                  itemIndex: i + 1,
+                  itemCount: planned.length,
+                );
+                var sent = 0;
+                await sftp.uploadFile(
+                  file.path,
+                  joinRemotePath(directory, file.name),
+                  cancel: job.cancel,
+                  onProgress: (uploaded, _) {
+                    sent = uploaded;
+                    final overall = bytesBefore + uploaded;
+                    final fraction = knownTotal > 0
+                        ? (overall / knownTotal).clamp(0.0, 1.0)
+                        : null;
+                    job.report(
+                      TransferProgress(
+                        label: file.name,
+                        itemIndex: i + 1,
+                        itemCount: planned.length,
+                        bytes: overall,
+                        totalBytes: knownTotal > 0 ? knownTotal : null,
+                        fraction: fraction,
+                      ),
+                    );
+                    reportNotification(
+                      fraction,
+                      label: file.name,
+                      itemIndex: i + 1,
+                      itemCount: planned.length,
+                    );
+                  },
+                );
+                bytesBefore += sent;
+                uploadedAny = true;
+              }
+            },
+          );
+        },
+      );
     } catch (e) {
-      session.close();
       if (mounted) {
-        if (session.isCancelled || e is TransferCancelled) {
+        if (e is TransferCancelled) {
           AppNotifications.info(context, t.sftp.uploadCancelled);
         } else {
           AppNotifications.error(context, resolveSftpError(e, t));
         }
       }
     }
-    if (uploadedAny) await _loadDirectory();
+    if (uploadedAny && mounted) await _loadDirectory();
   }
 
   Future<bool> _confirmOverwrite(String filename) {
@@ -967,28 +1001,29 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
     );
   }
 
-  /// Downloads one entry - a file straight through, a directory packed on the
-  /// server when it can pack, walked and copied file by file when it cannot.
+  /// Downloads one entry - a file straight through, a directory walked and
+  /// copied file by file.
   Future<void> _downloadFile(SftpName item) async {
     final sftp = _sftp;
     if (sftp == null) return;
+    final remotePath = _joinPath(item.filename);
 
     await _runDownload(
       label: item.filename,
-      run: (session) => item.attr.isDirectory
+      run: (job) => item.attr.isDirectory
           ? DownloadService.downloadSftpDirectory(
               sftp: sftp,
-              remotePath: _joinPath(item.filename),
+              remotePath: remotePath,
               folderName: item.filename,
-              cancel: session.cancel,
-              onProgress: session.update,
+              cancel: job.cancel,
+              onProgress: job.report,
             )
           : DownloadService.downloadSftpFile(
               sftp: sftp,
-              remotePath: _joinPath(item.filename),
+              remotePath: remotePath,
               fileName: item.filename,
-              cancel: session.cancel,
-              onProgress: session.update,
+              cancel: job.cancel,
+              onProgress: job.report,
             ),
     );
   }
@@ -999,50 +1034,49 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
     if (sftp == null || items.isEmpty) return;
     _clearSelection();
     final t = Translations.of(context);
+    final parentPath = _currentPath;
+    final entries = [
+      for (final item in items)
+        SftpEntryRef(
+          name: item.filename,
+          isDirectory: item.attr.isDirectory,
+          size: item.attr.size,
+        ),
+    ];
 
     await _runDownload(
       label: items.first.filename,
-      run: (session) => DownloadService.downloadSftpSelection(
+      run: (job) => DownloadService.downloadSftpSelection(
         sftp: sftp,
-        parentPath: _currentPath,
-        entries: items
-            .map(
-              (item) => SftpEntryRef(
-                name: item.filename,
-                isDirectory: item.attr.isDirectory,
-                size: item.attr.size,
-              ),
-            )
-            .toList(),
+        parentPath: parentPath,
+        entries: entries,
         multiFileLabel: t.sftp.downloadsFolder,
-        cancel: session.cancel,
-        onProgress: session.update,
+        cancel: job.cancel,
+        onProgress: job.report,
       ),
     );
   }
 
-  /// The one place a download is shown and torn down: the dialog goes up
-  /// before the first byte, comes down on every exit path, and a cancelled
-  /// transfer is reported as cancelled rather than as a failure.
+  /// The one place a download is queued and reported: a cancelled transfer
+  /// is reported as cancelled rather than as a failure. Paths are settled
+  /// before the job is queued, since the browser may have moved on by the
+  /// time it runs.
   Future<void> _runDownload({
     required String label,
-    required Future<SavedDownload?> Function(TransferSession session) run,
+    required Future<SavedDownload?> Function(TransferJob job) run,
   }) async {
     final t = Translations.of(context);
-    final session = TransferSession(
-      kind: TransferKind.download,
-      initialLabel: label,
-    )..show(context);
-
     try {
-      final saved = await run(session);
-      session.close();
-      if (!mounted || session.isCancelled || saved == null) return;
+      final saved = await _queue.add(
+        kind: TransferJobKind.download,
+        label: label,
+        run: run,
+      );
+      if (!mounted || saved == null) return;
       _announceSaved(saved);
     } catch (e) {
-      session.close();
       if (!mounted) return;
-      if (session.isCancelled || e is TransferCancelled) {
+      if (e is TransferCancelled) {
         AppNotifications.info(context, t.sftp.downloadCancelled);
       } else {
         AppNotifications.error(context, resolveSftpError(e, t));
@@ -1174,7 +1208,7 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
   /// both.
   Future<void> _transferTo(List<SftpName> items, {required bool move}) async {
     final sftp = _sftp;
-    if (sftp == null || items.isEmpty || _transferring) return;
+    if (sftp == null || items.isEmpty) return;
     final t = Translations.of(context);
     final sourceDirectory = _currentPath;
     final sources = [for (final item in items) _joinPath(item.filename)];
@@ -1232,29 +1266,21 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
       }
     }
     await _runTransfers(
-      planTransfers(
-        sourceDirectory: sourceDirectory,
-        entries: entries,
-        destination: destination,
-        existing: existing,
-        choice: choice,
-      ),
+      sourceDirectory: sourceDirectory,
+      entries: entries,
+      destination: destination,
+      choice: choice,
       move: move,
     );
   }
 
   Future<void> _duplicate(SftpName item) async {
-    if (_sftp == null || _transferring) return;
-    final existing = await _namesIn(_currentPath);
-    if (existing == null || !mounted) return;
+    if (_sftp == null) return;
     await _runTransfers(
-      planTransfers(
-        sourceDirectory: _currentPath,
-        entries: _entriesOf([item]),
-        destination: _currentPath,
-        existing: existing,
-        choice: ConflictChoice.keepBoth,
-      ),
+      sourceDirectory: _currentPath,
+      entries: _entriesOf([item]),
+      destination: _currentPath,
+      choice: ConflictChoice.keepBoth,
       move: false,
     );
   }
@@ -1276,51 +1302,100 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
     }
   }
 
-  /// No cancel: stopping `cp` halfway leaves half a folder, and closing the
-  /// channel does not reliably stop it anyway.
+  /// Cannot be cancelled once running: stopping `cp` halfway leaves half a
+  /// folder, and closing the channel does not reliably stop it anyway. It
+  /// can still be taken off the queue before it starts.
+  ///
+  /// The destination is listed and the names planned when the job starts,
+  /// not when it is queued: a copy queued behind another into the same
+  /// folder must not pick the name the first one is about to take.
   ///
   /// One failure does not strand the rest, as with delete - except when the
   /// account has no shell to run `cp`/`mv` on, since nothing after that can
   /// go either.
-  Future<void> _runTransfers(TransferPlan plan, {required bool move}) async {
+  Future<void> _runTransfers({
+    required String sourceDirectory,
+    required List<RemoteEntry> entries,
+    required String destination,
+    required ConflictChoice choice,
+    required bool move,
+  }) async {
     final t = Translations.of(context);
     final sftp = _sftp;
     if (sftp == null) return;
-    if (plan.transfers.isEmpty) {
+
+    TransferPlan? plan;
+    Map<String, Object> failures = const {};
+    try {
+      await _queue.add<void>(
+        kind: move ? TransferJobKind.move : TransferJobKind.copy,
+        label: entries.length == 1
+            ? entries.single.name
+            : t.sftp.queue.items(count: entries.length),
+        cancellable: false,
+        run: (job) async {
+          final listing = await sftp.listDirectory(destination);
+          final planned = planTransfers(
+            sourceDirectory: sourceDirectory,
+            entries: entries,
+            destination: destination,
+            existing: {for (final e in listing) e.filename},
+            choice: choice,
+          );
+          plan = planned;
+          final failed = <String, Object>{};
+          for (final (i, transfer) in planned.transfers.indexed) {
+            job.report(
+              TransferProgress(
+                label: transfer.entry.name,
+                itemIndex: i + 1,
+                itemCount: planned.transfers.length,
+                fraction: i / planned.transfers.length,
+              ),
+            );
+            try {
+              if (transfer.replaceExisting) await sftp.clearPath(transfer.to);
+              if (move) {
+                await sftp.moveEntry(transfer.from, transfer.to);
+              } else {
+                await sftp.copyEntry(transfer.from, transfer.to);
+              }
+            } catch (e) {
+              failed[transfer.entry.name] = e;
+              if (sftp.canRunCommands == false) break;
+            }
+          }
+          if (failed.isNotEmpty) throw _TransferFailures(failed);
+        },
+      );
+    } on _TransferFailures catch (e) {
+      failures = e.failures;
+    } on TransferCancelled {
+      if (mounted) AppNotifications.info(context, t.sftp.queue.cancelled);
+      return;
+    } catch (e) {
+      if (mounted) AppNotifications.error(context, resolveSftpError(e, t));
+      return;
+    }
+    if (mounted) await _loadDirectory(showSpinner: false);
+    final ran = plan;
+    if (!mounted || ran == null) return;
+    if (ran.transfers.isEmpty) {
       AppNotifications.info(context, t.sftp.nothingTransferred);
       return;
     }
-    setState(() => _busyLabel = move ? t.sftp.moving : t.sftp.copying);
-
-    final failures = <String, Object>{};
-    for (final transfer in plan.transfers) {
-      try {
-        if (transfer.replaceExisting) await sftp.clearPath(transfer.to);
-        if (move) {
-          await sftp.moveEntry(transfer.from, transfer.to);
-        } else {
-          await sftp.copyEntry(transfer.from, transfer.to);
-        }
-      } catch (e) {
-        failures[transfer.entry.name] = e;
-        if (sftp.canRunCommands == false) break;
-      }
-    }
-    if (mounted) setState(() => _busyLabel = null);
-    await _loadDirectory(showSpinner: false);
-    if (!mounted) return;
 
     if (failures.isEmpty) {
-      final done = plan.transfers.length;
-      final name = plan.transfers.first.to.split('/').last;
+      final done = ran.transfers.length;
+      final name = ran.transfers.first.to.split('/').last;
       var message = switch ((move, done)) {
         (true, 1) => t.sftp.movedName(name: name),
         (true, _) => t.sftp.movedCount(count: done),
         (false, 1) => t.sftp.copiedName(name: name),
         (false, _) => t.sftp.copiedCount(count: done),
       };
-      if (plan.skipped > 0) {
-        message = '$message  ·  ${t.sftp.skippedCount(count: plan.skipped)}';
+      if (ran.skipped > 0) {
+        message = '$message  ·  ${t.sftp.skippedCount(count: ran.skipped)}';
       }
       AppNotifications.success(context, message);
     } else if (failures.length == 1) {
@@ -1477,6 +1552,7 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
           directoryPath: _currentPath,
           siblingImages: siblings,
           onMutated: () => mutated = true,
+          transferQueue: _queue,
         ),
       ),
     ).then((_) {
@@ -1554,8 +1630,7 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
                       setState(() => _editingPath = editing),
                   trailing: _sftp != null ? _buildAddButton() : null,
                 ),
-          Divider(height: 1, color: _border),
-          if (_busyLabel != null) _buildBusyStrip(_busyLabel!),
+          const AppDivider(),
           Expanded(
             child: Stack(
               children: [
@@ -1625,32 +1700,13 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
           ),
         ),
       ],
-      child: Padding(
-        padding: const EdgeInsets.all(4),
-        child: Icon(PhosphorIconsRegular.plus, color: _accent, size: 18),
-      ),
-    );
-  }
-
-  Widget _buildBusyStrip(String label) {
-    return Container(
-      color: _surface,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 14,
-            height: 14,
-            child: CircularProgressIndicator(strokeWidth: 2, color: _accent),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(color: _textSecondary, fontSize: 13),
-            ),
-          ),
-        ],
+      child: SizedBox.square(
+        dimension: 40,
+        child: Icon(
+          PhosphorIconsRegular.plus,
+          color: _accent,
+          size: AppTheme.icon22,
+        ),
       ),
     );
   }
@@ -1727,7 +1783,7 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
     if (_error.isNotEmpty) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(AppTheme.space20),
           child: Text(_error, style: TextStyle(color: _errorColor)),
         ),
       );
@@ -1829,3 +1885,14 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
 /// A file on this machine on its way up: from the picker or dropped on the
 /// browser.
 typedef _LocalFile = ({String name, String path, int? size});
+
+/// The copies and moves of one job that failed, by entry name. Reads as the
+/// first error, which is what the transfer list shows for the job.
+class _TransferFailures implements Exception {
+  const _TransferFailures(this.failures);
+
+  final Map<String, Object> failures;
+
+  @override
+  String toString() => failures.values.first.toString();
+}

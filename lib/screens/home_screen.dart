@@ -1,14 +1,15 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 import '../i18n/strings.g.dart';
 import '../models/active_session.dart';
 import '../models/profile_group.dart';
+import '../models/session_tab.dart';
 import '../models/ssh_profile.dart';
 import '../providers/anonymize_provider.dart';
 import '../providers/groups_provider.dart';
@@ -25,12 +26,20 @@ import '../services/storage/group_storage.dart';
 import '../theme/theme.dart';
 import '../utils/group_match.dart';
 import '../utils/profile_sort.dart';
+import '../widgets/account/account_avatar_button.dart';
+import '../widgets/account/pro_hint_card.dart';
+import '../widgets/groups/group_filter_chips.dart';
+import '../widgets/groups/group_picker_sheet.dart';
+import '../widgets/groups/group_section_header.dart';
 import '../widgets/profiles/profile_card.dart';
 import '../widgets/profiles/profile_form_dialog.dart';
 import '../widgets/profiles/profile_search_field.dart';
 import '../widgets/profiles/server_guide.dart';
 import '../widgets/ssh/session_status.dart';
+import '../widgets/terminal/new_session_row.dart';
 import '../widgets/terminal/rename_session_dialog.dart';
+import '../widgets/ui/app_badge.dart';
+import '../widgets/ui/app_card.dart';
 import '../widgets/ui/app_dropdown.dart';
 import '../widgets/ui/app_form_field.dart';
 import '../widgets/ui/app_notifications.dart';
@@ -38,9 +47,6 @@ import '../widgets/ui/app_sheet.dart';
 import '../widgets/ui/confirm_dialog.dart';
 import '../widgets/ui/context_menu.dart';
 import '../widgets/ui/empty_state.dart';
-import '../widgets/ui/group_filter_chips.dart';
-import '../widgets/ui/group_picker_sheet.dart';
-import '../widgets/ui/group_section_header.dart';
 import '../widgets/ui/large_title_scaffold.dart';
 import '../widgets/ui/selection_action_bar.dart';
 import 'search/global_search_launcher.dart';
@@ -632,7 +638,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final liveTabs = tabs.where((s) => !s.dropped).toList();
     final selecting = _selectedProfileIds.isNotEmpty;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: AppTheme.space16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -698,7 +704,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ? null
                           : () => _endSessionRow(tabs[i]),
                     ),
-                  _NewSessionRow(
+                  NewSessionRow(
                     onTap: () => _openSession(
                       _uuid.v4(),
                       profile,
@@ -726,6 +732,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       child: LargeTitleScaffold(
         resizeToAvoidBottomInset: false,
         title: t.profiles.machinesHeading,
+        actions: const [AccountAvatarButton()],
         bodyBuilder: (context, scrollController, gutter) => ListenableBuilder(
           listenable: _manager,
           builder: (context, _) {
@@ -793,7 +800,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         ),
                         if (profiles.isNotEmpty)
                           SliverPadding(
-                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                            padding: const EdgeInsets.fromLTRB(
+                              AppTheme.space16,
+                              AppTheme.space16,
+                              AppTheme.space16,
+                              AppTheme.space12,
+                            ),
                             sliver: SliverToBoxAdapter(
                               child: Row(
                                 children: [
@@ -802,7 +814,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                       heroTag: 'globalSearch-machines',
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
+                                  const SizedBox(width: AppTheme.space8),
                                   ProfileSortMenu(
                                     boxSize: kSearchBoxHeight,
                                     sort: _selectedSort,
@@ -824,6 +836,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   setState(() => _selectedGroup = group),
                             ),
                           ),
+                        if (profiles.isNotEmpty)
+                          const SliverPadding(
+                            padding: EdgeInsets.fromLTRB(
+                              AppTheme.space16,
+                              AppTheme.space4,
+                              AppTheme.space16,
+                              0,
+                            ),
+                            sliver: SliverToBoxAdapter(child: ProHintCard()),
+                          ),
                         if (profiles.isEmpty)
                           SliverFillRemaining(
                             hasScrollBody: false,
@@ -831,7 +853,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               onAdd: () => _showProfileDialog(),
                               onQuickAdd: (link) =>
                                   _showProfileDialog(prefill: link),
-                            ).animate().fadeIn(duration: 200.ms),
+                            ).animate().fadeIn(duration: AppTheme.motionSlow),
                           )
                         else ...[
                           for (final (i, group) in displayGroups.indexed) ...[
@@ -853,22 +875,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               isLoadingSessions: _loadingRemoteSessionGroups
                                   .containsKey(group.name),
                               padding: EdgeInsets.fromLTRB(
-                                16,
-                                i == 0 ? 4 : 16,
-                                16,
-                                4,
+                                AppTheme.space16,
+                                i == 0 ? AppTheme.space4 : AppTheme.space16,
+                                AppTheme.space16,
+                                AppTheme.space4,
                               ),
                             ),
                             SliverPadding(
                               padding: const EdgeInsets.only(
-                                top: 4,
-                                bottom: 12,
+                                top: AppTheme.space4,
+                                bottom: AppTheme.space12,
                               ),
                               sliver: SliverList.separated(
                                 itemCount:
                                     (profilesByGroup[group] ?? const []).length,
                                 separatorBuilder: (_, _) =>
-                                    const SizedBox(height: 12),
+                                    const SizedBox(height: AppTheme.space12),
                                 itemBuilder: (context, index) =>
                                     _buildProfileItem(
                                       (profilesByGroup[group] ??
@@ -878,12 +900,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               ),
                             ),
                           ],
-                          SliverToBoxAdapter(
-                            child: SizedBox(
-                              height: _selectedProfileIds.isEmpty
-                                  ? 32
-                                  : SelectionActionBar.reservedHeight,
-                            ),
+                          const SliverToBoxAdapter(
+                            child: SizedBox(height: AppTheme.space32),
                           ),
                         ],
                       ],
@@ -952,7 +970,7 @@ class _ProfilesEmptyStateState extends State<_ProfilesEmptyState> {
             ),
           ),
           if (_invalid) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: AppTheme.space8),
             Text(
               t.profiles.quickAddInvalid,
               textAlign: TextAlign.center,
@@ -961,20 +979,25 @@ class _ProfilesEmptyStateState extends State<_ProfilesEmptyState> {
               ),
             ),
           ],
-          const SizedBox(height: 16),
+          const SizedBox(height: AppTheme.space16),
           Tooltip(
             message: t.profiles.addMachineButton,
             child: ElevatedButton.icon(
               onPressed: widget.onAdd,
-              icon: const Icon(PhosphorIconsRegular.plus, size: 18),
+              icon: const Icon(
+                PhosphorIconsRegular.plus,
+                size: AppTheme.icon18,
+              ),
               label: Text(t.profiles.addFirstMachine),
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size(0, 46),
-                padding: const EdgeInsets.symmetric(horizontal: 18),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppTheme.space16,
+                ),
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppTheme.space8),
           TextButton(
             onPressed: () => showServerGuideSheet(context),
             child: Text(t.profiles.noServerYet),
@@ -1013,6 +1036,43 @@ class _SessionRow extends ConsumerWidget {
   final VoidCallback? onDetach;
   final VoidCallback? onEnd;
 
+  /// The session's own name, or for one nobody named, "Session" with the
+  /// six digits that tell it apart from its neighbours set small after it.
+  Widget _sessionName(BuildContext context, bool anonymize, bool live) {
+    final colors = context.colors;
+    final style = colors.uiStyle.copyWith(
+      fontSize: AppTheme.font14,
+      fontWeight: FontWeight.w500,
+      color: live ? colors.textPrimary : colors.textSecondary,
+    );
+    final muxName = session.muxName;
+    if (muxName == null || !SessionTab.isGeneratedName(muxName) || anonymize) {
+      return Text(
+        sessionDisplayName(session, anonymize: anonymize),
+        style: style,
+        overflow: TextOverflow.ellipsis,
+      );
+    }
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(text: Translations.of(context).session.untitled),
+          TextSpan(
+            text: '  ${SessionTab.displayName(muxName)}',
+            style: TextStyle(
+              fontFamily: AppTheme.monoFamily,
+              fontSize: AppTheme.font12,
+              fontWeight: FontWeight.w400,
+              color: colors.textTertiary,
+            ),
+          ),
+        ],
+      ),
+      style: style,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Translations.of(context);
@@ -1022,192 +1082,110 @@ class _SessionRow extends ConsumerWidget {
     final accentColor = status.color;
     final hasMenu = onRename != null || onDetach != null || onEnd != null;
     final anonymize = ref.watch(anonymizeProvider);
-    final radius = isLast
-        ? BorderRadius.vertical(bottom: Radius.circular(AppTheme.radiusMd))
-        : BorderRadius.zero;
 
-    return Material(
-      color: context.colors.surfaceElevated.invisible,
-      borderRadius: radius,
-      child: Ink(
-        decoration: BoxDecoration(
-          color: context.colors.surfaceElevated,
-          borderRadius: radius,
-          border: Border(
-            top: BorderSide(color: context.colors.surfaceBorder),
-            left: BorderSide(color: context.colors.surfaceBorder),
-            right: BorderSide(color: context.colors.surfaceBorder),
-            bottom: isLast
-                ? BorderSide(color: context.colors.surfaceBorder)
-                : BorderSide.none,
-          ),
-        ),
-        child: InkWell(
-          borderRadius: radius,
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 11, 8, 11),
-            child: Row(
-              children: [
-                if (connecting)
-                  SizedBox.square(
-                    dimension: 11,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 1.8,
-                      color: accentColor,
-                    ),
-                  )
-                else
-                  Icon(
-                    connected
-                        ? PhosphorIconsFill.circle
-                        : PhosphorIconsRegular.circle,
-                    size: 9,
-                    color: accentColor,
-                  ),
-                SizedBox(width: connecting ? 10 : 12),
-                Expanded(
-                  child: Text(
-                    sessionDisplayName(session, anonymize: anonymize),
-                    style: context.colors.uiStyle.copyWith(
-                      fontSize: 13,
-                      color: connected || connecting
-                          ? context.colors.textPrimary
-                          : context.colors.textSecondary,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  status.label,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: connected ? FontWeight.w400 : FontWeight.w600,
-                    color: accentColor,
-                  ),
-                ),
-                if (hasMenu)
-                  Builder(
-                    builder: (menuCtx) {
-                      final mt = Translations.of(menuCtx);
-                      return AppActionDropdown<_SessionRowAction>(
-                        iconSize: 16,
-                        width: 220,
-                        items: [
-                          if (onRename != null)
-                            DropdownItem(
-                              value: _SessionRowAction.rename,
-                              intrinsicHeight: true,
-                              child: AppDropdownItem(
-                                icon: PhosphorIconsRegular.pencilSimple,
-                                label: mt.session.rename,
-                              ),
-                            ),
-                          if (onDetach != null)
-                            DropdownItem(
-                              value: _SessionRowAction.detach,
-                              intrinsicHeight: true,
-                              child: AppDropdownItem(
-                                icon: PhosphorIconsRegular.arrowLineDown,
-                                label: mt.session.detach,
-                              ),
-                            ),
-                          if (onEnd != null)
-                            DropdownItem(
-                              value: _SessionRowAction.end,
-                              intrinsicHeight: true,
-                              child: AppDropdownItem(
-                                icon: PhosphorIconsRegular.trash,
-                                label: mt.session.endSession,
-                                color: context.colors.error,
-                              ),
-                            ),
-                        ],
-                        onSelected: (action) {
-                          switch (action) {
-                            case _SessionRowAction.rename:
-                              onRename?.call();
-                            case _SessionRowAction.detach:
-                              onDetach?.call();
-                            case _SessionRowAction.end:
-                              onEnd?.call();
-                          }
-                        },
-                      );
-                    },
-                  )
-                else
-                  const SizedBox(width: 6),
-                Icon(
-                  PhosphorIconsFill.caretRight,
-                  size: 16,
-                  color: connected || connecting
-                      ? context.colors.textTertiary
-                      : context.colors.textTertiary.withValues(alpha: 0.6),
-                ),
-              ],
-            ),
-          ),
-        ),
+    return AppCard.segment(
+      first: false,
+      last: isLast,
+      onTap: onTap,
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.space16,
+        AppTheme.space10,
+        AppTheme.space8,
+        AppTheme.space10,
       ),
-    );
-  }
-}
-
-/// Always the last thing stitched under a machine, connected and detached
-/// sessions alike - a dedicated way to start a fresh session without having
-/// to repurpose a tap on the card or on one of its existing rows.
-class _NewSessionRow extends StatelessWidget {
-  const _NewSessionRow({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = Translations.of(context);
-    final radius = BorderRadius.vertical(
-      bottom: Radius.circular(AppTheme.radiusMd),
-    );
-    return Material(
-      color: context.colors.surfaceElevated.invisible,
-      borderRadius: radius,
-      child: Ink(
-        decoration: BoxDecoration(
-          color: context.colors.surfaceElevated,
-          borderRadius: radius,
-          border: Border(
-            top: BorderSide(color: context.colors.surfaceBorder),
-            left: BorderSide(color: context.colors.surfaceBorder),
-            right: BorderSide(color: context.colors.surfaceBorder),
-            bottom: BorderSide(color: context.colors.surfaceBorder),
-          ),
-        ),
-        child: InkWell(
-          borderRadius: radius,
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 11, 16, 11),
-            child: Row(
-              children: [
-                Icon(
-                  PhosphorIconsRegular.plus,
-                  size: 16,
-                  color: context.colors.primary,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  t.terminal.newSession,
-                  style: context.colors.uiStyle.copyWith(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: context.colors.primary,
-                  ),
-                ),
-              ],
+      child: Row(
+        children: [
+          if (connecting)
+            SizedBox.square(
+              dimension: AppTheme.icon10,
+              child: CircularProgressIndicator(
+                strokeWidth: 1.8,
+                color: accentColor,
+              ),
+            )
+          else
+            Icon(
+              connected
+                  ? PhosphorIconsFill.circle
+                  : PhosphorIconsRegular.circle,
+              size: AppTheme.icon10,
+              color: accentColor,
             ),
+          const SizedBox(width: AppTheme.space12),
+          Expanded(
+            child: _sessionName(context, anonymize, connected || connecting),
           ),
-        ),
+          const SizedBox(width: AppTheme.space8),
+          AppBadge(
+            status.label,
+            tone: connecting
+                ? BadgeTone.highlight
+                : connected
+                ? BadgeTone.success
+                : status.resumable
+                ? BadgeTone.warning
+                : BadgeTone.neutral,
+          ),
+          if (hasMenu)
+            Builder(
+              builder: (menuCtx) {
+                final mt = Translations.of(menuCtx);
+                return AppActionDropdown<_SessionRowAction>(
+                  iconSize: AppTheme.icon16,
+                  width: 220,
+                  items: [
+                    if (onRename != null)
+                      DropdownItem(
+                        value: _SessionRowAction.rename,
+                        intrinsicHeight: true,
+                        child: AppDropdownItem(
+                          icon: PhosphorIconsRegular.pencilSimple,
+                          label: mt.session.rename,
+                        ),
+                      ),
+                    if (onDetach != null)
+                      DropdownItem(
+                        value: _SessionRowAction.detach,
+                        intrinsicHeight: true,
+                        child: AppDropdownItem(
+                          icon: PhosphorIconsRegular.arrowLineDown,
+                          label: mt.session.detach,
+                        ),
+                      ),
+                    if (onEnd != null)
+                      DropdownItem(
+                        value: _SessionRowAction.end,
+                        intrinsicHeight: true,
+                        child: AppDropdownItem(
+                          icon: PhosphorIconsRegular.trash,
+                          label: mt.session.endSession,
+                          color: context.colors.error,
+                        ),
+                      ),
+                  ],
+                  onSelected: (action) {
+                    switch (action) {
+                      case _SessionRowAction.rename:
+                        onRename?.call();
+                      case _SessionRowAction.detach:
+                        onDetach?.call();
+                      case _SessionRowAction.end:
+                        onEnd?.call();
+                    }
+                  },
+                );
+              },
+            )
+          else
+            const SizedBox(width: AppTheme.space6),
+          Icon(
+            PhosphorIconsRegular.caretRight,
+            size: AppTheme.icon16,
+            color: connected || connecting
+                ? context.colors.textTertiary
+                : context.colors.textTertiary.withValues(alpha: 0.6),
+          ),
+        ],
       ),
     );
   }

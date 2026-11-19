@@ -3,11 +3,12 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dartssh2/dartssh2.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:termphin/models/agent_feature.dart';
 import 'package:termphin/models/session_tab.dart';
 import 'package:termphin/providers/profiles_provider.dart';
 import 'package:termphin/providers/ssh_session_manager_provider.dart';
@@ -25,10 +26,14 @@ import '../../support/test_app.dart';
 Future<SshSessionManager> _openMenu(
   WidgetTester tester, {
   Object? connectError,
+  String? masterVersion = _currentMaster,
   FakeSshBackend? backend,
 }) async {
   final profile = profileFixture();
   backend ??= FakeSshBackend();
+  backend.masterVersion = masterVersion == _currentMaster
+      ? AgentFeature.values.last.since
+      : masterVersion;
   backend.connectError = connectError;
   final manager = SshSessionManager.test(
     remoteAgentService: FakeRemoteAgentService(backend),
@@ -89,6 +94,11 @@ List<String> _rows(WidgetTester tester) {
       },
   ];
 }
+
+/// Stands for a master new enough to have every feature the app knows of,
+/// which [AgentFeature] says - so a new feature does not age this test's
+/// session.
+const _currentMaster = 'current';
 
 void main() {
   setUp(() async {
@@ -205,6 +215,17 @@ void main() {
     expect(end.top, greaterThan(close.bottom));
     expect(end.left, close.left);
     expect(end.width, close.width);
+  });
+
+  testWidgets('a session from an older helper says what it does without', (
+    tester,
+  ) async {
+    await _openMenu(tester, masterVersion: null);
+
+    expect(
+      find.byKey(const ValueKey('tabMenuItem-session-1-olderSession')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('the header names the session and where it logs in', (

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:terminal_view/terminal_view.dart';
 
 import '../../theme/theme.dart' as app_theme;
@@ -120,9 +120,9 @@ class _TerminalPreviewState extends State<TerminalPreview> {
             ),
             padding: EdgeInsets.fromLTRB(
               widget.sidePadding,
-              6,
+              app_theme.AppTheme.space6,
               widget.sidePadding,
-              6,
+              app_theme.AppTheme.space6,
             ),
             readOnly: true,
             autofocus: false,

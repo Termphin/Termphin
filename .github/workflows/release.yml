@@ -5,14 +5,16 @@ on:
     tags:
       - 'v*'
 
-# vX.Y.Z builds both platforms and publishes the release. A tag ending in
-# -ios.N or -android.N (v1.12.0-ios.22) is a test build for that platform
-# alone, N being the build number after the + in pubspec.yaml; its release is
-# a prerelease, so it never shows as the latest.
+# vX.Y.Z builds both platforms, sends the Android bundle to Play closed
+# testing and the iOS build to TestFlight, and publishes the release with its
+# notes - no files are attached; production is promoted by hand in each
+# store. A tag ending in -ios.N or -android.N (v1.12.0-ios.22) is a test build
+# for that platform alone, N being the build number after the + in
+# pubspec.yaml; its release is a prerelease, so it never shows as the latest.
 #
 # The release is created as a draft and published only once every build has
-# uploaded into it, so nobody ever sees a release without its files, and a
-# failed build leaves a draft to delete rather than a public half-release.
+# reached its store, so a failed build leaves a draft to delete rather than a
+# public release for a build that never shipped.
 
 concurrency:
   group: release-${{ github.ref_name }}
@@ -63,7 +65,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
-          flutter-version: '3.47.0'
+          flutter-version: '3.50.0'
           channel: 'stable'
           cache: true
 
@@ -117,19 +119,6 @@ jobs:
           if not lines:
               sys.exit(f"The entry for {version} carries no categories.")
 
-          lines += [
-              "## Verifying the APK",
-              "",
-              "Each file comes with a `.sha256` checksum and a build provenance",
-              "attestation proving it was built from this tag by this repository:",
-              "",
-              "```",
-              f"gh attestation verify termphin-{version}.apk -R Termphin/Termphin",
-              "```",
-              "",
-              "The APK is signed with a different key than the Google Play build,",
-              "so one does not update the other.",
-          ]
           print("\n".join(lines))
           PY
 
@@ -142,18 +131,16 @@ jobs:
           PRERELEASE=false
           [ "$PLATFORM" != all ] && PRERELEASE=true
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release edit "$TAG" --title "Termphin $TAG" --notes-file notes.md --prerelease="$PRERELEASE" --draft
+            gh release edit "$TAG" --title "$TAG" --notes-file notes.md --prerelease="$PRERELEASE" --draft
           else
-            gh release create "$TAG" --title "Termphin $TAG" --notes-file notes.md --prerelease="$PRERELEASE" --draft --verify-tag
+            gh release create "$TAG" --title "$TAG" --notes-file notes.md --prerelease="$PRERELEASE" --draft --verify-tag
           fi
 
   android:
     needs: [verify, draft]
     if: needs.verify.outputs.platform != 'ios'
     permissions:
-      contents: write
-      id-token: write
-      attestations: write
+      contents: read
     uses: ./.github/workflows/build-android.yml
     with:
       tag: ${{ github.ref_name }}
@@ -162,7 +149,8 @@ jobs:
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
       ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
       ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-      POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
+      FIREBASE_CONFIG_BASE64: ${{ secrets.FIREBASE_CONFIG_BASE64 }}
+      GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
 
   ios:
     needs: [verify, draft]
@@ -181,7 +169,7 @@ jobs:
       APPSTORE_API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
       APPSTORE_API_ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
       APPSTORE_API_PRIVATE_KEY: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
-      POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
+      FIREBASE_CONFIG_BASE64: ${{ secrets.FIREBASE_CONFIG_BASE64 }}
 
   publish:
     needs: [verify, android, ios]

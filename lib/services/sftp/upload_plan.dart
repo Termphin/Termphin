@@ -52,6 +52,27 @@ String sanitizedUploadName(String name) {
       : cleaned;
 }
 
+/// The scratch directory out of what the shell printed when asked for it, or
+/// `/tmp` when that is not a path.
+///
+/// Only the last line counts: a login script that writes something of its own
+/// (a banner, or the error from a broken `.bashrc` line) prints it before the
+/// answer. Anything left that is not absolute would otherwise become the
+/// upload's directory, and every upload into it fails as "not found". Over
+/// PowerShell the answer is a Windows path (`C:\Users\me\AppData\Local\Temp\`),
+/// which SFTP spells `/C:/Users/me/AppData/Local/Temp`.
+String tmpDirectoryFromOutput(String output, {required bool powershell}) {
+  final lines = [
+    for (final line in output.split('\n'))
+      if (line.trim().isNotEmpty) line.trim(),
+  ];
+  if (lines.isEmpty) return '/tmp';
+  final answer = lines.last;
+  if (!powershell) return answer.startsWith('/') ? answer : '/tmp';
+  if (!RegExp(r'^[A-Za-z]:[\\/]').hasMatch(answer)) return '/tmp';
+  return '/${answer.replaceAll('\\', '/').replaceAll(RegExp(r'/+$'), '')}';
+}
+
 /// Remote paths for one batch of picked files, in the order they were picked.
 ///
 /// [timestamped] is for the scratch directory, where a plain name would
@@ -104,4 +125,31 @@ String _unique(String name, Set<String> taken) {
 String uploadPasteText(Iterable<String> displayPaths, RemoteShellType shell) {
   final quote = shell == RemoteShellType.powershell ? windowsQuote : shellQuote;
   return displayPaths.map(quote).join(' ');
+}
+
+/// What a finished terminal upload does with its paths.
+enum UploadPasteAction {
+  /// Types them in.
+  paste,
+
+  /// Offers them in a menu at the cursor.
+  offer,
+
+  /// Keeps them for the next time the terminal is on screen.
+  hold,
+}
+
+/// Typing the paths in unasked is only safe when nothing moved under the
+/// user: the terminal is the one on screen, the upload started the moment it
+/// was asked for, and nothing was typed meanwhile. An upload that waited in
+/// the queue can end long after, mid-way through another command.
+UploadPasteAction uploadPasteAction({
+  required bool terminalShown,
+  required bool autoPaste,
+  required bool waited,
+  required bool typedMeanwhile,
+}) {
+  if (!terminalShown) return UploadPasteAction.hold;
+  if (autoPaste && !waited && !typedMeanwhile) return UploadPasteAction.paste;
+  return UploadPasteAction.offer;
 }

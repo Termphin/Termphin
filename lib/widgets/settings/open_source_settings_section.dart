@@ -1,5 +1,4 @@
-import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../i18n/strings.g.dart';
 import '../../services/app/project_urls.dart';
@@ -25,13 +24,11 @@ class OpenSourceSettingsSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SectionHeader(t.settings.openSource),
-        const SizedBox(height: 10),
+        const SizedBox(height: AppTheme.space10),
         AppCard(
           child: Column(
             children: [
               SettingsTile(
-                icon: PhosphorIconsRegular.star,
-                iconColor: context.colors.warning,
                 title: t.settings.starOnGitHub,
                 subtitle: t.settings.starOnGitHubSubtitle,
                 trailing: SettingsTileTrailing.external,
@@ -39,7 +36,6 @@ class OpenSourceSettingsSection extends StatelessWidget {
               ),
               const Divider(height: 1),
               SettingsTile(
-                icon: PhosphorIconsRegular.githubLogo,
                 title: t.settings.issueTracker,
                 subtitle: t.settings.issueTrackerSubtitle,
                 trailing: SettingsTileTrailing.external,
@@ -47,8 +43,6 @@ class OpenSourceSettingsSection extends StatelessWidget {
               ),
               const Divider(height: 1),
               SettingsTile(
-                icon: PhosphorIconsRegular.gitPullRequest,
-                iconColor: context.colors.primary,
                 title: t.settings.contribute,
                 subtitle: t.settings.contributeSubtitle,
                 trailing: SettingsTileTrailing.external,
@@ -56,7 +50,6 @@ class OpenSourceSettingsSection extends StatelessWidget {
               ),
               const Divider(height: 1),
               SettingsTile(
-                icon: PhosphorIconsRegular.certificate,
                 title: t.settings.sourceLicense,
                 subtitle: t.settings.sourceLicenseSubtitle,
                 trailing: SettingsTileTrailing.external,

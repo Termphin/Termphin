@@ -1,10 +1,13 @@
 import 'dart:math' as math;
 
 import 'package:dropdown_button2/dropdown_button2.dart';
-import 'package:flutter/material.dart';
+// ignore: deprecated_member_use
+import 'package:flutter/material.dart' as legacy show ScrollbarThemeData;
+import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../theme/theme.dart';
+import 'legacy_material.dart';
 
 /// Callers build the entries, so they need these; nothing else about the
 /// package should have to leak into a screen.
@@ -20,13 +23,19 @@ export 'package:dropdown_button2/dropdown_button2.dart'
 /// interval is not zero-width because the reveal divides by its own length.
 /// The scrollbar's thumb is always visible, as the only sign there is more
 /// to the menu below.
+///
+/// The scrollbar theme is the framework's own Material one, not
+/// `material_ui`'s: `dropdown_button2` is still built on the former, and the
+/// two are different types however alike they read.
 DropdownStyleData appDropdownStyle(
   BuildContext context, {
   double? width,
   double? maxHeight,
   DropdownDirection direction = DropdownDirection.textDirection,
   Offset offset = Offset.zero,
-  EdgeInsetsGeometry padding = const EdgeInsets.symmetric(vertical: 6),
+  EdgeInsetsGeometry padding = const EdgeInsets.symmetric(
+    vertical: AppTheme.space6,
+  ),
 }) => DropdownStyleData(
   width: width,
   maxHeight: maxHeight,
@@ -40,17 +49,17 @@ DropdownStyleData appDropdownStyle(
     border: Border.all(color: context.colors.surfaceBorderStrong),
   ),
   elevation: 0,
-  scrollbarTheme: ScrollbarThemeData(
+  scrollbarTheme: legacy.ScrollbarThemeData(
     thumbVisibility: const WidgetStatePropertyAll(true),
     thumbColor: WidgetStatePropertyAll(context.colors.textTertiary),
     thickness: const WidgetStatePropertyAll(3),
-    radius: const Radius.circular(2),
+    radius: const Radius.circular(AppTheme.radiusXxs),
     crossAxisMargin: 3,
   ),
 );
 
 MenuItemStyleData appDropdownItemStyle({
-  EdgeInsets padding = const EdgeInsets.symmetric(horizontal: 12),
+  EdgeInsets padding = const EdgeInsets.symmetric(horizontal: AppTheme.space12),
 }) => MenuItemStyleData(
   borderRadius: BorderRadius.circular(AppTheme.radiusSm),
   padding: padding,
@@ -60,7 +69,10 @@ MenuItemStyleData appDropdownItemStyle({
 ///
 /// Uses [DropdownButton2] like the value dropdowns in settings so both open
 /// the same way, and hides the underline the package draws under every button
-/// by default (a stray hairline under an icon-only button).
+/// by default (a stray hairline under an icon-only button). It is hidden
+/// with an empty `underline`, not `DropdownButtonHideUnderline`: the package
+/// reads the framework Material library's one, which the `material_ui`
+/// widget of the same name does not set.
 class AppActionDropdown<T> extends StatefulWidget {
   const AppActionDropdown({
     super.key,
@@ -213,11 +225,12 @@ class _AppActionDropdownState<T> extends State<AppActionDropdown<T>> {
         );
     return Listener(
       onPointerDown: (_) => _fitToScreen(),
-      child: DropdownButtonHideUnderline(
+      child: LegacyMaterial(
         child: DropdownButton2<T>(
           customButton: tooltip == null
               ? button
               : Tooltip(message: tooltip, child: button),
+          underline: const SizedBox.shrink(),
           items: widget.items,
           onChanged: _handleChanged,
           openDropdownListenable: widget.openDropdownListenable,
@@ -289,15 +302,15 @@ class AppDropdownItem extends StatelessWidget {
     final iconColor = color ?? context.colors.textSecondary;
     final iconData = icon;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.symmetric(vertical: AppTheme.space12),
       child: Row(
         children: [
           if (iconData != null) ...[
-            Icon(iconData, size: 18, color: iconColor),
-            const SizedBox(width: 12),
+            Icon(iconData, size: AppTheme.icon18, color: iconColor),
+            const SizedBox(width: AppTheme.space12),
           ] else if (leading != null) ...[
             leading!,
-            const SizedBox(width: 10),
+            const SizedBox(width: AppTheme.space10),
           ],
           Expanded(
             child: Text(
@@ -307,17 +320,17 @@ class AppDropdownItem extends StatelessWidget {
               style: TextStyle(
                 color: effective,
                 fontFamily: fontFamily,
-                fontSize: 14,
+                fontSize: AppTheme.font14,
                 fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
               ),
             ),
           ),
           ?trailing,
           if (selected) ...[
-            const SizedBox(width: 10),
+            const SizedBox(width: AppTheme.space10),
             Icon(
               PhosphorIconsRegular.check,
-              size: 14,
+              size: AppTheme.icon14,
               color: context.colors.primary,
             ),
           ],

@@ -3,19 +3,73 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:terminal_view/terminal_view.dart';
-
 import 'package:termphin/i18n/strings.g.dart';
 import 'package:termphin/services/app/app_commands.dart';
+import 'package:termphin/services/settings/terminal_settings.dart';
+import 'package:termphin/services/terminal/session_terminal.dart';
+import 'package:termphin/services/terminal/terminal_text.dart';
 import 'package:termphin/widgets/terminal/terminal_pane.dart';
+import 'package:termphin/widgets/terminal/terminal_search_bar.dart';
 
+import '../../support/session_terminal.dart';
 import '../../support/test_app.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  testWidgets('a pane that comes back finds the session as it now stands, '
+      'scrolled to its end', (tester) async {
+    final terminal = SessionTerminal();
+    final sent = <String>[];
+    Uint8List bytes(String text) => Uint8List.fromList(utf8.encode(text));
+    Future<void> mount() async {
+      await pumpTestApp(
+        tester,
+        Scaffold(
+          body: TerminalPane(
+            terminal: terminal,
+            onInput: (input) => sent.add(utf8.decode(input)),
+            onResize: (_, _) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    await mount();
+    terminal.add(bytes('seen before leaving\r\n'));
+    await tester.pumpAndSettle();
+
+    await tester.pumpWidget(const SizedBox());
+    final awayReplies = <String>[];
+    terminal.onReply = awayReplies.add;
+    terminal.add(
+      bytes([for (var i = 0; i < 200; i++) 'while away $i\r\n'].join()),
+    );
+    terminal.add(bytes('\x1b[5n'));
+    await tester.pumpAndSettle();
+
+    await mount();
+    terminal.add(bytes('\x1b[5n'));
+    await tester.pumpAndSettle();
+
+    final shown = terminalBufferText(terminal.terminal.buffer).split('\n');
+    expect(shown.first, 'seen before leaving');
+    expect(shown.last, 'while away 199');
+    final position = tester
+        .widget<TerminalView>(find.byType(TerminalView))
+        .scrollController!
+        .position;
+    expect(position.pixels, position.maxScrollExtent);
+    expect(position.maxScrollExtent, greaterThan(0));
+    expect(awayReplies, ['\x1b[0n']);
+    expect(sent, ['\x1b[0n']);
+  });
 
   testWidgets('pinch zoom resizes the terminal only when the gesture ends', (
     tester,
@@ -30,7 +84,7 @@ void main() {
           width: 400,
           height: 600,
           child: TerminalPane(
-            outputStream: output.stream,
+            terminal: terminalFedBy(output.stream),
             onInput: (_) {},
             onResize: (cols, rows) => sizes.add((cols, rows)),
           ),
@@ -65,6 +119,44 @@ void main() {
     expect(sizes, hasLength(initialResizeCount + 1));
   });
 
+  testWidgets(
+    'a long press that selects holds off the tab swipe until it lifts',
+    (tester) async {
+      final output = StreamController<Uint8List>();
+      addTearDown(output.close);
+      addTearDown(() => terminalSelectionDragActive.value = false);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SizedBox(
+            width: 400,
+            height: 600,
+            child: TerminalPane(
+              terminal: terminalFedBy(output.stream),
+              onInput: (_) {},
+              onResize: (_, _) {},
+            ),
+          ),
+        ),
+      );
+      output.add(utf8.encode('hello world'));
+      await tester.pump();
+
+      final origin = tester.getTopLeft(find.byType(TerminalPane));
+      final gesture = await tester.startGesture(origin + const Offset(12, 8));
+      await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+      expect(terminalSelectionDragActive.value, isTrue);
+
+      await gesture.moveBy(const Offset(120, 0));
+      await tester.pump();
+      expect(terminalSelectionDragActive.value, isTrue);
+
+      await gesture.up();
+      await tester.pump();
+      expect(terminalSelectionDragActive.value, isFalse);
+    },
+  );
+
   group('OSC 52', () {
     late List<String?> clipboardWrites;
     late StreamController<Uint8List> output;
@@ -97,10 +189,9 @@ void main() {
         tester,
         Scaffold(
           body: TerminalPane(
-            outputStream: output.stream,
+            terminal: terminalFedBy(output.stream, replay: history),
             onInput: (_) {},
             onResize: (_, _) {},
-            initialHistory: history,
           ),
         ),
       );
@@ -194,7 +285,7 @@ void main() {
         tester,
         Scaffold(
           body: TerminalPane(
-            outputStream: output.stream,
+            terminal: terminalFedBy(output.stream),
             onInput: (_) {},
             onResize: (_, _) {},
           ),
@@ -237,7 +328,7 @@ void main() {
           tester,
           Scaffold(
             body: TerminalPane(
-              outputStream: output.stream,
+              terminal: terminalFedBy(output.stream),
               onInput: (_) {},
               onResize: (_, _) {},
             ),
@@ -272,20 +363,26 @@ void main() {
     late StreamController<Uint8List> output;
     late List<String> links;
 
-    setUp(() {
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      await terminalSettings.load();
       output = StreamController<Uint8List>();
       links = [];
     });
 
     tearDown(() => output.close());
 
-    Future<FocusNode> mount(WidgetTester tester, String text) async {
+    Future<FocusNode> mount(
+      WidgetTester tester,
+      String text, {
+      void Function(List<int>)? onInput,
+    }) async {
       await pumpTestApp(
         tester,
         Scaffold(
           body: TerminalPane(
-            outputStream: output.stream,
-            onInput: (_) {},
+            terminal: terminalFedBy(output.stream),
+            onInput: onInput ?? (_) {},
             onResize: (_, _) {},
             onLinkDetected: (url, _) => links.add(url),
           ),
@@ -419,6 +516,100 @@ void main() {
       addTearDown(() => tester.view.resetViewInsets());
       await tester.pump(const Duration(milliseconds: 350));
     });
+
+    testWidgets(
+      'mouse reporting forwards the tap without raising the keyboard',
+      (tester) async {
+        final sent = <String>[];
+        final focus = await mount(
+          tester,
+          '\x1b[?1000h\x1b[?1006hTUI button\r\n',
+          onInput: (bytes) => sent.add(utf8.decode(bytes)),
+        );
+
+        await tester.tapAt(cellAt(tester, 0));
+        await tester.pumpAndSettle();
+
+        expect(sent, ['\x1b[<0;4;1M', '\x1b[<0;4;1m']);
+        expect(focus.hasFocus, isFalse);
+
+        output.add(Uint8List.fromList(utf8.encode('\x1b[?1000l')));
+        await tester.pumpAndSettle();
+        await tester.pump(const Duration(milliseconds: 350));
+
+        await tester.tapAt(cellAt(tester, 0));
+        await tester.pumpAndSettle();
+        expect(focus.hasFocus, isTrue);
+        await tester.pump(const Duration(milliseconds: 350));
+      },
+    );
+
+    testWidgets('mouse reporting leaves an open keyboard up on tap', (
+      tester,
+    ) async {
+      final sent = <String>[];
+      final focus = await mount(
+        tester,
+        'shell\r\n',
+        onInput: (bytes) => sent.add(utf8.decode(bytes)),
+      );
+
+      await tester.tapAt(cellAt(tester, 0));
+      await tester.pumpAndSettle();
+      expect(focus.hasFocus, isTrue);
+      tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+      addTearDown(() => tester.view.resetViewInsets());
+      await tester.pump(const Duration(milliseconds: 350));
+
+      output.add(
+        Uint8List.fromList(utf8.encode('\x1b[?1000h\x1b[?1006hTUI button\r\n')),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tapAt(cellAt(tester, 1));
+      await tester.pumpAndSettle();
+
+      expect(sent, containsAllInOrder(['\x1b[<0;4;2M', '\x1b[<0;4;2m']));
+      expect(focus.hasFocus, isTrue);
+      await tester.pump(const Duration(milliseconds: 350));
+    });
+
+    testWidgets(
+      'mouse reporting drops stale focus left when the soft keyboard was dismissed',
+      (tester) async {
+        final focus = await mount(tester, 'shell\r\n');
+
+        await tester.tapAt(cellAt(tester, 0));
+        await tester.pumpAndSettle();
+        expect(focus.hasFocus, isTrue);
+
+        output.add(
+          Uint8List.fromList(
+            utf8.encode('\x1b[?1000h\x1b[?1006hTUI button\r\n'),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.pump(const Duration(milliseconds: 350));
+
+        await tester.tapAt(cellAt(tester, 1));
+        await tester.pumpAndSettle();
+        expect(focus.hasFocus, isFalse);
+        await tester.pump(const Duration(milliseconds: 350));
+      },
+    );
+
+    testWidgets('mouse reporting still raises the keyboard when guard is off', (
+      tester,
+    ) async {
+      await terminalSettings.mouseKeyboardGuard.set(false);
+      final focus = await mount(tester, '\x1b[?1000h\x1b[?1006hTUI button\r\n');
+
+      await tester.tapAt(cellAt(tester, 0));
+      await tester.pumpAndSettle();
+
+      expect(focus.hasFocus, isTrue);
+      await tester.pump(const Duration(milliseconds: 350));
+    });
   });
 
   group('search', () {
@@ -438,7 +629,7 @@ void main() {
         tester,
         Scaffold(
           body: TerminalPane(
-            outputStream: output.stream,
+            terminal: terminalFedBy(output.stream),
             onInput: (_) {},
             onResize: (_, _) {},
             controller: controller,
@@ -487,6 +678,23 @@ void main() {
 
       expect(find.text('1/2'), findsOneWidget);
       expect(scroll(tester).pixels, 0);
+    });
+
+    testWidgets('the bar stands above the terminal, not over its first rows', (
+      tester,
+    ) async {
+      await mount(tester, 'hello\r\n');
+      final terminalBefore = tester.getRect(find.byType(TerminalView));
+
+      controller.openSearch();
+      await tester.pumpAndSettle();
+
+      final bar = tester.getRect(find.byType(TerminalSearchBar));
+      final terminal = tester.getRect(find.byType(TerminalView));
+      expect(bar.height, kTerminalSearchBarHeight);
+      expect(bar.top, terminalBefore.top);
+      expect(terminal.top, greaterThanOrEqualTo(bar.bottom));
+      expect(terminal.bottom, terminalBefore.bottom);
     });
 
     testWidgets('says so when nothing matches', (tester) async {
@@ -559,7 +767,7 @@ void main() {
         tester,
         Scaffold(
           body: TerminalPane(
-            outputStream: output.stream,
+            terminal: terminalFedBy(output.stream),
             onInput: (bytes) => sent.add(utf8.decode(bytes)),
             onResize: (_, _) {},
             onKeyEvent: onKeyEvent,

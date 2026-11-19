@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
@@ -28,15 +28,16 @@ import '../../services/storage/group_storage.dart';
 import '../../theme/theme.dart';
 import '../../utils/group_match.dart';
 import '../../utils/platform_info.dart';
+import '../../widgets/groups/group_dot.dart';
 import '../../widgets/profiles/profile_avatar.dart';
 import '../../widgets/ui/app_card.dart';
 import '../../widgets/ui/app_divider.dart';
 import '../../widgets/ui/app_sheet.dart';
 import '../../widgets/ui/empty_state.dart';
-import '../../widgets/ui/group_dot.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
 import '../../widgets/ui/section_header.dart';
 import '../../widgets/ui/section_navigator.dart';
+import '../../widgets/ui/tag_chip.dart';
 import '../keys/key_form_screen.dart';
 import '../snippets/snippet_run_screen.dart';
 import '../snippets/snippet_runs_screen.dart';
@@ -323,7 +324,14 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
               builder: (context, gutter) => Column(
                 children: [
                   Padding(
-                    padding: gutter.add(const EdgeInsets.fromLTRB(4, 8, 16, 8)),
+                    padding: gutter.add(
+                      const EdgeInsets.fromLTRB(
+                        AppTheme.space4,
+                        AppTheme.space8,
+                        AppTheme.space16,
+                        AppTheme.space8,
+                      ),
+                    ),
                     child: Row(
                       children: [
                         if (!AppModalScope.isDialog(context))
@@ -342,14 +350,24 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
                   if (widget.header case final header?)
                     Padding(
                       padding: gutter.add(
-                        const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                        const EdgeInsets.fromLTRB(
+                          AppTheme.space16,
+                          0,
+                          AppTheme.space16,
+                          AppTheme.space12,
+                        ),
                       ),
                       child: header,
                     ),
                   if (_scope != null)
                     Padding(
                       padding: gutter.add(
-                        const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                        const EdgeInsets.fromLTRB(
+                          AppTheme.space16,
+                          0,
+                          AppTheme.space16,
+                          AppTheme.space8,
+                        ),
                       ),
                       child: Align(
                         alignment: Alignment.centerLeft,
@@ -405,14 +423,14 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
                     enableSuggestions: false,
                     style: TextStyle(
                       fontFamily: AppTheme.uiFamily,
-                      fontSize: 15,
+                      fontSize: AppTheme.font15,
                       color: colors.textPrimary,
                     ),
                     decoration: InputDecoration(
                       hintText: _hint(t),
                       hintStyle: TextStyle(
                         fontFamily: AppTheme.uiFamily,
-                        fontSize: 14,
+                        fontSize: AppTheme.font14,
                         color: colors.textSecondary,
                       ),
                       isDense: true,
@@ -431,12 +449,12 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
                   onPressed: _clear,
                   icon: Icon(
                     PhosphorIconsRegular.x,
-                    size: 16,
+                    size: AppTheme.icon16,
                     color: colors.textTertiary,
                   ),
                 )
               else
-                const SizedBox(width: 12),
+                const SizedBox(width: AppTheme.space12),
             ],
           ),
         ),
@@ -567,20 +585,20 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
     return ListView(
       padding: gutter.add(
         EdgeInsets.fromLTRB(
-          16,
-          4,
-          16,
-          24 + MediaQuery.paddingOf(context).bottom,
+          AppTheme.space16,
+          AppTheme.space4,
+          AppTheme.space16,
+          AppTheme.space24 + MediaQuery.paddingOf(context).bottom,
         ),
       ),
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       children: [
         for (final (i, section) in sections.indexed) ...[
-          if (i > 0) const SizedBox(height: 20),
+          if (i > 0) const SizedBox(height: AppTheme.space20),
           section,
         ],
         if (browsing && !_picking) ...[
-          const SizedBox(height: 16),
+          const SizedBox(height: AppTheme.space16),
           Text(
             t.globalSearch.emptyHint,
             style: context.colors.uiSmall.copyWith(
@@ -645,7 +663,10 @@ class _Section extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          padding: const EdgeInsets.only(
+            left: AppTheme.space4,
+            bottom: AppTheme.space8,
+          ),
           child: SectionHeader(title),
         ),
         AppCard.fields(
@@ -677,33 +698,20 @@ class _ScopeChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return Container(
+    return TagChip(
       key: const ValueKey('globalSearchScope'),
-      padding: const EdgeInsets.only(left: 12),
-      decoration: BoxDecoration(
-        color: colors.primaryHighlight,
-        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-        border: Border.all(color: colors.primaryMuted),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          GroupDot(colorHex: group.colorHex, size: 8),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: context.colors.uiStyle.copyWith(
-              color: colors.primary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          IconButton(
-            tooltip: tooltip,
-            visualDensity: VisualDensity.compact,
-            onPressed: onClear,
-            icon: Icon(PhosphorIconsRegular.x, size: 14, color: colors.primary),
-          ),
-        ],
+      label: label,
+      selected: true,
+      leading: GroupDot(colorHex: group.colorHex, size: 8),
+      trailing: IconButton(
+        tooltip: tooltip,
+        visualDensity: VisualDensity.compact,
+        onPressed: onClear,
+        icon: Icon(
+          PhosphorIconsRegular.x,
+          size: AppTheme.icon14,
+          color: colors.primary,
+        ),
       ),
     );
   }
@@ -755,11 +763,16 @@ class _ResultRow extends StatelessWidget {
         color: _Cursor.of(context)
             ? colors.primaryHighlight
             : colors.primaryHighlight.invisible,
-        padding: const EdgeInsets.fromLTRB(14, 10, 12, 10),
+        padding: const EdgeInsets.fromLTRB(
+          AppTheme.space14,
+          AppTheme.space10,
+          AppTheme.space12,
+          AppTheme.space10,
+        ),
         child: Row(
           children: [
             SizedBox(width: 36, child: Center(child: leading)),
-            const SizedBox(width: 14),
+            const SizedBox(width: AppTheme.space14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -768,14 +781,14 @@ class _ResultRow extends StatelessWidget {
                     _highlighted(
                       title,
                       terms,
-                      colors.itemTitle.copyWith(fontSize: 15),
+                      colors.itemTitle.copyWith(fontSize: AppTheme.font15),
                       colors.primary,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   if (subtitle.isNotEmpty) ...[
-                    const SizedBox(height: 2),
+                    const SizedBox(height: AppTheme.space2),
                     Text.rich(
                       _highlighted(
                         subtitle,
@@ -790,7 +803,10 @@ class _ResultRow extends StatelessWidget {
                 ],
               ),
             ),
-            if (trailing != null) ...[const SizedBox(width: 8), trailing!],
+            if (trailing != null) ...[
+              const SizedBox(width: AppTheme.space8),
+              trailing!,
+            ],
           ],
         ),
       ),
@@ -873,7 +889,7 @@ class _MachineResult extends ConsumerWidget {
       onTap: onTap,
       trailing: Icon(
         PhosphorIconsRegular.caretRight,
-        size: 16,
+        size: AppTheme.icon16,
         color: context.colors.textTertiary,
       ),
     );
@@ -977,7 +993,7 @@ class _GroupResult extends StatelessWidget {
       onTap: onTap,
       trailing: Icon(
         PhosphorIconsRegular.funnelSimple,
-        size: 16,
+        size: AppTheme.icon16,
         color: context.colors.textTertiary,
       ),
     );
@@ -1009,7 +1025,7 @@ class _SnippetResult extends StatelessWidget {
       onTap: onTap,
       trailing: Icon(
         PhosphorIconsRegular.play,
-        size: 16,
+        size: AppTheme.icon16,
         color: context.colors.textTertiary,
       ),
     );
@@ -1043,7 +1059,7 @@ class _KeyResult extends StatelessWidget {
       onTap: onTap,
       trailing: Icon(
         PhosphorIconsRegular.pencilSimple,
-        size: 16,
+        size: AppTheme.icon16,
         color: colors.textTertiary,
       ),
     );
@@ -1060,5 +1076,6 @@ class _IconAvatar extends StatelessWidget {
   final Color color;
 
   @override
-  Widget build(BuildContext context) => Icon(icon, size: 22, color: color);
+  Widget build(BuildContext context) =>
+      Icon(icon, size: AppTheme.icon22, color: color);
 }

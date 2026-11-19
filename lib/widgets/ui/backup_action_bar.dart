@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../theme/theme.dart';
 import 'modal_actions.dart';
@@ -32,7 +32,12 @@ class BackupActionBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.space20,
+        AppTheme.space12,
+        AppTheme.space20,
+        AppTheme.space16,
+      ),
       decoration: BoxDecoration(
         color: context.colors.backgroundPrimary,
         border: Border(top: BorderSide(color: context.colors.surfaceDivider)),
@@ -57,7 +62,7 @@ class BackupActionBar extends StatelessWidget {
                     color: context.colors.onPrimary,
                   ),
                 )
-              : Icon(icon, size: 20),
+              : Icon(icon, size: AppTheme.icon20),
           label: Text(label),
         ),
       ),

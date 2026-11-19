@@ -1,0 +1,17 @@
+{
+  "name": "termphin-functions",
+  "private": true,
+  "license": "GPL-3.0-or-later",
+  "type": "commonjs",
+  "main": "index.js",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^14.5.1",
+    "firebase-functions": "^7.4.0"
+  }
+}

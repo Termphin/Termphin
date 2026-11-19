@@ -1,6 +1,6 @@
 import 'package:dartssh2/dartssh2.dart';
-import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
@@ -249,7 +249,10 @@ class SftpFileRow extends StatelessWidget {
         onTap: onTap,
         onLongPress: onLongPress,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppTheme.space16,
+            vertical: AppTheme.space8,
+          ),
           decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: colors.surfaceDivider)),
           ),
@@ -257,13 +260,13 @@ class SftpFileRow extends StatelessWidget {
             children: [
               if (selectionMode && !isUp)
                 Padding(
-                  padding: const EdgeInsets.only(right: 10),
+                  padding: const EdgeInsets.only(right: AppTheme.space10),
                   child: Icon(
                     isSelected
                         ? PhosphorIconsRegular.checkCircle
                         : PhosphorIconsFill.circle,
                     color: isSelected ? accent : textTertiary,
-                    size: 20,
+                    size: AppTheme.icon20,
                   ),
                 ),
               if (isProbing)
@@ -287,15 +290,15 @@ class SftpFileRow extends StatelessWidget {
                       ? PhosphorIconsFill.folderOpen
                       : PhosphorIconsFill.folder,
                   color: accent,
-                  size: 24,
+                  size: AppTheme.icon24,
                 )
               else
                 buildFileIcon(
                   item.filename,
-                  size: 24,
+                  size: AppTheme.icon24,
                   fallbackColor: textSecondary,
                 ),
-              const SizedBox(width: 14),
+              const SizedBox(width: AppTheme.space14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -304,7 +307,7 @@ class SftpFileRow extends StatelessWidget {
                       item.filename,
                       style: TextStyle(
                         color: textPrimary,
-                        fontSize: 14,
+                        fontSize: AppTheme.font14,
                         fontWeight: FontWeight.w500,
                       ),
                       maxLines: 1,
@@ -313,7 +316,7 @@ class SftpFileRow extends StatelessWidget {
                     if (!isUp &&
                         (item.attr.size != null ||
                             item.attr.modifyTime != null)) ...[
-                      const SizedBox(height: 1),
+                      const SizedBox(height: AppTheme.space2),
                       Text(
                         [
                           if (!isDir && item.attr.size != null)
@@ -321,7 +324,10 @@ class SftpFileRow extends StatelessWidget {
                           if (item.attr.modifyTime != null)
                             _formatModified(item.attr.modifyTime),
                         ].where((s) => s.isNotEmpty).join('  ·  '),
-                        style: TextStyle(color: textTertiary, fontSize: 11),
+                        style: TextStyle(
+                          color: textTertiary,
+                          fontSize: AppTheme.font11,
+                        ),
                       ),
                     ],
                   ],

@@ -1,7 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
-
 import 'package:termphin/theme/theme.dart';
 import 'package:termphin/widgets/ui/app_dropdown.dart';
 
@@ -72,6 +71,39 @@ void main() {
     test('too little room leaves placement to the package', () {
       expect(maxHeight(screen: 200), isNull);
     });
+  });
+
+  testWidgets('the menu button draws no underline', (tester) async {
+    await pumpTestApp(
+      tester,
+      Scaffold(
+        body: Center(
+          child: AppActionDropdown<int>(
+            items: const [
+              DropdownItem(
+                value: 1,
+                intrinsicHeight: true,
+                child: AppDropdownItem(label: 'First'),
+              ),
+            ],
+            onSelected: (_) {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final hairlines = find.byWidgetPredicate(
+      (widget) =>
+          widget is Container &&
+          widget.decoration is BoxDecoration &&
+          (widget.decoration! as BoxDecoration).border is Border &&
+          ((widget.decoration! as BoxDecoration).border! as Border)
+                  .bottom
+                  .style !=
+              BorderStyle.none,
+    );
+    expect(hairlines, findsNothing);
   });
 
   testWidgets('a menu opened by the left edge keeps clear of it', (

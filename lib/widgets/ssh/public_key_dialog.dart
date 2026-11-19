@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../i18n/strings.g.dart';
 import '../../models/ssh_key.dart';
@@ -21,9 +21,9 @@ Future<void> showPublicKeyDialog(BuildContext context, SshKey key) {
             t.keys.keyCreatedInstructions,
             style: Theme.of(ctx).textTheme.bodyMedium,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppTheme.space12),
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(AppTheme.space10),
             decoration: BoxDecoration(
               color: ctx.colors.backgroundPrimary,
               borderRadius: BorderRadius.circular(AppTheme.radiusSm),

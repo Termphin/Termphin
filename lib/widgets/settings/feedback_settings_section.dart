@@ -1,19 +1,24 @@
-import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../i18n/strings.g.dart';
+import '../../screens/settings/error_reports_screen.dart';
 import '../../services/app/manual_urls.dart';
 import '../../theme/theme.dart';
+import '../../utils/platform_info.dart';
 import '../ui/app_card.dart';
+import '../ui/app_divider.dart';
 import '../ui/clipboard_and_links.dart';
-import '../ui/manual_link.dart';
 import '../ui/section_header.dart';
 import '../ui/settings_tile.dart';
+import 'manual_link.dart';
 
-/// Feedback section: email and the manual. The issue tracker sits in the
-/// open source section.
+/// Feedback section: email, the error reports to send with a bug, and the
+/// manual. The issue tracker sits in the open source section.
 class FeedbackSettingsSection extends StatelessWidget {
-  const FeedbackSettingsSection({super.key});
+  const FeedbackSettingsSection({super.key, this.header = true});
+
+  /// Off on a screen of its own, whose title already says what this is.
+  final bool header;
 
   /// Opens the device's mail app with the address and subject already
   /// filled in - no in-app form, no backend to receive it.
@@ -41,36 +46,39 @@ class FeedbackSettingsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SectionHeader(t.settings.feedback),
-        const SizedBox(height: 10),
-        AppCard(
-          child: Column(
-            children: [
-              SettingsTile(
-                icon: PhosphorIconsRegular.chatCircleText,
-                iconColor: context.colors.primary,
-                title: t.settings.sendFeedback,
-                subtitle: t.settings.sendFeedbackSubtitle,
-                onTap: () => _sendFeedback(context, isBug: false),
-              ),
-              const Divider(height: 1),
-              SettingsTile(
-                icon: PhosphorIconsRegular.bug,
-                iconColor: context.colors.warning,
-                title: t.settings.reportBug,
-                subtitle: t.settings.reportBugSubtitle,
-                onTap: () => _sendFeedback(context, isBug: true),
-              ),
-              const Divider(height: 1),
-              SettingsTile(
-                icon: PhosphorIconsRegular.bookOpen,
-                iconColor: context.colors.primary,
-                title: t.settings.manual,
-                subtitle: t.settings.manualSubtitle,
-                onTap: () => openManual(context, ManualPage.home),
-              ),
-            ],
-          ),
+        if (header) ...[
+          SectionHeader(t.settings.feedback),
+          const SizedBox(height: AppTheme.space10),
+        ],
+        AppCard.fields(
+          children: [
+            SettingsTile(
+              title: t.settings.sendFeedback,
+              subtitle: t.settings.sendFeedbackSubtitle,
+              onTap: () => _sendFeedback(context, isBug: false),
+            ),
+            const AppDivider(),
+            SettingsTile(
+              title: t.settings.reportBug,
+              subtitle: t.settings.reportBugSubtitle,
+              onTap: () => _sendFeedback(context, isBug: true),
+            ),
+            const AppDivider(),
+            SettingsTile(
+              title: t.settings.errorReports,
+              subtitle: t.settings.errorReportsSubtitle,
+              destination: () => const ErrorReportsScreen(),
+            ),
+            const AppDivider(),
+            SettingsTile(
+              title: t.settings.manual,
+              subtitle: t.settings.manualSubtitle,
+              trailing: platformHas(PlatformFeature.embeddedWebView)
+                  ? SettingsTileTrailing.chevron
+                  : SettingsTileTrailing.external,
+              onTap: () => openManual(context, ManualPage.home),
+            ),
+          ],
         ),
       ],
     );

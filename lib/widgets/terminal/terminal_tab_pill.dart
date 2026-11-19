@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../i18n/strings.g.dart';
 import '../../models/session_tab.dart';
@@ -10,6 +10,15 @@ import 'session_tab_pill.dart';
 import 'session_view.dart';
 import 'tab_menu_parts.dart';
 
+/// Type size of a tab's name, and the line height it is set at. The strip's
+/// own height is derived from these in `terminalTabBarHeight` rather than
+/// written down separately - two numbers that have to agree but are declared
+/// apart only agree until one of them is edited.
+const kTabNameSize = kSessionTabNameSize;
+const kTabLineHeight = kSessionTabLineHeight;
+
+/// Vertical padding inside a tab pill.
+const kTabPillPaddingY = kSessionTabPillPaddingY;
 /// One tab's pill: the avatar ringed in its connection status, the name, the
 /// view-mode badge and the overflow menu.
 ///
@@ -41,6 +50,7 @@ class TerminalTabPill<T> extends StatelessWidget {
     required this.isActive,
     required this.stretch,
     this.collapsed = false,
+    this.unread = false,
     required this.menuItems,
     required this.onTap,
     required this.onMenuAction,
@@ -58,6 +68,9 @@ class TerminalTabPill<T> extends StatelessWidget {
   final bool stretch;
   final bool collapsed;
 
+  /// A notification came from this session since it was last on screen.
+  final bool unread;
+
   final List<DropdownItem<T>> menuItems;
   final VoidCallback onTap;
   final ValueChanged<T> onMenuAction;
@@ -74,7 +87,6 @@ class TerminalTabPill<T> extends StatelessWidget {
       ConnectionStatus.error => context.colors.error,
       ConnectionStatus.disconnected => theme.dividerColor,
     };
-
     final tab = SessionTabPill(
       sessionId: sessionId,
       profile: profile,
@@ -83,6 +95,7 @@ class TerminalTabPill<T> extends StatelessWidget {
       sessionName: this.sessionName,
       isActive: isActive,
       collapsed: collapsed,
+      unread: unread,
       stretch: stretch,
       onTap: onTap,
       trailing: [
@@ -150,7 +163,7 @@ class ViewModeBadge extends StatelessWidget {
             child: Icon(
               modeIcons[mode]!.$1,
               key: ValueKey(mode),
-              size: 15,
+              size: AppTheme.icon14,
               color: idleColor,
             ),
           ),

@@ -26,6 +26,14 @@ dialogs report nothing back.
   the machine form. An address can also be typed there the way it is after
   `ssh`; the form then opens filled in with it. `OnboardingResult` carries
   both to `_AppGate`, which opens the form only when nothing was imported.
+- **Returning users sign in from the welcome page.** "Already use Termphin?
+  Sign in" shows only where accounts exist and nobody is signed in, and opens
+  `SignInPanel` on its own screen. Once signed in, `SyncService.state()` decides:
+  a locked account (it syncs, this device has no key) swaps the server question
+  for the sync passphrase page, "Not now" brings the server question back; an
+  unlocked one skips it. Either way `_finish` reports `ServerAnswer.synced`,
+  which opens nothing - the machine list is the destination. Permissions and
+  analytics are asked in every mode.
 - **The server question is the point of it.** In September 2026 about 70% of
   new users never added a machine: most had nothing to connect to, or expected
   a terminal on the phone itself, and the old flow ended on an empty list with
@@ -59,9 +67,10 @@ Termphin?" in front of it, because filtering who gets asked by how they feel is
 against store policy and the API returns nothing to branch on. Gates, all
 device-local: five successful connections, three days since the first, and
 either never asked or 120 days plus a new version since the last. A request that
-throws burns no cooldown. It fires from `_AppShellState._checkWhatsNewThenReview`
-and only when the what's-new modal had nothing to show - the home screen gets
-one interruption, not two, and never over a live terminal. Settings → About has
+throws burns no cooldown. It fires last in `_AppShellState._runStartupInterstitials`
+and only when neither the what's-new modal nor the group migration prompt had
+anything to show - the home screen gets one interruption, not two, and never
+over a live terminal. Settings → About has
 a "Rate Termphin" row straight to the listing instead, since the in-app dialog
 is quota'd. Neither path is testable on a debug build.
 
@@ -86,7 +95,10 @@ what produced a wall of bullet points nobody read.
   the read. Give it its real number at release time and it appears everywhere.
   Both yaml files take the marker, and there is only ever one such entry.
 - `assets/whats_new.yaml` is the popup: hand-written, only ever new features.
-  Each highlight is `id` + `title` + `body` (prose) + optional `image`. **A
+  Each highlight is `id` + `title` + `body` (prose), plus optional `image`,
+  `aspect` (the image's ratio), `setting` (an inline toggle) and `announce`
+  (default true; false keeps it out of the popup and reachable only from the
+  setting's info button). **A
   version with no `highlights` block means no popup at all**, and most versions
   are meant to have none - a release is not owed an announcement. **Do not add a
   block, or flag a missing one as a gap, without being asked.**

@@ -3,7 +3,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:dartssh2/dartssh2.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'package:phosphor_flutter/phosphor_flutter.dart';
@@ -13,15 +13,16 @@ import '../../services/analytics/analytics_service.dart';
 import '../../services/sftp/cancel_token.dart';
 import '../../services/sftp/download_service.dart';
 import '../../services/sftp/sftp_service.dart';
+import '../../services/sftp/transfer_queue.dart';
 import '../../theme/theme.dart';
 import '../../utils/format_size.dart';
 import '../../utils/sftp_error_handler.dart';
 import '../../utils/sftp_path.dart';
-import '../../widgets/sftp/transfer_progress_dialog.dart';
 import '../../widgets/ui/app_notifications.dart';
 import '../../widgets/ui/app_sheet.dart';
 import '../../widgets/ui/clipboard_and_links.dart';
 import '../../widgets/ui/confirm_dialog.dart';
+import '../../widgets/ui/empty_state.dart';
 
 class _ImageEntry {
   final String path;
@@ -66,6 +67,10 @@ class SftpImagePreviewScreen extends StatefulWidget {
   /// while the handler popped anyway.
   final VoidCallback? onMutated;
 
+  /// The session's transfer queue, which a download joins like any other.
+  /// Without one the download runs on its own.
+  final TransferQueue? transferQueue;
+
   const SftpImagePreviewScreen({
     super.key,
     required this.sftp,
@@ -76,6 +81,7 @@ class SftpImagePreviewScreen extends StatefulWidget {
     this.directoryPath,
     this.siblingImages,
     this.onMutated,
+    this.transferQueue,
   });
 
   @override
@@ -268,21 +274,32 @@ class _SftpImagePreviewScreenState extends State<SftpImagePreviewScreen>
     _ensureLoaded(index + 1);
   }
 
+  /// This screen covers the session's transfer bar, so the button itself
+  /// spins while the download waits and runs.
+  bool _downloading = false;
+
   Future<void> _download() async {
     final entry = _entries[_index];
-    final session = TransferSession(
-      kind: TransferKind.download,
-      initialLabel: entry.filename,
-    )..show(context);
+    Future<SavedDownload> run(TransferJob? job) =>
+        DownloadService.downloadSftpFile(
+          sftp: widget.sftp,
+          remotePath: entry.path,
+          fileName: entry.filename,
+          cancel: job?.cancel,
+          onProgress: job?.report,
+        );
+    setState(() => _downloading = true);
     try {
-      await DownloadService.downloadSftpFile(
-        sftp: widget.sftp,
-        remotePath: entry.path,
-        fileName: entry.filename,
-        cancel: session.cancel,
-        onProgress: session.update,
-      );
-      session.close();
+      final queue = widget.transferQueue;
+      if (queue != null) {
+        await queue.add(
+          kind: TransferJobKind.download,
+          label: entry.filename,
+          run: run,
+        );
+      } else {
+        await run(null);
+      }
       if (mounted) {
         AppNotifications.success(
           context,
@@ -290,13 +307,14 @@ class _SftpImagePreviewScreenState extends State<SftpImagePreviewScreen>
         );
       }
     } catch (e) {
-      session.close();
       if (!mounted) return;
-      if (session.isCancelled || e is TransferCancelled) {
+      if (e is TransferCancelled) {
         AppNotifications.info(context, t.sftp.downloadCancelled);
       } else {
         AppNotifications.error(context, resolveSftpError(e, t));
       }
+    } finally {
+      if (mounted) setState(() => _downloading = false);
     }
   }
 
@@ -337,7 +355,7 @@ class _SftpImagePreviewScreenState extends State<SftpImagePreviewScreen>
     _zoomAnimController?.dispose();
     final animController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 220),
+      duration: AppTheme.motionPageReverse,
     );
     final animation = Matrix4Tween(begin: controller.value, end: end).animate(
       CurvedAnimation(parent: animController, curve: Curves.easeOutCubic),
@@ -380,8 +398,11 @@ class _SftpImagePreviewScreenState extends State<SftpImagePreviewScreen>
           onPressed: () => Navigator.of(context).pop(),
         ),
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(height: 1, color: context.colors.surfaceBorder),
+          preferredSize: const Size.fromHeight(AppTheme.hairline),
+          child: Container(
+            height: AppTheme.hairline,
+            color: context.colors.surfaceBorder,
+          ),
         ),
         title: entry == null
             ? const SizedBox.shrink()
@@ -390,7 +411,7 @@ class _SftpImagePreviewScreenState extends State<SftpImagePreviewScreen>
                 children: [
                   Text(
                     entry.filename,
-                    style: const TextStyle(fontSize: 16),
+                    style: const TextStyle(fontSize: AppTheme.font16),
                     overflow: TextOverflow.ellipsis,
                   ),
                   Row(
@@ -399,19 +420,19 @@ class _SftpImagePreviewScreenState extends State<SftpImagePreviewScreen>
                         Text(
                           formatFileSize(entry.size),
                           style: context.colors.uiStyle.copyWith(
-                            fontSize: 11,
+                            fontSize: AppTheme.font11,
                             color: context.colors.textTertiary,
                           ),
                         ),
                       if (_entries.length > 1) ...[
-                        const SizedBox(width: 8),
+                        const SizedBox(width: AppTheme.space8),
                         Text(
                           t.sftp.imageCounter(
                             current: _index + 1,
                             total: _entries.length,
                           ),
                           style: context.colors.uiStyle.copyWith(
-                            fontSize: 11,
+                            fontSize: AppTheme.font11,
                             color: context.colors.textTertiary,
                           ),
                         ),
@@ -433,9 +454,15 @@ class _SftpImagePreviewScreenState extends State<SftpImagePreviewScreen>
                   ),
           ),
           IconButton(
-            icon: const Icon(PhosphorIconsFill.downloadSimple),
+            icon: _downloading
+                ? const SizedBox.square(
+                    dimension: AppTheme.icon18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(PhosphorIconsFill.downloadSimple),
             tooltip: t.sftp.download,
-            onPressed: entry != null && _stateFor(_index).file != null
+            onPressed:
+                !_downloading && entry != null && _stateFor(_index).file != null
                 ? _download
                 : null,
           ),
@@ -476,13 +503,13 @@ class _SftpImagePreviewScreenState extends State<SftpImagePreviewScreen>
                 color: context.colors.primary,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppTheme.space16),
             if (state.progress > 0)
               Text(
                 '${(state.progress * 100).round()}%',
                 style: TextStyle(color: context.colors.textSecondary),
               ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppTheme.space12),
             TextButton(
               onPressed: () => setState(state.cancel.cancel),
               child: Text(
@@ -496,26 +523,11 @@ class _SftpImagePreviewScreenState extends State<SftpImagePreviewScreen>
     }
 
     if (state.error.isNotEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                PhosphorIconsFill.imageBroken,
-                color: context.colors.textTertiary,
-                size: 48,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                state.error,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: context.colors.textSecondary),
-              ),
-            ],
-          ),
-        ),
+      return EmptyStatePanel(
+        icon: PhosphorIconsFill.imageBroken,
+        title: state.error,
+        tone: EmptyStateTone.error,
+        compact: true,
       );
     }
 
@@ -531,22 +543,11 @@ class _SftpImagePreviewScreenState extends State<SftpImagePreviewScreen>
           child: Image.file(
             state.file!,
             key: ValueKey(state.file!.path),
-            errorBuilder: (ctx, _, _) => Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    PhosphorIconsFill.imageBroken,
-                    color: context.colors.textTertiary,
-                    size: 48,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    Translations.of(ctx).sftp.imageDecodeError,
-                    style: TextStyle(color: context.colors.textSecondary),
-                  ),
-                ],
-              ),
+            errorBuilder: (ctx, _, _) => EmptyStatePanel(
+              icon: PhosphorIconsFill.imageBroken,
+              title: Translations.of(ctx).sftp.imageDecodeError,
+              tone: EmptyStateTone.error,
+              compact: true,
             ),
           ),
         ),

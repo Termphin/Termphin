@@ -85,7 +85,7 @@ enum PlatformFeature {
   /// The app draws its own title bar in place of the system's.
   customWindowChrome,
 
-    /// The menu bar along the top of the screen that the system owns.
+  /// The menu bar along the top of the screen that the system owns.
   nativeMenuBar,
 
   /// The user keeps their own SSH keys in a `.ssh` folder the app can look
@@ -113,15 +113,22 @@ bool platformHas(PlatformFeature feature) => switch (feature) {
   PlatformFeature.haptics => isAndroidPlatform || isIOSPlatform,
   PlatformFeature.touchControls => !isDesktopPlatform,
   PlatformFeature.customWindowChrome => isDesktopPlatform,
-    PlatformFeature.nativeMenuBar => isMacOSPlatform,
+  PlatformFeature.nativeMenuBar => isMacOSPlatform,
   PlatformFeature.localSshFolder => isDesktopPlatform,
 };
 
-/// True when there's enough room for the sidebar layout: a desktop window,
-/// or any device turned to landscape - width freed up from the side, rather
-/// than the bottom nav eating into height that's already short.
+/// The narrowest window that gets the sidebar layout. A landscape window
+/// below it - one half of a split screen, a pop-up window - cannot spare the
+/// sidebar's width: beside it the screen would be squeezed to a sliver too
+/// narrow for its own rows.
+const double kWideLayoutMinWidth = 600;
+
+/// True when there's enough room for the desktop sidebar layout: a desktop
+/// window, or any device turned to landscape at least [kWideLayoutMinWidth]
+/// across - width freed up from the side, rather than the bottom nav eating
+/// into height that's already short.
 bool isWideLayout(BuildContext context) {
   if (isDesktopPlatform) return true;
   final size = MediaQuery.sizeOf(context);
-  return size.width > size.height;
+  return size.width > size.height && size.width >= kWideLayoutMinWidth;
 }

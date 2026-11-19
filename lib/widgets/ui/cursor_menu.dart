@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A small floating menu anchored to a point in the enclosing Stack - built
 /// for the "paste path after upload" menu, but generic on [child] so any

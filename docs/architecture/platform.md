@@ -97,6 +97,8 @@ throws the colour away). Both generated from `assets/icons/profile_avatars/` by
 
 ## Sharing to Termphin
 
+Android only for now; iOS has no share extension yet.
+
 `ShareActivity` takes `SEND`/`SEND_MULTIPLE` and runs **its own Flutter
 engine** on `shareMain` (`lib/main.dart` → `runShareApp` in
 `lib/screens/share/share_screen.dart`), in the sharing app's task. That is

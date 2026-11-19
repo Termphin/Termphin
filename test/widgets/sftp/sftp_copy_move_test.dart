@@ -1,15 +1,17 @@
 import 'dart:async';
 
 import 'package:dartssh2/dartssh2.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:termphin/models/active_session.dart';
 import 'package:termphin/services/settings/sftp_settings.dart';
 import 'package:termphin/services/sftp/sftp_remote_ops.dart';
+import 'package:termphin/services/sftp/transfer_queue.dart';
 import 'package:termphin/widgets/sftp/sftp_browser_view.dart';
 import 'package:termphin/widgets/sftp/sftp_folder_picker.dart';
+import 'package:termphin/widgets/ui/tag_chip.dart';
 
 import '../../support/fixtures.dart';
 import '../../support/sftp_fakes.dart';
@@ -47,7 +49,7 @@ class _Harness {
   List<String> names(String folder) =>
       tree.children[folder]!.map((e) => e.filename).toList();
 
-  Future<void> pump(WidgetTester tester) async {
+  Future<void> pump(WidgetTester tester, {TransferQueue? queue}) async {
     await pumpTestApp(
       tester,
       Scaffold(
@@ -58,6 +60,7 @@ class _Harness {
             connectedAt: DateTime.now(),
             sshService: service,
           ),
+          transferQueue: queue,
         ),
       ),
     );
@@ -320,40 +323,70 @@ void main() {
       expect(find.textContaining('Disk quota exceeded'), findsOneWidget);
     });
 
-    testWidgets('shows it is working, and takes nothing else meanwhile', (
+    testWidgets(
+      'a second copy waits its turn and names itself when it starts',
+      (tester) async {
+        final done = Completer<FakeCommandResult>();
+        final h = _Harness(
+          FakeSftpTree({
+            '/home/user': [sftpFile('a.txt')],
+          }),
+          onCommand: (c) =>
+              c.contains(execProbeMarker) ? _shell(c) : done.future,
+        );
+        await h.pump(tester);
+
+        await _openRowMenu(tester, 'a.txt');
+        await tester.tap(find.text('Duplicate'));
+        await tester.pump();
+        await tester.pump();
+        await _openRowMenu(tester, 'a.txt');
+        await tester.tap(find.text('Duplicate'));
+        await tester.pump(const Duration(milliseconds: 500));
+        expect(h.fileCommands, hasLength(1), reason: 'the second one waits');
+
+        h.tree.children['/home/user']!.add(sftpFile('a (1).txt'));
+        done.complete((exitCode: 0, stdout: '', stderr: ''));
+        await tester.pumpAndSettle();
+
+        expect(h.fileCommands, hasLength(2));
+        expect(h.fileCommands.first, contains("'/home/user/a (1).txt'"));
+        expect(h.fileCommands.last, contains("'/home/user/a (2).txt'"));
+      },
+    );
+
+    testWidgets('a waiting copy taken off the queue is not an error', (
       tester,
     ) async {
       final done = Completer<FakeCommandResult>();
+      final queue = TransferQueue();
       final h = _Harness(
         FakeSftpTree({
-          '/home/user': [sftpFile('a.txt'), sftpFile('b.txt')],
+          '/home/user': [sftpFile('a.txt')],
         }),
         onCommand: (c) => c.contains(execProbeMarker) ? _shell(c) : done.future,
       );
-      await h.pump(tester);
+      await h.pump(tester, queue: queue);
 
       await _openRowMenu(tester, 'a.txt');
       await tester.tap(find.text('Duplicate'));
       await tester.pump();
       await tester.pump();
-      expect(find.text('Copying on the server…'), findsOneWidget);
-
-      await tester.tap(
-        find.descendant(
-          of: find
-              .ancestor(of: find.text('b.txt'), matching: find.byType(Row))
-              .first,
-          matching: find.byIcon(PhosphorIconsRegular.dotsThreeVertical),
-        ),
-      );
-      await tester.pump(const Duration(milliseconds: 500));
+      await _openRowMenu(tester, 'a.txt');
       await tester.tap(find.text('Duplicate'));
       await tester.pump(const Duration(milliseconds: 500));
-      expect(h.fileCommands, hasLength(1), reason: 'the second one waits out');
+
+      queue.cancel(queue.jobs.last);
+      await tester.pump();
+      await tester.pump();
+      expect(find.byIcon(PhosphorIconsRegular.info), findsOneWidget);
+      expect(find.byIcon(PhosphorIconsRegular.xCircle), findsNothing);
 
       done.complete((exitCode: 0, stdout: '', stderr: ''));
       await tester.pumpAndSettle();
-      expect(find.text('Copying on the server…'), findsNothing);
+      expect(h.fileCommands, hasLength(1));
+      await tester.pumpWidget(const SizedBox());
+      queue.dispose();
     });
 
     testWidgets('a server locked to SFTP says so and stops offering copy', (
@@ -665,7 +698,7 @@ void main() {
       await tester.tap(find.text('Move to…'));
       await tester.pumpAndSettle();
       await tester.tap(
-        _inPicker(find.widgetWithText(ActionChip, '/home/user/app')),
+        _inPicker(find.widgetWithText(TagChip, '/home/user/app')),
       );
       await tester.pumpAndSettle();
       await _confirm(tester, 'Move here');

@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../i18n/strings.g.dart';
 import '../../services/analytics/analytics_service.dart';
+import '../../theme/theme.dart';
 import '../ui/app_card.dart';
 import '../ui/section_header.dart';
 import '../ui/settings_tile.dart';
@@ -18,7 +19,6 @@ class AnalyticsSettingsSection extends StatefulWidget {
 }
 
 class _AnalyticsSettingsSectionState extends State<AnalyticsSettingsSection> {
-  bool _loaded = false;
   bool _analyticsEnabled = false;
 
   @override
@@ -32,7 +32,6 @@ class _AnalyticsSettingsSectionState extends State<AnalyticsSettingsSection> {
     if (!mounted) return;
     setState(() {
       _analyticsEnabled = analyticsEnabled ?? false;
-      _loaded = true;
     });
   }
 
@@ -43,13 +42,12 @@ class _AnalyticsSettingsSectionState extends State<AnalyticsSettingsSection> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_loaded) return const SizedBox.shrink();
     final t = Translations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SectionHeader(t.settings.analytics),
-        const SizedBox(height: 10),
+        const SizedBox(height: AppTheme.space10),
         AppCard(
           child: SettingsSwitchTile(
             title: t.settings.analyticsToggle,

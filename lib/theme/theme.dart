@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../utils/platform_info.dart';
 import 'terminal_color_scheme.dart';
@@ -101,31 +101,52 @@ class AppColors extends ThemeExtension<AppColors> {
 
   bool get isDark => brightness == Brightness.dark;
 
+  /// Pro's colour, and only Pro's: the pill, the paywall's marks and its
+  /// button. A champagne gold on dark and a deep ochre on light, both well
+  /// clear of AA on a card. The same in every palette, terminal-derived ones
+  /// included, since it marks the product rather than the scheme.
+  Color get gold => isDark ? const Color(0xFFF0C674) : const Color(0xFF8A6100);
+
+  /// Text and icons drawn on [gold].
+  Color get onGold =>
+      isDark ? const Color(0xFF1A1200) : const Color(0xFFFFFFFF);
+
+  /// [gold] faded into the card, behind a Pro pill or a chosen plan.
+  Color get goldHighlight => Color.lerp(surfaceCard, gold, 0.14)!;
+
   /// Fill for the controls a form is made of - fields, dropdowns, pickers.
   /// Dark steps them up off whatever they sit on, since a card and a field
   /// painted the same colour only differ by their hairline. Light keeps them
   /// white and lets the border do it, the way a page of forms reads.
   Color get fieldFill => isDark ? surfaceOffset : surfaceCard;
 
+  /// The box every form control - field, dropdown, inline add row, empty hint -
+  /// is drawn in.
+  BoxDecoration get fieldDecoration => BoxDecoration(
+    color: fieldFill,
+    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+    border: Border.all(color: surfaceBorder),
+  );
+
   static const AppColors dark = AppColors(
     brightness: Brightness.dark,
     primary: Color(0xFF4A9BF0),
     primaryHover: Color(0xFF7FBCF8),
     primaryActive: Color(0xFF2E86DE),
-    primaryHighlight: Color(0xFF12243A),
+    primaryHighlight: Color(0xFF132B45),
     primaryMuted: Color(0xFF2E6296),
-    backgroundPrimary: Color(0xFF080C10),
-    surfaceCard: Color(0xFF131C23),
-    surfaceElevated: Color(0xFF1A242C),
-    surfaceOffset: Color(0xFF202C35),
-    surfaceOffset2: Color(0xFF27353F),
-    surfaceDynamic: Color(0xFF33434F),
-    surfaceDivider: Color(0xFF1B252D),
-    surfaceBorder: Color(0xFF24323C),
-    surfaceBorderStrong: Color(0xFF31404B),
-    textPrimary: Color(0xFFE4EBF0),
-    textSecondary: Color(0xFF9FACB6),
-    textTertiary: Color(0xFF7A8791),
+    backgroundPrimary: Color(0xFF070B0F),
+    surfaceCard: Color(0xFF152029),
+    surfaceElevated: Color(0xFF1C2833),
+    surfaceOffset: Color(0xFF233140),
+    surfaceOffset2: Color(0xFF2A3946),
+    surfaceDynamic: Color(0xFF364857),
+    surfaceDivider: Color(0xFF1F2B35),
+    surfaceBorder: Color(0xFF263541),
+    surfaceBorderStrong: Color(0xFF344552),
+    textPrimary: Color(0xFFEDF2F6),
+    textSecondary: Color(0xFFB0BCC6),
+    textTertiary: Color(0xFF8593A0),
     textInverse: Color(0xFF071016),
     onPrimary: Color(0xFF06121C),
     success: Color(0xFF5CCB93),
@@ -261,14 +282,14 @@ class AppColors extends ThemeExtension<AppColors> {
 
   TextStyle get monoStyle => TextStyle(
     fontFamily: AppTheme.monoFamily,
-    fontSize: 13,
+    fontSize: AppTheme.font13,
     fontWeight: FontWeight.w400,
     color: textSecondary,
   );
 
   TextStyle get monoSmall => TextStyle(
     fontFamily: AppTheme.monoFamily,
-    fontSize: 11,
+    fontSize: AppTheme.font11,
     fontWeight: FontWeight.w400,
     color: textSecondary,
   );
@@ -278,28 +299,28 @@ class AppColors extends ThemeExtension<AppColors> {
   /// actually code: commands, keys, logs, paths and editor content.
   TextStyle get uiStyle => TextStyle(
     fontFamily: AppTheme.uiFamily,
-    fontSize: 13,
+    fontSize: AppTheme.font13,
     fontWeight: FontWeight.w400,
     color: textSecondary,
   );
 
   TextStyle get uiSmall => TextStyle(
     fontFamily: AppTheme.uiFamily,
-    fontSize: 12,
+    fontSize: AppTheme.font12,
     fontWeight: FontWeight.w400,
     color: textSecondary,
   );
 
   TextStyle get itemTitle => TextStyle(
     fontFamily: AppTheme.uiFamily,
-    fontSize: 16,
+    fontSize: AppTheme.font16,
     fontWeight: FontWeight.w600,
     color: textPrimary,
   );
 
   TextStyle get sectionLabel => TextStyle(
     fontFamily: AppTheme.uiFamily,
-    fontSize: 10,
+    fontSize: AppTheme.font10,
     fontWeight: FontWeight.w600,
     letterSpacing: 1.2,
     color: textTertiary,
@@ -442,6 +463,9 @@ class AppTheme {
   static const Color terminalFg = kTerminalChromeForeground;
   static const Color terminalCursor = kTerminalChromeCursor;
 
+  /// For slivers too thin for a card corner, such as a scrollbar thumb.
+  static const double radiusXxs = 2;
+
   /// Corner radii. A desktop gets a tight scale: the generous one is drawn
   /// for a thumb-sized control on a phone, and around a 32 px button beside a
   /// square dialog it reads as a toy. Getters rather than constants so the
@@ -455,17 +479,121 @@ class AppTheme {
   static double get radiusXxl => isDesktopPlatform ? 14 : 40;
   static const double radiusPill = 999;
 
-  static const double spaceXs = 4;
-  static const double spaceSm = 8;
-  static const double spaceMd = 12;
-  static const double spaceLg = 16;
-  static const double spaceXl = 24;
-  static const double spaceXxl = 32;
+  /// Hairline: the smallest stroke.
+  static const double hairline = 1;
+
+  /// The thicker stroke: a selected outline and a spinner.
+  static const double strokeWide = 2;
+
+  /// Spacing scale. Values not on this scale snap to the nearest step;
+  /// ties snap toward the smaller value.
+  static const double space2 = 2;
+  static const double space4 = 4;
+  static const double space6 = 6;
+  static const double space8 = 8;
+  static const double space10 = 10;
+  static const double space12 = 12;
+  static const double space14 = 14;
+  static const double space16 = 16;
+  static const double space20 = 20;
+  static const double space24 = 24;
+  static const double space32 = 32;
+  static const double space40 = 40;
+  static const double space48 = 48;
+
+  /// Font sizes. Values not on this scale snap to the nearest step;
+  /// ties snap toward the smaller value.
+  static const double font10 = 10;
+  static const double font11 = 11;
+  static const double font12 = 12;
+  static const double font13 = 13;
+  static const double font14 = 14;
+  static const double font15 = 15;
+  static const double font16 = 16;
+  static const double font20 = 20;
+  static const double font26 = 26;
+  static const double font30 = 30;
+
+  /// Icon sizes. Values not on this scale snap to the nearest step;
+  /// ties snap toward the smaller value.
+  static const double icon8 = 8;
+  static const double icon10 = 10;
+  static const double icon12 = 12;
+  static const double icon14 = 14;
+  static const double icon16 = 16;
+  static const double icon18 = 18;
+  static const double icon20 = 20;
+  static const double icon22 = 22;
+  static const double icon24 = 24;
+  static const double icon26 = 26;
+  static const double icon28 = 28;
+  static const double icon32 = 32;
+  static const double icon36 = 36;
+  static const double icon40 = 40;
+  static const double icon48 = 48;
+  static const double icon56 = 56;
 
   static const Duration motionFast = Duration(milliseconds: 120);
+  static const Duration motionMedium = Duration(milliseconds: 250);
   static const Duration interactiveDuration = Duration(milliseconds: 160);
   static const Duration motionSlow = Duration(milliseconds: 200);
+  static const Duration motionPage = Duration(milliseconds: 320);
+  static const Duration motionPageReverse = Duration(milliseconds: 220);
+
+  /// The wrong-PIN shake: long enough to read as a shake, not a flinch.
+  static const Duration motionShake = Duration(milliseconds: 420);
   static const Curve interactiveCurve = Cubic(0.16, 1, 0.3, 1);
+
+  /// Black at 35%, the one shadow colour: black reads as depth on either
+  /// palette, where a tinted shadow would read as a glow.
+  static const Color shadowColor = Color(0x59000000);
+
+  /// Floating pills over the terminal.
+  static const List<BoxShadow> floatingShadow = [
+    BoxShadow(color: shadowColor, blurRadius: 10, offset: Offset(0, 3)),
+  ];
+
+  /// The bottom navigation bar's height.
+  static const double bottomBarHeight = 60;
+
+  /// Docks and bars.
+  static const List<BoxShadow> raisedShadow = [
+    BoxShadow(color: shadowColor, blurRadius: 8, offset: Offset(0, 2)),
+  ];
+
+  /// Black at 40% opacity: floating panels and dropdowns.
+  static const List<BoxShadow> popupShadow = [
+    BoxShadow(color: Color(0x66000000), blurRadius: 16, offset: Offset(0, 4)),
+  ];
+
+  /// Barrier color behind panels: black at 54% opacity.
+  static const Color scrim = Color(0x8A000000);
+
+  /// White, for what is drawn on an avatar swatch - the swatches are a fixed
+  /// palette that does not follow the theme, so neither does this.
+  static const Color avatarForeground = Color(0xFFFFFFFF);
+
+  /// Avatar palette: 7 distinct colours for profile avatar backgrounds.
+  static const List<Color> avatarPalette = [
+    Color(0xFF4DA3FF),
+    Color(0xFF4ADE80),
+    Color(0xFF8B5CF6),
+    Color(0xFFF59E0B),
+    Color(0xFFF87171),
+    Color(0xFF06B6D4),
+    Color(0xFFF472B6),
+  ];
+
+  /// Notification accent: blue used in platform notifications.
+  static const Color notificationAccent = Color(0xFF3795FB);
+
+  /// Toolbar accent colours for modifier and special keys.
+  static const Color toolbarMagenta = Color(0xFF8B5CF6);
+  static const Color toolbarBrightMagenta = Color(0xFFA78BFA);
+  static const Color toolbarCyan = Color(0xFF06B6D4);
+  static const Color toolbarBrightCyan = Color(0xFF22D3EE);
+  static const Color toolbarBlack = Color(0xFF111111);
+  static const Color toolbarBrightBlack = Color(0xFF6B7280);
 
   static const TerminalColorScheme terminalSchemeDefault =
       schemes.terminalSchemeDefault;
@@ -553,65 +681,65 @@ class AppTheme {
     return TextTheme(
       displayLarge: TextStyle(
         fontFamily: headingFamily,
-        fontSize: desktop ? 26 : 30,
+        fontSize: desktop ? font26 : font30,
         fontWeight: FontWeight.w700,
         letterSpacing: -0.7,
         color: c.textPrimary,
       ),
       titleLarge: TextStyle(
         fontFamily: headingFamily,
-        fontSize: desktop ? 18 : 20,
+        fontSize: desktop ? 18 : font20,
         fontWeight: FontWeight.w700,
         letterSpacing: -0.25,
         color: c.textPrimary,
       ),
       titleMedium: TextStyle(
         fontFamily: headingFamily,
-        fontSize: desktop ? 15 : 16,
+        fontSize: desktop ? font15 : font16,
         fontWeight: FontWeight.w600,
         color: c.textPrimary,
       ),
       titleSmall: TextStyle(
         fontFamily: headingFamily,
-        fontSize: 14,
+        fontSize: font14,
         fontWeight: FontWeight.w600,
         color: c.textPrimary,
       ),
       bodyLarge: TextStyle(
         fontFamily: uiFamily,
-        fontSize: desktop ? 15 : 16,
+        fontSize: desktop ? font15 : font16,
         fontWeight: FontWeight.w400,
         color: c.textPrimary,
       ),
       bodyMedium: TextStyle(
         fontFamily: uiFamily,
-        fontSize: 14,
+        fontSize: font14,
         fontWeight: FontWeight.w400,
         height: 1.4,
         color: c.textSecondary,
       ),
       bodySmall: TextStyle(
         fontFamily: uiFamily,
-        fontSize: 12,
+        fontSize: font12,
         fontWeight: FontWeight.w400,
         height: 1.35,
         color: c.textTertiary,
       ),
       labelLarge: TextStyle(
         fontFamily: uiFamily,
-        fontSize: 14,
+        fontSize: font14,
         fontWeight: FontWeight.w600,
         color: c.textPrimary,
       ),
       labelMedium: TextStyle(
         fontFamily: uiFamily,
-        fontSize: 12,
+        fontSize: font12,
         fontWeight: FontWeight.w600,
         color: c.textSecondary,
       ),
       labelSmall: TextStyle(
         fontFamily: uiFamily,
-        fontSize: 10,
+        fontSize: font10,
         fontWeight: FontWeight.w600,
         color: c.textTertiary,
       ),
@@ -771,7 +899,7 @@ class AppTheme {
         toolbarHeight: desktop ? 44 : null,
         titleTextStyle: TextStyle(
           fontFamily: headingFamily,
-          fontSize: desktop ? 16 : 20,
+          fontSize: desktop ? font16 : font20,
           fontWeight: FontWeight.w600,
           letterSpacing: -0.2,
           color: c.textPrimary,
@@ -803,18 +931,18 @@ class AppTheme {
         fillColor: c.fieldFill,
         isDense: desktop,
         contentPadding: EdgeInsets.symmetric(
-          horizontal: desktop ? 10 : 14,
-          vertical: desktop ? 10 : 14,
+          horizontal: desktop ? space10 : space14,
+          vertical: desktop ? space10 : space14,
         ),
         labelStyle: TextStyle(
           fontFamily: uiFamily,
-          fontSize: 14,
+          fontSize: font14,
           fontWeight: FontWeight.w500,
           color: c.textSecondary,
         ),
         hintStyle: TextStyle(
           fontFamily: uiFamily,
-          fontSize: 14,
+          fontSize: font14,
           color: c.textSecondary,
         ),
         border: OutlineInputBorder(
@@ -839,7 +967,7 @@ class AppTheme {
         ),
         titleTextStyle: TextStyle(
           fontFamily: headingFamily,
-          fontSize: desktop ? 17 : 20,
+          fontSize: desktop ? 17 : font20,
           fontWeight: FontWeight.w600,
           color: c.textPrimary,
         ),
@@ -854,7 +982,7 @@ class AppTheme {
         ),
         textStyle: TextStyle(
           fontFamily: uiFamily,
-          fontSize: 14,
+          fontSize: font14,
           fontWeight: FontWeight.w500,
           color: c.textPrimary,
         ),
@@ -877,7 +1005,7 @@ class AppTheme {
       dropdownMenuTheme: DropdownMenuThemeData(
         textStyle: TextStyle(
           fontFamily: uiFamily,
-          fontSize: 14,
+          fontSize: font14,
           fontWeight: FontWeight.w500,
           color: c.textPrimary,
         ),
@@ -908,7 +1036,7 @@ class AppTheme {
           ),
           textStyle: const TextStyle(
             fontFamily: uiFamily,
-            fontSize: 14,
+            fontSize: font14,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -925,7 +1053,7 @@ class AppTheme {
           ),
           textStyle: const TextStyle(
             fontFamily: uiFamily,
-            fontSize: 14,
+            fontSize: font14,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -941,7 +1069,7 @@ class AppTheme {
           ),
           textStyle: const TextStyle(
             fontFamily: uiFamily,
-            fontSize: 14,
+            fontSize: font14,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -958,7 +1086,7 @@ class AppTheme {
           ),
           textStyle: const TextStyle(
             fontFamily: uiFamily,
-            fontSize: 14,
+            fontSize: font14,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -996,13 +1124,13 @@ class AppTheme {
             color: states.contains(WidgetState.selected)
                 ? c.primary
                 : c.textTertiary,
-            size: 24,
+            size: icon24,
           );
         }),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           return TextStyle(
             fontFamily: uiFamily,
-            fontSize: 12,
+            fontSize: font12,
             fontWeight: FontWeight.w600,
             color: states.contains(WidgetState.selected)
                 ? c.primary

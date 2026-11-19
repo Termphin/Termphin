@@ -1,5 +1,6 @@
 import '../backup/export_service.dart';
 import '../completion/command_completion.dart';
+import '../pro/pro_hints.dart';
 import '../ssh/ssh_session_manager.dart';
 import 'action_dock_settings.dart';
 import 'anonymize_setting.dart';
@@ -7,6 +8,7 @@ import 'desktop_settings.dart';
 import 'editor_settings.dart';
 import 'floating_dock_settings.dart';
 import 'lock_settings.dart';
+import 'profile_form_settings.dart';
 import 'setting.dart';
 import 'sftp_settings.dart';
 import 'sidebar_settings.dart';
@@ -25,7 +27,10 @@ import 'upload_settings.dart';
 /// the app persists, which is the point - a setting added without being put
 /// here reads as its default forever, and that shows up immediately.
 Future<void> loadAppSettings() async {
-  await pinLegacyUploadDestination();
+  await Future.wait([
+    pinLegacyUploadDestination(),
+    pinLegacyMouseKeyboardGuard(),
+  ]);
   await Future.wait([
     terminalSettings.load(),
     editorSettings.load(),
@@ -41,6 +46,7 @@ Future<void> loadAppSettings() async {
     sidebarCollapsedSetting.load(),
     sidebarWidthSetting.load(),
     commandSuggestionsSetting.load(),
+    proTipsSetting.load(),
     sftpShowHiddenSetting.load(),
     sftpFollowTerminalSetting.load(),
     sftpSortFieldSetting.load(),
@@ -48,5 +54,6 @@ Future<void> loadAppSettings() async {
     tabBarPositionSetting.load(),
     lockTimeoutSetting.load(),
     closeToTraySetting.load(),
+    profileFormMoreOptionsSetting.load(),
   ]);
 }

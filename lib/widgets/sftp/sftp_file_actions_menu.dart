@@ -1,5 +1,5 @@
 import 'package:dartssh2/dartssh2.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
@@ -53,7 +53,7 @@ class SftpFileActionsMenu extends StatelessWidget {
     final isImage = !isDirectory && fileTypeOf(item.filename) == FileKind.image;
 
     return AppActionDropdown<SftpFileAction>(
-      iconSize: 18,
+      iconSize: AppTheme.icon18,
       iconColor: textTertiary,
       buttonSize: 34,
       width: 240,
@@ -205,7 +205,7 @@ class _EditorActionTileState extends State<_EditorActionTile> {
     final probe = _probe;
     if (_probing) {
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.symmetric(vertical: AppTheme.space12),
         child: Row(
           children: [
             SizedBox(
@@ -216,7 +216,7 @@ class _EditorActionTileState extends State<_EditorActionTile> {
                 color: widget.secondaryColor,
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: AppTheme.space10),
             Flexible(
               child: Text(
                 t.sftp.checkingFile,
@@ -224,7 +224,7 @@ class _EditorActionTileState extends State<_EditorActionTile> {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: widget.secondaryColor,
-                  fontSize: 14,
+                  fontSize: AppTheme.font14,
                   fontWeight: FontWeight.w500,
                 ),
               ),

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
@@ -40,13 +40,13 @@ class SearchBox extends StatelessWidget {
         ),
         child: Row(
           children: [
-            const SizedBox(width: 14),
+            const SizedBox(width: AppTheme.space14),
             Icon(
               PhosphorIconsRegular.magnifyingGlass,
-              size: 18,
+              size: AppTheme.icon18,
               color: Color.lerp(colors.textTertiary, colors.primary, focused),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: AppTheme.space10),
             Expanded(child: child),
           ],
         ),
@@ -90,7 +90,7 @@ class GlobalSearchLauncher extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontFamily: AppTheme.uiFamily,
-            fontSize: 14,
+            fontSize: AppTheme.font14,
             color: context.colors.textSecondary,
           ),
         ),
@@ -137,7 +137,7 @@ HeroFlightShuttleBuilder searchBoxFlight(String hint) =>
             softWrap: false,
             style: TextStyle(
               fontFamily: AppTheme.uiFamily,
-              fontSize: 14,
+              fontSize: AppTheme.font14,
               color: context.colors.textSecondary,
             ),
           ),
@@ -189,8 +189,8 @@ Future<void> openGlobalSearch(
   }
   return Navigator.of(context).push(
     PageRouteBuilder<void>(
-      transitionDuration: const Duration(milliseconds: 320),
-      reverseTransitionDuration: const Duration(milliseconds: 240),
+      transitionDuration: AppTheme.motionPage,
+      reverseTransitionDuration: AppTheme.motionMedium,
       pageBuilder: (_, _, _) => GlobalSearchScreen(
         heroTag: heroTag,
         hint: hint,

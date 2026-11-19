@@ -1,11 +1,10 @@
 import 'dart:convert';
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:termphin/app.dart';
 import 'package:termphin/models/session_tab.dart';
 import 'package:termphin/models/ssh_profile.dart';
@@ -236,7 +235,9 @@ void main() {
     final opened = <SshProfile>[];
     final previousHook = QuickActionsService.instance.onOpenProfile;
     QuickActionsService.instance.onOpenProfile = opened.add;
-    addTearDown(() => QuickActionsService.instance.onOpenProfile = previousHook);
+    addTearDown(
+      () => QuickActionsService.instance.onOpenProfile = previousHook,
+    );
 
     final profile = profileFixture(id: 'hooked-1', name: 'Hooked');
     QuickActionsService.instance.update([profile]);

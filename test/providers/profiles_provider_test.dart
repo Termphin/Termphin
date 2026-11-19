@@ -1,43 +1,29 @@
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:termphin/models/ssh_profile.dart';
 import 'package:termphin/providers/profiles_provider.dart';
 import 'package:termphin/services/analytics/analytics_service.dart';
 
+import '../support/analytics_recorder.dart';
 import '../support/fakes.dart';
 import '../support/fixtures.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-
-  const analyticsChannel = MethodChannel('posthog_flutter');
   final captured = <Map<String, Object?>>[];
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(analyticsChannel, (call) async {
-          if (call.method == 'capture') {
-            final arguments = call.arguments as Map;
-            captured.add({
-              'event': arguments['eventName'],
-              ...?(arguments['properties'] as Map?)?.cast<String, Object?>(),
-            });
-          }
-          return null;
-        });
+    analyticsRecorder.clear();
+    analyticsRecorder.onEvent = (name, parameters) =>
+        captured.add({'event': name, ...parameters});
     AnalyticsService.instance.resetForTest();
     await AnalyticsService.instance.setConsent(true);
     captured.clear();
   });
 
-  tearDown(() {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(analyticsChannel, null);
-  });
+  tearDown(() {});
 
   ProviderContainer createContainer(FakeProfileStorage storage) {
     return ProviderContainer.test(

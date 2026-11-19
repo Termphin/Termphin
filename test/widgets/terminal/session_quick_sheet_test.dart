@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:termphin/i18n/strings.g.dart';
 import 'package:termphin/services/settings/app_settings.dart';
@@ -8,7 +8,7 @@ import 'package:termphin/services/settings/toolbar_layout.dart';
 import 'package:termphin/theme/theme.dart';
 import 'package:termphin/widgets/terminal/session_quick_sheet.dart';
 import 'package:termphin/widgets/terminal/terminal_scheme_theme.dart';
-import 'package:termphin/widgets/ui/toolbar_key_button.dart';
+import 'package:termphin/widgets/terminal/toolbar_key_button.dart';
 
 import '../../support/test_app.dart';
 
@@ -131,9 +131,22 @@ void main() {
     await tester.pumpAndSettle();
     expect(terminalSettings.fontFamily.value, 'JetBrainsMonoNerdFontMono');
 
+    await tester.ensureVisible(find.text(t.toolbar.allTerminalSettings));
+    await tester.pumpAndSettle();
     await tester.tap(find.text(t.toolbar.allTerminalSettings));
     await tester.pumpAndSettle();
     expect(exits, ['appearance']);
+  });
+
+  testWidgets('switching tabs keeps the sheet the same height', (tester) async {
+    await open(tester);
+    final surface = find.byKey(const ValueKey('sessionQuickSurface'));
+    final toolbarHeight = tester.getSize(surface).height;
+
+    await tester.tap(find.byKey(const ValueKey('sessionQuickTab-appearance')));
+    await tester.pumpAndSettle();
+
+    expect(tester.getSize(surface).height, toolbarHeight);
   });
 
   testWidgets('with the toolbar off only the appearance is offered', (

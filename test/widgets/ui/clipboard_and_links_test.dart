@@ -1,7 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-
+import 'package:material_ui/material_ui.dart';
 import 'package:termphin/widgets/ui/clipboard_and_links.dart';
 
 import '../../support/platform_mocks.dart';
@@ -12,9 +11,7 @@ void main() {
 
   const urlLauncherChannel = MethodChannel('plugins.flutter.io/url_launcher');
 
-  testWidgets('puts the text on the clipboard and confirms it', (
-    tester,
-  ) async {
+  testWidgets('puts the text on the clipboard and confirms it', (tester) async {
     final clipboard = ClipboardMock()..install();
     addTearDown(clipboard.uninstall);
 

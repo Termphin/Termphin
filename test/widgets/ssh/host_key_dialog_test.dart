@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:termphin/app.dart';
 import 'package:termphin/i18n/strings.g.dart';
@@ -79,9 +79,7 @@ void main() {
       expect(find.text(t.hostKey.pinnedLabel), findsNothing);
     });
 
-    testWidgets('anonymize hides the real host, not the port', (
-      tester,
-    ) async {
+    testWidgets('anonymize hides the real host, not the port', (tester) async {
       SharedPreferences.setMockInitialValues({});
       await anonymizeSetting.set(true);
       addTearDown(() => anonymizeSetting.set(false));

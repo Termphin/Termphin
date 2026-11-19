@@ -1,22 +1,47 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
-import 'package:posthog_flutter/posthog_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'analytics_config.dart';
+import '../app/review_prompt_service.dart';
+import '../firebase/firebase_service.dart';
+import 'analytics_backend.dart';
 
 const kAnalyticsConsentPrefsKey = 'analytics_consent';
 
+/// Set once the question has been put to the user, whatever came of it: the
+/// card asking is shown once in the app's life, and leaving it unanswered is
+/// a no.
+const kAnalyticsAskedPrefsKey = 'analytics_asked';
+
+/// Set once a "yes" recorded by the old onboarding has been dropped. That
+/// page opened with its box already ticked, so its yes was not a choice
+/// anyone made, and it is not kept as one.
+const kAnalyticsConsentResetPrefsKey = 'analytics_consent_reset';
+
+/// Successful connections before the question is asked: the app has been
+/// used for real by then.
+const _askAfterConnections = 3;
+
+/// Days since the first connection before it is asked: past the first
+/// evening of setting machines up.
+const _askAfterDays = 2;
+
 /// The only events this app ever sends. Deliberately an enum rather than a
-/// free-form string - PostHog auto-captures nothing (no autocapture, no
-/// `$screen`, no lifecycle events), so this list is the entire event catalog.
+/// free-form string - automatic screen reporting is off and nothing is
+/// logged anywhere but through [AnalyticsService.capture], so this list is
+/// the event catalog. Google Analytics adds its own automatic events
+/// (`first_open`, `session_start`, `user_engagement`) once consent is given;
+/// the policy lists those too.
 ///
 /// It is also what the privacy policy's event table is written from, so a name
 /// added here without being added there makes the policy wrong.
 enum AnalyticsEvent {
   appOpened('app_opened'),
 
-  /// Sent by hand from the places that switch screens, not by PostHog's
-  /// `$screen` autocapture, which stays off: the four main destinations are
+  /// Sent by hand from the places that switch screens, not by automatic
+  /// screen reporting, which stays off: the four main destinations are
   /// tabs in one Stack rather than routes, so a navigator observer would miss
   /// them and a mounted-widget hook would report all four at once.
   screenViewed('screen_viewed'),
@@ -37,7 +62,40 @@ enum AnalyticsEvent {
   /// Play never reports whether its dialog appeared, let alone what was
   /// rated - that the ask was made is the only measurable part.
   reviewPromptRequested('review_prompt_requested'),
-  reviewStoreOpened('review_store_opened');
+  reviewStoreOpened('review_store_opened'),
+
+  /// The Pro funnel: a hint offered Pro, the paywall opened (and from
+  /// where), a plan was tapped, the store said it went through.
+  proPromptShown('pro_prompt_shown'),
+  paywallViewed('paywall_viewed'),
+  purchaseStarted('purchase_started'),
+  purchaseCompleted('purchase_completed'),
+
+  /// The paywall had nothing to sell: not signed in, the store had no offer,
+  /// or asking it failed. A visit that ends here never had a chance to buy.
+  paywallOffersFailed('paywall_offers_failed'),
+
+  /// A purchase that did not go through, and why: cancelled, or the store
+  /// failing - the two mean very different things for the funnel.
+  purchaseFailed('purchase_failed'),
+
+  /// Restoring purchases: found Pro, found nothing, or failed.
+  restoreFinished('restore_finished'),
+
+  /// The paywall's redeem link tapped: a store's own code for Pro, sent to
+  /// the App Store's sheet or Google Play's redeem page.
+  redeemCodeOpened('redeem_code_opened'),
+
+  /// Whether Pro is used once bought: push turned on or off, a server given
+  /// its relay key or failing to take it, a notification tapped, sync set up
+  /// or stopped by something other than a missing network.
+  pushEnabled('push_enabled'),
+  pushDisabled('push_disabled'),
+  relayServerAdded('relay_server_added'),
+  relayServerFailed('relay_server_failed'),
+  notificationOpened('notification_opened'),
+  syncEnabled('sync_enabled'),
+  syncFailed('sync_failed');
 
   const AnalyticsEvent(this.eventName);
   final String eventName;
@@ -75,11 +133,33 @@ enum AnalyticsProperty {
 
   /// Whether a reconnect continued the terminal on screen instead of replaying
   /// the session's history into a new one.
-  inPlace('in_place');
+  inPlace('in_place'),
+
+  /// Where the paywall was opened from, or which hint was shown: a fixed
+  /// name from [ProSource], never anything the user typed.
+  source('source'),
+
+  /// `annual`, `monthly` or `lifetime`.
+  plan('plan'),
+
+  /// How an attempt ended, from a fixed set per event: `granted` or `denied`
+  /// for push, `found` or `none` for a restore, `new` or `joined` for sync.
+  outcome('outcome'),
+
+  /// What a tapped notification came through: `push` from a server, or
+  /// `terminal` from a session the app had open.
+  via('via');
 
   const AnalyticsProperty(this.propertyName);
   final String propertyName;
 }
+
+/// The snake_case name analytics sends for one of the app's own enum values,
+/// `notSignedIn` as `not_signed_in`: a fixed name, never anything typed.
+String analyticsName(Enum value) => value.name.replaceAllMapped(
+  RegExp('[A-Z]'),
+  (match) => '_${match[0]!.toLowerCase()}',
+);
 
 /// Screens, as analytics sees them. Names are ours, not widget class names,
 /// so renaming a class does not silently split a funnel in two.
@@ -100,6 +180,13 @@ enum AnalyticsScreen {
   export('export'),
   sftpEditor('sftp_editor'),
   editorSettings('editor_settings'),
+  notificationsSettings('notifications_settings'),
+  terminalSettings('terminal_settings'),
+  filesSettings('files_settings'),
+  connectionSettings('connection_settings'),
+  privacySettings('privacy_settings'),
+  helpSettings('help_settings'),
+  aboutSettings('about_settings'),
   sftpImagePreview('sftp_image_preview'),
   manual('manual'),
 
@@ -112,157 +199,232 @@ enum AnalyticsScreen {
   final String screenName;
 }
 
-/// Strips `$ip` from event properties before they leave the device.
+/// Whether [error] is nothing but a transport closing.
 ///
-/// Belt and suspenders: the native SDKs resolve `$ip` server-side from the
-/// request, after this callback runs, so it is never actually present here.
-/// The setting that matters is the PostHog project's own "Discard client IP
-/// data" toggle (Project Settings > General) - this cannot reach that from
-/// the client.
-PostHogEvent _stripIp(PostHogEvent event) {
-  event.properties?.remove(r'$ip');
-  event.properties?.remove('ip');
-  return event;
-}
-
-/// Whether an `$exception` payload is nothing but a transport closing.
-///
-/// A dropped SSH socket is this app's ordinary weather, and the message carries
-/// the address and port of the machine the user reached, which must not leave
-/// the device.
+/// A dropped SSH socket is this app's ordinary weather, and its message
+/// carries the address and port of the machine the user reached, which must
+/// not leave the device.
 @visibleForTesting
-bool isTransportOnlyException(Map<String, Object?> properties) {
-  final exceptionList = properties[r'$exception_list'];
-  if (exceptionList is! List || exceptionList.isEmpty) {
-    return false;
-  }
-  for (final item in exceptionList) {
-    if (item is! Map) {
-      return false;
-    }
-    final type = item['type'];
-    final value = item['value'];
-    final isSocketType = type == 'SocketException';
-    final isSocketValue =
-        value is String && value.startsWith('SocketException');
-    if (!isSocketType && !isSocketValue) {
-      return false;
-    }
-  }
-  return true;
-}
+bool isTransportOnlyError(Object error) => error is SocketException;
 
-PostHogEvent? _dropTransportNoise(PostHogEvent event) {
-  if (event.event == r'$exception' &&
-      isTransportOnlyException(event.properties ?? const {})) {
-    return null;
-  }
-  return event;
-}
-
-/// Gates PostHog behind explicit consent.
+/// Gates analytics and crash reports behind explicit consent.
 ///
-/// [init] always calls `Posthog().setup()` so the SDK is ready, but starts it
-/// opted out unless a previous run already recorded consent - nothing is
-/// captured before the user has answered the prompt, or after they turn it
-/// off in Settings. Every autocapture surface (app lifecycle events, screen
-/// views, rage clicks, push events, feature flags, session replay, surveys)
-/// is off - only the events in [AnalyticsEvent], captured explicitly through
-/// [capture], ever leave the device.
+/// Both are off in the manifest and `Info.plist` until switched on here, so
+/// nothing is collected before the user has answered the prompt, or after
+/// they turn it off in Settings. Automatic screen reporting and the
+/// advertising id stay off either way - only the events in [AnalyticsEvent],
+/// captured explicitly through [capture], and the errors handed to
+/// [recordError] ever leave the device.
 class AnalyticsService {
   AnalyticsService._();
   static final AnalyticsService instance = AnalyticsService._();
 
-  /// Whether the user has been asked and, if so, what they answered. Null
-  /// means the prompt has never been shown.
+  /// Stands in for Firebase in tests, which watch what would have been sent.
+  @visibleForTesting
+  static AnalyticsBackend? Function()? backendOverride;
+
+  /// Where events go, or null in a build with no Firebase project, where
+  /// analytics is simply off. Firebase may not be up yet; [_ensureStarted]
+  /// brings it up when there is consent to act on.
+  AnalyticsBackend? get _backend {
+    final override = backendOverride;
+    if (override != null) return override();
+    if (!FirebaseService.instance.available) return null;
+    return _firebase ??= FirebaseAnalyticsBackend();
+  }
+
+  Future<bool> _ensureStarted() async {
+    final override = startOverride;
+    if (override != null) return override();
+    if (backendOverride != null) return true;
+    return FirebaseService.instance.start();
+  }
+
+  FirebaseAnalyticsBackend? _firebase;
+
+  /// What the user answered, or null when they never said yes or no - which
+  /// counts as no.
   Future<bool?> loadConsent() async {
     final preferences = await SharedPreferences.getInstance();
+    await _resetUnchosenConsent(preferences);
     return preferences.getBool(kAnalyticsConsentPrefsKey);
   }
 
-  /// Whether `Posthog().setup()` has run in this process.
-  bool _started = false;
-
-  /// This is a singleton, so a test that starts the SDK would otherwise leave
-  /// it started for every test after it.
-  @visibleForTesting
-  void resetForTest() => _started = false;
-
-  /// Brings the SDK up, which happens only once consent is on record.
-  ///
-  /// `setup()` generates a device id and writes it to the phone, and no config
-  /// option prevents that - `optOut` only gates sending. Storing an identifier
-  /// on someone's device is the thing ePrivacy Art. 5(3) asks consent for, so
-  /// the SDK is not touched at all until the answer is yes.
-  ///
-  /// No autocapture: this app's only events are the ones in [AnalyticsEvent],
-  /// captured explicitly.
-  Future<void> _start() async {
-    final config = PostHogConfig(AnalyticsConfig.projectApiKey)
-      ..host = AnalyticsConfig.host
-      ..captureApplicationLifecycleEvents = false
-      ..preloadFeatureFlags = false
-      ..sendFeatureFlagEvents = false
-      ..capturePushNotificationSubscriptions = false
-      ..capturePushNotificationOpened = false
-      ..surveys = false
-      ..sessionReplay = false
-      ..beforeSend = [_stripIp, _dropTransportNoise]
-      ..errorTrackingConfig.captureFlutterErrors = true
-      ..errorTrackingConfig.capturePlatformDispatcherErrors = true;
-
-    config.rageClickConfig.enabled = false;
-    await Posthog().setup(config);
-    _started = true;
+  /// Drops a yes the old onboarding recorded, once. A no stays a no.
+  Future<void> _resetUnchosenConsent(SharedPreferences preferences) async {
+    if (preferences.getBool(kAnalyticsConsentResetPrefsKey) == true) return;
+    if (preferences.getBool(kAnalyticsConsentPrefsKey) == true) {
+      await preferences.remove(kAnalyticsConsentPrefsKey);
+    }
+    await preferences.setBool(kAnalyticsConsentResetPrefsKey, true);
   }
 
+  /// Whether the card asking for consent is up. Set by [maybeAsk], cleared
+  /// by an answer or by [dismissAsk].
+  final asking = ValueNotifier<bool>(false);
+
+  /// Clock for the gate in [maybeAsk], swapped in tests.
+  @visibleForTesting
+  static DateTime Function() now = DateTime.now;
+
+  /// Puts the question up if it has never been asked or answered and the app
+  /// has been used for real: a few successful connections, spread over a
+  /// couple of days. It is marked asked the moment it shows, so it never
+  /// comes back, answered or not. Returns whether it is up.
+  Future<bool> maybeAsk() async {
+    if (_backend == null) return false;
+    final preferences = await SharedPreferences.getInstance();
+    if (await loadConsent() != null) return false;
+    if (preferences.getBool(kAnalyticsAskedPrefsKey) == true) return false;
+    final connections =
+        preferences.getInt(kReviewSuccessfulConnectionsPrefsKey) ?? 0;
+    if (connections < _askAfterConnections) return false;
+    final first = preferences.getInt(kReviewFirstConnectionAtPrefsKey);
+    if (first == null) return false;
+    final since = now().difference(DateTime.fromMillisecondsSinceEpoch(first));
+    if (since < const Duration(days: _askAfterDays)) return false;
+    await preferences.setBool(kAnalyticsAskedPrefsKey, true);
+    asking.value = true;
+    return true;
+  }
+
+  /// Takes the question down unanswered, which leaves everything off.
+  void dismissAsk() => asking.value = false;
+
+  /// Whether collection is on in this process.
+  bool _enabled = false;
+
+  /// This is a singleton, so a test that switches collection on would
+  /// otherwise leave it on for every test after it.
+  @visibleForTesting
+  void resetForTest() {
+    _enabled = false;
+    asking.value = false;
+  }
+
+  /// Acts on the answer on record. A yes starts Firebase and switches
+  /// collection on. Anything else leaves Firebase alone - until something
+  /// else starts it, at which point the answer is put in force again, so an
+  /// account or push never brings back what was switched off.
   Future<void> init() async {
-    if (!AnalyticsConfig.isConfigured) return;
+    final backend = _backend;
+    if (backend == null) return;
+    FirebaseService.instance.onStart(() async {
+      final consent = await loadConsent();
+      if (backendOverride == null) await _apply(backend, consent == true);
+    });
     if (await loadConsent() != true) return;
-    await _start();
+    if (!await _ensureStarted()) return;
+    if (backendOverride != null) await _apply(backend, true);
   }
 
   /// Records the user's choice and acts on it immediately - from the initial
-  /// prompt, or later from Settings.
+  /// prompt, or later from Settings. The `app_opened` for the launch that
+  /// asked is already gone by this point; counting it would mean capturing
+  /// before the answer.
   ///
-  /// The first yes is also what starts the SDK, since [init] leaves it alone
-  /// until then. The `app_opened` for that launch is already gone by this
-  /// point; counting it would mean capturing before the answer.
+  /// A no does not start Firebase: when nothing else has brought it up there
+  /// is nothing to switch off, and starting it would write installation ids
+  /// for someone who just declined. If something starts it later, [init]'s
+  /// [FirebaseService.onStart] hook puts the no in force then.
   Future<void> setConsent(bool granted) async {
     final preferences = await SharedPreferences.getInstance();
     await preferences.setBool(kAnalyticsConsentPrefsKey, granted);
-    if (!AnalyticsConfig.isConfigured) return;
-    if (granted) {
-      if (!_started) await _start();
-      await Posthog().enable();
-    } else if (_started) {
-      await Posthog().disable();
+    await preferences.setBool(kAnalyticsAskedPrefsKey, true);
+    await preferences.setBool(kAnalyticsConsentResetPrefsKey, true);
+    asking.value = false;
+    final backend = _backend;
+    if (backend == null) return;
+    if (!granted && !_firebaseUp) {
+      _enabled = false;
+      return;
+    }
+    if (!await _ensureStarted()) return;
+    await _apply(backend, granted);
+  }
+
+  /// Stands in for [FirebaseService.ready] in tests.
+  @visibleForTesting
+  static bool Function()? firebaseUpOverride;
+
+  /// Stands in for [FirebaseService.start] in tests, which count the starts.
+  @visibleForTesting
+  static Future<bool> Function()? startOverride;
+
+  bool get _firebaseUp {
+    final override = firebaseUpOverride;
+    if (override != null) return override();
+    if (backendOverride != null) return true;
+    return FirebaseService.instance.ready;
+  }
+
+  Future<void> _apply(AnalyticsBackend backend, bool enabled) async {
+    try {
+      await backend.setCollectionEnabled(enabled);
+      _enabled = enabled;
+    } catch (_) {
+      _enabled = false;
     }
   }
 
-  /// Captures [event]. A no-op until consent has started the SDK, so callers
-  /// never need to check consent first. Callers fire this and forget it, so a
-  /// failure (no network, platform channel unavailable in a test) is swallowed
-  /// rather than surfacing somewhere unrelated.
+  /// Captures [event]. A no-op until consent has switched collection on, so
+  /// callers never need to check consent first. Callers fire this and forget
+  /// it, so a failure (no network, platform channel unavailable in a test) is
+  /// swallowed rather than surfacing somewhere unrelated.
   ///
   /// [properties] carries dimensions, never content: an enum name, a flag or
   /// a count. Nothing derived from a host, a username, a path, a command or
   /// an error message goes in one - see [_assertSafe] for the tripwire that
-  /// catches the obvious shapes of that in debug.
+  /// catches the obvious shapes of that in debug. Google Analytics takes no
+  /// booleans, so a flag goes out as `true` or `false` spelled out.
   Future<void> capture(
     AnalyticsEvent event, {
     Map<AnalyticsProperty, Object>? properties,
   }) async {
-    if (!AnalyticsConfig.isConfigured || !_started) return;
+    final backend = _backend;
+    if (backend == null || !_enabled) return;
     assert(_assertSafe(properties));
     try {
-      await Posthog().capture(
-        eventName: event.eventName,
-        properties: properties?.map(
-          (property, value) => MapEntry(property.propertyName, value),
-        ),
-      );
+      await backend.logEvent(event.eventName, {
+        for (final MapEntry(key: property, :value)
+            in (properties ?? {}).entries)
+          property.propertyName: value is bool ? '$value' : value,
+      });
     } catch (_) {}
+  }
+
+  /// Sends [error] as a crash report, once consent is on. A transport
+  /// closing is not a crash and names the machine, so it never goes.
+  Future<void> recordError(
+    Object error,
+    StackTrace? stack, {
+    bool fatal = false,
+  }) async {
+    final backend = _backend;
+    if (backend == null || !_enabled || isTransportOnlyError(error)) return;
+    try {
+      await backend.recordError(error, stack, fatal: fatal);
+    } catch (_) {}
+  }
+
+  /// Hands every uncaught error to [recordError] and on to whatever handled
+  /// it before. Called from `main` after `ErrorReports.install`, so both see
+  /// every error.
+  void installErrorHandlers() {
+    final previousFlutterError = FlutterError.onError;
+    FlutterError.onError = (details) {
+      unawaited(
+        recordError(details.exception, details.stack, fatal: !details.silent),
+      );
+      previousFlutterError?.call(details);
+    };
+
+    final dispatcher = PlatformDispatcher.instance;
+    final previousPlatformError = dispatcher.onError;
+    dispatcher.onError = (error, stack) {
+      unawaited(recordError(error, stack, fatal: true));
+      return previousPlatformError?.call(error, stack) ?? false;
+    };
   }
 
   /// Records that [screen] came to the front.

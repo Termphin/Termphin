@@ -6,12 +6,15 @@ list(APPEND FLUTTER_PLUGIN_LIST
   app_links
   connectivity_plus
   desktop_drop
+  firebase_core
+  cloud_firestore
+  firebase_auth
   flutter_secure_storage_windows
   local_auth_windows
   screen_retriever_windows
-  share_plus
   tray_kit
   url_launcher_windows
+  share_plus
   window_manager
 )
 

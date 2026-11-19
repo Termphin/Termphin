@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:termphin/i18n/strings.g.dart';
 import 'package:termphin/providers/profiles_provider.dart';
 import 'package:termphin/providers/ssh_session_manager_provider.dart';
 import 'package:termphin/providers/terminal_overlay_provider.dart';
@@ -10,14 +11,13 @@ import 'package:termphin/screens/search/global_search_screen.dart';
 import 'package:termphin/screens/terminal/terminal_screen.dart';
 import 'package:termphin/services/app/app_commands.dart';
 import 'package:termphin/services/settings/sidebar_settings.dart';
-import 'package:termphin/services/settings/tab_bar_settings.dart';
 import 'package:termphin/services/ssh/ssh_session_manager.dart';
 import 'package:termphin/theme/theme.dart';
 import 'package:termphin/widgets/profiles/profile_avatar.dart';
+import 'package:termphin/widgets/shell/nav_rail.dart';
 import 'package:termphin/widgets/terminal/add_session_sheet.dart';
 import 'package:termphin/widgets/terminal/floating_action_dock.dart';
-import 'package:termphin/widgets/ui/app_notifications.dart';
-import 'package:termphin/widgets/ui/nav_rail.dart';
+import 'package:termphin/widgets/ui/fade_over_color.dart';
 
 import '../support/fakes.dart';
 import '../support/fixtures.dart';
@@ -40,6 +40,7 @@ import '../support/test_app.dart';
 }
 
 void main() {
+  final t = AppLocale.en.buildSync();
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() => SharedPreferences.setMockInitialValues({}));
@@ -65,6 +66,7 @@ void main() {
       expect(container.read(terminalOverlayProvider), isNull);
 
       await tester.tap(find.byTooltip('Re-attach'));
+      await tester.pump();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 250));
 
@@ -101,6 +103,7 @@ void main() {
 
       await tester.tap(find.byTooltip('Re-attach'));
       await tester.pump();
+      await tester.pump();
       await tester.pump(const Duration(milliseconds: 250));
 
       final overlay = container.read(terminalOverlayProvider);
@@ -117,10 +120,10 @@ void main() {
   double terminalOpacity(WidgetTester tester) {
     final finder = find.ancestor(
       of: find.byType(TerminalScreen),
-      matching: find.byType(AnimatedOpacity),
+      matching: find.byType(FadeOverColor),
     );
     if (finder.evaluate().isEmpty) return 0;
-    return tester.widget<AnimatedOpacity>(finder.first).opacity;
+    return tester.widget<FadeOverColor>(finder.first).opacity;
   }
 
   testWidgets(
@@ -152,6 +155,7 @@ void main() {
       expect(terminalOpacity(tester), 0);
 
       await tester.tap(find.text('devbox'));
+      await tester.pump();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
@@ -202,6 +206,7 @@ void main() {
 
     await tester.tap(find.text('devbox'));
     await tester.pump();
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     expect(terminalOpacity(tester), 1.0);
 
@@ -212,46 +217,9 @@ void main() {
 
     await tester.tap(find.text('devbox'));
     await tester.pump();
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     expect(terminalOpacity(tester), 1.0);
-  });
-
-  testWidgets('toasts hang from the top edge once the tabs are at the bottom', (
-    tester,
-  ) async {
-    addTearDown(() => tabBarPositionSetting.set(TabBarPosition.top));
-    final profile = profileFixture();
-
-    final backend = FakeSshBackend();
-    final fakeManager = SshSessionManager.test(
-      remoteAgentService: FakeRemoteAgentService(backend),
-      serviceFactory: backend.createService,
-    );
-    addTearDown(fakeManager.dispose);
-    fakeManager.adoptRemoteSession(profile, 'devbox');
-    final container = ProviderContainer.test(
-      overrides: [
-        sshSessionManagerProvider.overrideWithValue(fakeManager),
-        profileStorageProvider.overrideWithValue(FakeProfileStorage([profile])),
-      ],
-    );
-    await container.read(profilesProvider.notifier).loadProfiles();
-
-    await pumpTestApp(tester, const MainShell(), container: container);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 250));
-    await tester.tap(find.text('devbox'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-
-    final strip = terminalTabBarHeight(tester.element(find.byType(MainShell)));
-    expect(appNotificationAnchor.value, strip);
-
-    await tabBarPositionSetting.set(TabBarPosition.bottom);
-    expect(appNotificationAnchor.value, 0, reason: 'nothing up top now');
-
-    await tabBarPositionSetting.set(TabBarPosition.top);
-    expect(appNotificationAnchor.value, strip);
   });
 
   testWidgets('system back closes the action dock before the terminal', (
@@ -278,6 +246,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
     await tester.tap(find.text('devbox'));
+    await tester.pump();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     expect(terminalOpacity(tester), 1.0);
@@ -306,7 +275,7 @@ void main() {
     expect(terminalOpacity(tester), 0);
   });
 
-  testWidgets('an unselected nav item fades out its own colour, not black', (
+  testWidgets('the open tab sits on the bar\'s one lighter segment', (
     tester,
   ) async {
     final (container, fakeManager) = _containerWithFakeConnect();
@@ -315,26 +284,22 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
 
-    final fills = tester
-        .widgetList<AnimatedContainer>(
-          find.descendant(
-            of: find.byKey(const ValueKey('bottomNavBar')),
-            matching: find.byType(AnimatedContainer),
-          ),
-        )
-        .map((c) => (c.decoration! as BoxDecoration).color!)
-        .toList();
-
-    final highlight = AppColors.dark.primaryHighlight;
-    expect(fills, contains(highlight));
-    final unselected = fills.where((c) => c != highlight);
-    expect(unselected, isNotEmpty);
-    for (final fill in unselected) {
-      expect(fill.a, 0);
-      expect(fill.r, highlight.r);
-      expect(fill.g, highlight.g);
-      expect(fill.b, highlight.b);
-    }
+    final bar = find.byKey(const ValueKey('bottomNavBar'));
+    final segments = find.descendant(
+      of: bar,
+      matching: find.byWidgetPredicate(
+        (widget) =>
+            widget is DecoratedBox &&
+            (widget.decoration as BoxDecoration).color ==
+                AppColors.dark.surfaceOffset2,
+      ),
+    );
+    expect(segments, findsOneWidget);
+    final segment = tester.getRect(segments);
+    final home = tester.getCenter(
+      find.descendant(of: bar, matching: find.text(t.nav.home)),
+    );
+    expect(segment.contains(home), isTrue);
   });
 
   group('the wide-layout sidebar collapses', () {
@@ -367,6 +332,7 @@ void main() {
 
       await tester.tap(find.byTooltip('Collapse sidebar'));
       await tester.pump();
+      await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
       expect(
@@ -396,6 +362,7 @@ void main() {
 
       await tester.tap(find.byTooltip('Collapse sidebar'));
       await tester.pump();
+      await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
       expect(railWidth(), kNavRailCollapsedWidth);
@@ -404,6 +371,7 @@ void main() {
       expect(find.byTooltip('Expand sidebar'), findsOneWidget);
 
       await tester.tap(find.byTooltip('Expand sidebar'));
+      await tester.pump();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
@@ -447,6 +415,7 @@ void main() {
 
       await tester.tap(find.byTooltip('Collapse sidebar'));
       await tester.pump();
+      await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
       expect(sidebarCollapsedSetting.value, isTrue);
@@ -454,6 +423,7 @@ void main() {
       expect(sidebarCollapsedSetting.value, isTrue);
 
       await tester.tap(inSidebar(find.byTooltip('Keys')));
+      await tester.pump();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
@@ -480,6 +450,7 @@ void main() {
       );
 
       await tester.tap(find.byTooltip('Collapse sidebar'));
+      await tester.pump();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 

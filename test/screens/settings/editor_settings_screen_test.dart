@@ -1,8 +1,7 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:re_editor/re_editor.dart' as re;
 import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:termphin/i18n/strings.g.dart';
 import 'package:termphin/screens/settings/editor_settings_screen.dart';
 import 'package:termphin/services/settings/editor_settings.dart';
@@ -44,11 +43,11 @@ void main() {
     final lineNumbersSwitch = find.descendant(
       of: find.ancestor(
         of: find.text(t.settings.editorLineNumbers),
-        matching: find.byType(Row),
+        matching: find.byType(SwitchListTile),
       ),
       matching: find.byType(Switch),
     );
-    await tester.tap(lineNumbersSwitch.first);
+    await tester.tap(lineNumbersSwitch);
     await tester.pumpAndSettle();
 
     expect(editorSettings.lineNumbers.value, isFalse);

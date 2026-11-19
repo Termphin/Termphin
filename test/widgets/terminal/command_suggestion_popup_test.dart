@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:termphin/i18n/strings.g.dart';
 import 'package:termphin/services/completion/command_completion.dart';
 import 'package:termphin/theme/theme.dart';

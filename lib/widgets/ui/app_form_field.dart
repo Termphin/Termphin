@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../theme/theme.dart';
@@ -33,6 +33,7 @@ class AppFormField extends StatelessWidget {
     this.readOnly = false,
     this.onChanged,
     this.onSubmitted,
+    this.autofillHints,
   });
 
   final TextEditingController controller;
@@ -53,16 +54,18 @@ class AppFormField extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
 
+  /// What a password manager should fill in here - `AutofillHints.email`,
+  /// `AutofillHints.password` - so one offers itself when the field is
+  /// tapped. Null keeps it out of autofill.
+  final Iterable<String>? autofillHints;
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: context.colors.fieldFill,
-        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-        border: Border.all(color: context.colors.surfaceBorder),
-      ),
+      decoration: context.colors.fieldDecoration,
       child: TextFormField(
         controller: controller,
+        autofillHints: autofillHints,
         readOnly: readOnly,
         textInputAction: action,
         keyboardType: keyboardType,
@@ -78,18 +81,25 @@ class AppFormField extends StatelessWidget {
         style: monospace
             ? context.colors.monoStyle.copyWith(
                 color: context.colors.textPrimary,
-                fontSize: 12,
+                fontSize: AppTheme.font12,
               )
-            : TextStyle(fontSize: 15, color: context.colors.textPrimary),
+            : TextStyle(
+                fontSize: AppTheme.font15,
+                color: context.colors.textPrimary,
+              ),
         decoration: InputDecoration(
           labelText: label,
           hintText: hint,
           hintStyle: TextStyle(
             color: context.colors.textTertiary,
-            fontSize: monospace ? 12 : 14,
+            fontSize: monospace ? AppTheme.font12 : AppTheme.font14,
           ),
           prefixIcon: icon != null
-              ? Icon(icon, size: 18, color: context.colors.textTertiary)
+              ? Icon(
+                  icon,
+                  size: AppTheme.icon18,
+                  color: context.colors.textTertiary,
+                )
               : null,
           suffixIcon: suffix,
           filled: false,
@@ -100,12 +110,12 @@ class AppFormField extends StatelessWidget {
           focusedErrorBorder: InputBorder.none,
           disabledBorder: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 14,
+            horizontal: AppTheme.space14,
+            vertical: AppTheme.space14,
           ),
           labelStyle: TextStyle(
             color: context.colors.textTertiary,
-            fontSize: 13,
+            fontSize: AppTheme.font13,
           ),
         ),
       ),
@@ -135,11 +145,7 @@ class AppInlineAddField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: context.colors.fieldFill,
-        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-        border: Border.all(color: context.colors.surfaceBorder),
-      ),
+      decoration: context.colors.fieldDecoration,
       child: Row(
         children: [
           Expanded(
@@ -150,12 +156,15 @@ class AppInlineAddField extends StatelessWidget {
               onTapOutside: (_) =>
                   FocusManager.instance.primaryFocus?.unfocus(),
               onSubmitted: (_) => onSubmit(),
-              style: TextStyle(fontSize: 14, color: context.colors.textPrimary),
+              style: TextStyle(
+                fontSize: AppTheme.font14,
+                color: context.colors.textPrimary,
+              ),
               decoration: InputDecoration(
                 hintText: hint,
                 hintStyle: TextStyle(
                   color: context.colors.textTertiary,
-                  fontSize: 14,
+                  fontSize: AppTheme.font14,
                 ),
                 filled: false,
                 isDense: true,
@@ -165,7 +174,9 @@ class AppInlineAddField extends StatelessWidget {
                 errorBorder: InputBorder.none,
                 focusedErrorBorder: InputBorder.none,
                 disabledBorder: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppTheme.space14,
+                ),
               ),
             ),
           ),
@@ -173,7 +184,7 @@ class AppInlineAddField extends StatelessWidget {
             tooltip: addTooltip,
             icon: Icon(
               PhosphorIconsRegular.plus,
-              size: 18,
+              size: AppTheme.icon18,
               color: context.colors.primary,
             ),
             onPressed: onSubmit,
@@ -195,15 +206,17 @@ class AppEmptyHint extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: context.colors.fieldFill,
-        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-        border: Border.all(color: context.colors.surfaceBorder),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppTheme.space14,
+        vertical: AppTheme.space12,
       ),
+      decoration: context.colors.fieldDecoration,
       child: Text(
         text,
-        style: TextStyle(color: context.colors.textTertiary, fontSize: 13),
+        style: TextStyle(
+          color: context.colors.textTertiary,
+          fontSize: AppTheme.font13,
+        ),
       ),
     );
   }

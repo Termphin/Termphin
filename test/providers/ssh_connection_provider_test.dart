@@ -3,7 +3,6 @@ import 'dart:convert';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:fake_async/fake_async.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -18,15 +17,15 @@ import 'package:termphin/services/ssh/keepalive_pinger.dart';
 import 'package:termphin/services/ssh/network_monitor.dart';
 import 'package:termphin/services/ssh/ssh_service.dart';
 import 'package:termphin/services/ssh/ssh_session_manager.dart';
+import 'package:termphin/services/terminal/terminal_text.dart';
 
+import '../support/analytics_recorder.dart';
 import '../support/fakes.dart';
 import '../support/fixtures.dart';
 import '../support/ssh_fakes.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-
-  const analyticsChannel = MethodChannel('posthog_flutter');
   final capturedEvents = <String>[];
   final capturedProperties = <String, Map<String, Object?>>{};
 
@@ -42,18 +41,11 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     capturedEvents.clear();
     capturedProperties.clear();
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(analyticsChannel, (call) async {
-          if (call.method == 'capture') {
-            final arguments = call.arguments as Map;
-            final event = arguments['eventName'] as String;
-            capturedEvents.add(event);
-            capturedProperties[event] = Map<String, Object?>.from(
-              (arguments['properties'] as Map?) ?? const {},
-            );
-          }
-          return null;
-        });
+    analyticsRecorder.clear();
+    analyticsRecorder.onEvent = (name, parameters) {
+      capturedEvents.add(name);
+      capturedProperties[name] = Map<String, Object?>.from(parameters);
+    };
     AnalyticsService.instance.resetForTest();
     await AnalyticsService.instance.setConsent(true);
     capturedEvents.clear();
@@ -81,8 +73,6 @@ void main() {
     manager.dispose();
     await network.dispose();
     await networkChanges.close();
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(analyticsChannel, null);
   });
 
   ProviderContainer createContainer() => ProviderContainer.test(
@@ -125,7 +115,8 @@ void main() {
         (shellCall.arguments as Map)['command'],
         contains('attach --replay'),
       );
-      expect(manager.getSession('session-1')?.pendingReplay, isNotEmpty);
+      final terminal = manager.getSession('session-1')!.terminal.terminal;
+      expect((terminal.viewWidth, terminal.viewHeight), (120, 40));
       expect(capturedEvents, contains('connection_success'));
       expect(capturedEvents, isNot(contains('session_resumed')));
     },
@@ -263,8 +254,9 @@ void main() {
   test('attaches to an existing session without connecting again', () async {
     final profile = profileFixture();
     await manager.startSession(profile, sessionId: 'existing');
-    backend.latestService.emit([1, 2, 3]);
+    backend.latestService.emit(utf8.encode('abc'));
     await Future<void>.delayed(Duration.zero);
+    final terminal = manager.getSession('existing')!.terminal;
     backend.calls.clear();
     final container = createContainer();
     final provider = sshConnectionProvider(('existing', profile));
@@ -273,7 +265,9 @@ void main() {
 
     expect(container.read(provider).status, ConnectionStatus.connected);
     expect(backend.calls.where((call) => call.method == 'connect'), isEmpty);
-    expect(manager.getSession('existing')?.pendingReplay, [1, 2, 3]);
+    expect(manager.getSession('existing')!.terminal, same(terminal));
+    terminal.flush();
+    expect(terminalBufferText(terminal.terminal.buffer), 'abc');
     expect(capturedEvents, contains('session_resumed'));
     expect(capturedEvents, isNot(contains('connection_success')));
   });
@@ -728,11 +722,11 @@ void main() {
       expect(shape.remove('duration_ms'), isA<int>());
       expect(shape, {
         'auth_method': 'password',
-        'via_jump_host': false,
+        'via_jump_host': 'false',
         'fallback_count': 0,
         'port_forwards': 0,
         'reason': 'auth_failed',
-        'retry': false,
+        'retry': 'false',
       });
     });
 
@@ -768,12 +762,12 @@ void main() {
       expect(shape.remove('duration_ms'), isA<int>());
       expect(shape, {
         'auth_method': 'privateKey',
-        'via_jump_host': false,
+        'via_jump_host': 'false',
         'fallback_count': 2,
         'port_forwards': 1,
         'multiplexer': container.read(provider).multiplexer.name,
-        'agent_installed': false,
-        'used_fallback': false,
+        'agent_installed': 'false',
+        'used_fallback': 'false',
       });
     });
 
@@ -787,7 +781,7 @@ void main() {
 
       expect(
         capturedProperties['connection_success']?['agent_installed'],
-        true,
+        'true',
       );
     });
 
@@ -800,7 +794,10 @@ void main() {
       await container.read(provider.notifier).connect();
       await pumpEventQueue();
 
-      expect(capturedProperties['connection_success']?['via_jump_host'], true);
+      expect(
+        capturedProperties['connection_success']?['via_jump_host'],
+        'true',
+      );
     });
 
     test('a transport that dies mid-session reports a drop', () async {

@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
@@ -11,6 +11,7 @@ import '../../services/app/review_prompt_service.dart';
 import '../../theme/theme.dart';
 import '../../utils/platform_info.dart';
 import '../ui/app_card.dart';
+import '../ui/app_divider.dart';
 import '../ui/app_notifications.dart';
 import '../ui/clipboard_and_links.dart';
 import '../ui/section_header.dart';
@@ -20,7 +21,14 @@ import '../ui/settings_tile.dart';
 /// About section: version, release notes, rating the app, licenses and the
 /// legal documents.
 class AboutSettingsSection extends StatelessWidget {
-  const AboutSettingsSection({super.key, required this.version});
+  const AboutSettingsSection({
+    super.key,
+    required this.version,
+    this.header = true,
+  });
+
+  /// Off on a screen of its own, whose title already says what this is.
+  final bool header;
 
   /// "1.4.2 (57)", or `null` while [PackageInfo] is still loading.
   final String? version;
@@ -33,10 +41,10 @@ class AboutSettingsSection extends StatelessWidget {
       applicationName: 'Termphin',
       applicationVersion: version,
       applicationIcon: Padding(
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(AppTheme.space8),
         child: Icon(
           PhosphorIconsFill.terminalWindow,
-          size: 40,
+          size: AppTheme.icon40,
           color: context.colors.primary,
         ),
       ),
@@ -80,70 +88,59 @@ class AboutSettingsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SectionHeader(t.settings.about),
-        const SizedBox(height: 10),
-        AppCard(
-          clipChild: true,
-          child: Column(
-            children: [
+        if (header) ...[
+          SectionHeader(t.settings.about),
+          const SizedBox(height: AppTheme.space10),
+        ],
+        AppCard.fields(
+          children: [
+            SettingsTile(
+              title: 'Termphin',
+              subtitle: version == null
+                  ? t.settings.aboutTagline
+                  : t.settings.aboutVersion(version: version!),
+              trailing: SettingsTileTrailing.none,
+            ),
+            const AppDivider(),
+            SettingsTile(
+              title: t.settings.releaseNotes,
+              subtitle: t.settings.releaseNotesSubtitle,
+              onTap: () => _showReleaseNotes(context),
+            ),
+            if (ReviewPromptService.instance.canOpenStoreListing) ...[
+              const AppDivider(),
               SettingsTile(
-                icon: PhosphorIconsFill.terminalWindow,
-                title: 'Termphin',
-                subtitle: version == null
-                    ? t.settings.aboutTagline
-                    : t.settings.aboutVersion(version: version!),
-                trailing: SettingsTileTrailing.none,
-              ),
-              const Divider(height: 1),
-              SettingsTile(
-                icon: PhosphorIconsFill.sparkle,
-                title: t.settings.releaseNotes,
-                subtitle: t.settings.releaseNotesSubtitle,
-                onTap: () => _showReleaseNotes(context),
-              ),
-              if (ReviewPromptService.instance.canOpenStoreListing) ...[
-                const Divider(height: 1),
-                SettingsTile(
-                  icon: PhosphorIconsFill.star,
-                  title: t.settings.rateApp,
-                  subtitle: isIOSPlatform
-                      ? t.settings.rateAppSubtitleIos
-                      : t.settings.rateAppSubtitle,
-                  trailing: SettingsTileTrailing.external,
-                  onTap: () => _rateApp(context),
-                ),
-              ],
-              const Divider(height: 1),
-              SettingsTile(
-                icon: PhosphorIconsFill.scales,
-                title: t.settings.licenses,
-                subtitle: t.settings.licensesSubtitle,
-                onTap: () => _showLicenses(context),
-              ),
-              const Divider(height: 1),
-              SettingsTile(
-                icon: PhosphorIconsFill.shieldCheck,
-                title: t.settings.privacyPolicy,
-                subtitle: t.settings.privacyPolicySubtitle,
+                title: t.settings.rateApp,
+                subtitle: isIOSPlatform
+                    ? t.settings.rateAppSubtitleIos
+                    : t.settings.rateAppSubtitle,
                 trailing: SettingsTileTrailing.external,
-                onTap: () => openExternalUrl(
-                  context,
-                  Uri.parse(LegalUrls.privacyPolicy),
-                ),
-              ),
-              const Divider(height: 1),
-              SettingsTile(
-                icon: PhosphorIconsFill.fileText,
-                title: t.settings.terms,
-                subtitle: t.settings.termsSubtitle,
-                trailing: SettingsTileTrailing.external,
-                onTap: () => openExternalUrl(
-                  context,
-                  Uri.parse(LegalUrls.termsOfService),
-                ),
+                onTap: () => _rateApp(context),
               ),
             ],
-          ),
+            const AppDivider(),
+            SettingsTile(
+              title: t.settings.licenses,
+              subtitle: t.settings.licensesSubtitle,
+              onTap: () => _showLicenses(context),
+            ),
+            const AppDivider(),
+            SettingsTile(
+              title: t.settings.privacyPolicy,
+              subtitle: t.settings.privacyPolicySubtitle,
+              trailing: SettingsTileTrailing.external,
+              onTap: () =>
+                  openExternalUrl(context, Uri.parse(LegalUrls.privacyPolicy)),
+            ),
+            const AppDivider(),
+            SettingsTile(
+              title: t.settings.terms,
+              subtitle: t.settings.termsSubtitle,
+              trailing: SettingsTileTrailing.external,
+              onTap: () =>
+                  openExternalUrl(context, Uri.parse(LegalUrls.termsOfService)),
+            ),
+          ],
         ),
       ],
     );

@@ -1,14 +1,19 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../i18n/strings.g.dart';
 import '../models/ssh_profile.dart';
 import '../providers/anonymize_provider.dart';
+import '../providers/groups_provider.dart';
 import '../providers/profiles_provider.dart';
+import '../providers/snippets_provider.dart';
 import '../providers/ssh_keys_provider.dart';
-import '../services/analytics/analytics_service.dart';
+import '../providers/sync_provider.dart';
+import '../services/account/account_service.dart';
 import '../services/app/identity_anonymizer.dart';
 import '../services/app/legal_urls.dart';
 import '../services/app/onboarding_service.dart';
@@ -17,16 +22,18 @@ import '../services/ssh/local_network_permission.dart';
 import '../services/ssh/ssh_config_import.dart';
 import '../services/ssh/ssh_link.dart';
 import '../services/storage/group_storage.dart';
+import '../services/sync/sync_engine.dart';
+import '../services/sync/sync_service.dart';
 import '../theme/theme.dart';
 import '../utils/platform_info.dart';
 import '../widgets/profiles/server_guide.dart';
 import '../widgets/ui/app_card.dart';
 import '../widgets/ui/app_divider.dart';
+import '../widgets/ui/app_form_field.dart';
 import '../widgets/ui/clipboard_and_links.dart';
 import '../widgets/ui/key_caps.dart';
 import '../widgets/ui/permission_tile.dart';
-
-const _serverPage = 1;
+import 'settings/account_screen.dart';
 
 /// The permissions page asks for what the system gates. A desktop gates none
 /// of it, and a page of nothing to grant is a page to skip.
@@ -35,11 +42,21 @@ bool get _hasPermissionsPage =>
     platformHas(PlatformFeature.foregroundService) ||
     platformHas(PlatformFeature.localNetworkPermission);
 
-int get _pageCount => _hasPermissionsPage ? 4 : 3;
-
 /// What onboarding was told about having a server, which decides where the
 /// app goes once it closes.
-enum ServerAnswer { hasServer, notYet }
+///
+/// [synced] is a returning user whose account already syncs and whose
+/// machines have just arrived: the machine list is the destination, and the
+/// server question was not asked.
+enum ServerAnswer { hasServer, notYet, synced }
+
+/// The pages onboarding can show, in the order they come.
+enum _Step { welcome, server, unlock, permissions }
+
+/// How a returning user came in: not at all, to a synced account whose
+/// passphrase is still to be entered, or to a synced account already unlocked
+/// on this device.
+enum _Returning { none, locked, unlocked }
 
 /// What onboarding ended with, which decides where the app goes next.
 class OnboardingResult {
@@ -60,7 +77,7 @@ typedef SshConfigLoader =
     Future<List<SshConfigCandidate>> Function(Set<String> existing);
 
 /// First-launch flow: what Termphin is, whether there is a server to connect
-/// to, permissions, then analytics consent.
+/// to, then permissions.
 ///
 /// The server question is the point of it. Most people who installed and never
 /// connected had no machine to connect to, and the old flow never asked - it
@@ -68,11 +85,18 @@ typedef SshConfigLoader =
 ///
 /// A desktop gets its own shape, [_DesktopOnboarding]: a carousel of pages
 /// with dots is a phone's, and reads as a phone stretched over a window.
+/// A returning user signs in from the welcome page. If their account already
+/// syncs, the server question is replaced by the sync passphrase, or skipped
+/// when this device already holds it.
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({
     super.key,
     required this.onComplete,
     this.sshConfigLoader,
+    @visibleForTesting this.accountsAvailable,
+    @visibleForTesting this.signIn,
+    @visibleForTesting this.syncState,
+    @visibleForTesting this.unlock,
   });
 
   final ValueChanged<OnboardingResult> onComplete;
@@ -80,17 +104,32 @@ class OnboardingScreen extends StatefulWidget {
   @visibleForTesting
   final SshConfigLoader? sshConfigLoader;
 
+  /// Stands in for [AccountService.available] in tests.
+  final bool? accountsAvailable;
+
+  /// Stands in for pushing the sign-in screen in tests. Completes with whether
+  /// someone is signed in afterwards.
+  final Future<bool> Function(BuildContext context)? signIn;
+
+  /// Stands in for [SyncService.state] in tests.
+  final Future<SyncState> Function()? syncState;
+
+  /// Stands in for [SyncService.unlock] in tests.
+  final Future<SyncReport> Function(String passphrase)? unlock;
+
   @override
   State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
 /// The server page is the one question that has to be answered to go on;
-/// every other page can be swiped past.
+/// every other page can be swiped past. The unlock page is passed through only
+/// by unlocking it or by saying "not now".
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final _pageController = PageController();
   int _page = 0;
-  bool _analyticsChecked = true;
   ServerAnswer? _answer;
+  bool _signedIn = AccountService.instance.user != null;
+  _Returning _returning = _Returning.none;
 
   @override
   void dispose() {
@@ -98,11 +137,81 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     super.dispose();
   }
 
+  bool get _accountsAvailable =>
+      widget.accountsAvailable ?? AccountService.instance.available;
+
+  List<_Step> get _steps => [
+    _Step.welcome,
+    if (_returning == _Returning.none) _Step.server,
+    if (_returning == _Returning.locked) _Step.unlock,
+    if (_hasPermissionsPage) _Step.permissions,
+  ];
+
   Future<void> _finish() async {
-    await AnalyticsService.instance.setConsent(_analyticsChecked);
     await OnboardingService.instance.markCompleted();
-    widget.onComplete(OnboardingResult(_answer ?? ServerAnswer.notYet));
+    widget.onComplete(
+      OnboardingResult(
+        _returning == _Returning.unlocked
+            ? ServerAnswer.synced
+            : _answer ?? ServerAnswer.notYet,
+      ),
+    );
   }
+
+  Future<void> _signIn() async {
+    final signedIn = await (widget.signIn ?? _pushSignIn)(context);
+    if (!signedIn || !mounted) return;
+    final state = await _readSyncState();
+    if (!mounted) return;
+    setState(() {
+      _signedIn = true;
+      _returning = switch (state) {
+        SyncState.locked => _Returning.locked,
+        SyncState.ready => _Returning.unlocked,
+        _ => _Returning.none,
+      };
+    });
+  }
+
+  Future<bool> _pushSignIn(BuildContext context) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const AccountScreen(closeOnSignIn: true),
+      ),
+    );
+    return AccountService.instance.user != null;
+  }
+
+  /// A failed read is treated as no sync, so the normal flow goes on.
+  Future<SyncState> _readSyncState() async {
+    try {
+      return await (widget.syncState ?? SyncService.instance.state)();
+    } catch (_) {
+      return SyncState.signedOut;
+    }
+  }
+
+  Widget _pageFor(_Step step) => switch (step) {
+    _Step.welcome => _WelcomePage(
+      onSignIn: _accountsAvailable && !_signedIn ? _signIn : null,
+    ),
+    _Step.server => _ServerPage(
+      answer: _answer,
+      onChanged: (a) => setState(() => _answer = a),
+    ),
+    _Step.unlock => _UnlockSyncPage(
+      unlock: widget.unlock ?? SyncService.instance.unlock,
+      onUnlocked: () => setState(() => _returning = _Returning.unlocked),
+      onNotNow: () => setState(() => _returning = _Returning.none),
+    ),
+    _Step.permissions => const _PermissionsPage(),
+  };
+
+  bool _canContinue(_Step step) => switch (step) {
+    _Step.server => _answer != null,
+    _Step.unlock => false,
+    _ => true,
+  };
 
   void _next() {
     _pageController.nextPage(
@@ -126,6 +235,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         sshConfigLoader: widget.sshConfigLoader,
       );
     }
+    final steps = _steps;
     return Scaffold(
       backgroundColor: context.colors.backgroundPrimary,
       body: SafeArea(
@@ -136,46 +246,45 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 controller: _pageController,
                 physics: const NeverScrollableScrollPhysics(),
                 onPageChanged: (page) => setState(() => _page = page),
-                children: [
-                  const _WelcomePage(),
-                  _ServerPage(
-                    answer: _answer,
-                    onChanged: (a) => setState(() => _answer = a),
-                  ),
-                  if (_hasPermissionsPage) const _PermissionsPage(),
-                  _AnalyticsPage(
-                    checked: _analyticsChecked,
-                    onChanged: (v) => setState(() => _analyticsChecked = v),
-                  ),
-                ],
+                children: [for (final step in steps) _pageFor(step)],
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+              padding: const EdgeInsets.fromLTRB(
+                AppTheme.space24,
+                AppTheme.space8,
+                AppTheme.space24,
+                AppTheme.space24,
+              ),
               child: Column(
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(
-                      _pageCount,
+                      steps.length,
                       (index) => AnimatedContainer(
                         duration: AppTheme.motionSlow,
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: AppTheme.space4,
+                        ),
                         width: index == _page ? 20 : 6,
                         height: 6,
                         decoration: BoxDecoration(
                           color: index == _page
                               ? context.colors.primary
                               : context.colors.surfaceBorder,
-                          borderRadius: BorderRadius.circular(3),
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.radiusPill,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: AppTheme.space20),
                   _OnboardingActions(
                     page: _page,
-                    canContinue: _page != _serverPage || _answer != null,
+                    pageCount: steps.length,
+                    canContinue: _canContinue(steps[_page]),
                     onBack: _back,
                     onContinue: _next,
                     onFinish: _finish,
@@ -193,6 +302,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 class _OnboardingActions extends StatelessWidget {
   const _OnboardingActions({
     required this.page,
+    required this.pageCount,
     required this.canContinue,
     required this.onBack,
     required this.onContinue,
@@ -200,6 +310,7 @@ class _OnboardingActions extends StatelessWidget {
   });
 
   final int page;
+  final int pageCount;
   final bool canContinue;
   final VoidCallback onBack;
   final VoidCallback onContinue;
@@ -208,7 +319,7 @@ class _OnboardingActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Translations.of(context);
-    final isLast = page == _pageCount - 1;
+    final isLast = page == pageCount - 1;
     return Row(
       children: [
         if (page > 0)
@@ -229,13 +340,16 @@ class _OnboardingActions extends StatelessWidget {
 
 /// The real logo and one sentence about what the app is for.
 class _WelcomePage extends StatelessWidget {
-  const _WelcomePage();
+  const _WelcomePage({required this.onSignIn});
+
+  /// Null hides the link: no accounts in this build, or someone is signed in.
+  final VoidCallback? onSignIn;
 
   @override
   Widget build(BuildContext context) {
     final t = Translations.of(context);
     return _CenteredScroll(
-      padding: const EdgeInsets.symmetric(horizontal: 28),
+      padding: const EdgeInsets.symmetric(horizontal: AppTheme.space24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -243,7 +357,7 @@ class _WelcomePage extends StatelessWidget {
             borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             child: Image.asset('assets/logo.png', width: 76, height: 76),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: AppTheme.space20),
           Text(
             t.onboarding.welcomeTitle,
             textAlign: TextAlign.center,
@@ -251,13 +365,168 @@ class _WelcomePage extends StatelessWidget {
               context,
             ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppTheme.space12),
           Text(
             t.onboarding.welcomeBody,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: context.colors.textSecondary,
             ),
+          ),
+          if (onSignIn != null) ...[
+            const SizedBox(height: AppTheme.space20),
+            TextButton(
+              onPressed: onSignIn,
+              child: Text(t.onboarding.signInLink),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// The returning user's synced account is locked on this device: the passphrase
+/// brings the machines, keys and snippets in. "Not now" goes back to the
+/// server question.
+class _UnlockSyncPage extends ConsumerStatefulWidget {
+  const _UnlockSyncPage({
+    required this.unlock,
+    required this.onUnlocked,
+    required this.onNotNow,
+  });
+
+  final Future<SyncReport> Function(String passphrase) unlock;
+  final VoidCallback onUnlocked;
+  final VoidCallback onNotNow;
+
+  @override
+  ConsumerState<_UnlockSyncPage> createState() => _UnlockSyncPageState();
+}
+
+class _UnlockSyncPageState extends ConsumerState<_UnlockSyncPage> {
+  final _passphrase = TextEditingController();
+  bool _busy = false;
+  SyncFailure? _failure;
+
+  @override
+  void dispose() {
+    _passphrase.dispose();
+    super.dispose();
+  }
+
+  /// Unlocks, then reloads what came in and starts automatic sync, the same
+  /// way the sync card does once it has unlocked.
+  Future<void> _unlock() async {
+    if (_busy) return;
+    setState(() {
+      _busy = true;
+      _failure = null;
+    });
+    try {
+      await widget.unlock(_passphrase.text);
+      await ref.read(profilesProvider.notifier).loadProfiles();
+      await ref.read(profileGroupsProvider.notifier).loadGroups();
+      await ref.read(snippetsProvider.notifier).loadSnippets();
+      ref.read(sshKeysRevisionProvider.notifier).bump();
+      unawaited(ref.read(syncCoordinatorProvider).start());
+    } on SyncException catch (error) {
+      _fail(error.failure);
+      return;
+    } catch (_) {
+      _fail(SyncFailure.unknown);
+      return;
+    }
+    if (mounted) widget.onUnlocked();
+  }
+
+  void _fail(SyncFailure failure) {
+    if (mounted) {
+      setState(() {
+        _failure = failure;
+        _busy = false;
+      });
+    }
+  }
+
+  String _failureText(Translations t, SyncFailure failure) {
+    final f = t.account.sync.failure;
+    return switch (failure) {
+      SyncFailure.wrongPassphrase => f.wrongPassphrase,
+      SyncFailure.notPro => f.notPro,
+      SyncFailure.network => f.network,
+      SyncFailure.alreadySetUp => f.alreadySetUp,
+      SyncFailure.turnedOff => f.turnedOff,
+      SyncFailure.passphraseChanged => f.passphraseChanged,
+      SyncFailure.unknown => f.unknown,
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Translations.of(context);
+    final failure = _failure;
+    return _CenteredScroll(
+      padding: const EdgeInsets.symmetric(horizontal: AppTheme.space24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const _DuotoneIcon(
+            fill: PhosphorIconsFill.lockKey,
+            regular: PhosphorIconsRegular.lockKey,
+          ),
+          const SizedBox(height: AppTheme.space16),
+          Text(
+            t.onboarding.unlockTitle,
+            textAlign: TextAlign.center,
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: AppTheme.space12),
+          Text(
+            t.onboarding.unlockBody,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: context.colors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: AppTheme.space24),
+          AutofillGroup(
+            child: AppFormField(
+              controller: _passphrase,
+              label: t.account.sync.passphrase,
+              icon: PhosphorIconsRegular.key,
+              obscure: true,
+              action: TextInputAction.done,
+              autofillHints: const [AutofillHints.password],
+              onSubmitted: (_) => _unlock(),
+            ),
+          ),
+          if (failure != null) ...[
+            const SizedBox(height: AppTheme.space12),
+            Text(
+              _failureText(t, failure),
+              textAlign: TextAlign.center,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: context.colors.error),
+            ),
+          ],
+          const SizedBox(height: AppTheme.space20),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: _busy ? null : _unlock,
+              child: Text(
+                _busy ? t.account.sync.syncing : t.onboarding.unlockAction,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppTheme.space8),
+          TextButton(
+            onPressed: _busy ? null : widget.onNotNow,
+            child: Text(t.onboarding.notNow),
           ),
         ],
       ),
@@ -277,7 +546,7 @@ class _ServerPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = Translations.of(context);
     return _CenteredScroll(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: AppTheme.space24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -285,7 +554,7 @@ class _ServerPage extends StatelessWidget {
             fill: PhosphorIconsFill.hardDrives,
             regular: PhosphorIconsRegular.hardDrives,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppTheme.space16),
           Text(
             t.onboarding.serverTitle,
             textAlign: TextAlign.center,
@@ -293,7 +562,7 @@ class _ServerPage extends StatelessWidget {
               context,
             ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppTheme.space12),
           Text(
             t.onboarding.serverBody,
             textAlign: TextAlign.center,
@@ -301,7 +570,7 @@ class _ServerPage extends StatelessWidget {
               color: context.colors.textSecondary,
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppTheme.space24),
           _ChoiceTile(
             icon: PhosphorIconsRegular.checkCircle,
             title: t.onboarding.serverYes,
@@ -309,7 +578,7 @@ class _ServerPage extends StatelessWidget {
             selected: answer == ServerAnswer.hasServer,
             onTap: () => onChanged(ServerAnswer.hasServer),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppTheme.space10),
           _ChoiceTile(
             icon: PhosphorIconsRegular.question,
             title: t.onboarding.serverNotYet,
@@ -323,7 +592,7 @@ class _ServerPage extends StatelessWidget {
             alignment: Alignment.topCenter,
             child: answer == ServerAnswer.notYet
                 ? const Padding(
-                    padding: EdgeInsets.only(top: 16),
+                    padding: EdgeInsets.only(top: AppTheme.space16),
                     child: ServerGuideList(),
                   )
                 : const SizedBox(width: double.infinity),
@@ -356,59 +625,41 @@ class _ChoiceTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final radius = BorderRadius.circular(AppTheme.radiusMd);
-    return Material(
-      color: colors.surfaceElevated.invisible,
-      borderRadius: radius,
-      child: InkWell(
-        borderRadius: radius,
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: AppTheme.interactiveDuration,
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: selected
-                ? colors.primary.withValues(alpha: 0.08)
-                : colors.surfaceElevated,
-            borderRadius: radius,
-            border: Border.all(
-              color: selected ? colors.primary : colors.surfaceBorder,
+    return AppCard(
+      elevated: true,
+      selected: selected,
+      onTap: onTap,
+      padding: const EdgeInsets.all(AppTheme.space14),
+      child: Row(
+        children: [
+          Icon(icon, size: AppTheme.icon24, color: colors.primary),
+          const SizedBox(width: AppTheme.space14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: colors.itemTitle),
+                const SizedBox(height: AppTheme.space2),
+                Text(
+                  subtitle,
+                  style: colors.uiSmall.copyWith(color: colors.textSecondary),
+                ),
+              ],
             ),
           ),
-          child: Row(
-            children: [
-              Icon(icon, size: 24, color: colors.primary),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: colors.itemTitle),
-                    const SizedBox(height: 3),
-                    Text(
-                      subtitle,
-                      style: colors.uiSmall.copyWith(
-                        color: colors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              if (keyHint case final hint?) ...[
-                KeyCaps([hint]),
-                const SizedBox(width: 10),
-              ],
-              Icon(
-                selected
-                    ? PhosphorIconsRegular.checkCircle
-                    : PhosphorIconsRegular.circle,
-                size: 22,
-                color: selected ? colors.primary : colors.textTertiary,
-              ),
-            ],
+          const SizedBox(width: AppTheme.space8),
+          if (keyHint case final hint?) ...[
+            KeyCaps([hint]),
+            const SizedBox(width: AppTheme.space10),
+          ],
+          Icon(
+            selected
+                ? PhosphorIconsRegular.checkCircle
+                : PhosphorIconsRegular.circle,
+            size: AppTheme.icon22,
+            color: selected ? colors.primary : colors.textTertiary,
           ),
-        ),
+        ],
       ),
     );
   }
@@ -571,7 +822,7 @@ class _PermissionsPageState extends State<_PermissionsPage>
   Widget build(BuildContext context) {
     final t = Translations.of(context);
     return _CenteredScroll(
-      padding: const EdgeInsets.symmetric(horizontal: 28),
+      padding: const EdgeInsets.symmetric(horizontal: AppTheme.space24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -579,7 +830,7 @@ class _PermissionsPageState extends State<_PermissionsPage>
             fill: PhosphorIconsFill.shieldCheck,
             regular: PhosphorIconsRegular.shieldCheck,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppTheme.space16),
           Text(
             t.onboarding.permissionsTitle,
             textAlign: TextAlign.center,
@@ -587,7 +838,7 @@ class _PermissionsPageState extends State<_PermissionsPage>
               context,
             ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppTheme.space8),
           Text(
             t.onboarding.permissionsBody,
             textAlign: TextAlign.center,
@@ -595,7 +846,7 @@ class _PermissionsPageState extends State<_PermissionsPage>
               color: context.colors.textSecondary,
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: AppTheme.space20),
           Opacity(
             opacity: _loaded ? 1 : 0.5,
             child: AppCard(
@@ -612,7 +863,7 @@ class _PermissionsPageState extends State<_PermissionsPage>
                         granted: _batteryUnrestricted,
                         onTap: _loaded ? _onBatteryTap : null,
                       ),
-                      const AppDivider(indent: 14),
+                      const AppDivider(indent: AppTheme.space14),
                     ],
                     PermissionTile(
                       dense: true,
@@ -622,7 +873,7 @@ class _PermissionsPageState extends State<_PermissionsPage>
                       onTap: _loaded ? _onNotificationsTap : null,
                     ),
                     if (_localNetworkEnforced) ...[
-                      const AppDivider(indent: 14),
+                      const AppDivider(indent: AppTheme.space14),
                       PermissionTile(
                         dense: true,
                         title: t.onboarding.localNetworkTitle,
@@ -636,69 +887,7 @@ class _PermissionsPageState extends State<_PermissionsPage>
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AnalyticsPage extends StatelessWidget {
-  const _AnalyticsPage({required this.checked, required this.onChanged});
-
-  final bool checked;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = Translations.of(context);
-    return _CenteredScroll(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const _DuotoneIcon(
-            fill: PhosphorIconsFill.chartLineUp,
-            regular: PhosphorIconsRegular.chartLineUp,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            t.analyticsConsent.title,
-            textAlign: TextAlign.center,
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            t.analyticsConsent.body,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: context.colors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 20),
-          AppCard(
-            clipChild: true,
-            child: Material(
-              color: context.colors.surfaceCard.invisible,
-              child: CheckboxListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14),
-                title: Text(
-                  t.analyticsConsent.checkboxLabel,
-                  style: const TextStyle(fontSize: 14),
-                ),
-                value: checked,
-                checkColor: context.colors.onPrimary,
-                fillColor: WidgetStateProperty.resolveWith(
-                  (s) => s.contains(WidgetState.selected)
-                      ? context.colors.primary
-                      : null,
-                ),
-                onChanged: (v) => onChanged(v ?? false),
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppTheme.space24),
           Text(
             t.analyticsConsent.legalNotice,
             textAlign: TextAlign.center,
@@ -706,7 +895,7 @@ class _AnalyticsPage extends StatelessWidget {
               context,
             ).textTheme.bodySmall?.copyWith(color: context.colors.textTertiary),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: AppTheme.space4),
           const _LegalLinks(),
         ],
       ),
@@ -714,7 +903,8 @@ class _AnalyticsPage extends StatelessWidget {
   }
 }
 
-/// The two published documents, side by side under the consent question.
+/// The two published documents, side by side under the notice on the last
+/// page that finishing means accepting them.
 class _LegalLinks extends StatelessWidget {
   const _LegalLinks();
 
@@ -750,7 +940,10 @@ class _LegalLink extends StatelessWidget {
     return TextButton(
       onPressed: () => openExternalUrl(context, Uri.parse(url)),
       style: TextButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppTheme.space10,
+          vertical: AppTheme.space4,
+        ),
         minimumSize: Size.zero,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         textStyle: Theme.of(context).textTheme.bodySmall,
@@ -785,14 +978,12 @@ class _DesktopOnboarding extends ConsumerStatefulWidget {
 class _DesktopOnboardingState extends ConsumerState<_DesktopOnboarding> {
   static const _welcome = 0;
   static const _server = 1;
-  static const _privacy = 2;
 
   final _focus = FocusNode(debugLabel: 'desktopOnboarding');
   final _target = TextEditingController();
   final _targetFocus = FocusNode();
   int _step = _welcome;
   ServerAnswer? _answer;
-  bool _analyticsChecked = true;
   bool _targetInvalid = false;
   bool _finishing = false;
 
@@ -875,7 +1066,7 @@ class _DesktopOnboardingState extends ConsumerState<_DesktopOnboarding> {
       setState(() => _targetInvalid = invalid);
       if (invalid) return;
     }
-    if (_step == _privacy) {
+    if (_step == _server) {
       _finish();
       return;
     }
@@ -891,7 +1082,6 @@ class _DesktopOnboardingState extends ConsumerState<_DesktopOnboarding> {
 
   Future<void> _finish() async {
     setState(() => _finishing = true);
-    await AnalyticsService.instance.setConsent(_analyticsChecked);
     final imported = _answer == ServerAnswer.hasServer
         ? await _importPicked()
         : 0;
@@ -1003,7 +1193,6 @@ class _DesktopOnboardingState extends ConsumerState<_DesktopOnboarding> {
     final steps = [
       t.onboarding.stepWelcome,
       t.onboarding.stepServer,
-      t.onboarding.stepPrivacy,
     ];
     return Scaffold(
       backgroundColor: colors.backgroundPrimary,
@@ -1061,11 +1250,7 @@ class _DesktopOnboardingState extends ConsumerState<_DesktopOnboarding> {
 
   Widget _stepBody(Translations t) => switch (_step) {
     _welcome => _DesktopWelcome(body: t.onboarding.welcomeBodyDesktop),
-    _server => _serverStep(t),
-    _ => _AnalyticsPage(
-      checked: _analyticsChecked,
-      onChanged: (v) => setState(() => _analyticsChecked = v),
-    ),
+    _ => _serverStep(t),
   };
 
   Widget _footer(Translations t) {
@@ -1091,7 +1276,7 @@ class _DesktopOnboardingState extends ConsumerState<_DesktopOnboarding> {
           const KeyCaps(['Enter']),
           const SizedBox(width: 6),
           Text(
-            _step == _privacy
+            _step == _server
                 ? t.onboarding.keyFinish
                 : t.onboarding.keyContinue,
             style: hint,
@@ -1100,11 +1285,11 @@ class _DesktopOnboardingState extends ConsumerState<_DesktopOnboarding> {
           FilledButton(
             key: const ValueKey('onboardingContinue'),
             onPressed: _canContinue && !_finishing ? _continue : null,
-            child: Text(switch (_step) {
-              _welcome => t.onboarding.getStarted,
-              _privacy => t.onboarding.finish,
-              _ => t.onboarding.continueAction,
-            }),
+            child: Text(
+              _step == _welcome
+                  ? t.onboarding.getStarted
+                  : t.onboarding.finish,
+            ),
           ),
         ],
       ),
@@ -1181,6 +1366,22 @@ class _DesktopOnboardingState extends ConsumerState<_DesktopOnboarding> {
               padding: EdgeInsets.only(top: 16),
               child: ServerGuideList(),
             ),
+          const SizedBox(height: AppTheme.space24),
+          Center(
+            child: Column(
+              children: [
+                Text(
+                  t.analyticsConsent.legalNotice,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: context.colors.textTertiary,
+                  ),
+                ),
+                const SizedBox(height: AppTheme.space4),
+                const _LegalLinks(),
+              ],
+            ),
+          ),
         ],
       ),
     );

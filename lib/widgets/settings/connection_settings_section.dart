@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
@@ -11,14 +11,32 @@ import '../../theme/theme.dart';
 import '../../utils/platform_info.dart';
 import '../ssh/remote_agent_info_sheet.dart';
 import '../ui/app_card.dart';
+import '../ui/app_divider.dart';
 import '../ui/permission_tile.dart';
 import '../ui/section_header.dart';
 import '../ui/settings_tile.dart';
+import 'settings_rows_reveal.dart';
+
+/// How many of the permissions [ConnectionSettingsSection] lists are not
+/// given, for the warning on the row that leads to it: hidden a screen deep,
+/// a refused permission would otherwise go unnoticed.
+Future<int> connectionIssueCount() async {
+  final background = ForegroundNotificationService.instance;
+  final localNetwork = LocalNetworkPermission.instance;
+  final missing = [
+    isAndroidPlatform && !await background.isIgnoringBatteryOptimizations,
+    await localNetwork.isEnforced && !await localNetwork.isGranted,
+  ];
+  return missing.where((issue) => issue).length;
+}
 
 /// Connection section: the remote agent switch and the system permissions it
 /// and the foreground service depend on.
 class ConnectionSettingsSection extends StatefulWidget {
-  const ConnectionSettingsSection({super.key});
+  const ConnectionSettingsSection({super.key, this.header = true});
+
+  /// Off on a screen of its own, whose title already says what this is.
+  final bool header;
 
   @override
   State<ConnectionSettingsSection> createState() =>
@@ -27,9 +45,7 @@ class ConnectionSettingsSection extends StatefulWidget {
 
 class _ConnectionSettingsSectionState extends State<ConnectionSettingsSection>
     with WidgetsBindingObserver {
-  bool _loaded = false;
   bool _remoteAgentEnabled = true;
-  bool _notificationsGranted = false;
   bool _batteryUnrestricted = false;
 
   /// Only Android 17 and up gates local traffic, so on anything older the row
@@ -63,7 +79,6 @@ class _ConnectionSettingsSectionState extends State<ConnectionSettingsSection>
     final remoteAgentEnabled = remoteAgentSetting.value;
     final background = ForegroundNotificationService.instance;
     final batteryUnrestricted = await background.isIgnoringBatteryOptimizations;
-    final notificationsGranted = await background.hasNotificationPermission;
     final localNetwork = LocalNetworkPermission.instance;
     final localNetworkEnforced = await localNetwork.isEnforced;
     final localNetworkGranted = await localNetwork.isGranted;
@@ -71,10 +86,8 @@ class _ConnectionSettingsSectionState extends State<ConnectionSettingsSection>
     setState(() {
       _remoteAgentEnabled = remoteAgentEnabled;
       _batteryUnrestricted = batteryUnrestricted;
-      _notificationsGranted = notificationsGranted;
       _localNetworkEnforced = localNetworkEnforced;
       _localNetworkGranted = localNetworkGranted;
-      _loaded = true;
     });
   }
 
@@ -92,18 +105,8 @@ class _ConnectionSettingsSectionState extends State<ConnectionSettingsSection>
     await _refreshSystemPermissions();
   }
 
-  Future<void> _onNotificationsTap() async {
-    final background = ForegroundNotificationService.instance;
-    if (_notificationsGranted) {
-      await background.openNotificationSettings();
-    } else {
-      await background.requestNotificationPermission();
-    }
-    await _refreshSystemPermissions();
-  }
-
   /// A refusal the system will not re-prompt for leaves the app's settings
-  /// page as the only way in, the same as the notification permission above.
+  /// page as the only way in.
   Future<void> _onLocalNetworkTap() async {
     final localNetwork = LocalNetworkPermission.instance;
     if (_localNetworkGranted) {
@@ -120,88 +123,67 @@ class _ConnectionSettingsSectionState extends State<ConnectionSettingsSection>
   Future<void> _refreshSystemPermissions() async {
     final background = ForegroundNotificationService.instance;
     final batteryUnrestricted = await background.isIgnoringBatteryOptimizations;
-    final notificationsGranted = await background.hasNotificationPermission;
     final localNetworkGranted = await LocalNetworkPermission.instance.isGranted;
     if (!mounted) return;
     setState(() {
       _batteryUnrestricted = batteryUnrestricted;
-      _notificationsGranted = notificationsGranted;
       _localNetworkGranted = localNetworkGranted;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_loaded) return const SizedBox.shrink();
     final t = Translations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SectionHeader(t.settings.connection),
-        const SizedBox(height: 10),
-        AppCard(
-          child: Column(
-            children: [
-              SettingsSwitchTile(
-                title: t.settings.remoteAgentToggle,
-                subtitle: t.settings.remoteAgentToggleSubtitle,
-                value: _remoteAgentEnabled,
-                onChanged: _onRemoteAgentToggle,
-              ),
-              const Divider(height: 1),
+        if (widget.header) ...[
+          SectionHeader(t.settings.connection),
+          const SizedBox(height: AppTheme.space10),
+        ],
+        AppCard.fields(
+          children: [
+            SettingsSwitchTile(
+              title: t.settings.remoteAgentToggle,
+              subtitle: t.settings.remoteAgentToggleSubtitle,
+              value: _remoteAgentEnabled,
+              onChanged: _onRemoteAgentToggle,
+            ),
+            const AppDivider(),
+            SettingsTile(
+              title: t.settings.remoteAgentHowItWorks,
+              subtitle: t.settings.remoteAgentHowItWorksSubtitle,
+              onTap: () => showRemoteAgentInfoSheet(context),
+            ),
+            if (platformHas(PlatformFeature.backgroundSuspension)) ...[
+              const AppDivider(),
               SettingsTile(
-                icon: PhosphorIconsRegular.shieldCheck,
-                iconColor: context.colors.primary,
-                title: t.settings.remoteAgentHowItWorks,
-                subtitle: t.settings.remoteAgentHowItWorksSubtitle,
-                onTap: () => showRemoteAgentInfoSheet(context),
+                title: t.settings.backgroundSuspended,
+                subtitle: t.settings.backgroundSuspendedSubtitle,
+                trailing: SettingsTileTrailing.none,
               ),
-              if (platformHas(PlatformFeature.backgroundSuspension)) ...[
-                const Divider(height: 1),
-                SettingsTile(
-                  icon: PhosphorIconsRegular.moon,
-                  iconColor: context.colors.textTertiary,
-                  title: t.settings.backgroundSuspended,
-                  subtitle: t.settings.backgroundSuspendedSubtitle,
-                  trailing: SettingsTileTrailing.none,
+            ],
+            if (platformHas(PlatformFeature.batteryOptimization)) ...[
+              const AppDivider(),
+              PermissionTile(
+                leading: Icon(
+                  _batteryUnrestricted
+                      ? PhosphorIconsRegular.batteryCharging
+                      : PhosphorIconsRegular.batteryWarning,
+                  color: _batteryUnrestricted
+                      ? context.colors.primary
+                      : context.colors.warning,
                 ),
-              ],
-              if (platformHas(PlatformFeature.batteryOptimization)) ...[
-                const Divider(height: 1),
-                PermissionTile(
-                  leading: Icon(
-                    _batteryUnrestricted
-                        ? PhosphorIconsRegular.batteryCharging
-                        : PhosphorIconsRegular.batteryWarning,
-                    color: _batteryUnrestricted
-                        ? context.colors.primary
-                        : context.colors.warning,
-                  ),
-                  title: t.settings.batteryUnrestricted,
-                  subtitle: t.settings.batteryUnrestrictedSubtitle,
-                  granted: _batteryUnrestricted,
-                  onTap: _onBatteryOptimizationTap,
-                ),
-              ],
-              if (platformHas(PlatformFeature.notificationPermission)) ...[
-                const Divider(height: 1),
-                PermissionTile(
-                  leading: Icon(
-                    _notificationsGranted
-                        ? PhosphorIconsRegular.bell
-                        : PhosphorIconsRegular.bellSlash,
-                    color: _notificationsGranted
-                        ? context.colors.primary
-                        : context.colors.warning,
-                  ),
-                  title: t.settings.notificationsPermission,
-                  subtitle: t.settings.notificationsPermissionSubtitle,
-                  granted: _notificationsGranted,
-                  onTap: _onNotificationsTap,
-                ),
-              ],
-              if (_localNetworkEnforced) ...[
-                const Divider(height: 1),
+                title: t.settings.batteryUnrestricted,
+                subtitle: t.settings.batteryUnrestrictedSubtitle,
+                granted: _batteryUnrestricted,
+                onTap: _onBatteryOptimizationTap,
+              ),
+            ],
+            SettingsRowsReveal(
+              visible: _localNetworkEnforced,
+              children: [
+                const AppDivider(),
                 PermissionTile(
                   leading: Icon(
                     _localNetworkGranted
@@ -217,8 +199,8 @@ class _ConnectionSettingsSectionState extends State<ConnectionSettingsSection>
                   onTap: _onLocalNetworkTap,
                 ),
               ],
-            ],
-          ),
+            ),
+          ],
         ),
       ],
     );

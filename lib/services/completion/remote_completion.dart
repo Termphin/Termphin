@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import '../ssh/remote_agent_service.dart' show powerShellCommandLine;
+import 'shell_words.dart';
 
 /// Which shell answers "what could come next" on a host.
 enum CompletionEngine { none, bash, fish, powershell }
@@ -26,6 +27,10 @@ class HostCompletionData {
   /// The bash-completion script to source, when the host has one.
   final String? bashCompletionPath;
 
+  /// What [remember] was given, oldest first, with the directory each
+  /// command ran in when it was known. No history file records that.
+  final List<({String command, String? directory})> _remembered = [];
+
   /// A fresh one each time: [remember] adds to it.
   static HostCompletionData get empty => HostCompletionData(
     history: const [],
@@ -33,11 +38,32 @@ class HostCompletionData {
     engine: CompletionEngine.none,
   );
 
-  void remember(String command) {
-    if (looksSecret(command)) return;
+  void remember(String command, {String? directory}) {
+    if (looksSecret(command) || command.contains('\n')) return;
     history.add(command);
     if (history.length > _kMaxHistory) {
       history.removeRange(0, history.length - _kMaxHistory);
+    }
+    _remembered.add((command: command, directory: directory));
+    if (_remembered.length > _kMaxHistory) {
+      _remembered.removeRange(0, _remembered.length - _kMaxHistory);
+    }
+  }
+
+  /// The commands remembered in [directory], oldest first.
+  List<String> ranIn(String? directory) => directory == null
+      ? const []
+      : [
+          for (final entry in _remembered)
+            if (entry.directory == directory) entry.command,
+        ];
+
+  /// Takes over what [previous] remembered, for data read again from the
+  /// host: the shell may not have written those commands to its history
+  /// file yet, and the file never says where they ran.
+  void carryOver(HostCompletionData previous) {
+    for (final entry in previous._remembered) {
+      remember(entry.command, directory: entry.directory);
     }
   }
 }
@@ -133,12 +159,21 @@ HostCompletionData parseProbe(Uint8List output) {
 
   String? section;
   String? historyFile;
+  String? continued;
   for (final raw in _splitLines(output)) {
     var line = utf8.decode(
       historyFile == '.zsh_history' ? _unmetafy(raw) : raw,
       allowMalformed: true,
     );
     if (line.endsWith('\r')) line = line.substring(0, line.length - 1);
+    if (section == 'history' && historyFile == '.zsh_history') {
+      if (continued != null) line = '$continued\n$line';
+      continued = null;
+      if (line.endsWith(r'\') && !line.startsWith(_kMarker)) {
+        continued = line.substring(0, line.length - 1);
+        continue;
+      }
+    }
     if (_isPowerShellNoise(line)) continue;
     if (line.startsWith(_kMarker)) {
       final rest = line.substring(_kMarker.length);
@@ -203,6 +238,10 @@ HostCompletionData parseProbe(Uint8List output) {
 /// One history file line as a command, or null for a line that is not one:
 /// bash's `#1700000000` timestamps, zsh's `: 1700000000:0;` prefix, fish's
 /// YAML-ish `- cmd:` records.
+///
+/// A command over several lines is dropped: typing it back sends each
+/// newline as Enter, so its first line would run on its own. zsh writes one
+/// with a backslash before each newline, which [parseProbe] joins up first.
 String? _historyEntry(String line, String? file) {
   switch (file) {
     case '.zsh_history':
@@ -218,6 +257,7 @@ String? _historyEntry(String line, String? file) {
       if (RegExp(r'^#\d+$').hasMatch(line)) return null;
   }
   final command = line.trimRight();
+  if (command.contains('\n')) return null;
   return command.trim().isEmpty ? null : command;
 }
 
@@ -251,7 +291,11 @@ Uint8List _unmetafy(Uint8List bytes) {
 /// [line], run in the directory the session's shell is in.
 ///
 /// [cwdFile] is where the agent keeps that directory, relative to home; a
-/// plain session has none and completes from home.
+/// plain session has none and completes from home. When the directory is
+/// known, the answer starts with it, for [completionDirectory].
+///
+/// bash gets the line in words cut as its own completion would cut them, and
+/// the last of them without its quotes for the plain file fallback.
 String completeCommand(
   CompletionEngine engine,
   String line, {
@@ -271,24 +315,32 @@ String completeCommand(
   return wrapForAnyShell('''
 exec 2>/dev/null
 TERMPHIN_LINE=\$(printf %s '${_b64(line)}' | base64 -d)
+TERMPHIN_WORDS='${_b64(completionWords(line).map((w) => '$w\n').join())}'
+TERMPHIN_CUR=\$(printf %s '${_b64(readLastWord(line, breaks: _kBashBreaks).plainTail)}' | base64 -d)
 TERMPHIN_DIR=
 ${cwdFile == null ? '' : 'TERMPHIN_DIR=\$(cat "\$HOME/\$(printf %s \'${_b64(cwdFile)}\' | base64 -d)")'}
-export TERMPHIN_LINE TERMPHIN_DIR
+export TERMPHIN_LINE TERMPHIN_WORDS TERMPHIN_CUR TERMPHIN_DIR
 s=\$(printf %s '${_b64(inner.$2)}' | base64 -d)
 if command -v timeout >/dev/null; then exec timeout 3 ${inner.$1} -c "\$s"; fi
 exec ${inner.$1} -c "\$s"
 ''');
 }
 
+/// Where bash cuts a word for completion, of its `COMP_WORDBREAKS`: what
+/// follows is completed alone, `--file=sr` as `sr`.
+const _kBashBreaks = '=:';
+
+/// Candidates for a `~/` path come back from bash-completion with the home
+/// directory spelled out, and are given their `~` back to match what was
+/// typed. Whether one is a directory is asked of the path expanded.
 String _bashScript(String? completionPath) =>
     '''
 exec 2>/dev/null
-[ -n "\$TERMPHIN_DIR" ] && cd -- "\$TERMPHIN_DIR"
+[ -n "\$TERMPHIN_DIR" ] && cd -- "\$TERMPHIN_DIR" && printf '$_kMarker''cwd %s\\n' "\$PWD"
 PS1='\$ '
 ${completionPath == null ? '' : '. ${_shQuote(completionPath)}'}
 line=\$TERMPHIN_LINE
-read -ra COMP_WORDS <<< "\$line"
-[[ -z \$line || \$line == *[[:space:]] ]] && COMP_WORDS+=("")
+mapfile -t COMP_WORDS < <(printf %s "\$TERMPHIN_WORDS" | base64 -d)
 COMP_CWORD=\$(( \${#COMP_WORDS[@]} - 1 ))
 COMP_LINE=\$line
 COMP_POINT=\${#line}
@@ -308,15 +360,18 @@ elif [[ -n \$spec ]]; then
   opts=\${opts% *}
   eval "mapfile -t COMPREPLY < <(compgen \$opts -- \\"\\\$cur\\")"
 fi
-(( \${#COMPREPLY[@]} )) || mapfile -t COMPREPLY < <(compgen -f -- "\$cur")
+(( \${#COMPREPLY[@]} )) || mapfile -t COMPREPLY < <(compgen -f -- "\$TERMPHIN_CUR")
 for c in "\${COMPREPLY[@]}"; do
-  [[ -d \$c && \$c != */ ]] && c="\$c/"
+  [[ \$TERMPHIN_CUR == "~/"* && \$c == "\$HOME/"* ]] && c="~/\${c#"\$HOME/"}"
+  d=\$c
+  [[ \$d == "~/"* ]] && d="\$HOME/\${d#"~/"}"
+  [[ -d \$d && \$c != */ ]] && c="\$c/"
   printf '%s\\n' "\$c"
 done | head -n 500
 ''';
 
 const _fishScript = r'''
-test -n "$TERMPHIN_DIR"; and cd $TERMPHIN_DIR
+test -n "$TERMPHIN_DIR"; and cd $TERMPHIN_DIR; and echo "@@termphin:cwd $PWD"
 complete -C "$TERMPHIN_LINE" | head -n 500
 ''';
 
@@ -338,7 +393,9 @@ $ProgressPreference = 'SilentlyContinue'
 [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding $false
 $line = @@LINE@@
 $dir = @@DIR@@
-if ($dir) { Set-Location -LiteralPath $dir }
+if ($dir -and (Set-Location -LiteralPath $dir -PassThru)) {
+  '@@termphin:cwd ' + (Get-Location).ProviderPath
+}
 $word = ($line -split '\s')[-1]
 $slash = $word.Contains('/')
 $r = TabExpansion2 -inputScript $line -cursorColumn $line.Length
@@ -377,7 +434,24 @@ List<String> parseCandidates(Uint8List output) {
       utf8.decode(output, allowMalformed: true),
     ))
       if (line.split('\t').first.trimRight() case final c
-          when c.isNotEmpty && !_isPowerShellNoise(c) && seen.add(c))
+          when c.isNotEmpty &&
+              !c.startsWith(_kMarker) &&
+              !_isPowerShellNoise(c) &&
+              seen.add(c))
         c,
   ];
+}
+
+/// The directory [completeCommand] completed in, when it said.
+String? completionDirectory(Uint8List output) {
+  const prefix = '${_kMarker}cwd ';
+  for (final line in const LineSplitter().convert(
+    utf8.decode(output, allowMalformed: true),
+  )) {
+    if (line.startsWith(prefix)) {
+      final directory = line.substring(prefix.length).trim();
+      return directory.isEmpty ? null : directory;
+    }
+  }
+  return null;
 }

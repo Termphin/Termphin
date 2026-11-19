@@ -12,6 +12,8 @@ enum DockAction {
   uploadFile,
   paste,
   search,
+  copyAll,
+  saveOutput,
   copyPath,
   newSession,
   tunnels,
@@ -23,6 +25,8 @@ enum DockAction {
 /// the few tiles you actually reach for, not the whole action list. The rest
 /// stay one switch away in Settings for whoever wants them.
 const kDefaultHiddenDockActions = <DockAction>{
+  DockAction.copyAll,
+  DockAction.saveOutput,
   DockAction.copyPath,
   DockAction.newSession,
   DockAction.tunnels,
@@ -35,6 +39,8 @@ IconData dockActionIcon(DockAction action) => switch (action) {
   DockAction.uploadFile => PhosphorIconsRegular.uploadSimple,
   DockAction.paste => PhosphorIconsRegular.clipboardText,
   DockAction.search => PhosphorIconsRegular.magnifyingGlass,
+  DockAction.copyAll => PhosphorIconsRegular.copy,
+  DockAction.saveOutput => PhosphorIconsRegular.downloadSimple,
   DockAction.copyPath => PhosphorIconsRegular.folderSimple,
   DockAction.newSession => PhosphorIconsRegular.plus,
   DockAction.tunnels => PhosphorIconsFill.arrowsLeftRight,
@@ -49,12 +55,72 @@ String dockActionLabel(Translations t, DockAction action) => switch (action) {
   DockAction.uploadFile => t.actionDock.uploadFile.replaceFirst(' ', '\n'),
   DockAction.paste => t.actionDock.paste,
   DockAction.search => t.actionDock.search,
+  DockAction.copyAll => t.actionDock.copyAll,
+  DockAction.saveOutput => t.actionDock.saveOutput,
   DockAction.copyPath => t.actionDock.copyPath,
   DockAction.newSession => t.terminal.newSession,
   DockAction.tunnels => t.portForwarding.manageTunnels,
   DockAction.rename => t.session.rename,
   DockAction.viewLog => t.connection.viewLog,
 };
+
+/// The dock's order and hidden set as one value, the shape every edit in the
+/// editor takes and returns.
+typedef DockLayout = ({List<DockAction> order, Set<DockAction> hidden});
+
+/// The order the editor shows: what is on the dock first, in its order, then
+/// the hidden ones. Keeping the stored order in that shape means a hidden
+/// action never sits between two visible ones, where it would decide where it
+/// lands once shown again without the user ever seeing that place.
+List<DockAction> _normalized(List<DockAction> order, Set<DockAction> hidden) =>
+    [
+      for (final a in order)
+        if (!hidden.contains(a)) a,
+      for (final a in order)
+        if (hidden.contains(a)) a,
+    ];
+
+/// [layout] with [action] on the dock at [index] among the visible actions,
+/// whether it was on the dock already or hidden. The rest shift to make room,
+/// so dragging a tile forward drops it after the tile it was let go on and
+/// dragging it back drops it before that tile.
+DockLayout placeDockAction(DockLayout layout, DockAction action, int index) {
+  final hidden = {...layout.hidden}..remove(action);
+  final rest = [
+    for (final a in layout.order)
+      if (a != action) a,
+  ];
+  final visible = [
+    for (final a in rest)
+      if (!hidden.contains(a)) a,
+  ];
+  visible.insert(index.clamp(0, visible.length), action);
+  return (
+    order: [
+      ...visible,
+      for (final a in rest)
+        if (hidden.contains(a)) a,
+    ],
+    hidden: hidden,
+  );
+}
+
+/// [layout] with [action] taken off the dock, at the end of the hidden ones -
+/// the tray reads in the order things were put into it.
+DockLayout hideDockAction(DockLayout layout, DockAction action) {
+  final hidden = {...layout.hidden, action};
+  final order = _normalized([
+    for (final a in layout.order)
+      if (a != action) a,
+  ], hidden)..add(action);
+  return (order: order, hidden: hidden);
+}
+
+/// What a fresh install shows.
+const DockLayout kDefaultDockLayout = (
+  order: DockAction.values,
+  hidden: kDefaultHiddenDockActions,
+);
 
 const kActionDockOrderPrefsKey = 'command_palette_order';
 const kActionDockHiddenPrefsKey = 'command_palette_hidden';

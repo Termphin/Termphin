@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:termphin/services/settings/sidebar_settings.dart';
-import 'package:termphin/widgets/ui/nav_rail.dart';
+import 'package:termphin/widgets/shell/nav_rail.dart';
 
 import '../../support/test_app.dart';
 

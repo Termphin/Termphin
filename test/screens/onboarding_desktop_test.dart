@@ -1,13 +1,14 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:termphin/i18n/strings.g.dart';
 import 'package:termphin/models/ssh_profile.dart';
 import 'package:termphin/providers/profiles_provider.dart';
 import 'package:termphin/providers/ssh_keys_provider.dart';
 import 'package:termphin/screens/onboarding_screen.dart';
+import 'package:termphin/services/analytics/analytics_service.dart';
 import 'package:termphin/services/app/onboarding_service.dart';
 import 'package:termphin/services/ssh/ssh_config_import.dart';
 
@@ -84,12 +85,11 @@ void main() {
     expect(find.byType(PageView), findsNothing);
     expect(find.text(t.onboarding.stepWelcome), findsOneWidget);
     expect(find.text(t.onboarding.stepServer), findsOneWidget);
-    expect(find.text(t.onboarding.stepPrivacy), findsOneWidget);
     expect(find.text(t.onboarding.welcomeBodyDesktop), findsOneWidget);
     expect(find.text(t.onboarding.permissionsTitle), findsNothing);
   }, variant: _linux);
 
-  testWidgets('the keyboard alone goes through it: Enter, 2, Enter, Enter', (
+  testWidgets('the keyboard alone goes through it: Enter, 2, Enter', (
     tester,
   ) async {
     OnboardingResult? result;
@@ -103,12 +103,10 @@ void main() {
 
     await press(tester, LogicalKeyboardKey.digit2);
     await press(tester, LogicalKeyboardKey.enter);
-    expect(find.text(t.analyticsConsent.title), findsOneWidget);
-
-    await press(tester, LogicalKeyboardKey.enter);
     expect(result?.answer, ServerAnswer.notYet);
     expect(result?.target, isNull);
     expect(await OnboardingService.instance.isCompleted(), isTrue);
+    expect(await AnalyticsService.instance.loadConsent(), isNull);
   }, variant: _linux);
 
   testWidgets('Esc goes back a step', (tester) async {
@@ -136,8 +134,6 @@ void main() {
     expect(find.text(t.profiles.quickAddInvalid), findsOneWidget);
 
     await tester.enterText(field, 'ops@db.example.com:2200');
-    await tester.tap(find.byKey(const ValueKey('onboardingContinue')));
-    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('onboardingContinue')));
     await tester.pumpAndSettle();
 
@@ -175,8 +171,6 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('onboardingContinue')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('onboardingContinue')));
-    await tester.pumpAndSettle();
 
     expect(result?.imported, 2);
     expect(profiles.profiles.map((p) => p.name), ['web', 'pi']);
@@ -198,7 +192,6 @@ void main() {
     await press(tester, LogicalKeyboardKey.enter);
     await press(tester, LogicalKeyboardKey.digit2);
     expect(find.text(t.onboarding.sshConfigTitle), findsNothing);
-    await press(tester, LogicalKeyboardKey.enter);
     await press(tester, LogicalKeyboardKey.enter);
 
     expect(result?.imported, 0);

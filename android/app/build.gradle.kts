@@ -8,6 +8,17 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+/**
+ * Firebase is wired in only where its config is: `google-services.json` is
+ * kept out of the repository and copied in by `scripts/firebase_config.sh`,
+ * so a build from source - a fork, CI without the secret - builds the same
+ * app without Firebase rather than failing.
+ */
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+    apply(plugin = "com.google.firebase.crashlytics")
+}
+
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
 if (keystorePropertiesFile.exists()) {

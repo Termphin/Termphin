@@ -342,6 +342,18 @@ void main() {
     expect(restored.mainHostFirst, isFalse);
   });
 
+  test('a round trip keeps a machine that may not reach the phone', () async {
+    final profile = profileFixture().copyWith(serverNotifications: false);
+    await ProfileStorage().saveProfiles([profile]);
+    final exported = await service.exportToJson(const ExportOptions());
+    await ProfileStorage().saveProfiles([]);
+
+    await service.importFromJson(exported, const ImportOptions());
+
+    final restored = (await ProfileStorage().loadProfiles()).single;
+    expect(restored.serverNotifications, isFalse);
+  });
+
   test('an imported profile replaces the one it shares an id with', () async {
     await toolbarSettings.load();
     await saveToolbarProfiles(

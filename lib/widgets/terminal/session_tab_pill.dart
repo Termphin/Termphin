@@ -1,9 +1,10 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../models/session_tab.dart';
 import '../../models/ssh_profile.dart';
 import '../../theme/theme.dart';
 import '../profiles/profile_avatar.dart';
+import 'notice_dot.dart';
 
 /// Type size and line height inside a tab; the strip's height is derived from
 /// these, so they live with the pill rather than in a second place.
@@ -31,6 +32,7 @@ class SessionTabPill extends StatelessWidget {
     this.sessionName,
     this.isActive = false,
     this.collapsed = false,
+    this.unread = false,
     this.stretch = true,
     this.trailing = const [],
   });
@@ -53,6 +55,9 @@ class SessionTabPill extends StatelessWidget {
   /// Avatar only, for a collapsed rail - the ring still says the status.
   final bool collapsed;
 
+  /// A notification came from this session since it was last on screen.
+  final bool unread;
+
   /// Fills the rail's width rather than sizing to the label.
   final bool stretch;
   final List<Widget> trailing;
@@ -68,7 +73,7 @@ class SessionTabPill extends StatelessWidget {
     final activeText = theme.colorScheme.onSurface;
     final inactiveText = activeText.withValues(alpha: 0.55);
 
-    final avatar = AnimatedContainer(
+    final ring = AnimatedContainer(
       key: ValueKey('sessionStatusAvatar-$sessionId'),
       duration: AppTheme.interactiveDuration,
       decoration: BoxDecoration(
@@ -81,6 +86,11 @@ class SessionTabPill extends StatelessWidget {
         colorHex: profile.colorHex,
         size: 20,
       ),
+    );
+    final avatar = NoticeDot(
+      visible: unread,
+      ground: Theme.of(context).scaffoldBackgroundColor,
+      child: ring,
     );
 
     final name = _name(isActive ? activeText : inactiveText);
@@ -169,6 +179,7 @@ class StripActionButton extends StatelessWidget {
     required this.tooltip,
     required this.icon,
     required this.onTap,
+    this.active = false,
   });
 
   /// On the button's own surface, where the strip's tests look for it.
@@ -176,25 +187,31 @@ class StripActionButton extends StatelessWidget {
   final String tooltip;
   final IconData icon;
   final VoidCallback? onTap;
+  final bool active;
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     final shape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-      side: BorderSide(color: context.colors.surfaceBorder),
+      side: BorderSide(color: active ? colors.primary : colors.surfaceBorder),
     );
     return Tooltip(
       message: tooltip,
       child: Material(
         key: buttonKey,
-        color: context.colors.surfaceOffset,
+        color: active ? colors.primaryHighlight : colors.surfaceOffset,
         shape: shape,
         child: InkWell(
           onTap: onTap,
           customBorder: shape,
           child: SizedBox.square(
             dimension: 36,
-            child: Icon(icon, size: 18, color: context.colors.textSecondary),
+            child: Icon(
+              icon,
+              size: AppTheme.icon18,
+              color: active ? colors.primary : colors.textSecondary,
+            ),
           ),
         ),
       ),

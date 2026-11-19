@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:terminal_view/terminal_view.dart';
 import 'package:termphin/models/active_session.dart';
 import 'package:termphin/models/ssh_profile.dart';
+import 'package:termphin/services/terminal/terminal_text.dart';
 
 void main() {
   ActiveSessionView createSession() => ActiveSessionView(
@@ -21,13 +21,20 @@ void main() {
     connectedAt: DateTime(2026),
   );
 
-  test('records output in raw history while nothing is listening', () {
+  Uint8List bytes(String text) => Uint8List.fromList(utf8.encode(text));
+
+  String shownBy(ActiveSessionView session) {
+    session.terminal.flush();
+    return terminalBufferText(session.terminal.terminal.buffer);
+  }
+
+  test('parses output into its terminal while no pane is showing it', () {
     final session = createSession();
 
-    session.deliverOutput(Uint8List.fromList([1, 2]));
-    session.deliverOutput(Uint8List.fromList([3, 4]));
+    session.deliverOutput(bytes('one\r\n'));
+    session.deliverOutput(bytes('two'));
 
-    expect(session.rawHistorySnapshot.toList(), [1, 2, 3, 4]);
+    expect(shownBy(session), 'one\ntwo');
     session.dispose();
   });
 
@@ -41,47 +48,65 @@ void main() {
     session.dispose();
   });
 
-  test('keeps recording history after a listener cancels', () async {
+  test('keeps parsing after a listener cancels', () async {
     final session = createSession();
     final subscription = session.outputStream.listen((_) {});
     await subscription.cancel();
 
-    session.deliverOutput(Uint8List.fromList([7, 8]));
+    session.deliverOutput(bytes('still here'));
 
-    expect(session.rawHistorySnapshot.toList(), [7, 8]);
+    expect(shownBy(session), 'still here');
     session.dispose();
   });
 
-  test('copies delivered bytes before recording them', () {
+  test('copies delivered bytes before queueing them', () {
     final session = createSession();
-    final bytes = Uint8List.fromList([1, 2]);
+    final delivered = bytes('ab');
 
-    session.deliverOutput(bytes);
-    bytes[0] = 9;
+    session.deliverOutput(delivered);
+    delivered[0] = 0x7a;
 
-    expect(session.rawHistorySnapshot.toList(), [1, 2]);
+    expect(shownBy(session), 'ab');
     session.dispose();
   });
 
-  test('trims raw history once it outgrows the cap', () {
+  test('keeps what was said before a long run of redraws', () {
     final session = createSession();
-    final chunk = Uint8List(64 * 1024);
-
-    for (var i = 0; i < 16; i++) {
-      session.deliverOutput(chunk);
+    for (var line = 1; line <= 300; line++) {
+      session.deliverOutput(bytes('answer line $line\r\n'));
     }
+    const frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+    var redrawn = 0;
+    for (var tick = 0; redrawn < 700 * 1024; tick++) {
+      final frame = bytes(
+        '\r\x1b[2K\x1b[38;5;208m${frames[tick % 10]}\x1b[39m '
+        'Thinking… (${tick ~/ 10}s · esc to interrupt)',
+      );
+      redrawn += frame.length;
+      session.deliverOutput(frame);
+    }
+    session.deliverOutput(bytes('\r\x1b[2Kdone\r\n'));
 
-    expect(session.rawHistorySnapshot.length, lessThanOrEqualTo(512 * 1024));
+    final shown = shownBy(session).split('\n');
+
+    expect(shown.first, 'answer line 1');
+    expect(shown, hasLength(301));
+    expect(shown.last, 'done');
     session.dispose();
   });
 
-  test('drops history on dispose', () {
+  test('stops parsing on dispose', () {
     final session = createSession();
-    session.deliverOutput(Uint8List.fromList([1, 2]));
+    final terminal = session.terminal;
+    session.deliverOutput(bytes('before'));
+    terminal.flush();
 
     session.dispose();
+    terminal
+      ..add(bytes(' after'))
+      ..flush();
 
-    expect(session.rawHistorySnapshot, isEmpty);
+    expect(terminalBufferText(terminal.terminal.buffer), 'before');
   });
 
   test('ignores output after dispose', () {
@@ -94,69 +119,67 @@ void main() {
     );
   });
 
-  group('a snapshot whose start was trimmed away', () {
-    Terminal rebuiltFrom(ActiveSessionView session) {
-      final terminal = Terminal();
-      terminal.write(utf8.decode(session.rawHistorySnapshot));
-      return terminal;
-    }
+  test('a tab restored without a terminal gets one at the size its pty '
+      'opens with', () {
+    final restored = createSession()..ptyOpensAt(132, 50);
+    final laidOut = createSession();
+    laidOut.terminal.terminal.resize(100, 30);
+    laidOut.ptyOpensAt(132, 50);
 
-    void outgrowTheCap(ActiveSessionView session) {
-      final screenful = Uint8List.fromList(utf8.encode('\x1b[H${'x' * 4096}'));
-      for (var i = 0; i < 200; i++) {
-        session.deliverOutput(screenful);
-      }
-    }
+    expect(restored.terminal.terminal.viewWidth, 132);
+    expect(restored.terminal.terminal.viewHeight, 50);
+    expect(laidOut.terminal.terminal.viewWidth, 100);
+    restored.dispose();
+    laidOut.dispose();
+  });
 
-    test('still puts a full-screen program back on the alt screen with its '
-        'mouse reporting, so it keeps owning the scroll', () {
+  test('a replay arriving after dispose starts nothing', () {
+    final session = createSession();
+    final terminal = session.terminal;
+    session.dispose();
+
+    session.restartTerminal(bytes('late'));
+
+    expect(session.terminal, same(terminal));
+  });
+
+  group('a replay that replaces what was there', () {
+    test('starts a new terminal from it, at the size of the old one', () {
       final session = createSession();
-      session.deliverOutput(
-        Uint8List.fromList(utf8.encode('\x1b[?1049h\x1b[?1000;1006h')),
-      );
-      outgrowTheCap(session);
+      session.deliverOutput(bytes('stale'));
+      final replaced = session.terminal..flush();
+      replaced.terminal.resize(100, 30);
 
-      final terminal = rebuiltFrom(session);
+      session.restartTerminal(bytes('fresh'));
 
-      expect(terminal.isUsingAltBuffer, isTrue);
-      expect(terminal.mouseMode, isNot(MouseMode.none));
+      expect(session.terminal, isNot(same(replaced)));
+      expect(shownBy(session), 'fresh');
+      expect(session.terminal.terminal.viewWidth, 100);
+      expect(session.terminal.terminal.viewHeight, 30);
       session.dispose();
     });
 
-    test('does not restore a mode the program already turned off', () {
+    test('leaves the old terminal as it stood, for the pane still on it', () {
       final session = createSession();
-      session.deliverOutput(
-        Uint8List.fromList(
-          utf8.encode('\x1b[?1049h\x1b[?1000h\x1b[?1000l\x1b[?1049l'),
-        ),
-      );
-      outgrowTheCap(session);
+      session.deliverOutput(bytes('stale'));
+      final replaced = session.terminal..flush();
 
-      final terminal = rebuiltFrom(session);
+      session.restartTerminal(bytes('fresh'));
+      replaced
+        ..add(bytes(' and late'))
+        ..flush();
 
-      expect(terminal.isUsingAltBuffer, isFalse);
-      expect(terminal.mouseMode, MouseMode.none);
+      expect(terminalBufferText(replaced.terminal.buffer), 'stale');
       session.dispose();
     });
 
-    test('picks up a mode sequence split across two chunks', () {
+    test('takes live output after it', () {
       final session = createSession();
-      session.deliverOutput(Uint8List.fromList(utf8.encode('\x1b[?10')));
-      session.deliverOutput(Uint8List.fromList(utf8.encode('49h')));
-      outgrowTheCap(session);
 
-      expect(rebuiltFrom(session).isUsingAltBuffer, isTrue);
-      session.dispose();
-    });
+      session.restartTerminal(bytes('fresh\r\n'));
+      session.deliverOutput(bytes('live'));
 
-    test('keeps the modes a replaced history was trimmed of', () {
-      final session = createSession();
-      final replay = BytesBuilder()
-        ..add(utf8.encode('\x1b[?1049h'))
-        ..add(Uint8List(600 * 1024));
-      session.replaceHistory(replay.takeBytes());
-
-      expect(rebuiltFrom(session).isUsingAltBuffer, isTrue);
+      expect(shownBy(session), 'fresh\nlive');
       session.dispose();
     });
   });

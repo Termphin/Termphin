@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../services/settings/floating_dock_settings.dart';
@@ -171,17 +171,11 @@ class _DockButton extends StatelessWidget {
         color: Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(AppTheme.radiusPill),
         border: Border.all(color: borderColor, width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.35),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: AppTheme.raisedShadow,
       ),
       child: Icon(
         PhosphorIconsRegular.list,
-        size: 20,
+        size: AppTheme.icon20,
         color: context.colors.primary,
       ),
     );

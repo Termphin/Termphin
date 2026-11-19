@@ -9,6 +9,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../i18n/strings.g.dart';
 import '../../models/active_session.dart';
+import '../../models/agent_feature.dart';
 import '../../models/remote_agent_status.dart';
 import '../../models/remote_shell.dart';
 import '../../models/session_tab.dart';
@@ -20,6 +21,7 @@ import '../storage/profile_storage.dart';
 import '../terminal/agent_probe_cache.dart';
 import '../terminal/osc_markers.dart';
 import '../terminal/remote_mux_commands.dart';
+import '../terminal/terminal_notification.dart';
 import 'remote_agent_service.dart';
 import 'ssh_prompts.dart';
 import 'ssh_service.dart';
@@ -312,12 +314,130 @@ class SshSessionManager extends ChangeNotifier {
   /// is, so a stall shows up while someone is there to see it.
   bool _foreground = true;
 
+  bool get foreground => _foreground;
+
+  /// The tab last brought to the front.
+  String? get activeSessionId => _lastActiveSessionId;
+
+  /// Whether the terminal is what is on screen rather than the machine list
+  /// or settings - with [activeSessionId], which session its user is looking
+  /// at. Kept by `MainShell`. A change is announced to listeners, so what
+  /// remembers which session was last looked at sees the user leave the
+  /// terminal for the machine list too.
+  bool get terminalOnScreen => _terminalOnScreen;
+  bool _terminalOnScreen = false;
+  set terminalOnScreen(bool value) {
+    if (value == _terminalOnScreen) return;
+    _terminalOnScreen = value;
+    _clearSeen();
+    notifyListeners();
+  }
+
+  /// Sessions that notified since they were last looked at, for the dot on
+  /// their tab and on the session dock. Only a session that exists gets
+  /// one - a server's push names a machine, not a tab - and the one on
+  /// screen never does: whoever is looking at it saw what happened.
+  final _unread = <String>{};
+
+  bool hasUnreadNotice(String sessionId) => _unread.contains(sessionId);
+
+  bool get hasAnyUnreadNotice => _unread.any(_sessions.containsKey);
+
+  void noteUnread(String sessionId) {
+    if (!_sessions.containsKey(sessionId)) return;
+    if (sessionId == _visibleSessionId) return;
+    if (_unread.add(sessionId)) notifyListeners();
+  }
+
+  String? get _visibleSessionId =>
+      _foreground && _terminalOnScreen ? _lastActiveSessionId : null;
+
+  /// Forgets the dot of the session now on screen. True when there was one.
+  bool _clearSeen() {
+    final visible = _visibleSessionId;
+    return visible != null && _unread.remove(visible);
+  }
+
+  /// Takes what programs in any session ask the terminal to announce. Set by
+  /// `main`, which decides what of it reaches the system.
+  void Function(ActiveSessionView session, TerminalNotification notification)?
+  onTerminalNotification;
+
+  final _notificationWatches =
+      Expando<StreamSubscription<TerminalNotification>>();
+
+  /// Hands [session]'s notifications to [onTerminalNotification], once per
+  /// session object - a resumed session is the same object and keeps its
+  /// subscription.
+  void _watchNotifications(ActiveSessionView session) {
+    if (_notificationWatches[session] != null) return;
+    _notificationWatches[session] = session.notifications.listen(
+      (notification) => onTerminalNotification?.call(session, notification),
+    );
+  }
+
+  /// What the app types to tell an agent master the phone went to the
+  /// background. The master's attach client takes it out of the input, so
+  /// the shell never sees it - which is why only a master that knows it,
+  /// [AgentFeature.backgroundNotices], is ever sent it.
+  static final presenceAway = Uint8List.fromList(
+    utf8.encode('\x1b]5386;away\x07'),
+  );
+
+  /// What the app types to tell the master the phone is back.
+  static final presenceBack = Uint8List.fromList(
+    utf8.encode('\x1b]5386;back\x07'),
+  );
+
+  /// How long notifications stay held after coming back if the marker never
+  /// arrives - a master that went down meanwhile sends none.
+  static const presenceMarkerWait = Duration(seconds: 10);
+
+  /// Whether [session]'s master can be told the phone went away.
+  static bool _hearsPresence(ActiveSessionView session) =>
+      !session.dropped &&
+      session.sshService != null &&
+      session.multiplexer == Multiplexer.termphin &&
+      !AgentFeature.missingFor(
+        session.masterVersion,
+      ).contains(AgentFeature.backgroundNotices);
+
+  /// Tells every master that can hear it that the phone went to the
+  /// background. A phone that freezes the app - an iPhone - keeps its
+  /// connection open, so without this the master would go on treating it as
+  /// attached and never relay a notification. Notifications from these
+  /// sessions are held from now until [comeBack]'s marker.
+  void goAway() {
+    for (final session in _sessions.values) {
+      if (!_hearsPresence(session)) continue;
+      session.away = true;
+      session.holdingNotices = true;
+      session.sshService!.write(presenceAway);
+    }
+  }
+
+  /// Tells the masters told [goAway] that the phone is back. Notifications
+  /// stay held until each master's marker, which follows whatever it queued
+  /// meanwhile - the session's terminal sees it in order with the output -
+  /// or [presenceMarkerWait] at the most.
+  void comeBack() {
+    for (final session in _sessions.values) {
+      if (!session.away) continue;
+      session.away = false;
+      if (_hearsPresence(session)) {
+        session.sshService!.write(presenceBack);
+      }
+      Timer(presenceMarkerWait, () => session.holdingNotices = false);
+    }
+  }
+
   void setForeground(bool foreground) {
     if (foreground == _foreground) return;
     _foreground = foreground;
     for (final session in _sessions.values) {
       session.sshService?.setForeground(foreground);
     }
+    if (_clearSeen()) notifyListeners();
   }
 
   /// Marks sessions whose transport died while the app was away.
@@ -532,6 +652,7 @@ class SshSessionManager extends ChangeNotifier {
   Future<void> setActiveSession(String sessionId) async {
     if (_lastActiveSessionId == sessionId) return;
     _lastActiveSessionId = sessionId;
+    if (_clearSeen()) notifyListeners();
     await _saveSessionUiState();
   }
 
@@ -622,7 +743,8 @@ class SshSessionManager extends ChangeNotifier {
         ..sshService = service
         ..dropped = false
         ..connecting = true
-        ..resumedInPlace = false;
+        ..resumedInPlace = false
+        ..ptyOpensAt(initialWidth, initialHeight);
     } else {
       session = ActiveSessionView(
         id: id,
@@ -633,9 +755,12 @@ class SshSessionManager extends ChangeNotifier {
         sshService: service,
         isRun: isRun,
         connecting: true,
+        columns: initialWidth,
+        rows: initialHeight,
       );
     }
     _sessions[id] = session;
+    _watchNotifications(session);
     notifyListeners();
 
     try {
@@ -714,6 +839,9 @@ class SshSessionManager extends ChangeNotifier {
             ? null
             : (path: binary, isWindows: agentOperatingSystem == 'Windows');
 
+      session
+        ..masterVersion = null
+        ..masterChecked = false;
       final replayWaiter = ReplayWaiter(
         enabled: replayRemoteHistory && backend == Multiplexer.termphin,
       );
@@ -728,23 +856,25 @@ class SshSessionManager extends ChangeNotifier {
         if (payload == '5381;termphin-reboot-restored') {
           session.notifyRebootRestored();
         }
+        final master = masterVersionFrom(payload);
+        if (master != null) session.masterVersion = master;
         _handleCwdMarker(session, payload);
       });
-      session.serviceOutputSubscription = service.output.listen(
-        (bytes) {
-          replayWaiter.onOutput();
-          service.quality.heard();
-          markerTracker.consume(bytes);
-          offsetCounter.onChunk(bytes.length);
-          if (staging) {
-            staged.add(bytes);
-            return;
-          }
-          session.outputPosition = offsetCounter.position;
-          session.deliverOutput(bytes);
-        },
-        onError: (_) => markSessionDropped(id),
-      );
+      session.serviceOutputSubscription = service.output.listen((bytes) {
+        replayWaiter.onOutput();
+        service.quality.heard();
+        markerTracker.consume(bytes);
+        if (!session.masterChecked && backend == Multiplexer.termphin) {
+          session.masterChecked = true;
+        }
+        offsetCounter.onChunk(bytes.length);
+        if (staging) {
+          staged.add(bytes);
+          return;
+        }
+        session.outputPosition = offsetCounter.position;
+        session.deliverOutput(bytes);
+      }, onError: (_) => markSessionDropped(id));
 
       onConnectionLog?.call(t.connectionLog.openingSession);
       final sshSession = await service.startShell(
@@ -768,7 +898,7 @@ class SshSessionManager extends ChangeNotifier {
           staged.forEach(session.deliverOutput);
           session.resumedInPlace = true;
         } else {
-          session.replaceHistory(
+          session.restartTerminal(
             Uint8List.fromList([for (final chunk in staged) ...chunk]),
           );
         }
@@ -792,7 +922,6 @@ class SshSessionManager extends ChangeNotifier {
       );
       if (!_sessionOrder.contains(id)) _sessionOrder.add(id);
       await _saveSessionUiState();
-      session.pendingReplay = session.rawHistorySnapshot;
       session.connecting = false;
       notifyListeners();
       onConnectionLog?.call(t.connectionLog.sessionReady);
@@ -1267,13 +1396,6 @@ class SshSessionManager extends ChangeNotifier {
       math.max(1, width),
       math.max(1, height),
     );
-  }
-
-  Future<Uint8List> requestReplay(String sessionId) async {
-    final session = _sessions[sessionId];
-    final replay = session?.rawHistorySnapshot ?? Uint8List(0);
-    if (session != null) session.pendingReplay = replay;
-    return replay;
   }
 
   Future<Uint8List> exec(String sessionId, String command) async {

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../app.dart';
 import '../../i18n/strings.g.dart';
@@ -82,10 +82,10 @@ class _KeyboardInteractiveDialogState
           children: [
             if (instruction.isNotEmpty) ...[
               Text(instruction, style: colors.uiStyle),
-              const SizedBox(height: AppTheme.spaceLg),
+              const SizedBox(height: AppTheme.space16),
             ],
             for (var i = 0; i < request.questions.length; i++) ...[
-              if (i > 0) const SizedBox(height: AppTheme.spaceMd),
+              if (i > 0) const SizedBox(height: AppTheme.space12),
               TextField(
                 controller: _controllers[i],
                 autofocus: i == 0,

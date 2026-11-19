@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:termphin/services/backup/export_service.dart';
 import 'package:termphin/services/completion/command_completion.dart';
+import 'package:termphin/services/pro/pro_hints.dart';
 import 'package:termphin/services/settings/action_dock_settings.dart';
 import 'package:termphin/services/settings/anonymize_setting.dart';
 import 'package:termphin/services/settings/app_settings.dart';
@@ -11,6 +12,7 @@ import 'package:termphin/services/settings/desktop_settings.dart';
 import 'package:termphin/services/settings/editor_settings.dart';
 import 'package:termphin/services/settings/floating_dock_settings.dart';
 import 'package:termphin/services/settings/lock_settings.dart';
+import 'package:termphin/services/settings/profile_form_settings.dart';
 import 'package:termphin/services/settings/setting.dart';
 import 'package:termphin/services/settings/sftp_settings.dart';
 import 'package:termphin/services/settings/sidebar_settings.dart';
@@ -40,6 +42,7 @@ List<Setting<Object?>> get _loaded => [
   sidebarCollapsedSetting,
   sidebarWidthSetting,
   commandSuggestionsSetting,
+  proTipsSetting,
   sftpShowHiddenSetting,
   sftpFollowTerminalSetting,
   sftpSortFieldSetting,
@@ -47,6 +50,7 @@ List<Setting<Object?>> get _loaded => [
   tabBarPositionSetting,
   lockTimeoutSetting,
   closeToTraySetting,
+  profileFormMoreOptionsSetting,
 ];
 
 /// Where a `Setting` is built, found by reading the source rather than by
@@ -204,9 +208,16 @@ final Map<Setting<Object?>, Object?> _alternatives = {
   ),
   terminalSettings.cursorBlink: false,
   terminalSettings.predictiveEcho: false,
+  terminalSettings.programNotifications: false,
+  terminalSettings.finishedNotifications: false,
+  terminalSettings.quietNotifications: false,
+  terminalSettings.noticeLines: false,
+  terminalSettings.openAppNotices: false,
+  terminalSettings.openAppNoticeStyle: kOpenAppNoticeSystem,
   terminalSettings.fontFamily: kTerminalFontLabels.keys.firstWhere(
     (name) => name != terminalSettings.fontFamily.fallback,
   ),
+  terminalSettings.mouseKeyboardGuard: false,
   editorSettings.fontSize: 16.5,
   editorSettings.fontFamily: kTerminalFontLabels.keys.firstWhere(
     (name) => name != editorSettings.fontFamily.fallback,
@@ -255,7 +266,9 @@ final Map<Setting<Object?>, Object?> _alternatives = {
   sidebarCollapsedSetting: !sidebarCollapsedSetting.fallback,
   sidebarWidthSetting: 300.0,
   commandSuggestionsSetting: !commandSuggestionsSetting.fallback,
+  proTipsSetting: !proTipsSetting.fallback,
   tabBarPositionSetting: TabBarPosition.bottom,
   lockTimeoutSetting: LockTimeout.minutes5,
   closeToTraySetting: !closeToTraySetting.fallback,
+  profileFormMoreOptionsSetting: !profileFormMoreOptionsSetting.fallback,
 };

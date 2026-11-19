@@ -1,8 +1,7 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:termphin/screens/settings/terminal_appearance_screen.dart';
 import 'package:termphin/services/settings/terminal_settings.dart';
 import 'package:termphin/theme/theme.dart';

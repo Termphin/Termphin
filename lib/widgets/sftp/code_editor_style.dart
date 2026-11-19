@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:re_editor/re_editor.dart' as re;
 
 import '../../services/settings/editor_settings.dart';
@@ -94,7 +94,7 @@ re.CodeEditorStyle codeEditorStyle(
 re.CodeIndicatorBuilder? editorLineNumbers() {
   if (!editorSettings.lineNumbers.value) return null;
   return (context, editingController, chunkController, notifier) => Padding(
-    padding: const EdgeInsets.only(right: 12),
+    padding: const EdgeInsets.only(right: AppTheme.space12),
     child: re.DefaultCodeLineNumber(
       controller: editingController,
       notifier: notifier,

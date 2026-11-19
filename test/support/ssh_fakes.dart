@@ -12,6 +12,15 @@ import 'package:termphin/services/ssh/ssh_prompts.dart';
 import 'package:termphin/services/ssh/ssh_service.dart';
 
 class FakeSshBackend {
+  /// The agent master version the fake announces on attach, as one from
+  /// 0.16.0 on does; null plays a master too old to say.
+  String? masterVersion = '0.16.0';
+
+  /// Whether an attach without a replay still gets the master's version
+  /// marker first, as a real master sends it; off, such an attach gets no
+  /// output at all, the moment before the master has spoken.
+  bool markerWithoutReplay = false;
+
   final List<MethodCall> calls = [];
   final List<FakeSshService> services = [];
   Object? connectError;
@@ -113,7 +122,19 @@ class FakeSshService extends SshService {
     if (scripted != null && command != null) {
       emit(scripted(command));
     } else if (command?.contains(' --replay ') ?? false) {
-      emit(utf8.encode('\x1b]5380;termphin-replay-end\x07'));
+      final master = backend.masterVersion;
+      emit(
+        utf8.encode(
+          '${master == null ? '' : '\x1b]5384;termphin-master;$master\x07'}'
+          '\x1b]5380;termphin-replay-end\x07',
+        ),
+      );
+    } else if (backend.markerWithoutReplay &&
+        (command?.contains(' attach ') ?? false)) {
+      final master = backend.masterVersion;
+      if (master != null) {
+        emit(utf8.encode('\x1b]5384;termphin-master;$master\x07'));
+      }
     }
     return fakeSession;
   }

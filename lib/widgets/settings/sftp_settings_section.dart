@@ -1,6 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../i18n/strings.g.dart';
 import '../../screens/settings/editor_settings_screen.dart';
@@ -11,22 +10,26 @@ import '../../services/sftp/download_location.dart';
 import '../../theme/theme.dart';
 import '../../utils/platform_info.dart';
 import '../ui/app_card.dart';
+import '../ui/app_divider.dart';
 import '../ui/app_notifications.dart';
 import '../ui/section_header.dart';
 import '../ui/section_navigator.dart';
 import '../ui/settings_tile.dart';
+import 'settings_rows_reveal.dart';
 
 /// SFTP section: download folder, hidden files, follow-the-terminal and the
 /// text editor settings.
 class SftpSettingsSection extends StatefulWidget {
-  const SftpSettingsSection({super.key});
+  const SftpSettingsSection({super.key, this.header = true});
+
+  /// Off on a screen of its own, whose title already says what this is.
+  final bool header;
 
   @override
   State<SftpSettingsSection> createState() => _SftpSettingsSectionState();
 }
 
 class _SftpSettingsSectionState extends State<SftpSettingsSection> {
-  bool _loaded = false;
   DownloadFolder? _downloadFolder;
 
   @override
@@ -40,7 +43,6 @@ class _SftpSettingsSectionState extends State<SftpSettingsSection> {
     if (!mounted) return;
     setState(() {
       _downloadFolder = downloadFolder;
-      _loaded = true;
     });
   }
 
@@ -65,85 +67,79 @@ class _SftpSettingsSectionState extends State<SftpSettingsSection> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_loaded) return const SizedBox.shrink();
     final t = Translations.of(context);
     final canPick = platformHas(PlatformFeature.downloadFolderPicker);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SectionHeader(t.settings.sftp),
-        const SizedBox(height: 10),
-        AppCard(
-          child: Column(
-            children: [
-              SettingsTile(
-                icon: PhosphorIconsRegular.folderOpen,
-                iconColor: context.colors.primary,
-                title: t.settings.downloadFolder,
-                subtitle: !canPick
-                    ? t.settings.downloadFolderIos
-                    : (_downloadFolder?.label.isNotEmpty ?? false
-                          ? _downloadFolder!.label
-                          : t.settings.downloadFolderDefault),
-                trailing: canPick
-                    ? SettingsTileTrailing.chevron
-                    : SettingsTileTrailing.none,
-                onTap: canPick ? _onPickDownloadFolder : null,
-              ),
-              if (canPick && _downloadFolder != null) ...[
-                const Divider(height: 1),
+        if (widget.header) ...[
+          SectionHeader(t.settings.sftp),
+          const SizedBox(height: AppTheme.space10),
+        ],
+        AppCard.fields(
+          children: [
+            SettingsTile(
+              title: t.settings.downloadFolder,
+              subtitle: !canPick
+                  ? t.settings.downloadFolderIos
+                  : (_downloadFolder?.label.isNotEmpty ?? false
+                        ? _downloadFolder!.label
+                        : t.settings.downloadFolderDefault),
+              trailing: canPick
+                  ? SettingsTileTrailing.chevron
+                  : SettingsTileTrailing.none,
+              onTap: canPick ? _onPickDownloadFolder : null,
+            ),
+            SettingsRowsReveal(
+              visible: canPick && _downloadFolder != null,
+              children: [
+                const AppDivider(),
                 SettingsTile(
-                  icon: PhosphorIconsRegular.arrowCounterClockwise,
-                  iconColor: context.colors.textTertiary,
                   title: t.settings.downloadFolderReset,
                   trailing: SettingsTileTrailing.none,
                   onTap: _onResetDownloadFolder,
                 ),
               ],
-              const Divider(height: 1),
-              ValueListenableBuilder<bool>(
-                valueListenable: sftpShowHiddenSetting,
-                builder: (context, showHidden, _) => SettingsSwitchTile(
-                  icon: PhosphorIconsRegular.eye,
-                  title: t.settings.sftpShowHidden,
-                  subtitle: t.settings.sftpShowHiddenSubtitle,
-                  value: showHidden,
-                  onChanged: sftpShowHiddenSetting.set,
-                ),
+            ),
+            const AppDivider(),
+            ValueListenableBuilder<bool>(
+              valueListenable: sftpShowHiddenSetting,
+              builder: (context, showHidden, _) => SettingsSwitchTile(
+                title: t.settings.sftpShowHidden,
+                subtitle: t.settings.sftpShowHiddenSubtitle,
+                value: showHidden,
+                onChanged: sftpShowHiddenSetting.set,
               ),
-              const Divider(height: 1),
-              ValueListenableBuilder<bool>(
-                valueListenable: sftpFollowTerminalSetting,
-                builder: (context, follow, _) => SettingsSwitchTile(
-                  icon: PhosphorIconsRegular.folderOpen,
-                  title: t.settings.sftpFollowTerminal,
-                  subtitle: t.settings.sftpFollowTerminalSubtitle,
-                  value: follow,
-                  onChanged: sftpFollowTerminalSetting.set,
-                ),
+            ),
+            const AppDivider(),
+            ValueListenableBuilder<bool>(
+              valueListenable: sftpFollowTerminalSetting,
+              builder: (context, follow, _) => SettingsSwitchTile(
+                title: t.settings.sftpFollowTerminal,
+                subtitle: t.settings.sftpFollowTerminalSubtitle,
+                value: follow,
+                onChanged: sftpFollowTerminalSetting.set,
               ),
-              const Divider(height: 1),
-              SettingsTile(
-                icon: PhosphorIconsRegular.fileText,
-                title: t.settings.textEditor,
-                subtitle: t.settings.textEditorSubtitle(
-                  font:
-                      kTerminalFontLabels[editorSettings.fontFamily.value] ??
-                      '',
-                  size: editorSettings.fontSize.value.toStringAsFixed(1),
-                ),
-                onTap: () async {
-                  await pushAppPage<void>(
-                    context,
-                    window: true,
-                    title: t.settings.textEditor,
-                    builder: (_) => const EditorSettingsScreen(),
-                  );
-                  if (mounted) setState(() {});
-                },
+            ),
+            const AppDivider(),
+            SettingsTile(
+              title: t.settings.textEditor,
+              subtitle: t.settings.textEditorSubtitle(
+                font:
+                    kTerminalFontLabels[editorSettings.fontFamily.value] ?? '',
+                size: editorSettings.fontSize.value.toStringAsFixed(1),
               ),
-            ],
-          ),
+              onTap: () async {
+                await pushAppPage<void>(
+                  context,
+                  window: true,
+                  title: t.settings.textEditor,
+                  builder: (_) => const EditorSettingsScreen(),
+                );
+                if (mounted) setState(() {});
+              },
+            ),
+          ],
         ),
       ],
     );

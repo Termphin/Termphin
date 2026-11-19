@@ -1,6 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
+import 'package:material_ui/material_ui.dart';
 import 'package:termphin/widgets/ui/text_input_dialog.dart';
 
 import '../../support/test_app.dart';
@@ -9,10 +8,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('returns the trimmed text on confirm', (tester) async {
-    await pumpTestApp(
-      tester,
-      const _TextInputHost(initialValue: '  hello  '),
-    );
+    await pumpTestApp(tester, const _TextInputHost(initialValue: '  hello  '));
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
 

@@ -4,9 +4,9 @@ import 'dart:convert';
 import 'package:dartssh2/dartssh2.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:share_plus/share_plus.dart' show SharePlus, ShareParams;
 
@@ -17,34 +17,39 @@ import '../../models/session_tab.dart';
 import '../../models/ssh_profile.dart';
 import '../../providers/ssh_connection_provider.dart';
 import '../../providers/ssh_session_manager_provider.dart';
+import '../../providers/transfer_queue_provider.dart';
 import '../../services/completion/command_completion.dart';
 import '../../services/settings/sftp_settings.dart';
 import '../../services/settings/terminal_settings.dart';
 import '../../services/settings/upload_settings.dart';
 import '../../services/sftp/cancel_token.dart';
+import '../../services/sftp/download_service.dart';
 import '../../services/sftp/sftp_remote_ops.dart';
 import '../../services/sftp/sftp_service.dart';
+import '../../services/sftp/transfer_queue.dart';
 import '../../services/sftp/upload_plan.dart';
 import '../../services/ssh/local_network_permission.dart';
 import '../../services/ssh/ssh_service.dart';
 import '../../services/ssh/ssh_session_manager.dart';
+import '../../services/terminal/pty_resize_reporter.dart';
 import '../../services/terminal/terminal_text.dart';
 import '../../theme/theme.dart';
 import '../../utils/connection_error_text.dart';
 import '../../utils/platform_info.dart';
 import '../../utils/sftp_error_handler.dart';
 import '../../utils/sftp_path.dart';
+import '../settings/manual_link.dart';
 import '../sftp/confirm_overwrite.dart';
 import '../sftp/sftp_browser_view.dart';
 import '../sftp/sftp_folder_picker.dart';
-import '../sftp/upload_progress_bar.dart';
+import '../sftp/transfer_bar.dart';
 import '../ssh/connecting_view.dart';
 import '../ssh/connection_log_sheet.dart';
 import '../ssh/connection_quality_pill.dart';
+import '../ui/app_card.dart';
 import '../ui/app_notifications.dart';
 import '../ui/clipboard_and_links.dart';
 import '../ui/cursor_menu.dart';
-import '../ui/manual_link.dart';
 import 'command_suggestion_popup.dart';
 import 'floating_action_dock.dart';
 import 'link_preview_popup.dart';
@@ -322,6 +327,11 @@ class SessionViewState extends ConsumerState<SessionView> {
     }
     if (widget.isActive && !oldWidget.isActive) _focusOnDesktop();
     if (widget.isActive != oldWidget.isActive) _onScreenChanged();
+    if (_terminalShown &&
+        (!oldWidget.isActive ||
+            oldWidget.viewMode != SessionViewMode.terminal)) {
+      _offerPendingPaste();
+    }
     super.didUpdateWidget(oldWidget);
   }
 
@@ -357,12 +367,11 @@ class SessionViewState extends ConsumerState<SessionView> {
     _completion.dispose();
     unawaited(_rebootRestoredSub?.cancel());
     _fontSizeSaveDebounce?.cancel();
-    _resizeDebounce?.cancel();
+    _resizeReporter.dispose();
     ctrlMode.dispose();
     altMode.dispose();
     shiftMode.dispose();
-    _uploadCancel?.cancel();
-    _uploadProgress.dispose();
+    _transfersExpanded.dispose();
     super.dispose();
   }
 
@@ -405,7 +414,6 @@ class SessionViewState extends ConsumerState<SessionView> {
   void _onTerminalReady(int attachId) {
     _readyAttachId = attachId;
     _terminalReady = true;
-    _manager.getSession(widget.sessionKey.$1)?.pendingReplay = null;
     _applySettings();
     _nativeController.requestFit();
     ref
@@ -464,6 +472,7 @@ class SessionViewState extends ConsumerState<SessionView> {
   /// but not a bare Esc, which is what closed them: pressed again it would
   /// open them right back, a toggle where it is meant to be a way out.
   void _onInput(List<int> rawBytes) {
+    _inputSerial++;
     if (_cursorMenuContent != null) _dismissCursorMenu();
     if (isTypedInput(rawBytes)) _dismissLink();
     if (_suggestionsPaused &&
@@ -521,8 +530,30 @@ class SessionViewState extends ConsumerState<SessionView> {
     notifier.write(data);
   }
 
-  final ValueNotifier<UploadProgress?> _uploadProgress = ValueNotifier(null);
-  CancelToken? _uploadCancel;
+  TransferQueue get _transfers =>
+      ref.read(transferQueueProvider(widget.sessionKey.$1));
+
+  final ValueNotifier<bool> _transfersExpanded = ValueNotifier(false);
+
+  /// Folds the transfer list away; true when it was open, so back stops
+  /// there.
+  bool collapseTransfers() {
+    if (!_transfersExpanded.value) return false;
+    _transfersExpanded.value = false;
+    return true;
+  }
+
+  /// Bumped by every keystroke, so a finished upload can tell whether the
+  /// command line was touched while it ran.
+  var _inputSerial = 0;
+
+  /// Paths of an upload that finished while this terminal was out of sight,
+  /// offered at the cursor the next time it is shown. A later upload
+  /// replaces them.
+  String? _pendingPaste;
+
+  bool get _terminalShown =>
+      widget.isActive && widget.viewMode == SessionViewMode.terminal;
 
   /// Picks local files and uploads them to the shell's scratch directory, its
   /// current directory or a folder the user picks, depending on
@@ -584,13 +615,11 @@ class SessionViewState extends ConsumerState<SessionView> {
     );
 
     final queue = <(LocalUpload, String)>[];
-    final client = await session.sftpClient;
-    final sftp = SftpService(client);
-    final done = <String>[];
+    final checker = SftpService(await session.sftpClient);
     try {
       for (var i = 0; i < picked.length; i++) {
         if (destination != UploadDestination.tmp &&
-            await sftp.exists(planned[i])) {
+            await checker.exists(planned[i])) {
           if (!mounted) return;
           if (await confirmUploadOverwrite(context, picked[i].name) != true) {
             continue;
@@ -598,60 +627,93 @@ class SessionViewState extends ConsumerState<SessionView> {
         }
         queue.add((picked[i], planned[i]));
       }
-      if (queue.isEmpty || !mounted) return;
-
-      final sizes = [for (final (file, _) in queue) await file.length()];
-      final total = sizes.contains(null)
-          ? null
-          : sizes.fold<int>(0, (sum, size) => sum + size!);
-
-      final cancel = CancelToken();
-      _uploadCancel = cancel;
-      _uploadProgress.value = UploadProgress(bytes: 0, total: total);
-      var bytesBefore = 0;
-      try {
-        for (var i = 0; i < queue.length; i++) {
-          cancel.throwIfCancelled();
-          final (file, remotePath) = queue[i];
-          _uploadProgress.value = UploadProgress(
-            bytes: bytesBefore,
-            total: total,
-            index: i + 1,
-            count: queue.length,
-          );
-          var fileSent = 0;
-          await sftp.uploadStream(
-            file.open(),
-            remotePath,
-            totalSize: sizes[i],
-            cancel: cancel,
-            onProgress: (sent, _) {
-              fileSent = sent;
-              _uploadProgress.value = UploadProgress(
-                bytes: bytesBefore + sent,
-                total: total,
-                index: i + 1,
-                count: queue.length,
-              );
-            },
-          );
-          bytesBefore += sizes[i] ?? fileSent;
-          done.add(remotePath);
-        }
-      } catch (e) {
-        if (!mounted) return;
-        if (cancel.isCancelled || e is TransferCancelled) {
-          AppNotifications.info(context, t.sftp.uploadCancelled);
-        } else {
-          AppNotifications.error(context, resolveSftpError(e, t));
-        }
-        return;
-      } finally {
-        _uploadCancel = null;
-        _uploadProgress.value = null;
-      }
     } finally {
-      await sftp.close();
+      await checker.close();
+    }
+    if (queue.isEmpty || !mounted) return;
+
+    final sizes = [for (final (file, _) in queue) await file.length()];
+    final total = sizes.contains(null)
+        ? null
+        : sizes.fold<int>(0, (sum, size) => sum + size!);
+    final typedBefore = _inputSerial;
+    final done = <String>[];
+    var waited = false;
+    try {
+      await _transfers.add<void>(
+        kind: TransferJobKind.upload,
+        label: queue.first.$1.name,
+        run: (job) async {
+          waited = job.waited;
+          final sftp = SftpService.resolving(() => session.sftpClient);
+          try {
+            await TransferNotification.runUpload(
+              label: queue.first.$1.name,
+              completeTarget: queue.length == 1
+                  ? queue.single.$1.name
+                  : sftpPathToDisplay(directory),
+              fileCount: queue.length,
+              cancel: job.cancel,
+              showAndroidComplete: false,
+              body: (reportNotification) async {
+                var bytesBefore = 0;
+                for (var i = 0; i < queue.length; i++) {
+                  job.cancel.throwIfCancelled();
+                  final (file, remotePath) = queue[i];
+                  TransferProgress progressAt(int bytes) => TransferProgress(
+                    label: file.name,
+                    itemIndex: i + 1,
+                    itemCount: queue.length,
+                    bytes: bytes,
+                    totalBytes: total,
+                    fraction: total == null || total <= 0
+                        ? null
+                        : (bytes / total).clamp(0.0, 1.0),
+                  );
+                  final initial = progressAt(bytesBefore);
+                  job.report(initial);
+                  reportNotification(
+                    initial.fraction,
+                    label: file.name,
+                    itemIndex: i + 1,
+                    itemCount: queue.length,
+                  );
+                  var fileSent = 0;
+                  await sftp.uploadStream(
+                    file.open(),
+                    remotePath,
+                    totalSize: sizes[i],
+                    cancel: job.cancel,
+                    onProgress: (sent, _) {
+                      fileSent = sent;
+                      final update = progressAt(bytesBefore + sent);
+                      job.report(update);
+                      reportNotification(
+                        update.fraction,
+                        label: file.name,
+                        itemIndex: i + 1,
+                        itemCount: queue.length,
+                      );
+                    },
+                  );
+                  bytesBefore += sizes[i] ?? fileSent;
+                  done.add(remotePath);
+                }
+              },
+            );
+          } finally {
+            await sftp.close();
+          }
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+      if (e is TransferCancelled) {
+        AppNotifications.info(context, t.sftp.uploadCancelled);
+      } else {
+        AppNotifications.error(context, resolveSftpError(e, t));
+      }
+      return;
     }
     if (!mounted || done.isEmpty) return;
 
@@ -663,10 +725,24 @@ class SessionViewState extends ConsumerState<SessionView> {
       done.map(sftpPathToDisplay),
       session.remoteShellType,
     );
-    if (uploadAutoPasteSetting.value) {
-      _paste(paste);
-      return;
+    switch (uploadPasteAction(
+      terminalShown: _terminalShown,
+      autoPaste: uploadAutoPasteSetting.value,
+      waited: waited,
+      typedMeanwhile: _inputSerial != typedBefore,
+    )) {
+      case UploadPasteAction.paste:
+        _paste(paste);
+      case UploadPasteAction.offer:
+        _offerPaste(paste);
+      case UploadPasteAction.hold:
+        _pendingPaste = paste;
     }
+  }
+
+  /// The paths at the cursor, for the user to take or leave.
+  void _offerPaste(String paste) {
+    _pendingPaste = null;
     _showCursorMenu(
       (dismiss) => _PasteUploadPathMenu(
         onPaste: () {
@@ -676,6 +752,17 @@ class SessionViewState extends ConsumerState<SessionView> {
         onDismiss: dismiss,
       ),
     );
+  }
+
+  /// Waits a frame: the terminal has only just come on stage, and the cursor
+  /// has no position to anchor to until it has been laid out.
+  void _offerPendingPaste() {
+    if (_pendingPaste == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final paste = _pendingPaste;
+      if (!mounted || paste == null || !_terminalShown) return;
+      _offerPaste(paste);
+    });
   }
 
   /// Folders picked for uploads this run, per machine, offered first.
@@ -742,6 +829,54 @@ class SessionViewState extends ConsumerState<SessionView> {
     await copyToClipboard(context, cwd, message: t.sftp.pathCopied);
   }
 
+  /// Puts everything the terminal holds, scrollback included, on the
+  /// clipboard. A clipboard has a size limit of its own on some systems, so a
+  /// refusal points to saving the output instead.
+  Future<void> copyAllOutput() async {
+    final t = Translations.of(context);
+    final text = _nativeController.bufferText();
+    if (text == null || text.isEmpty) {
+      AppNotifications.info(context, t.actionDock.nothingToCopy);
+      return;
+    }
+    try {
+      await copyToClipboard(context, text, message: t.actionDock.copiedAll);
+    } catch (_) {
+      if (!mounted) return;
+      AppNotifications.error(context, t.actionDock.copyAllFailed);
+    }
+  }
+
+  /// Saves everything the terminal holds, scrollback included, to a text file
+  /// wherever the user picks.
+  Future<void> saveOutput() async {
+    final t = Translations.of(context);
+    final text = _nativeController.bufferText();
+    if (text == null || text.isEmpty) {
+      AppNotifications.info(context, t.actionDock.nothingToCopy);
+      return;
+    }
+    final timestamp = DateTime.now()
+        .toIso8601String()
+        .replaceAll(':', '-')
+        .substring(0, 19);
+    try {
+      final savePath = await FilePicker.saveFile(
+        dialogTitle: t.actionDock.saveOutputDialogTitle,
+        fileName: 'termphin_output_$timestamp.txt',
+        bytes: Uint8List.fromList(utf8.encode('$text\n')),
+      );
+      if (savePath == null || !mounted) return;
+      AppNotifications.success(context, t.actionDock.outputSaved);
+    } catch (e) {
+      if (!mounted) return;
+      AppNotifications.error(
+        context,
+        t.actionDock.saveOutputFailed(error: e.toString()),
+      );
+    }
+  }
+
   /// See [SftpBrowserView.terminalDirectory].
   Future<String?> _terminalDirectoryForSftp(ActiveSessionView session) async {
     if (!sftpFollowTerminalSetting.value) return null;
@@ -805,14 +940,12 @@ class SessionViewState extends ConsumerState<SessionView> {
         case RemoteShellType.powershell:
           try {
             final result = await client
-                .run('[System.IO.Path]::GetTempPath()')
+                .run('[System.IO.Path]::GetTempPath()', stderr: false)
                 .timeout(const Duration(seconds: 5));
-            final raw = utf8.decode(result).trim();
-            if (raw.isEmpty) return '/tmp';
-            final posix = raw
-                .replaceAll('\\', '/')
-                .replaceAll(RegExp(r'/+$'), '');
-            return posix.startsWith('/') ? posix : '/$posix';
+            return tmpDirectoryFromOutput(
+              utf8.decode(result),
+              powershell: true,
+            );
           } catch (_) {
             return '/tmp';
           }
@@ -820,10 +953,12 @@ class SessionViewState extends ConsumerState<SessionView> {
         case RemoteShellType.unknown:
           try {
             final result = await client
-                .run(r'printf %s "${TMPDIR:-/tmp}"')
+                .run(r'printf %s "${TMPDIR:-/tmp}"', stderr: false)
                 .timeout(const Duration(seconds: 5));
-            final raw = utf8.decode(result).trim();
-            return raw.isEmpty ? '/tmp' : raw;
+            return tmpDirectoryFromOutput(
+              utf8.decode(result),
+              powershell: false,
+            );
           } catch (_) {
             return '/tmp';
           }
@@ -835,32 +970,16 @@ class SessionViewState extends ConsumerState<SessionView> {
     return resolved;
   }
 
-  int? _sentCols;
-  int? _sentRows;
-  Timer? _resizeDebounce;
-
-  /// How long the size has to hold still before the server hears about it.
-  ///
-  /// The pane is resized by the layout now, so it follows the keyboard frame by
-  /// frame - and every frame of that animation is a window-change the remote
-  /// shell acts on, which a full-screen TUI answers with a full repaint. The
-  /// throttle belongs here, at the packet, rather than in the layout: the
-  /// terminal is free to be the right size on every frame, the server is only
-  /// told the size it settled on.
-  static const _resizeSettleDelay = Duration(milliseconds: 120);
-
-  void _onResize(int cols, int rows) {
-    if (cols == _sentCols && rows == _sentRows) return;
-    _sentCols = cols;
-    _sentRows = rows;
-    _resizeDebounce?.cancel();
-    _resizeDebounce = Timer(_resizeSettleDelay, () {
+  late final _resizeReporter = PtyResizeReporter(
+    send: (cols, rows) {
       if (!mounted) return;
       ref
           .read(sshConnectionProvider(widget.sessionKey).notifier)
           .resize(cols, rows);
-    });
-  }
+    },
+  );
+
+  void _onResize(int cols, int rows) => _resizeReporter.report(cols, rows);
 
   void _clearSelection() {
     _nativeController.clearSelection();
@@ -985,10 +1104,36 @@ class SessionViewState extends ConsumerState<SessionView> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(transferQueueProvider(widget.sessionKey.$1));
     final state = ref.watch(sshConnectionProvider(widget.sessionKey));
 
     _terminalReady = _readyAttachId == state.attachId;
 
+    return _PhaseSwitcher(
+      phase: _phaseOf(state),
+      child: _buildPhase(context, state),
+    );
+  }
+
+  /// Which screen [state] puts up, so the switch between them can be
+  /// animated: a reconnect over a held frame is still the terminal.
+  _Phase _phaseOf(SshConnectionState state) {
+    switch (state.status) {
+      case ConnectionStatus.connecting || ConnectionStatus.reconnecting:
+        final held = _heldFrame;
+        final holding =
+            state.status == ConnectionStatus.reconnecting &&
+            held != null &&
+            held.attachId == state.attachId;
+        return holding ? _Phase.terminal : _Phase.connecting;
+      case ConnectionStatus.error:
+        return _Phase.error;
+      default:
+        return _Phase.terminal;
+    }
+  }
+
+  Widget _buildPhase(BuildContext context, SshConnectionState state) {
     if (state.status == ConnectionStatus.connecting ||
         state.status == ConnectionStatus.reconnecting) {
       final held = _heldFrame;
@@ -1012,111 +1157,125 @@ class SessionViewState extends ConsumerState<SessionView> {
       final t = Translations.of(context);
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(AppTheme.space20),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 420),
-            child: Container(
+            child: SizedBox(
               width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 22),
-              decoration: BoxDecoration(
-                color: context.colors.surfaceCard,
+              child: AppCard(
                 borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-                border: Border.all(color: context.colors.surfaceBorder),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: context.colors.error.withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      PhosphorIconsFill.warningCircle,
-                      color: context.colors.error,
-                      size: 28,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Text(
-                    t.terminal.connectFailed,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  if (state.errorMessage != null) ...[
-                    const SizedBox(height: 7),
-                    SelectableText(
-                      connectionErrorText(
-                        t,
-                        state.failureReason,
-                        widget.sessionKey.$2.authMethod,
-                        fallback: state.errorMessage!,
+                padding: const EdgeInsets.fromLTRB(
+                  AppTheme.space24,
+                  AppTheme.space24,
+                  AppTheme.space24,
+                  AppTheme.space20,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: AppTheme.icon48,
+                      height: AppTheme.icon48,
+                      decoration: BoxDecoration(
+                        color: context.colors.error.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
                       ),
+                      child: Icon(
+                        PhosphorIconsFill.warningCircle,
+                        color: context.colors.error,
+                        size: AppTheme.icon28,
+                      ),
+                    ),
+                    const SizedBox(height: AppTheme.space14),
+                    Text(
+                      t.terminal.connectFailed,
                       textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: context.colors.textTertiary,
-                        height: 1.4,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                  ],
-                  const SizedBox(height: 20),
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: [
-                      if (state.failureReason ==
-                          SshFailureReason.localNetworkBlocked)
-                        ElevatedButton.icon(
-                          onPressed: _onAllowLocalNetwork,
-                          icon: const Icon(
-                            PhosphorIconsFill.houseLine,
-                            size: 18,
-                          ),
-                          label: Text(t.connection.allowLocalNetwork),
+                    if (state.errorMessage != null) ...[
+                      const SizedBox(height: AppTheme.space6),
+                      SelectableText(
+                        connectionErrorText(
+                          t,
+                          state.failureReason,
+                          widget.sessionKey.$2.authMethod,
+                          fallback: state.errorMessage!,
                         ),
-                      if (state.failureReason ==
-                          SshFailureReason.localNetworkUnverified)
-                        OutlinedButton.icon(
-                          onPressed: _onOpenLocalNetworkSettings,
-                          icon: const Icon(PhosphorIconsRegular.gear, size: 18),
-                          label: Text(t.connection.openLocalNetworkSettings),
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: context.colors.textTertiary,
+                          height: 1.4,
                         ),
-                      _RetryButton(
-                        primary:
-                            state.failureReason !=
-                            SshFailureReason.localNetworkBlocked,
-                        label: t.common.retry,
-                        onPressed: () => ref
-                            .read(
-                              sshConnectionProvider(widget.sessionKey).notifier,
-                            )
-                            .connect(),
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: widget.onClose,
-                        icon: const Icon(PhosphorIconsRegular.x, size: 18),
-                        label: Text(t.common.close),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 6),
-                  TextButton.icon(
-                    onPressed: () => openManual(
-                      context,
-                      connectionErrorManualPage(
-                        state.failureReason,
-                        widget.sessionKey.$2.authMethod,
-                      ),
+                    const SizedBox(height: AppTheme.space20),
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: AppTheme.space10,
+                      runSpacing: AppTheme.space10,
+                      children: [
+                        if (state.failureReason ==
+                            SshFailureReason.localNetworkBlocked)
+                          ElevatedButton.icon(
+                            onPressed: _onAllowLocalNetwork,
+                            icon: const Icon(
+                              PhosphorIconsFill.houseLine,
+                              size: AppTheme.icon18,
+                            ),
+                            label: Text(t.connection.allowLocalNetwork),
+                          ),
+                        if (state.failureReason ==
+                            SshFailureReason.localNetworkUnverified)
+                          OutlinedButton.icon(
+                            onPressed: _onOpenLocalNetworkSettings,
+                            icon: const Icon(
+                              PhosphorIconsRegular.gear,
+                              size: AppTheme.icon18,
+                            ),
+                            label: Text(t.connection.openLocalNetworkSettings),
+                          ),
+                        _RetryButton(
+                          primary:
+                              state.failureReason !=
+                              SshFailureReason.localNetworkBlocked,
+                          label: t.common.retry,
+                          onPressed: () => ref
+                              .read(
+                                sshConnectionProvider(
+                                  widget.sessionKey,
+                                ).notifier,
+                              )
+                              .connect(),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: widget.onClose,
+                          icon: const Icon(
+                            PhosphorIconsRegular.x,
+                            size: AppTheme.icon18,
+                          ),
+                          label: Text(t.common.close),
+                        ),
+                      ],
                     ),
-                    icon: const Icon(PhosphorIconsRegular.question, size: 18),
-                    label: Text(t.manual.howToFix),
-                  ),
-                ],
+                    const SizedBox(height: AppTheme.space6),
+                    TextButton.icon(
+                      onPressed: () => openManual(
+                        context,
+                        connectionErrorManualPage(
+                          state.failureReason,
+                          widget.sessionKey.$2.authMethod,
+                        ),
+                      ),
+                      icon: const Icon(
+                        PhosphorIconsRegular.question,
+                        size: AppTheme.icon18,
+                      ),
+                      label: Text(t.manual.howToFix),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -1152,14 +1311,14 @@ class SessionViewState extends ConsumerState<SessionView> {
   /// selection popup carves the risen toolbar's strip out of its own bound,
   /// or it would end up drawn underneath it.
   ///
-  /// The native view has to be in the tree to boot up and take the replayed
-  /// scrollback, but showing it while it does means watching the history
-  /// paint itself, so the connect screen is kept over it until it reports
-  /// ready - or, after a reconnect, over the terminal it replaces. That
-  /// outer stack stays even once it is ready: dropping it would put a
-  /// `Column` where the `Stack` used to be, and Flutter would rebuild that
-  /// whole subtree - including a fresh, empty platform view - instead of
-  /// keeping the terminal that just replayed the history.
+  /// The pane has to be in the tree to lay out and give the terminal its
+  /// size, but showing it while it does means watching a replay reflow, so
+  /// the connect screen is kept over it until it reports ready - or, after a
+  /// reconnect, over the terminal it replaces. That outer stack stays even
+  /// once it is ready: dropping it would put a `Column` where the `Stack`
+  /// used to be, and Flutter would rebuild that whole subtree - a fresh pane,
+  /// scrolled back to the end and without its selection or search - instead
+  /// of keeping the one that is there.
   ///
   /// The bubble over a selection is a finger's copy button; a desktop copies
   /// from the keys or a right click, so it never shows there.
@@ -1282,20 +1441,31 @@ class SessionViewState extends ConsumerState<SessionView> {
                           ).scaffoldBackgroundColor,
                         ),
                       ),
-                    UploadProgressBar(
-                      progress: _uploadProgress,
-                      onCancel: () => _uploadCancel?.cancel(),
-                    ),
                   ],
                 ),
               ),
               if (_sftpInitialized)
                 Offstage(
                   offstage: widget.viewMode != SessionViewMode.sftp,
-                  child: SftpBrowserView(
-                    key: widget.sftpKey,
-                    session: session,
-                    terminalDirectory: () => _terminalDirectoryForSftp(session),
+                  child: ListenableBuilder(
+                    listenable: _transfers,
+                    builder: (context, child) => AnimatedPadding(
+                      duration: MediaQuery.disableAnimationsOf(context)
+                          ? Duration.zero
+                          : AppTheme.motionSlow,
+                      curve: AppTheme.interactiveCurve,
+                      padding: EdgeInsets.only(
+                        top: _transfers.jobs.isEmpty ? 0 : TransferBar.height,
+                      ),
+                      child: child,
+                    ),
+                    child: SftpBrowserView(
+                      key: widget.sftpKey,
+                      session: session,
+                      transferQueue: _transfers,
+                      terminalDirectory: () =>
+                          _terminalDirectoryForSftp(session),
+                    ),
                   ),
                 ),
             ],
@@ -1308,16 +1478,25 @@ class SessionViewState extends ConsumerState<SessionView> {
       fit: StackFit.expand,
       children: [
         body,
-        if (!_terminalReady && !replacing)
-          ColoredBox(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            child: ConnectingView(
-              profile: widget.sessionKey.$2,
-              onCancel: widget.onClose,
-              connectionLog: state.connectionLog,
-              restoringHistory: true,
-            ),
-          ),
+        Positioned.fill(
+          child: TransferBar(queue: _transfers, expanded: _transfersExpanded),
+        ),
+        _PhaseSwitcher(
+          phase: !_terminalReady && !replacing
+              ? _Phase.connecting
+              : _Phase.terminal,
+          child: !_terminalReady && !replacing
+              ? ColoredBox(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  child: ConnectingView(
+                    profile: widget.sessionKey.$2,
+                    onCancel: widget.onClose,
+                    connectionLog: state.connectionLog,
+                    restoringHistory: true,
+                  ),
+                )
+              : const SizedBox.shrink(),
+        ),
       ],
     );
   }
@@ -1335,13 +1514,12 @@ class SessionViewState extends ConsumerState<SessionView> {
       child: IgnorePointer(
         ignoring: !live,
         child: TerminalPane(
-          outputStream: session.outputStream,
+          terminal: session.terminal,
           inputStream: session.inputStream,
           inputReceipts: session.inputReceipts,
           onInput: _onInput,
           onResize: live ? _onResize : _ignoreResize,
           controller: live ? _nativeController : null,
-          initialHistory: session.pendingReplay,
           onReady: () => _onTerminalReady(attachId),
           onFontSizeChanged: _onFontSizeChanged,
           onSelectionStateChanged: (active, topY, bottomY) {
@@ -1371,63 +1549,106 @@ class SessionViewState extends ConsumerState<SessionView> {
     final t = Translations.of(context);
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(AppTheme.space20),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
-          child: Container(
+          child: SizedBox(
             width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 22),
-            decoration: BoxDecoration(
-              color: context.colors.surfaceCard,
+            child: AppCard(
               borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-              border: Border.all(color: context.colors.surfaceBorder),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: context.colors.primary.withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
+              padding: const EdgeInsets.fromLTRB(
+                AppTheme.space24,
+                AppTheme.space24,
+                AppTheme.space24,
+                AppTheme.space20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: AppTheme.icon48,
+                    height: AppTheme.icon48,
+                    decoration: BoxDecoration(
+                      color: context.colors.primary.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      PhosphorIconsFill.plugs,
+                      color: context.colors.primary,
+                      size: AppTheme.icon26,
+                    ),
                   ),
-                  child: Icon(
-                    PhosphorIconsFill.plugs,
-                    color: context.colors.primary,
-                    size: 26,
+                  const SizedBox(height: AppTheme.space14),
+                  Text(
+                    t.session.offlineTitle,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  t.session.offlineTitle,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
+                  const SizedBox(height: AppTheme.space6),
+                  Text(
+                    t.session.offlineBody,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: context.colors.textTertiary,
+                      height: 1.4,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 7),
-                Text(
-                  t.session.offlineBody,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: context.colors.textTertiary,
-                    height: 1.4,
+                  const SizedBox(height: AppTheme.space20),
+                  ElevatedButton.icon(
+                    onPressed: () => ref
+                        .read(sshConnectionProvider(widget.sessionKey).notifier)
+                        .connect(),
+                    icon: const Icon(
+                      PhosphorIconsFill.plugsConnected,
+                      size: AppTheme.icon18,
+                    ),
+                    label: Text(t.session.attach),
                   ),
-                ),
-                const SizedBox(height: 20),
-                ElevatedButton.icon(
-                  onPressed: () => ref
-                      .read(sshConnectionProvider(widget.sessionKey).notifier)
-                      .connect(),
-                  icon: const Icon(PhosphorIconsFill.plugsConnected, size: 18),
-                  label: Text(t.session.attach),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+enum _Phase { connecting, error, terminal }
+
+/// Cross-fades from one connection phase to the next instead of cutting:
+/// the connecting screen gives way to the terminal, which settles in from a
+/// touch smaller. Only a change of [phase] animates; a rebuild within one
+/// is passed straight through.
+class _PhaseSwitcher extends StatelessWidget {
+  const _PhaseSwitcher({required this.phase, required this.child});
+
+  final _Phase phase;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : AppTheme.motionMedium,
+      reverseDuration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : AppTheme.motionSlow,
+      switchInCurve: AppTheme.interactiveCurve,
+      switchOutCurve: Curves.easeInCubic,
+      layoutBuilder: (current, previous) =>
+          Stack(fit: StackFit.expand, children: [...previous, ?current]),
+      transitionBuilder: (child, animation) => FadeTransition(
+        opacity: animation,
+        child: ScaleTransition(
+          scale: Tween(begin: 0.98, end: 1.0).animate(animation),
+          child: child,
+        ),
+      ),
+      child: KeyedSubtree(key: ValueKey(phase), child: child),
     );
   }
 }
@@ -1453,13 +1674,7 @@ class _CopyPastePopup extends StatelessWidget {
         color: surface,
         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: border),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.35),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        boxShadow: AppTheme.floatingShadow,
       ),
       child: IntrinsicHeight(
         child: Row(
@@ -1508,13 +1723,7 @@ class _PasteUploadPathMenu extends StatelessWidget {
         color: surface,
         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: border),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.35),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        boxShadow: AppTheme.floatingShadow,
       ),
       child: IntrinsicHeight(
         child: Row(
@@ -1550,8 +1759,8 @@ class _PopupIconBtn extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Icon(icon, size: 16, color: textColor),
+          padding: const EdgeInsets.all(AppTheme.space12),
+          child: Icon(icon, size: AppTheme.icon16, color: textColor),
         ),
       ),
     );
@@ -1579,17 +1788,20 @@ class _PopupBtn extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppTheme.space16,
+            vertical: AppTheme.space10,
+          ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 16, color: textColor),
-              const SizedBox(width: 7),
+              Icon(icon, size: AppTheme.icon16, color: textColor),
+              const SizedBox(width: AppTheme.space6),
               Text(
                 label,
                 style: TextStyle(
                   color: textColor,
-                  fontSize: 14,
+                  fontSize: AppTheme.font14,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -1623,23 +1835,17 @@ class _ScrollToBottomButton extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(AppTheme.radiusXl),
           child: Container(
-            width: 40,
-            height: 40,
+            width: AppTheme.icon40,
+            height: AppTheme.icon40,
             decoration: BoxDecoration(
               color: backgroundColor.withValues(alpha: 0.85),
               borderRadius: BorderRadius.circular(AppTheme.radiusXl),
               border: Border.all(color: borderColor, width: 1),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.35),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+              boxShadow: AppTheme.raisedShadow,
             ),
             child: Icon(
               PhosphorIconsFill.arrowLineDown,
-              size: 20,
+              size: AppTheme.icon20,
               color: accent,
             ),
           ),
@@ -1665,7 +1871,7 @@ class _RetryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const icon = Icon(PhosphorIconsFill.arrowClockwise, size: 18);
+    const icon = Icon(PhosphorIconsFill.arrowClockwise, size: AppTheme.icon18);
     final text = Text(label);
     return primary
         ? ElevatedButton.icon(onPressed: onPressed, icon: icon, label: text)

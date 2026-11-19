@@ -940,14 +940,11 @@ class SshService {
       );
 
       await _stderrSubscription?.cancel();
-      _stderrSubscription = session.stderr.listen(
-        (chunk) {
-          if (!_isDisposed && !_outputController.isClosed) {
-            _outputController.add(chunk);
-          }
-        },
-        onError: (Object _, StackTrace _) {},
-      );
+      _stderrSubscription = session.stderr.listen((chunk) {
+        if (!_isDisposed && !_outputController.isClosed) {
+          _outputController.add(chunk);
+        }
+      }, onError: (Object _, StackTrace _) {});
 
       void closeOutput() {
         if (!_isDisposed && !_outputController.isClosed) {

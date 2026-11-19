@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:dartssh2/dartssh2.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
@@ -12,6 +12,8 @@ import '../../services/app/identity_anonymizer.dart';
 import '../../services/platform/share_intent_service.dart';
 import '../../services/settings/sftp_settings.dart';
 import '../../services/sftp/cancel_token.dart';
+import '../../services/sftp/download_service.dart';
+import '../../services/sftp/remote_path.dart';
 import '../../services/sftp/sftp_service.dart';
 import '../../services/sftp/upload_plan.dart';
 import '../../services/ssh/ssh_prompts.dart';
@@ -23,7 +25,7 @@ import '../../utils/sftp_error_handler.dart';
 import '../../utils/sftp_path.dart';
 import '../../widgets/sftp/confirm_overwrite.dart';
 import '../../widgets/sftp/sftp_folder_picker.dart';
-import '../../widgets/sftp/upload_progress_bar.dart' show UploadProgress;
+import '../../widgets/sftp/upload_progress.dart';
 import '../../widgets/ssh/host_key_dialog.dart';
 import '../../widgets/ssh/keyboard_interactive_dialog.dart';
 import '../../widgets/ui/app_notifications.dart';
@@ -187,33 +189,61 @@ class _ShareUploadScreenState extends ConsumerState<ShareUploadScreen> {
       _progress = UploadProgress(bytes: 0, total: total);
     });
 
-    var bytesBefore = 0;
     try {
-      for (var i = 0; i < queue.length; i++) {
-        cancel.throwIfCancelled();
-        final (file, remotePath) = queue[i];
-        setState(() => _current = file.name);
-        var fileSent = 0;
-        await sftp.uploadStream(
-          file.open(),
-          remotePath,
-          totalSize: sizes[i],
-          cancel: cancel,
-          onProgress: (sent, _) {
-            fileSent = sent;
-            if (!mounted) return;
-            setState(
-              () => _progress = UploadProgress(
-                bytes: bytesBefore + sent,
-                total: total,
-                index: i + 1,
-                count: queue.length,
-              ),
+      await TransferNotification.runUpload(
+        label: queue.first.$1.name,
+        completeTarget: queue.length == 1
+            ? queue.single.$1.name
+            : (remotePathSegments(directory).lastOrNull ??
+                  sftpPathToDisplay(directory)),
+        fileCount: queue.length,
+        cancel: cancel,
+        body: (reportNotification) async {
+          var bytesBefore = 0;
+          for (var i = 0; i < queue.length; i++) {
+            cancel.throwIfCancelled();
+            final (file, remotePath) = queue[i];
+            setState(() => _current = file.name);
+            reportNotification(
+              total == null || total <= 0
+                  ? null
+                  : (bytesBefore / total).clamp(0.0, 1.0),
+              label: file.name,
+              itemIndex: i + 1,
+              itemCount: queue.length,
             );
-          },
-        );
-        bytesBefore += sizes[i] ?? fileSent;
-      }
+            var fileSent = 0;
+            await sftp.uploadStream(
+              file.open(),
+              remotePath,
+              totalSize: sizes[i],
+              cancel: cancel,
+              onProgress: (sent, _) {
+                fileSent = sent;
+                final totalSent = bytesBefore + sent;
+                reportNotification(
+                  total == null || total <= 0
+                      ? null
+                      : (totalSent / total).clamp(0.0, 1.0),
+                  label: file.name,
+                  itemIndex: i + 1,
+                  itemCount: queue.length,
+                );
+                if (!mounted) return;
+                setState(
+                  () => _progress = UploadProgress(
+                    bytes: totalSent,
+                    total: total,
+                    index: i + 1,
+                    count: queue.length,
+                  ),
+                );
+              },
+            );
+            bytesBefore += sizes[i] ?? fileSent;
+          }
+        },
+      );
     } catch (error) {
       if (!mounted) return;
       setState(() => _stage = _Stage.picking);
@@ -311,7 +341,7 @@ class _ShareUploadScreenState extends ConsumerState<ShareUploadScreen> {
       body: _Status(
         leading: Icon(
           PhosphorIconsRegular.cloudArrowUp,
-          size: 40,
+          size: AppTheme.icon40,
           color: colors.primary,
         ),
         title: t.share.uploading,
@@ -331,7 +361,7 @@ class _ShareUploadScreenState extends ConsumerState<ShareUploadScreen> {
               ),
               style: colors.uiSmall.copyWith(color: colors.textTertiary),
             ),
-          const SizedBox(height: 20),
+          const SizedBox(height: AppTheme.space20),
           ClipRRect(
             borderRadius: BorderRadius.circular(AppTheme.radiusPill),
             child: LinearProgressIndicator(
@@ -341,7 +371,7 @@ class _ShareUploadScreenState extends ConsumerState<ShareUploadScreen> {
               valueColor: AlwaysStoppedAnimation<Color>(colors.primary),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppTheme.space8),
           Text(
             total == null
                 ? formatFileSize(progress?.bytes ?? 0)
@@ -349,7 +379,7 @@ class _ShareUploadScreenState extends ConsumerState<ShareUploadScreen> {
                       '${formatFileSize(total)}',
             style: colors.uiSmall.copyWith(color: colors.textTertiary),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: AppTheme.space20),
           TextButton(
             onPressed: () => _cancel?.cancel(),
             child: Text(t.common.cancel),
@@ -365,7 +395,7 @@ class _ShareUploadScreenState extends ConsumerState<ShareUploadScreen> {
       body: _Status(
         leading: Icon(
           PhosphorIconsRegular.checkCircle,
-          size: 48,
+          size: AppTheme.icon48,
           color: colors.success,
         ),
         title: t.share.done,
@@ -400,14 +430,14 @@ class _Status extends StatelessWidget {
     return SafeArea(
       child: Center(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 40),
+          padding: const EdgeInsets.symmetric(horizontal: AppTheme.space40),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               leading,
-              const SizedBox(height: 20),
+              const SizedBox(height: AppTheme.space20),
               Text(title, textAlign: TextAlign.center, style: colors.itemTitle),
-              const SizedBox(height: 6),
+              const SizedBox(height: AppTheme.space6),
               ...children,
             ],
           ),

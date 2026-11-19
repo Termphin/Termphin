@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
@@ -14,12 +14,14 @@ import '../../services/app/identity_anonymizer.dart';
 import '../../theme/theme.dart';
 import '../../utils/group_match.dart';
 import '../../utils/profile_sort.dart';
+import '../../widgets/groups/group_filter_chips.dart';
 import '../../widgets/profiles/profile_avatar.dart';
+import '../../widgets/profiles/profile_pick_card.dart';
 import '../../widgets/profiles/profile_search_field.dart';
+import '../../widgets/ui/app_divider.dart';
 import '../../widgets/ui/app_form_field.dart';
 import '../../widgets/ui/app_sheet.dart';
 import '../../widgets/ui/empty_state.dart';
-import '../../widgets/ui/group_filter_chips.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
 import '../../widgets/ui/modal_actions.dart';
 import '../../widgets/ui/section_header.dart';
@@ -160,8 +162,8 @@ class _SnippetRunScreenState extends ConsumerState<SnippetRunScreen> {
                   subtitle: widget.snippet.name,
                 ),
               ),
-              const SizedBox(height: 8),
-              Divider(height: 1, color: context.colors.surfaceDivider),
+              const SizedBox(height: AppTheme.space8),
+              const AppDivider(),
               Expanded(
                 child: profiles.isEmpty
                     ? EmptyStatePanel(
@@ -171,10 +173,11 @@ class _SnippetRunScreenState extends ConsumerState<SnippetRunScreen> {
                       )
                     : ListView(
                         padding: EdgeInsets.fromLTRB(
-                          20,
-                          16,
-                          20,
-                          MediaQuery.viewInsetsOf(context).bottom + 24,
+                          AppTheme.space20,
+                          AppTheme.space16,
+                          AppTheme.space20,
+                          MediaQuery.viewInsetsOf(context).bottom +
+                              AppTheme.space24,
                         ).add(gutter),
                         children: [
                           if (widget.snippet.placeholders.isNotEmpty) ...[
@@ -182,7 +185,7 @@ class _SnippetRunScreenState extends ConsumerState<SnippetRunScreen> {
                               t.snippets.argumentsTitle,
                               hint: t.snippets.runArgumentsHint,
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: AppTheme.space10),
                             for (final name in widget.snippet.placeholders) ...[
                               AppFormField(
                                 key: ValueKey('snippetRunArg:$name'),
@@ -191,9 +194,9 @@ class _SnippetRunScreenState extends ConsumerState<SnippetRunScreen> {
                                 icon: PhosphorIconsFill.bracketsCurly,
                                 monospace: true,
                               ),
-                              const SizedBox(height: 10),
+                              const SizedBox(height: AppTheme.space10),
                             ],
-                            const SizedBox(height: 14),
+                            const SizedBox(height: AppTheme.space14),
                           ],
                           Row(
                             children: [
@@ -218,7 +221,7 @@ class _SnippetRunScreenState extends ConsumerState<SnippetRunScreen> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: AppTheme.space10),
                           ProfileSearchField(
                             controller: _searchController,
                             sort: _sort,
@@ -228,7 +231,7 @@ class _SnippetRunScreenState extends ConsumerState<SnippetRunScreen> {
                                 setState(() => _sort = value),
                           ),
                           if (groups.length > 1) ...[
-                            const SizedBox(height: 10),
+                            const SizedBox(height: AppTheme.space10),
                             GroupFilterChips(
                               groups: groupsWithColour,
                               selected: _selectedGroup,
@@ -237,7 +240,7 @@ class _SnippetRunScreenState extends ConsumerState<SnippetRunScreen> {
                                   setState(() => _selectedGroup = group),
                             ),
                           ],
-                          const SizedBox(height: 12),
+                          const SizedBox(height: AppTheme.space12),
                           if (visible.isEmpty)
                             EmptyStateHint(
                               icon: PhosphorIconsRegular.magnifyingGlass,
@@ -255,16 +258,26 @@ class _SnippetRunScreenState extends ConsumerState<SnippetRunScreen> {
                                   }
                                 }),
                               ),
-                              const SizedBox(height: 10),
+                              const SizedBox(height: AppTheme.space10),
                             ],
                         ],
                       ),
               ),
-              Divider(height: 1, color: context.colors.surfaceDivider),
+              const AppDivider(),
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 16).add(gutter),
+                padding: const EdgeInsets.fromLTRB(
+                  AppTheme.space20,
+                  AppTheme.space12,
+                  AppTheme.space20,
+                  AppTheme.space16,
+                ).add(gutter),
                 child: ModalActions(
                   primary: FilledButton(
+                    style: FilledButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                      ),
+                    ),
                     onPressed: _selected.isEmpty ? null : _start,
                     child: Text(t.snippets.runNow(count: _selected.length)),
                   ),
@@ -290,7 +303,12 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 8, 16, 0),
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.space4,
+        AppTheme.space8,
+        AppTheme.space16,
+        0,
+      ),
       child: Row(
         children: [
           IconButton(
@@ -301,7 +319,7 @@ class _Header extends StatelessWidget {
               AppModalScope.isDialog(context)
                   ? PhosphorIconsRegular.x
                   : PhosphorIconsRegular.arrowLeft,
-              size: 20,
+              size: AppTheme.icon20,
               color: context.colors.textSecondary,
             ),
             onPressed: () => Navigator.of(context).pop(),
@@ -313,7 +331,7 @@ class _Header extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(title, style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 2),
+                const SizedBox(height: AppTheme.space2),
                 Text(
                   subtitle,
                   maxLines: 1,
@@ -352,71 +370,23 @@ class _MachineRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final anonymize = ref.watch(anonymizeProvider);
-    final accent = context.colors.primary;
-    final radius = BorderRadius.circular(AppTheme.radiusMd);
     final name = anonymize ? IdentityAnonymizer.name(profile.id) : profile.name;
     final username = anonymize
         ? IdentityAnonymizer.username(profile.id)
         : profile.username;
     final host = anonymize ? IdentityAnonymizer.host(profile.id) : profile.host;
 
-    return Material(
-      color: context.colors.surfaceElevated.invisible,
-      borderRadius: radius,
-      child: Ink(
-        decoration: BoxDecoration(
-          color: context.colors.surfaceElevated,
-          borderRadius: radius,
-          border: Border.all(
-            color: selected ? accent : context.colors.surfaceBorder,
-          ),
-        ),
-        child: InkWell(
-          borderRadius: radius,
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              children: [
-                ProfileAvatar(
-                  iconName: profile.iconName,
-                  colorHex: profile.colorHex,
-                  size: 42,
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.colors.itemTitle,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '$username@$host:${profile.port}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.colors.uiStyle,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Icon(
-                  selected
-                      ? PhosphorIconsRegular.checkCircle
-                      : PhosphorIconsRegular.circle,
-                  size: 22,
-                  color: selected ? accent : context.colors.textTertiary,
-                ),
-              ],
-            ),
-          ),
-        ),
+    return ProfilePickCard(
+      leading: ProfileAvatar(
+        iconName: profile.iconName,
+        colorHex: profile.colorHex,
+        size: 42,
       ),
+      title: name,
+      subtitle: '$username@$host:${profile.port}',
+      selected: selected,
+      showUnselectedIndicator: true,
+      onTap: onTap,
     );
   }
 }

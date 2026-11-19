@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../theme/theme.dart';
 import '../../utils/platform_info.dart';
@@ -94,7 +94,12 @@ class LargeTitleHeader extends StatelessWidget {
     super.key,
     required this.title,
     this.subtitle,
-    this.padding = const EdgeInsets.fromLTRB(16, 24, 16, 8),
+    this.padding = const EdgeInsets.fromLTRB(
+      AppTheme.space16,
+      AppTheme.space24,
+      AppTheme.space16,
+      AppTheme.space8,
+    ),
   });
 
   final String title;
@@ -104,7 +109,7 @@ class LargeTitleHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isWideLayout(context)) {
-      return const SizedBox(height: AppTheme.spaceLg);
+      return const SizedBox(height: AppTheme.space16);
     }
     return Padding(
       padding: padding,
@@ -113,7 +118,7 @@ class LargeTitleHeader extends StatelessWidget {
         children: [
           Text(title, style: Theme.of(context).textTheme.displayLarge),
           if (subtitle != null) ...[
-            const SizedBox(height: 4),
+            const SizedBox(height: AppTheme.space4),
             Text(
               subtitle!,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -227,10 +232,16 @@ class _LargeTitleScaffoldState extends State<LargeTitleScaffold> {
         floatingActionButton: widget.floatingActionButton,
         body: SafeArea(
           top: false,
+          bottom: false,
           child: ListKeyNavigation(
             child: ContentGutter(
-              builder: (context, gutter) =>
-                  widget.bodyBuilder(context, _scrollController, gutter),
+              builder: (context, gutter) => widget.bodyBuilder(
+                context,
+                _scrollController,
+                gutter.copyWith(
+                  bottom: gutter.bottom + MediaQuery.paddingOf(context).bottom,
+                ),
+              ),
             ),
           ),
         ),

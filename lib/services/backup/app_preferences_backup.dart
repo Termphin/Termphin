@@ -1,9 +1,11 @@
 import '../completion/command_completion.dart';
+import '../pro/pro_hints.dart';
 import '../settings/action_dock_settings.dart';
 import '../settings/desktop_settings.dart';
 import '../settings/editor_settings.dart';
 import '../settings/floating_dock_settings.dart';
 import '../settings/lock_settings.dart';
+import '../settings/profile_form_settings.dart';
 import '../settings/setting.dart';
 import '../settings/sftp_settings.dart';
 import '../settings/sidebar_settings.dart';
@@ -28,28 +30,41 @@ import 'form_factor_settings.dart';
 /// desktop's, and the side this device is not comes from the last backup
 /// restored here ([OtherFormFactorStore]).
 Future<Map<String, dynamic>> exportTerminalSettings({
-  required FormFactor formFactor,
+  FormFactor? formFactor,
 }) async {
   final settings = terminalSettings;
   await settings.load();
-  final isDesktop = formFactor == FormFactor.desktop;
   final own = {
     'fontFamily': settings.fontFamily.value,
     'fontSize': settings.fontSize.value,
     'lineHeight': settings.lineHeight.value,
     'sidePadding': settings.sidePadding.value,
   };
-  final other = await const OtherFormFactorStore().read(
-    OtherFormFactorStore.terminal,
-  );
+  final isDesktop = formFactor == FormFactor.desktop;
+  final other = formFactor == null
+      ? null
+      : await const OtherFormFactorStore().read(
+          OtherFormFactorStore.terminal,
+        );
   final desktop = isDesktop ? own : other;
   return {
     'schemeId': settings.scheme.value,
     'cursorStyle': settings.cursorStyle.value,
     'cursorBlink': settings.cursorBlink.value,
     'predictiveEcho': settings.predictiveEcho.value,
-    ...?(isDesktop ? other : own),
-    kDesktopTerminalKey: ?desktop,
+    if (formFactor == null)
+      ...own
+    else ...{
+      ...?(isDesktop ? other : own),
+      kDesktopTerminalKey: ?desktop,
+    },
+    'programNotifications': settings.programNotifications.value,
+    'finishedNotifications': settings.finishedNotifications.value,
+    'quietNotifications': settings.quietNotifications.value,
+    'noticeLines': settings.noticeLines.value,
+    'openAppNotices': settings.openAppNotices.value,
+    'openAppNoticeStyle': settings.openAppNoticeStyle.value,
+    'mouseKeyboardGuard': settings.mouseKeyboardGuard.value,
   };
 }
 
@@ -60,7 +75,7 @@ Future<Map<String, dynamic>> exportTerminalSettings({
 /// profiles. The editor's text settings are split by [FormFactor] like the
 /// terminal's, under [kDesktopEditorKey].
 Future<Map<String, dynamic>> exportAppPreferences({
-  required FormFactor formFactor,
+  FormFactor? formFactor,
 }) async {
   final isDesktop = formFactor == FormFactor.desktop;
   final ownEditor = {
@@ -68,9 +83,9 @@ Future<Map<String, dynamic>> exportAppPreferences({
     'editorFontFamily': await editorSettings.fontFamily.load(),
     'editorLineHeight': await editorSettings.lineHeight.load(),
   };
-  final otherEditor = await const OtherFormFactorStore().read(
-    OtherFormFactorStore.editor,
-  );
+  final otherEditor = formFactor == null
+      ? null
+      : await const OtherFormFactorStore().read(OtherFormFactorStore.editor);
   final toolbar = (await toolbarSettings.layout.load());
   final profiles = (await toolbarSettings.profiles.load());
   return {
@@ -97,19 +112,25 @@ Future<Map<String, dynamic>> exportAppPreferences({
     'uploadAutoPaste': await uploadAutoPasteSetting.load(),
     'remoteAgentEnabled': await remoteAgentSetting.load(),
     'sidebarCollapsed': await sidebarCollapsedSetting.load(),
+    'profileFormMoreOptions': await profileFormMoreOptionsSetting.load(),
     'sftpShowHidden': await sftpShowHiddenSetting.load(),
     'sftpFollowTerminal': await sftpFollowTerminalSetting.load(),
     'sftpSortField': (await sftpSortFieldSetting.load()).name,
     'sftpSortDescending': await sftpSortDescendingSetting.load(),
     'commandSuggestions': await commandSuggestionsSetting.load(),
+    'proTips': await proTipsSetting.load(),
     'tabBarPosition': (await tabBarPositionSetting.load()).name,
     'lockTimeout': (await lockTimeoutSetting.load()).name,
     'closeToTray': await closeToTraySetting.load(),
     'editorWordWrap': await editorSettings.wordWrap.load(),
     'editorLineNumbers': await editorSettings.lineNumbers.load(),
     'editorTabWidth': await editorSettings.tabWidth.load(),
-    ...?(isDesktop ? otherEditor : ownEditor),
-    kDesktopEditorKey: ?(isDesktop ? ownEditor : otherEditor),
+    if (formFactor == null)
+      ...ownEditor
+    else ...{
+      ...?(isDesktop ? otherEditor : ownEditor),
+      kDesktopEditorKey: ?(isDesktop ? ownEditor : otherEditor),
+    },
   };
 }
 
@@ -123,10 +144,9 @@ Future<Map<String, dynamic>> exportAppPreferences({
 /// so the next backup taken here carries them on.
 Future<void> importTerminalSettings(
   Map<String, dynamic> ts, {
-  required FormFactor formFactor,
+  FormFactor? formFactor,
 }) async {
   final settings = terminalSettings;
-  final isDesktop = formFactor == FormFactor.desktop;
 
   Future<void> restore<T>(Setting<T> setting, Object? raw) async {
     if (raw is T) await setting.set(raw);
@@ -134,20 +154,26 @@ Future<void> importTerminalSettings(
 
   await restore<String>(settings.scheme, ts['schemeId']);
 
-  final mobile = pickFields(ts, kTerminalFormFactorFields);
-  final rawDesktop = ts[kDesktopTerminalKey];
-  final desktop = rawDesktop is Map
-      ? Map<String, dynamic>.from(rawDesktop)
-      : null;
-  final own = isDesktop ? desktop : mobile;
-  final other = isDesktop ? mobile : desktop;
-  if (other != null && other.isNotEmpty) {
-    await const OtherFormFactorStore().write(
-      OtherFormFactorStore.terminal,
-      other,
-    );
+  final Map<String, dynamic> text;
+  if (formFactor == null) {
+    text = ts;
+  } else {
+    final isDesktop = formFactor == FormFactor.desktop;
+    final mobile = pickFields(ts, kTerminalFormFactorFields);
+    final rawDesktop = ts[kDesktopTerminalKey];
+    final desktop = rawDesktop is Map
+        ? Map<String, dynamic>.from(rawDesktop)
+        : null;
+    final own = isDesktop ? desktop : mobile;
+    final other = isDesktop ? mobile : desktop;
+    if (other != null && other.isNotEmpty) {
+      await const OtherFormFactorStore().write(
+        OtherFormFactorStore.terminal,
+        other,
+      );
+    }
+    text = own ?? const <String, dynamic>{};
   }
-  final text = own ?? const <String, dynamic>{};
   await restore<String>(settings.fontFamily, text['fontFamily']);
   await restore<double>(
     settings.fontSize,
@@ -164,6 +190,19 @@ Future<void> importTerminalSettings(
   await restore<String>(settings.cursorStyle, ts['cursorStyle']);
   await restore<bool>(settings.cursorBlink, ts['cursorBlink']);
   await restore<bool>(settings.predictiveEcho, ts['predictiveEcho']);
+  await restore<bool>(
+    settings.programNotifications,
+    ts['programNotifications'],
+  );
+  await restore<bool>(
+    settings.finishedNotifications,
+    ts['finishedNotifications'],
+  );
+  await restore<bool>(settings.quietNotifications, ts['quietNotifications']);
+  await restore<bool>(settings.noticeLines, ts['noticeLines']);
+  await restore<bool>(settings.openAppNotices, ts['openAppNotices']);
+  await restore<String>(settings.openAppNoticeStyle, ts['openAppNoticeStyle']);
+  await restore<bool>(settings.mouseKeyboardGuard, ts['mouseKeyboardGuard']);
   await settings.load();
 }
 
@@ -179,9 +218,8 @@ Future<void> importTerminalSettings(
 /// settings follow [formFactor] as in [importTerminalSettings].
 Future<void> importAppPreferences(
   Map<String, dynamic> appPrefs, {
-  required FormFactor formFactor,
+  FormFactor? formFactor,
 }) async {
-  final isDesktop = formFactor == FormFactor.desktop;
   final toolbarOrderRaw = appPrefs['toolbarOrder'] as List?;
   if (toolbarOrderRaw != null) {
     final current = (await toolbarSettings.layout.load());
@@ -274,6 +312,10 @@ Future<void> importAppPreferences(
   if (sidebarCollapsed is bool) {
     await sidebarCollapsedSetting.set(sidebarCollapsed);
   }
+  final moreOptions = appPrefs['profileFormMoreOptions'];
+  if (moreOptions is bool) {
+    await profileFormMoreOptionsSetting.set(moreOptions);
+  }
 
   final sftpShowHidden = appPrefs['sftpShowHidden'];
   if (sftpShowHidden is bool) await sftpShowHiddenSetting.set(sftpShowHidden);
@@ -299,6 +341,9 @@ Future<void> importAppPreferences(
     await commandSuggestionsSetting.set(commandSuggestions);
   }
 
+  final proTips = appPrefs['proTips'];
+  if (proTips is bool) await proTipsSetting.set(proTips);
+
   final tabBarPosition = _byName(
     TabBarPosition.values,
     appPrefs['tabBarPosition'],
@@ -312,20 +357,26 @@ Future<void> importAppPreferences(
   if (editorWordWrap is bool) {
     await editorSettings.wordWrap.set(editorWordWrap);
   }
-  final mobileEditor = pickFields(appPrefs, kEditorFormFactorFields);
-  final rawDesktopEditor = appPrefs[kDesktopEditorKey];
-  final desktopEditor = rawDesktopEditor is Map
-      ? Map<String, dynamic>.from(rawDesktopEditor)
-      : null;
-  final otherEditor = isDesktop ? mobileEditor : desktopEditor;
-  if (otherEditor != null && otherEditor.isNotEmpty) {
-    await const OtherFormFactorStore().write(
-      OtherFormFactorStore.editor,
-      otherEditor,
-    );
+  final Map<String, dynamic> editorText;
+  if (formFactor == null) {
+    editorText = appPrefs;
+  } else {
+    final isDesktop = formFactor == FormFactor.desktop;
+    final mobileEditor = pickFields(appPrefs, kEditorFormFactorFields);
+    final rawDesktopEditor = appPrefs[kDesktopEditorKey];
+    final desktopEditor = rawDesktopEditor is Map
+        ? Map<String, dynamic>.from(rawDesktopEditor)
+        : null;
+    final otherEditor = isDesktop ? mobileEditor : desktopEditor;
+    if (otherEditor != null && otherEditor.isNotEmpty) {
+      await const OtherFormFactorStore().write(
+        OtherFormFactorStore.editor,
+        otherEditor,
+      );
+    }
+    editorText =
+        (isDesktop ? desktopEditor : mobileEditor) ?? const <String, dynamic>{};
   }
-  final editorText =
-      (isDesktop ? desktopEditor : mobileEditor) ?? const <String, dynamic>{};
   final editorFontSize = editorText['editorFontSize'];
   if (editorFontSize is num) {
     await editorSettings.fontSize.set(editorFontSize.toDouble());

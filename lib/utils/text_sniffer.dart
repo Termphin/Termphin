@@ -30,14 +30,7 @@ class TextProbe {
 
 /// Bytes below 0x20 that appear in ordinary text files: tab, LF, vertical
 /// tab, form feed, CR, and ESC (common in logs with ANSI colour codes).
-const _allowedControlBytes = {
-  0x09,
-  0x0a,
-  0x0b,
-  0x0c,
-  0x0d,
-  0x1b,
-};
+const _allowedControlBytes = {0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x1b};
 
 /// Share of control bytes above which the content is treated as binary.
 const _controlByteLimit = 0.1;

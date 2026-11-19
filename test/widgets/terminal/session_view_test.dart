@@ -2,10 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:terminal_view/terminal_view.dart';
 import 'package:termphin/i18n/strings.g.dart';
@@ -232,6 +232,7 @@ void main() {
       for (var i = 0; i < 6; i++) {
         await tester.pump(const Duration(milliseconds: 20));
       }
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.byType(TerminalPane), findsNothing);
       expect(find.byType(ReconnectingIndicator), findsNothing);
@@ -274,7 +275,8 @@ void main() {
               return Future.value();
             });
         addTearDown(
-          () => TestDefaultBinaryMessengerBinding.instance
+          () => TestDefaultBinaryMessengerBinding
+              .instance
               .defaultBinaryMessenger
               .setMockMethodCallHandler(SystemChannels.platform, null),
         );

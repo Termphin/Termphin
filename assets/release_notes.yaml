@@ -17,19 +17,71 @@
 # and the landing changelog both drop any entry whose version is not a dotted
 # number. Give it the real number at release time and it appears in both.
 - version: "Unreleased"
-  date: "2026-10-11"
+  date: "2026-11-19"
+  added:
+    - "Clickable TUIs no longer toggle the keyboard on tap, with a button in the tab bar (Settings → Terminal → Manual keyboard in TUIs)"
+    - "Live progress for SFTP downloads, uploads, fast upload and shared files in the status bar, Lock Screen and Dynamic Island"
+    - "Redeem a Google Play or App Store code for Pro from the Pro screen"
+  changed:
+    - "Multi-file SFTP downloads show one continuous progress update across the whole batch"
+- version: "1.15.1"
+  date: "2026-11-17"
+  changed:
+    - "Usage stats and crash reports stay off until you say yes, asked once after a few days"
+- version: "1.15.0"
+  date: "2026-11-16"
+  added:
+    - "Termphin Pro: notifications from your servers even with Termphin closed, and end-to-end encrypted sync"
+    - "Sync your machines, keys, snippets and settings across your devices, with a passphrase only you know"
+    - "Sign in with Google, Apple, GitHub or email, only needed for Pro"
+    - "A long command tells you when it finishes, with the last line it printed"
+    - "An AI agent or installer that stops to ask you something lets you know"
+    - "Notifications from another session show inside Termphin while you use it, with a dot on its tab"
+    - "Search in Settings"
+    - "Leaving a form with unsaved changes asks first"
+  changed:
+    - "Settings are grouped into a few clear screens"
+    - "Messages inside the app are calmer and show at the top"
+    - "Less used fields in forms wait under More options"
+    - "Running sessions move to a newer helper on their own, without restarting"
+  fixed:
+    - "Text no longer disappears from the terminal when the keyboard opens or closes"
+    - "Bold text no longer loses letters"
+    - "Coming back to a session no longer breaks a line or leaves empty lines in the output"
+    - "Backspace and Polish letters work in sessions on Windows servers"
+- version: "1.14.1"
+  date: "2026-11-01"
+  fixed:
+    - "Fast upload to the temporary folder no longer fails with \"File or directory not found\" on some servers"
+- version: "1.14.0"
+  date: "2026-10-22"
+  added:
+    - "Copy all and Save output in the action dock: copy or save the whole terminal output"
+- version: "1.13.0"
+  date: "2026-10-18"
   added:
     - "An Open source section in Settings: star Termphin on GitHub, browse issues, contribute"
+    - "Error reports in Settings: see the errors Termphin ran into and send them with a bug report"
   changed:
+    - "File transfers no longer block the screen: they queue in a bar at the top that you can expand"
     - "Picking a jump host uses the same search, groups and machine cards as opening a session"
     - "Anonymize mode also hides hosts in known hosts, the host key prompt and the connection log"
-    - "Confirmations that delete or end something show that action in red"
+    - "The terminal search bar is smaller and no longer covers the output"
+    - "Arranging the action dock is easier: drag tiles into place, hide them with one tap and reset to the defaults"
+    - "Smarter autocomplete"
+    - "Selection improvements"
+    - "Opening and leaving the terminal and switching tabs are animated"
+    - "Selecting machines, keys, snippets or files brings up one bar of actions, docked within reach"
+    - "Settings are easier to scan, with shorter descriptions"
+    - "A more consistent look across the app"
   fixed:
+    - "The terminal no longer looks broken after coming back to the app until the keyboard is opened"
     - "The file browser no longer shows the previous folder's files after quick navigation"
     - "Closing a tab while the connection drops no longer leaves the tab stuck"
     - "Pasting into a tab that has just closed no longer crashes the app"
     - "Typing a path in the file browser is no longer reset by a background refresh"
     - "A link that cannot be opened now says so instead of doing nothing"
+    - "The terminal's quick settings keep the same height when you switch between their tabs"
 - version: "1.12.0"
   date: "2026-10-11"
   added:

@@ -1,12 +1,12 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:termphin/models/ssh_profile.dart';
 import 'package:termphin/providers/profiles_provider.dart';
 import 'package:termphin/screens/home_screen.dart';
 import 'package:termphin/screens/search/global_search_launcher.dart';
+import 'package:termphin/theme/theme.dart';
 import 'package:termphin/widgets/profiles/profile_avatar.dart';
 import 'package:termphin/widgets/profiles/profile_card.dart';
 
@@ -69,7 +69,8 @@ void main() {
     expect(editOpened, isTrue);
   });
 
-  testWidgets('Machine avatars use a tinted gradient', (tester) async {
+  testWidgets('Machine avatars are a flat neutral disc with the colour on '
+      'the glyph', (tester) async {
     await pumpTestApp(
       tester,
       const ProfileAvatar(iconName: 'desktop', colorHex: '4DA3FF'),
@@ -83,10 +84,13 @@ void main() {
     );
     final decoration = avatarContainer.decoration! as BoxDecoration;
 
-    expect(decoration.color, const Color(0xFF4DA3FF).withValues(alpha: 0.15));
-    expect(decoration.gradient, isA<LinearGradient>());
-    expect(decoration.border, isNotNull);
-    expect(find.byType(ProfileAvatarGlyph), findsOneWidget);
+    expect(decoration.color, AppColors.dark.surfaceOffset);
+    expect(decoration.gradient, isNull);
+    expect(decoration.border, isNull);
+    expect(
+      tester.widget<ProfileAvatarGlyph>(find.byType(ProfileAvatarGlyph)).color,
+      const Color(0xFF4DA3FF),
+    );
   });
 
   testWidgets('HomeScreen separates search and machine content', (

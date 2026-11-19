@@ -1,17 +1,21 @@
 import 'dart:async';
 
 import 'package:app_links/app_links.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'debug/debug_panel.dart';
 import 'i18n/strings.g.dart';
 import 'models/ssh_profile.dart';
+import 'providers/account_provider.dart';
 import 'providers/groups_provider.dart';
 import 'providers/profiles_provider.dart';
 import 'providers/snippets_provider.dart';
+import 'providers/ssh_session_manager_provider.dart';
+import 'providers/sync_provider.dart';
 import 'providers/terminal_overlay_provider.dart';
 import 'providers/theme_provider.dart';
 import 'screens/lock_screen.dart';
@@ -20,18 +24,26 @@ import 'screens/onboarding_screen.dart';
 import 'services/analytics/analytics_service.dart';
 import 'services/app/app_commands.dart';
 import 'services/app/debug_interstitials.dart';
+import 'services/app/legal_updates_service.dart';
 import 'services/app/onboarding_service.dart';
 import 'services/app/review_prompt_service.dart';
 import 'services/app/tag_migration_service.dart';
 import 'services/app/whats_new_service.dart';
 import 'services/platform/desktop_window.dart';
+import 'services/platform/local_notifications_service.dart';
 import 'services/platform/quick_actions_service.dart';
+import 'services/pro/pro_hints.dart';
+import 'services/pro/pro_service.dart';
+import 'services/push/push_service.dart';
 import 'services/security/lock_service.dart';
 import 'services/security/relock_guard.dart';
 import 'services/settings/toolbar_share_link.dart';
 import 'services/ssh/ssh_link.dart';
+import 'services/terminal/in_app_alerts.dart';
+import 'services/terminal/terminal_alerts.dart';
 import 'theme/theme.dart';
 import 'utils/platform_info.dart';
+import 'widgets/onboarding/legal_update_dialog.dart';
 import 'widgets/onboarding/tag_migration_modal.dart';
 import 'widgets/onboarding/whats_new_modal.dart';
 import 'widgets/profiles/profile_avatar.dart';
@@ -67,6 +79,11 @@ class _AppRoot extends ConsumerWidget {
 
   /// The share screen asks for the PIN itself and never outlives one share,
   /// so only the app proper can be locked again.
+  ///
+  /// [MaterialUiCompatibilityBridge] hands the theme down to the packages
+  /// still built on the framework's own Material library - the dropdowns,
+  /// the code editor, the web view - which would otherwise find no theme of
+  /// theirs and draw in Material's defaults.
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
@@ -80,13 +97,25 @@ class _AppRoot extends ConsumerWidget {
       navigatorKey: navigatorKey,
       navigatorObservers: [AppCommands.instance.modalObserver],
       home: home ?? const _AppGate(),
-      builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
-        value: AppTheme.systemOverlayStyleFor(context.colors),
-        child: _ScaledMediaQuery(
-          child: _DesktopChrome(
-            child: home == null
-                ? _RelockLayer(child: child ?? const SizedBox.shrink())
-                : child ?? const SizedBox.shrink(),
+      // ignore: deprecated_member_use
+      builder: (context, child) => MaterialUiCompatibilityBridge(
+        child: AnnotatedRegion<SystemUiOverlayStyle>(
+          value: AppTheme.systemOverlayStyleFor(context.colors),
+          child: _ScaledMediaQuery(
+            child: _DesktopChrome(
+              child: debugPanelEnabled
+                  ? DebugPanel(
+                      navigatorKey: navigatorKey,
+                      child: home == null
+                          ? _RelockLayer(
+                              child: child ?? const SizedBox.shrink(),
+                            )
+                          : child ?? const SizedBox.shrink(),
+                    )
+                  : home == null
+                  ? _RelockLayer(child: child ?? const SizedBox.shrink())
+                  : child ?? const SizedBox.shrink(),
+            ),
           ),
         ),
       ),
@@ -262,10 +291,24 @@ class _AppGateState extends ConsumerState<_AppGate> {
   @override
   void initState() {
     super.initState();
+    final sync = ref.read(syncCoordinatorProvider);
     _lifecycle = AppLifecycleListener(
       onHide: RelockGuard.instance.appHidden,
-      onShow: RelockGuard.instance.appShown,
+      onShow: () {
+        RelockGuard.instance.appShown();
+        sync.resumed();
+        unawaited(ProService.instance.resumed());
+        ProHints.instance.flush();
+      },
     );
+    ref.listenManual(accountProvider, (previous, user) {
+      if (user == null) {
+        if (previous != null) unawaited(ProService.instance.signedOut());
+        unawaited(ProService.instance.refresh());
+      } else if (previous?.uid != user.uid) {
+        unawaited(ProService.instance.refresh());
+      }
+    }, fireImmediately: true);
     _initLinkHandling();
     _checkGate();
   }
@@ -458,9 +501,114 @@ class _AppShellState extends ConsumerState<_AppShell> {
     service.iconIds = ProfileAvatarData.icons.map((icon) => icon.id).toList();
     service.normalizeColorHex = (hex) => ProfileAvatarColor.forHex(hex).hex;
     service.init();
+    LocalNotificationsService.instance.onOpenSession = (sessionId) {
+      _noteOpened(
+        relayTargetFromPayload(sessionId) != null ? 'push' : 'terminal',
+      );
+      _openNotifiedSession(sessionId);
+    };
+    PushService.instance.onOpenRelayed = (profileId, session) {
+      _noteOpened('push');
+      _openRelayedSession(profileId, session);
+    };
+    InAppAlerts.instance.present = _presentAlert;
     WidgetsBinding.instance.addPostFrameCallback(
       (_) => _runStartupInterstitials(),
     );
+  }
+
+  @override
+  void dispose() {
+    LocalNotificationsService.instance.onOpenSession = null;
+    PushService.instance.onOpenRelayed = null;
+    InAppAlerts.instance.present = null;
+    super.dispose();
+  }
+
+  /// Shows [alert] as a card at the top of the app; opening it does what
+  /// tapping the system notification would. Behind the PIN screen it is left
+  /// to the system, which keeps it until the user is back in.
+  bool _presentAlert(TerminalAlert alert) {
+    if (RelockGuard.instance.holding) return false;
+    final context = navigatorKey.currentContext;
+    if (context == null || !context.mounted) return false;
+    AppNotifications.alert(
+      context,
+      title: alert.title,
+      body: alert.body,
+      actionLabel: t.notifications.openSession,
+      onOpen: () {
+        _noteOpened('in_app');
+        _openNotifiedSession(alert.sessionId);
+      },
+    );
+    return true;
+  }
+
+  /// Records a tapped notification, by what it came through: [via] is
+  /// `push` from a server, `terminal` from a session the app had open, or
+  /// `in_app` for the card shown while the app was in front.
+  void _noteOpened(String via) => unawaited(
+    AnalyticsService.instance.capture(
+      AnalyticsEvent.notificationOpened,
+      properties: {AnalyticsProperty.via: via},
+    ),
+  );
+
+  /// What tapping a notification from the terminal does: the session it was
+  /// about, in front, with the rest of the tabs behind it. Like a shortcut it
+  /// waits behind the PIN when one is due; a session gone since does nothing.
+  void _openNotifiedSession(String sessionId) {
+    final relayed = relayTargetFromPayload(sessionId);
+    if (relayed != null) {
+      _openRelayedSession(relayed.$1, relayed.$2);
+      return;
+    }
+    if (RelockGuard.instance.holding) {
+      RelockGuard.instance.whenUnlocked(() => _openNotifiedSession(sessionId));
+      return;
+    }
+    final context = navigatorKey.currentContext;
+    if (context == null || !context.mounted) return;
+    final container = ProviderScope.containerOf(context);
+    final session = container
+        .read(sshSessionManagerProvider)
+        .getSession(sessionId);
+    if (session == null) return;
+    container
+        .read(terminalOverlayProvider.notifier)
+        .show(sessionId, session.profile);
+  }
+
+  /// What tapping a push from a server does: that machine's session [session]
+  /// - picked up from the server if this phone had not seen it - or, when
+  /// the server named none, the machine as if tapped on the home screen.
+  /// Waits behind the PIN like any other way in; a machine deleted since
+  /// does nothing.
+  void _openRelayedSession(String profileId, String session) {
+    if (RelockGuard.instance.holding) {
+      RelockGuard.instance.whenUnlocked(
+        () => _openRelayedSession(profileId, session),
+      );
+      return;
+    }
+    final context = navigatorKey.currentContext;
+    if (context == null || !context.mounted) return;
+    final container = ProviderScope.containerOf(context);
+    final profile = container
+        .read(profilesProvider)
+        .where((profile) => profile.id == profileId)
+        .firstOrNull;
+    if (profile == null) return;
+    final overlay = container.read(terminalOverlayProvider.notifier);
+    if (session.isEmpty) {
+      overlay.openProfile(profile);
+      return;
+    }
+    final tabId = container
+        .read(sshSessionManagerProvider)
+        .adoptRemoteSession(profile, session);
+    overlay.show(tabId, profile, scope: SiblingScope.none);
   }
 
   /// What a quick-action shortcut does once it is allowed through: the same
@@ -474,9 +622,11 @@ class _AppShellState extends ConsumerState<_AppShell> {
     ).read(terminalOverlayProvider.notifier).openProfile(profile);
   }
 
-  /// What the home screen may interrupt with, in order: what changed, then the
-  /// one question this release has to ask, then - only if neither of those
-  /// spoke - the store prompt.
+  /// What the home screen may interrupt with, in order: a material change
+  /// to the terms or the privacy policy, what changed in the app, then the
+  /// one question this release has to ask, then - only if none of those
+  /// spoke - the one-time question about sharing anonymous stats, and only
+  /// if that did not come up either, the store prompt.
   ///
   /// The review dialog never stacks on another modal: two interstitials get
   /// both dismissed unread. The tag conversion is not subject to that budget,
@@ -490,11 +640,18 @@ class _AppShellState extends ConsumerState<_AppShell> {
   Future<void> _runStartupInterstitials() async {
     final packageInfo = await PackageInfo.fromPlatform();
 
+    var interrupted = false;
+    final legal = await LegalUpdatesService.instance.pending();
+    if (legal != null && mounted) {
+      await showLegalUpdateDialog(context, legal);
+      await LegalUpdatesService.instance.markSeen();
+      interrupted = true;
+    }
+
     final highlights = await WhatsNewService.instance.pendingSince(
       packageInfo.version,
     );
     if (!mounted) return;
-    var interrupted = false;
     if (highlights.isNotEmpty) {
       await showWhatsNewModal(context, highlights);
       await WhatsNewService.instance.markSeen(highlights);
@@ -516,6 +673,7 @@ class _AppShellState extends ConsumerState<_AppShell> {
     }
 
     if (interrupted) return;
+    if (await AnalyticsService.instance.maybeAsk()) return;
     if (await ReviewPromptService.instance.maybePrompt(packageInfo.version)) {
       unawaited(
         AnalyticsService.instance.capture(AnalyticsEvent.reviewPromptRequested),

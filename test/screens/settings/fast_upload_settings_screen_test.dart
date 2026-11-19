@@ -1,12 +1,11 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:termphin/i18n/strings.g.dart';
 import 'package:termphin/screens/settings/fast_upload_settings_screen.dart';
-import 'package:termphin/services/analytics/analytics_config.dart';
+import 'package:termphin/services/firebase/firebase_config.dart';
 import 'package:termphin/services/settings/app_settings.dart';
 import 'package:termphin/services/settings/upload_settings.dart';
-import 'package:termphin/widgets/sftp/upload_progress_bar.dart';
 import 'package:termphin/widgets/ui/large_title_scaffold.dart';
 
 import '../../support/test_app.dart';
@@ -156,125 +155,11 @@ void main() {
     });
   });
 
-  group('UploadProgressBar', () {
-    testWidgets('shows nothing while there is no upload', (tester) async {
-      final progress = ValueNotifier<UploadProgress?>(null);
-      addTearDown(progress.dispose);
-
-      await pumpTestApp(
-        tester,
-        Scaffold(
-          body: Stack(
-            children: [UploadProgressBar(progress: progress, onCancel: () {})],
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.byType(SizedBox), findsWidgets);
-      expect(find.textContaining('B'), findsNothing);
-    });
-
-    testWidgets('reports bytes against the total once one is known', (
-      tester,
-    ) async {
-      final progress = ValueNotifier<UploadProgress?>(
-        const UploadProgress(bytes: 512, total: 2048),
-      );
-      addTearDown(progress.dispose);
-
-      await pumpTestApp(
-        tester,
-        Scaffold(
-          body: Stack(
-            children: [UploadProgressBar(progress: progress, onCancel: () {})],
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.textContaining('512'), findsOneWidget);
-    });
-
-    testWidgets('fills in proportion to what is done', (tester) async {
-      final progress = ValueNotifier<UploadProgress?>(
-        const UploadProgress(bytes: 512, total: 2048),
-      );
-      addTearDown(progress.dispose);
-
-      await pumpTestApp(
-        tester,
-        Scaffold(
-          body: Stack(
-            children: [UploadProgressBar(progress: progress, onCancel: () {})],
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      final bar = tester.widget<FractionallySizedBox>(
-        find.byType(FractionallySizedBox),
-      );
-      expect(bar.widthFactor, closeTo(0.25, 1e-9));
-    });
-
-    testWidgets('with no total there is nothing to fill', (tester) async {
-      final progress = ValueNotifier<UploadProgress?>(
-        const UploadProgress(bytes: 512),
-      );
-      addTearDown(progress.dispose);
-
-      await pumpTestApp(
-        tester,
-        Scaffold(
-          body: Stack(
-            children: [UploadProgressBar(progress: progress, onCancel: () {})],
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      final bar = tester.widget<FractionallySizedBox>(
-        find.byType(FractionallySizedBox),
-      );
-      expect(bar.widthFactor, 0.0);
-    });
-
-    testWidgets('goes away again when the upload finishes', (tester) async {
-      final progress = ValueNotifier<UploadProgress?>(
-        const UploadProgress(bytes: 512, total: 2048),
-      );
-      addTearDown(progress.dispose);
-
-      await pumpTestApp(
-        tester,
-        Scaffold(
-          body: Stack(
-            children: [UploadProgressBar(progress: progress, onCancel: () {})],
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.byType(FractionallySizedBox), findsOneWidget);
-
-      progress.value = null;
-      await tester.pumpAndSettle();
-      expect(find.byType(FractionallySizedBox), findsNothing);
-    });
-  });
-
-  group('AnalyticsConfig', () {
-    test('a build without a key sends nothing', () {
-      final override = AnalyticsConfig.apiKeyOverride;
-      addTearDown(() => AnalyticsConfig.apiKeyOverride = override);
-      AnalyticsConfig.apiKeyOverride = null;
-      expect(AnalyticsConfig.projectApiKey, isEmpty);
-      expect(AnalyticsConfig.isConfigured, isFalse);
-    });
-
-    test('points at the EU host', () {
-      expect(AnalyticsConfig.host, contains('eu.i.posthog.com'));
-      expect(Uri.parse(AnalyticsConfig.host).scheme, 'https');
+  group('FirebaseConfig', () {
+    test('a build without a project talks to no Firebase', () {
+      for (final platform in TargetPlatform.values) {
+        expect(FirebaseConfig.optionsFor(platform, debug: false), isNull);
+      }
     });
   });
 }

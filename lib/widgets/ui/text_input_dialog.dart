@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../i18n/strings.g.dart';
 
@@ -6,7 +6,7 @@ import '../../i18n/strings.g.dart';
 /// trimmed text when [confirmLabel] is pressed or the field is submitted and
 /// [validator] (if any) accepts it; null when cancelled.
 ///
-/// [obscureText] is for a secret - a passphrase - which is hidden as it is
+/// [obscure] is for a secret - a passphrase - which is hidden as it is
 /// typed and returned exactly as typed: a space at either end of one is
 /// part of it.
 ///
@@ -20,9 +20,9 @@ Future<String?> showTextInputDialog(
   required String confirmLabel,
   String initialValue = '',
   String? labelText,
-    String? hintText,
+  String? hintText,
   FormFieldValidator<String>? validator,
-  bool obscureText = false,
+  bool obscure = false,
 }) async {
   final t = Translations.of(context);
   final controller = TextEditingController(text: initialValue);
@@ -30,9 +30,7 @@ Future<String?> showTextInputDialog(
 
   void submit(BuildContext ctx) {
     if (formKey.currentState?.validate() ?? false) {
-            Navigator.of(
-        ctx,
-      ).pop(obscureText ? controller.text : controller.text.trim());
+      Navigator.of(ctx).pop(obscure ? controller.text : controller.text.trim());
     }
   }
 
@@ -44,8 +42,10 @@ Future<String?> showTextInputDialog(
         key: formKey,
         child: TextFormField(
           controller: controller,
-                    autofocus: true,
-          obscureText: obscureText,
+          autofocus: true,
+          obscureText: obscure,
+          autocorrect: !obscure,
+          enableSuggestions: !obscure,
           onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
           decoration: InputDecoration(labelText: labelText, hintText: hintText),
           validator: validator,

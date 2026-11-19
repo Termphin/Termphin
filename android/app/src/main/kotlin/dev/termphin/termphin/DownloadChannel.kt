@@ -1,6 +1,7 @@
 package dev.termphin.termphin
 
 import android.app.Activity
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -23,7 +24,10 @@ import io.flutter.plugin.common.MethodChannel
 import java.io.File
 import java.io.FileInputStream
 
-class DownloadChannel(private val activity: Activity) {
+class DownloadChannel(
+    private val activity: Activity,
+    private val clearStaleOnRegister: Boolean = true,
+) {
 
     companion object {
         private const val CHANNEL_NAME = "dev.termphin.termphin/downloads"
@@ -35,27 +39,25 @@ class DownloadChannel(private val activity: Activity) {
         private const val ACTION_CANCEL_DOWNLOAD = "dev.termphin.action.CANCEL_DOWNLOAD"
         private const val EXTRA_DOWNLOAD_ID = "download_id"
         const val PICK_FOLDER_REQUEST = 0x7E01
-
-        /** Safe as static: the process stays alive for the duration of a
-         *  download because the foreground service holds it. */
-        private var liveChannel: MethodChannel? = null
     }
 
     private val context get() = activity.applicationContext
     private val resolver get() = context.contentResolver
 
-    /** Progress notifications currently on screen, so the group summary can go
-     *  away with the last of them instead of outliving every download. */
+    /** Progress notifications currently on screen for this engine, so the group
+     *  summary can go away with the last of them and cancel actions route to
+     *  the engine that owns the transfer. */
     private val activeProgress = mutableSetOf<Int>()
 
+    private var channel: MethodChannel? = null
     private var pendingFolderPick: MethodChannel.Result? = null
     private var receiverRegistered = false
 
     private val cancelReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val id = intent?.getIntExtra(EXTRA_DOWNLOAD_ID, -1) ?: return
-            if (id != -1) {
-                liveChannel?.invokeMethod("downloadCancelRequested", mapOf("id" to id))
+            if (id != -1 && activeProgress.contains(id)) {
+                channel?.invokeMethod("downloadCancelRequested", mapOf("id" to id))
             }
         }
     }
@@ -72,13 +74,15 @@ class DownloadChannel(private val activity: Activity) {
     }
 
     fun register(flutterEngine: FlutterEngine) {
-        clearStaleProgressNotifications()
+        if (clearStaleOnRegister) {
+            clearStaleProgressNotifications()
+        }
 
-        val channel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL_NAME)
-        liveChannel = channel
+        val methodChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL_NAME)
+        channel = methodChannel
         registerCancelReceiver()
 
-        channel.setMethodCallHandler { call, result ->
+        methodChannel.setMethodCallHandler { call, result ->
                 when (call.method) {
                     "saveToDownloads" -> {
                         val sourcePath = call.argument<String>("sourcePath")!!
@@ -144,7 +148,18 @@ class DownloadChannel(private val activity: Activity) {
                         val channelName = call.argument<String>("channelName")!!
                         val channelDescription = call.argument<String>("channelDescription")!!
                         val cancelLabel = call.argument<String>("cancelLabel")!!
-                        showProgress(id, fileName, progress, channelName, channelDescription, cancelLabel)
+                        val subtitle = call.argument<String>("subtitle")
+                        val shortText = call.argument<String>("shortText")
+                        showProgress(
+                            id = id,
+                            fileName = fileName,
+                            progress = progress,
+                            channelName = channelName,
+                            channelDescription = channelDescription,
+                            cancelLabel = cancelLabel,
+                            subtitle = subtitle,
+                            shortText = shortText,
+                        )
                         result.success(null)
                     }
                     "showComplete" -> {
@@ -165,6 +180,19 @@ class DownloadChannel(private val activity: Activity) {
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    fun dispose() {
+        activeProgress.toList().forEach(::cancelProgress)
+        channel?.setMethodCallHandler(null)
+        channel = null
+        if (receiverRegistered) {
+            try {
+                context.unregisterReceiver(cancelReceiver)
+            } catch (_: IllegalArgumentException) {
+            }
+            receiverRegistered = false
+        }
     }
 
     /** Returns true when the result belonged to this channel. */
@@ -482,13 +510,14 @@ class DownloadChannel(private val activity: Activity) {
         channelName: String,
         channelDescription: String,
         cancelLabel: String,
+        subtitle: String?,
+        shortText: String?,
     ) {
         ensureProgressChannel(channelName, channelDescription)
-        ensureGroupSummary()
         activeProgress.add(id)
 
-        val tapIntent = Intent(context, MainActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val tapIntent = Intent(context, activity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         }
         val tapPendingIntent = PendingIntent.getActivity(
             context,
@@ -508,7 +537,47 @@ class DownloadChannel(private val activity: Activity) {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        val notification = NotificationCompat.Builder(context, PROGRESS_CHANNEL_ID)
+        if (Build.VERSION.SDK_INT >= 36) {
+            val progressStyle = Notification.ProgressStyle()
+                .setStyledByProgress(true)
+                .setProgressSegments(
+                    listOf(
+                        Notification.ProgressStyle.Segment(100)
+                            .setColor(0xFF4DA3FF.toInt())
+                    )
+                )
+                .setProgressIndeterminate(progress <= 0)
+            if (progress > 0) {
+                progressStyle.setProgress(progress.coerceAtMost(100))
+            }
+
+            val builder = Notification.Builder(context, PROGRESS_CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_stat_termphin)
+                .setContentTitle(fileName)
+                .setStyle(progressStyle)
+                .setContentIntent(tapPendingIntent)
+                .addAction(
+                    Notification.Action.Builder(null, cancelLabel, cancelPendingIntent).build()
+                )
+                .setCategory(Notification.CATEGORY_PROGRESS)
+                .setLocalOnly(true)
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .setRequestPromotedOngoing(true)
+
+            if (!subtitle.isNullOrEmpty()) {
+                builder.setContentText(subtitle)
+            }
+            if (!shortText.isNullOrEmpty()) {
+                builder.setShortCriticalText(shortText)
+            }
+
+            notificationManager.notify(id, builder.build())
+            return
+        }
+
+        ensureGroupSummary()
+        val builder = NotificationCompat.Builder(context, PROGRESS_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_termphin)
             .setContentTitle(fileName)
             .setProgress(100, progress, progress == 0)
@@ -520,8 +589,10 @@ class DownloadChannel(private val activity: Activity) {
             .setSilent(true)
             .setOnlyAlertOnce(true)
             .setGroup(GROUP_KEY)
-            .build()
-        notificationManager.notify(id, notification)
+        if (!subtitle.isNullOrEmpty()) {
+            builder.setContentText(subtitle)
+        }
+        notificationManager.notify(id, builder.build())
     }
 
     private fun cancelProgress(id: Int) {

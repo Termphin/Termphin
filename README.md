@@ -1,5 +1,3 @@
-[![Termphin](docs/images/readme-header.webp)](https://termphin.dev)
-
 <h1 align="center">Termphin</h1>
 
 <p align="center">
@@ -26,25 +24,25 @@
   vim and other TUIs render without broken box characters.
 - **Encrypted local vault.** Keys and passwords are sealed with AES-256-GCM,
   under a key your phone's secure hardware holds.
+- **Know when it's done.** A long command or an AI agent waiting for an
+  answer sends you a notification, even with Termphin closed.
+- **Sync across devices.** Machines, keys, snippets and settings, end-to-end
+  encrypted with a passphrase only you know.
 
 <p align="center">
-  <img src="docs/images/readme-tablet.webp" alt="htop and a service log side by side in Termphin" width="100%">
+  <img src="docs/images/readme-pixel.webp" alt="A deploy session in Termphin on a phone, still there after coming back" width="360">
 </p>
 
 ## Download
 
 <a href="https://play.google.com/store/apps/details?id=dev.termphin.termphin"><img src="docs/images/google-play-badge.png" alt="Get it on Google Play" height="56"></a>
+<a href="https://apps.apple.com/app/id6813191168"><img src="docs/images/app-store-badge.svg" alt="Download on the App Store" height="56"></a>
 
 | Platform | Status |
 |---|---|
-| Android | [Google Play](https://play.google.com/store/apps/details?id=dev.termphin.termphin), or the APK from [Releases](../../releases/latest) |
-| iOS | Coming soon |
+| Android | [Google Play](https://play.google.com/store/apps/details?id=dev.termphin.termphin) |
+| iOS | [App Store](https://apps.apple.com/app/id6813191168) |
 | macOS, Windows, Linux | Work in progress |
-
-The APK on Releases is signed with a different key than the Google Play build,
-so one does not update the other - uninstall first to switch. Each APK comes
-with a SHA-256 checksum and a build provenance attestation:
-`gh attestation verify termphin-<version>.apk -R Termphin/Termphin`.
 
 ## Built for productivity
 

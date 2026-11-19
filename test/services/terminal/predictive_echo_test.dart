@@ -31,6 +31,23 @@ void main() {
     terminal.write(reply ?? key);
   }
 
+  test('lets go of the terminal on dispose, which outlives it', () {
+    echo.dispose();
+
+    expect(terminal.overlay, isNull);
+    expect(terminal.onAfterWrite, isNull);
+  });
+
+  test('leaves the terminal to the echo that took it over', () {
+    final successor = PredictiveEcho(terminal)..attach();
+    addTearDown(successor.dispose);
+
+    echo.dispose();
+
+    expect(terminal.overlay, same(successor));
+    expect(terminal.onAfterWrite, isNotNull);
+  });
+
   test('the first key of a line is not shown before its echo', () {
     echo.userInput('a');
 

@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:dartssh2/dartssh2.dart';
 import 'package:flutter/gestures.dart' show kDoubleTapTimeout;
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
@@ -14,9 +14,11 @@ import '../../theme/theme.dart';
 import '../../utils/platform_info.dart';
 import '../../utils/sftp_error_handler.dart';
 import '../../utils/sftp_path.dart';
+import '../ui/app_divider.dart';
 import '../ui/app_notifications.dart';
 import '../ui/app_sheet.dart';
 import '../ui/sheet_handle.dart';
+import '../ui/tag_chip.dart';
 import '../ui/text_input_dialog.dart';
 import 'sftp_shortcuts.dart';
 
@@ -324,7 +326,12 @@ class _SftpFolderPickerState extends State<SftpFolderPicker> {
 
     List<Widget> body(ScrollController? scrollController) => [
       Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 8, 0),
+        padding: const EdgeInsets.fromLTRB(
+          AppTheme.space20,
+          0,
+          AppTheme.space8,
+          0,
+        ),
         child: Row(
           children: [
             Expanded(
@@ -334,7 +341,7 @@ class _SftpFolderPickerState extends State<SftpFolderPicker> {
                       autofocus: true,
                       style: colors.monoStyle.copyWith(
                         color: colors.textPrimary,
-                        fontSize: 12,
+                        fontSize: AppTheme.font12,
                       ),
                       decoration: const InputDecoration(isDense: true),
                       onSubmitted: _submitPath,
@@ -343,7 +350,7 @@ class _SftpFolderPickerState extends State<SftpFolderPicker> {
                       sftpPathToDisplay(_path),
                       style: colors.monoStyle.copyWith(
                         color: colors.textSecondary,
-                        fontSize: 12,
+                        fontSize: AppTheme.font12,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -353,7 +360,7 @@ class _SftpFolderPickerState extends State<SftpFolderPicker> {
               tooltip: t.sftp.editPath,
               icon: Icon(
                 PhosphorIconsRegular.pencilSimple,
-                size: 18,
+                size: AppTheme.icon18,
                 color: colors.textTertiary,
               ),
               onPressed: () {
@@ -369,34 +376,39 @@ class _SftpFolderPickerState extends State<SftpFolderPicker> {
           height: 40,
           child: ListView(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: AppTheme.space16),
             children: [
               Center(
                 child: Padding(
-                  padding: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.only(right: AppTheme.space8),
                   child: Text(
                     t.sftp.recentFolders,
-                    style: TextStyle(color: colors.textTertiary, fontSize: 12),
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ),
               ),
               for (final folder in recent)
                 Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: ActionChip(
-                    label: Text(sftpPathToDisplay(folder)),
-                    visualDensity: VisualDensity.compact,
-                    onPressed: () => _load(folder),
+                  padding: const EdgeInsets.only(right: AppTheme.space6),
+                  child: TagChip(
+                    label: sftpPathToDisplay(folder),
+                    selected: false,
+                    onTap: () => _load(folder),
                   ),
                 ),
             ],
           ),
         ),
-      Divider(height: 1, color: colors.surfaceDivider),
+      const AppDivider(),
       Expanded(child: _buildList(scrollController)),
-      Divider(height: 1, color: colors.surfaceDivider),
+      const AppDivider(),
       Padding(
-        padding: const EdgeInsets.fromLTRB(12, 8, 16, 8),
+        padding: const EdgeInsets.fromLTRB(
+          AppTheme.space12,
+          AppTheme.space8,
+          AppTheme.space16,
+          AppTheme.space8,
+        ),
         child: Row(
           children: [
             Tooltip(
@@ -406,7 +418,10 @@ class _SftpFolderPickerState extends State<SftpFolderPicker> {
               ),
               child: TextButton.icon(
                 onPressed: _loading || _error.isNotEmpty ? null : _createFolder,
-                icon: const Icon(PhosphorIconsRegular.folderPlus, size: 18),
+                icon: const Icon(
+                  PhosphorIconsRegular.folderPlus,
+                  size: AppTheme.icon18,
+                ),
                 label: Text(t.sftp.newFolder),
               ),
             ),
@@ -466,7 +481,12 @@ class _SftpFolderPickerState extends State<SftpFolderPicker> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppTheme.space20,
+                    AppTheme.space16,
+                    AppTheme.space20,
+                    AppTheme.space4,
+                  ),
                   child: Text(
                     widget.title,
                     style: Theme.of(context).textTheme.titleMedium,
@@ -482,9 +502,14 @@ class _SftpFolderPickerState extends State<SftpFolderPicker> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SheetHandle(topPadding: 8),
+            const SheetHandle(topPadding: AppTheme.space8),
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 4),
+              padding: const EdgeInsets.fromLTRB(
+                AppTheme.space20,
+                AppTheme.space14,
+                AppTheme.space20,
+                AppTheme.space4,
+              ),
               child: Text(
                 widget.title,
                 style: Theme.of(context).textTheme.titleMedium,
@@ -519,7 +544,7 @@ class _SftpFolderPickerState extends State<SftpFolderPicker> {
     if (_error.isNotEmpty) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(AppTheme.space20),
           child: Text(_error, style: TextStyle(color: colors.error)),
         ),
       );
@@ -586,19 +611,23 @@ class _FolderRow extends StatelessWidget {
           onTap: enabled || dense ? onTap : null,
           child: Padding(
             padding: EdgeInsets.symmetric(
-              horizontal: 20,
-              vertical: dense ? 0 : 12,
+              horizontal: AppTheme.space20,
+              vertical: dense ? 0 : AppTheme.space12,
             ),
             child: Row(
               children: [
-                Icon(icon, color: colors.primary, size: dense ? 18 : 22),
-                SizedBox(width: dense ? 10 : 14),
+                Icon(
+                  icon,
+                  color: colors.primary,
+                  size: dense ? AppTheme.icon18 : AppTheme.icon22,
+                ),
+                SizedBox(width: dense ? AppTheme.space10 : AppTheme.space14),
                 Expanded(
                   child: Text(
                     name,
                     style: TextStyle(
                       color: colors.textPrimary,
-                      fontSize: dense ? 13 : 14,
+                      fontSize: dense ? AppTheme.font13 : AppTheme.font14,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

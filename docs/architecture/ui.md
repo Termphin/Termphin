@@ -148,11 +148,67 @@ come back:
   leftover reservation. `android:windowSoftInputMode="adjustResize|stateAlwaysHidden"`
   is what closes it - `stateHidden` alone only applies when the activity is
   first entered.
-- **The debounce moved to the packet.** The pane follows the keyboard frame by
-  frame, and every intermediate height would otherwise be a window-change the
-  remote shell acts on. `SessionViewState._onResize` holds the last size for
-  120ms and sends once. Throttling the layout to protect the pty was the wrong
-  layer.
+- **The grid waits for the keyboard to stop.** The pane's box follows the
+  keyboard frame by frame, but its terminal is resized once, when the height
+  has held for `kTerminalResizeSettleDelay` (`TerminalView.resizeSettleDelay`).
+  Until then the view is a shorter window on the same rows, resting where the
+  resize will leave it (`RenderTerminal.restingScrollOffset`) so nothing jumps
+  when it lands - which is also where "scroll to the bottom" and the follow
+  mode have to aim, not `maxScrollExtent`. Resizing on every frame cost two
+  buffers a frame and, on the alternate screen, rows dropped for good at each
+  step. A change of width is never held back.
+- **The debounce moved to the packet.** Every intermediate height would
+  otherwise be a window-change the
+  remote shell acts on. `PtyResizeReporter` holds the last size for 120ms and
+  sends once. Throttling the layout to protect the pty was the wrong layer.
+  Settling back on the size the server already has (the layout passing
+  through another one, as it can on the way back from the background) sends a
+  one-row nudge first: the local buffer was resized twice, the pty never, so
+  without it no SIGWINCH comes and the program never repaints over what the
+  resizes left - until the keyboard changes the size for real.
+
+### Notifications from programs
+
+A program asks the terminal for a notification with an OSC sequence that
+prints nothing: `OSC 9` (iTerm2's; Claude Code sends it with
+`preferredNotifChannel` set to `iterm2`), `OSC 777;notify` (rxvt's, and what
+`termphin notify` in the agent writes) or kitty's one-shot `OSC 99`.
+`TerminalNotification.fromOsc` reads all three into one line of text each.
+
+- **The session hears it, not the pane.** `SessionTerminal` parses every
+  session whether a pane is bound or not, so it hands notifications to
+  `ActiveSessionView.notifications` itself and forwards the OSC to the pane
+  after. A replay never raises one again.
+- **News is what the user is not looking at.** `TerminalAlerts` posts unless
+  the app is in front with the terminal shown (`MainShell` keeps
+  `SshSessionManager.terminalOnScreen`) on that very session. One per session
+  every 3 s, the newest replacing the last (`terminalAlertId`), and a
+  notification with only a title takes the machine's name as its title
+  (anonymised when `anonymizeSetting` is on).
+- Tapping one opens its session through `terminalOverlayProvider`, behind the
+  PIN when one is due; a tap that launched the app waits in
+  `LocalNotificationsService` until the shell sets `onOpenSession`.
+- `terminalSettings.programNotifications` turns it off; it is in the backup.
+
+### Drawing the terminal
+
+Two switches in `lib/widgets/terminal/terminal_rendering.dart` and
+`frame_stats_overlay.dart`, both compile-time:
+
+- `terminal_view`'s glyph atlas is on: printable ASCII is stamped from an
+  image of the font, one draw a line, instead of laid out as a paragraph per
+  run of one style. `--dart-define=TERMINAL_GLYPH_ATLAS=false` turns it off.
+  `test/widgets/terminal/glyph_atlas_real_font_test.dart` holds it to the same
+  ink as the laid-out text in the font the app ships.
+- `--dart-define=FRAME_STATS=true` puts `FrameStatsOverlay` in the corner of
+  every pane: frames drawn in the last second, mean UI and raster time, and
+  how many overran the display's frame. A tap flips the atlas, so the two
+  ways of drawing can be compared on the same session. A measuring build,
+  never a release.
+
+`repos/terminal_view/benchmark/render_benchmark_test.dart` measures the UI
+thread's side of a frame on the host, for comparing one build of the view
+with another.
 
 ### Tab strip position
 
@@ -162,8 +218,7 @@ between the session and the key toolbar - so in the file browser, which has
 no toolbar, it is the bottom row. **Moving it must never resize the pane**:
 the strip is the same height in either place and nothing is added around it
 (`terminal_tab_bar_position_test.dart` pins the pane's size across a switch).
-The toolbar's own top line parts tabs from keys; a gap would cost rows. With
-the strip down there is nothing up top, so `MainShell` anchors toasts at 0.
+The toolbar's own top line parts tabs from keys; a gap would cost rows.
 Landscape keeps the side rail either way.
 
 ### Action dock
@@ -176,6 +231,13 @@ is not - there is nothing to type into. The SharedPreferences keys still read
 `command_palette_*` so the rename does not reset anyone's layout. The name
 survives in `snippet_picker_panel.dart`, which really is a search-and-run
 palette.
+
+The editor draws the panel tile for tile over a tray of the hidden ones.
+Dragging inserts (`placeDockAction`), never swaps, and a tray tile can be
+dragged straight to its place; hiding and showing go through the corner badge
+only, so a stray tap on the panel changes nothing. Every edit stores the order
+visible-first (`hideDockAction`), so no hidden action sits unseen between two
+visible ones. A mouse drags at once, a finger long-presses first.
 
 ### Special-keys toolbar and its editor
 
@@ -231,12 +293,32 @@ the live toolbar is `SpecialKeysToolbar`; the editor is `ToolbarSettingsScreen`.
 
 ### Notifications and sheets
 
-`AppNotifications` is the only way to show transient feedback. Toasts slide out
-from under the app bar, up to three at a time, in a root `OverlayEntry`; the
-stack clears as one unit. **Do not use `ScaffoldMessenger`/`SnackBar`** - the
+`AppNotifications` is the only way to show transient feedback. Toasts drop in
+at the top of the screen, just under the status bar, up to three at a time, in
+a root `OverlayEntry`; the stack clears as one unit. A short message with
+nothing to tap is a pill; a title, an action or a second line make it a card
+tinted with its kind. A repeat while it is up counts on the one shown (×2).
+How long one stays follows its length (an alert 12 s); errors buzz once, alerts twice,
+confirmations not at all. **Do not use `ScaffoldMessenger`/`SnackBar`** - the
 bottom of the screen belongs to the nav bar, the session dock and the key
-toolbar. Screens with a non-standard app bar height set
-`appNotificationAnchor`.
+toolbar.
+
+`AppNotifications.alert` is the in-app stand-in for a terminal notification:
+while Termphin is in front, `terminalSettings.openAppNotices` is on and
+`openAppNoticeStyle` is `app` (both the defaults), `InAppAlerts` hands a
+program's alert from another session, or a server's push, to the app shell,
+which shows it as a card with "Open" instead of posting a system
+notification. With the style set to `system`, behind the PIN screen or in the
+background, the system notification is posted; with `openAppNotices` off,
+nothing is while the app is in front. Either way the session's tab gets a dot
+(`SshSessionManager.noteUnread`) until it is looked at.
+
+**Context bars:** selecting rows (machines, keys, snippets, files) and the
+transfer bar all use `ContextBar` - a flat docked strip, never a floating card,
+tinted while selecting. Actions that do not fit move into "More" from the end,
+so a split pane gets the same bar. The file browser and the transfer bar dock
+it at the top; machines, keys and snippets dock it at the bottom, within reach
+of the thumb, through `SelectionActionHost`, which pushes the list up.
 
 `showAppSheet` is the only way to open a bottom sheet - and on a desktop it
 opens the same content as a dialog instead (`docs/architecture/desktop.md`).
@@ -306,8 +388,8 @@ Material 3, light and dark, in `lib/theme/theme.dart`. Every interface colour
 lives on `AppColors`, a `ThemeExtension`, and is read off the context:
 `context.colors.textPrimary`, **never a constant** - that is what makes a widget
 a dependent of the theme so it repaints when the palette changes. `AppTheme`
-keeps only what does not vary: radius, spacing and motion tokens, font families,
-terminal colour schemes. Reading a colour off the context means the surrounding
+keeps only what does not vary: the token scales, font families, terminal colour
+schemes. Reading a colour off the context means the surrounding
 expression cannot be `const` - drop the `const`, do not reach for the constant.
 
 `themeModeProvider` over `AppThemeMode`: `system` by default, `light`/`dark` to
@@ -330,6 +412,29 @@ extension), **never `Colors.transparent`** - that constant is transparent
 *black*, so the colour tweens through grey on its way out. Same reason
 `splashColor`/`highlightColor`/`hoverColor`/`focusColor` are set from the accent
 in `themeFor`.
+
+**Tokens, not numbers.** Every padding and spacer is an `AppTheme.spaceN`
+(2-48), every font size an `AppTheme.fontN`, every icon size an
+`AppTheme.iconN`, every corner a `radius*`, every shadow `floatingShadow`,
+`raisedShadow` or `popupShadow`, a barrier `scrim`. The names carry the value so
+a call site still reads as a layout. A value missing from a scale is snapped to
+the nearest step (ties toward the smaller) or, if it is really needed, added to
+the scale - never typed at the call site. Fixed brand colours (avatar swatches,
+the notification accent, toolbar key accents) are `AppTheme` constants too.
+`test/theme/design_tokens_test.dart` fails on a literal padding, spacer, font
+size, icon size, corner or colour anywhere in `lib/` outside `lib/theme/`.
+
+**The kit is the only place a shape is drawn.** Before writing a
+`Container(decoration: ...)`, a chip or a pill, use `lib/widgets/ui/`:
+`AppCard` (plain, `elevated` on sheets and panels, `selected`, tappable with
+`onTap`), `AppBadge`/`AppBadge.count` with a `BadgeTone`, `TagChip` (`solid` for
+a toggled mode), `SectionHeader` for a caption, `ListSectionHeader` and its
+`action` buttons, `SettingsTile`/`SettingsSwitchTile`/`SettingsCheckboxTile`
+(`dense` inside a packed card), `SettingsDropdownField<T>`/`SettingsDropdownRow<T>`,
+`AppSearchField` (`dense` in a bar), `BarIconButton`, `EmptyStatePanel`
+(`tone: error`, `compact`) and `EmptyStateHint`, `context.colors.fieldDecoration`
+for the box of any form control. A widget that knows about the app's data -
+groups, profiles, the toolbar layout - lives with its feature, not in the kit.
 
 **No sliders** - numeric settings use the `StepperRow`/`ValueStepperRow` +/-
 pair, which hits an exact value on the first try.

@@ -1,7 +1,6 @@
 import 'dart:async';
-
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
@@ -16,15 +15,16 @@ import '../../services/storage/ssh_key_storage.dart';
 import '../../theme/theme.dart';
 import '../../utils/group_match.dart';
 import '../../utils/platform_info.dart';
+import '../../widgets/groups/group_filter_chips.dart';
+import '../../widgets/groups/group_picker_sheet.dart';
+import '../../widgets/groups/group_section_header.dart';
+import '../../widgets/ui/app_card.dart';
 import '../../widgets/ui/app_dropdown.dart';
 import '../../widgets/ui/app_notifications.dart';
 import '../../widgets/ui/clipboard_and_links.dart';
 import '../../widgets/ui/confirm_dialog.dart';
 import '../../widgets/ui/context_menu.dart';
 import '../../widgets/ui/empty_state.dart';
-import '../../widgets/ui/group_filter_chips.dart';
-import '../../widgets/ui/group_picker_sheet.dart';
-import '../../widgets/ui/group_section_header.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
 import '../../widgets/ui/list_key_navigation.dart';
 import '../../widgets/ui/list_section_header.dart';
@@ -144,7 +144,7 @@ class _KeyManagerScreenState extends ConsumerState<KeyManagerScreen> {
         title: t.keys.localPassphraseTitle(name: local.name),
         confirmLabel: t.keys.localImport,
         labelText: t.keys.keyPassphraseLabel,
-        obscureText: true,
+        obscure: true,
       );
       if (passphrase == null || passphrase.isEmpty || !mounted) return false;
     }
@@ -392,7 +392,7 @@ class _KeyManagerScreenState extends ConsumerState<KeyManagerScreen> {
                     ? Border(
                         bottom: BorderSide(
                           color: context.colors.surfaceBorder,
-                          width: 1,
+                          width: AppTheme.hairline,
                         ),
                       )
                     : const Border(),
@@ -615,12 +615,8 @@ class _KeyManagerScreenState extends ConsumerState<KeyManagerScreen> {
                                         ),
                                       ),
                                     ],
-                                    SliverToBoxAdapter(
-                                      child: SizedBox(
-                                        height: _isSelectionMode
-                                            ? SelectionActionBar.reservedHeight
-                                            : 32,
-                                      ),
+                                    const SliverToBoxAdapter(
+                                      child: SizedBox(height: AppTheme.space32),
                                     ),
                                   ],
                                 ],
@@ -650,11 +646,11 @@ class _KeyManagerScreenState extends ConsumerState<KeyManagerScreen> {
             await showKeyFormScreen(context);
             if (mounted) await _loadKeys(showLoading: false);
           },
-          icon: const Icon(PhosphorIconsRegular.plus, size: 18),
+          icon: const Icon(PhosphorIconsRegular.plus, size: AppTheme.icon18),
           label: Text(t.keys.addKey),
           style: ElevatedButton.styleFrom(
             minimumSize: const Size(0, 46),
-            padding: const EdgeInsets.symmetric(horizontal: 18),
+            padding: const EdgeInsets.symmetric(horizontal: AppTheme.space16),
           ),
         ),
       ),
@@ -695,120 +691,112 @@ class _KeyTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return AppCard(
       onTap: onTap,
       onLongPress: onLongPress,
-      child: AnimatedContainer(
-        duration: AppTheme.interactiveDuration,
-        decoration: BoxDecoration(
-          color: SelectionStyle.fill(
-            context,
-            context.colors.surfaceCard,
-            selected: selected,
-          ),
-          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-          border: Border.fromBorderSide(
-            SelectionStyle.side(context, selected: selected),
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              if (isSelectionMode) ...[
-                SelectionCheck(selected: selected, size: 22),
-                const SizedBox(width: 12),
-              ],
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+      selected: selected,
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.space16,
+        AppTheme.space12,
+        AppTheme.space8,
+        AppTheme.space12,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          if (isSelectionMode) ...[
+            SelectionCheck(selected: selected, size: 22),
+            const SizedBox(width: AppTheme.space12),
+          ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        Text(
-                          sshKey.name,
-                          style: Theme.of(context).textTheme.labelLarge,
+                    Text(
+                      sshKey.name,
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
+                    const SizedBox(width: AppTheme.space8),
+                    _KeyTypeBadge(
+                      label: _typeLabel,
+                      color: _typeColor(context),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppTheme.space4),
+                Text(
+                  sshKey.formattedDate,
+                  style: TextStyle(
+                    color: context.colors.textTertiary,
+                    fontSize: AppTheme.font12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Visibility.maintain(
+            visible: !isSelectionMode,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(
+                    PhosphorIconsRegular.copy,
+                    size: AppTheme.icon20,
+                  ),
+                  color: context.colors.primary,
+                  tooltip: Translations.of(context).keys.copyPublicKey,
+                  onPressed: onCopyPublicKey,
+                ),
+                Builder(
+                  builder: (ctx) {
+                    final t = Translations.of(ctx);
+                    return AppActionDropdown<String>(
+                      iconSize: AppTheme.icon20,
+                      buttonSize: 40,
+                      iconColor: context.colors.textSecondary,
+                      width: 220,
+                      items: [
+                        DropdownItem(
+                          value: 'copy',
+                          intrinsicHeight: true,
+                          child: AppDropdownItem(
+                            icon: PhosphorIconsFill.copy,
+                            label: t.keys.copyPublicKey,
+                          ),
                         ),
-                        const SizedBox(width: 8),
-                        _KeyTypeBadge(
-                          label: _typeLabel,
-                          color: _typeColor(context),
+                        DropdownItem(
+                          value: 'edit',
+                          intrinsicHeight: true,
+                          child: AppDropdownItem(
+                            icon: PhosphorIconsFill.pencilSimple,
+                            label: t.common.edit,
+                          ),
+                        ),
+                        DropdownItem(
+                          value: 'delete',
+                          intrinsicHeight: true,
+                          child: AppDropdownItem(
+                            icon: PhosphorIconsFill.trash,
+                            label: t.common.delete,
+                            color: context.colors.error,
+                          ),
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      sshKey.formattedDate,
-                      style: TextStyle(
-                        color: context.colors.textTertiary,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Visibility.maintain(
-                visible: !isSelectionMode,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(PhosphorIconsFill.copy, size: 20),
-                      color: context.colors.primary,
-                      tooltip: Translations.of(context).keys.copyPublicKey,
-                      onPressed: onCopyPublicKey,
-                    ),
-                    Builder(
-                      builder: (ctx) {
-                        final t = Translations.of(ctx);
-                        return AppActionDropdown<String>(
-                          iconSize: 20,
-                          buttonSize: 40,
-                          iconColor: context.colors.textSecondary,
-                          width: 220,
-                          items: [
-                            DropdownItem(
-                              value: 'copy',
-                              intrinsicHeight: true,
-                              child: AppDropdownItem(
-                                icon: PhosphorIconsFill.copy,
-                                label: t.keys.copyPublicKey,
-                              ),
-                            ),
-                            DropdownItem(
-                              value: 'edit',
-                              intrinsicHeight: true,
-                              child: AppDropdownItem(
-                                icon: PhosphorIconsFill.pencilSimple,
-                                label: t.common.edit,
-                              ),
-                            ),
-                            DropdownItem(
-                              value: 'delete',
-                              intrinsicHeight: true,
-                              child: AppDropdownItem(
-                                icon: PhosphorIconsFill.trash,
-                                label: t.common.delete,
-                                color: context.colors.error,
-                              ),
-                            ),
-                          ],
-                          onSelected: (v) {
-                            if (v == 'copy') onCopyPublicKey();
-                            if (v == 'edit' || v == 'rename') onEdit();
-                            if (v == 'delete') onDelete();
-                          },
-                        );
+                      onSelected: (v) {
+                        if (v == 'copy') onCopyPublicKey();
+                        if (v == 'edit' || v == 'rename') onEdit();
+                        if (v == 'delete') onDelete();
                       },
-                    ),
-                  ],
+                    );
+                  },
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -994,7 +982,10 @@ class _KeyTypeBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppTheme.space8,
+        vertical: AppTheme.space2,
+      ),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(AppTheme.radiusXs),
@@ -1004,7 +995,7 @@ class _KeyTypeBadge extends StatelessWidget {
         label,
         style: TextStyle(
           color: color,
-          fontSize: 11,
+          fontSize: AppTheme.font11,
           fontWeight: FontWeight.w600,
         ),
       ),

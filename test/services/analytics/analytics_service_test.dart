@@ -1,39 +1,26 @@
-import 'package:flutter/services.dart';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:termphin/services/analytics/analytics_service.dart';
 
+import '../../support/analytics_recorder.dart';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  const channel = MethodChannel('posthog_flutter');
-  final calls = <String>[];
-  final arguments = <String, dynamic>{};
+  final calls = analyticsRecorder.calls;
+
+  Map<String, Object?> lastEvent() {
+    final event = analyticsRecorder.events.last;
+    return {'eventName': event.name, 'properties': event.parameters};
+  }
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     AnalyticsService.instance.resetForTest();
-    calls.clear();
-    arguments.clear();
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(channel, (call) async {
-          calls.add(call.method);
-          if (call.method == 'setup') {
-            arguments['optOut'] = (call.arguments as Map)['optOut'];
-          }
-          if (call.method == 'capture') {
-            final map = call.arguments as Map;
-            arguments['eventName'] = map['eventName'];
-            arguments['properties'] = map['properties'];
-          }
-          return null;
-        });
-  });
-
-  tearDown(() {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(channel, null);
+    analyticsRecorder.clear();
   });
 
   test('the SDK is not touched before the prompt has been answered', () async {
@@ -49,21 +36,20 @@ void main() {
 
     await AnalyticsService.instance.capture(AnalyticsEvent.appOpened);
 
-    expect(calls, isNot(contains('capture')));
+    expect(analyticsRecorder.events, isEmpty);
   });
 
-  test('granting consent starts the SDK and enables capture', () async {
+  test('granting consent switches collection on', () async {
     await AnalyticsService.instance.init();
     calls.clear();
 
     await AnalyticsService.instance.setConsent(true);
 
     expect(await AnalyticsService.instance.loadConsent(), isTrue);
-    expect(calls, containsAllInOrder(['setup', 'enable']));
-    expect(calls, isNot(contains('disable')));
+    expect(calls, ['enable']);
   });
 
-  test('withdrawing consent persists it and disables capture', () async {
+  test('withdrawing consent persists it and switches collection off', () async {
     await AnalyticsService.instance.setConsent(true);
     calls.clear();
 
@@ -74,35 +60,36 @@ void main() {
     expect(calls, isNot(contains('enable')));
   });
 
-  test('a previously granted consent starts the SDK on the next run', () async {
-    SharedPreferences.setMockInitialValues({kAnalyticsConsentPrefsKey: true});
+  test('a previously granted consent switches collection on at the next '
+      'launch', () async {
+    SharedPreferences.setMockInitialValues({
+      kAnalyticsConsentPrefsKey: true,
+      kAnalyticsConsentResetPrefsKey: true,
+    });
     AnalyticsService.instance.resetForTest();
     calls.clear();
 
     await AnalyticsService.instance.init();
 
-    expect(calls, contains('setup'));
+    expect(calls, ['enable']);
   });
 
-  test(
-    'a previously denied consent leaves the SDK alone on the next run',
-    () async {
-      SharedPreferences.setMockInitialValues({
-        kAnalyticsConsentPrefsKey: false,
-      });
-      AnalyticsService.instance.resetForTest();
-      calls.clear();
+  test('a previously denied consent leaves Firebase alone at the next '
+      'launch', () async {
+    SharedPreferences.setMockInitialValues({kAnalyticsConsentPrefsKey: false});
+    AnalyticsService.instance.resetForTest();
+    calls.clear();
 
-      await AnalyticsService.instance.init();
+    await AnalyticsService.instance.init();
+    await AnalyticsService.instance.capture(AnalyticsEvent.appOpened);
 
-      expect(calls, isEmpty);
-    },
-  );
+    expect(calls, isEmpty);
+  });
 
   group('properties', () {
     setUp(() => AnalyticsService.instance.setConsent(true));
 
-    test('go out under their declared names', () async {
+    test('go out under their declared names, a flag spelled out', () async {
       await AnalyticsService.instance.capture(
         AnalyticsEvent.connectionFailed,
         properties: const {
@@ -112,10 +99,10 @@ void main() {
         },
       );
 
-      expect(arguments['eventName'], 'connection_failed');
-      expect(arguments['properties'], {
+      expect(lastEvent()['eventName'], 'connection_failed');
+      expect(lastEvent()['properties'], {
         'reason': 'auth_failed',
-        'via_jump_host': true,
+        'via_jump_host': 'true',
         'fallback_count': 2,
       });
     });
@@ -123,8 +110,8 @@ void main() {
     test('a screen view names the screen, not the widget class', () async {
       await AnalyticsService.instance.screen(AnalyticsScreen.knownHosts);
 
-      expect(arguments['eventName'], 'screen_viewed');
-      expect(arguments['properties'], {'screen': 'known_hosts'});
+      expect(lastEvent()['eventName'], 'screen_viewed');
+      expect(lastEvent()['properties'], {'screen': 'known_hosts'});
     });
 
     test(
@@ -132,7 +119,7 @@ void main() {
       () async {
         await AnalyticsService.instance.settingChanged('toolbar_order', null);
 
-        expect(arguments['properties'], {'setting': 'toolbar_order'});
+        expect(lastEvent()['properties'], {'setting': 'toolbar_order'});
       },
     );
 
@@ -144,7 +131,7 @@ void main() {
         ),
         completes,
       );
-      expect(arguments['properties'], {
+      expect(lastEvent()['properties'], {
         'setting': 'terminal_font_family',
         'value': 'JetBrains Mono',
       });
@@ -169,73 +156,30 @@ void main() {
     });
   });
 
-  group('isTransportOnlyException', () {
-    test('drops a single SocketException entry matched by type', () {
-      final properties = {
-        r'$exception_list': [
-          {'type': 'SocketException', 'value': 'Connection refused'},
-        ],
-      };
+  group('crash reports', () {
+    test('go nowhere before consent', () async {
+      await AnalyticsService.instance.recordError(StateError('boom'), null);
 
-      expect(isTransportOnlyException(properties), isTrue);
+      expect(analyticsRecorder.errors, isEmpty);
     });
 
-    test(
-      'drops a single entry matched only by value starting with SocketException',
-      () {
-        final properties = {
-          r'$exception_list': [
-            {
-              'type': 'OSClientError',
-              'value':
-                  'SocketException: Software caused connection abort, address = devbox, port = 36328',
-            },
-          ],
-        };
+    test('go once consent is on', () async {
+      await AnalyticsService.instance.setConsent(true);
 
-        expect(isTransportOnlyException(properties), isTrue);
-      },
-    );
+      await AnalyticsService.instance.recordError(StateError('boom'), null);
 
-    test('keeps a list mixing a SocketException with a StateError', () {
-      final properties = {
-        r'$exception_list': [
-          {'type': 'SocketException', 'value': 'Connection reset'},
-          {'type': 'StateError', 'value': 'Bad state: closed'},
-        ],
-      };
-
-      expect(isTransportOnlyException(properties), isFalse);
+      expect(analyticsRecorder.errors, [isA<StateError>()]);
     });
 
-    test('keeps an empty list', () {
-      final properties = {r'$exception_list': <Map<String, Object?>>[]};
+    test('a transport closing is not one, and names the machine', () async {
+      await AnalyticsService.instance.setConsent(true);
 
-      expect(isTransportOnlyException(properties), isFalse);
+      await AnalyticsService.instance.recordError(
+        const SocketException('Connection reset', port: 22),
+        null,
+      );
+
+      expect(analyticsRecorder.errors, isEmpty);
     });
-
-    test('keeps a missing exception list key', () {
-      final properties = <String, Object?>{};
-
-      expect(isTransportOnlyException(properties), isFalse);
-    });
-
-    test(
-      'keeps exception list holding something other than a list of maps without throwing',
-      () {
-        for (final malformed in [
-          'not a list',
-          42,
-          [1, 2, 3],
-          ['string entry'],
-          [null],
-        ]) {
-          expect(
-            isTransportOnlyException({r'$exception_list': malformed}),
-            isFalse,
-          );
-        }
-      },
-    );
   });
 }
