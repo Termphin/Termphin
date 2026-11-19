@@ -4,7 +4,9 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import '../../utils/platform_info.dart';
 import 'aead.dart';
+import 'file_fallback_master_key_store.dart';
 
 const _masterKeyEntry = 'termphin_master_key_v1';
 
@@ -32,6 +34,21 @@ const kMasterKeyIOSOptions = IOSOptions(
   synchronizable: false,
 );
 
+/// The master key's keychain on a Mac: the login keychain, not the data
+/// protection one.
+///
+/// The data protection keychain answers -34018 ("a required entitlement
+/// isn't present") to an app without a keychain access group, which takes a
+/// provisioning profile and a team - a build signed only to run locally has
+/// neither, and every import or saved password failed on it. The login
+/// keychain needs no entitlement and still keeps the key to this user on
+/// this Mac. Like the iOS options, it is set before the macOS build ships:
+/// switching later would strand the key in the keychain it was written to.
+const kMasterKeyMacOSOptions = MacOsOptions(
+  usesDataProtectionKeychain: false,
+  synchronizable: false,
+);
+
 /// Where the master key lives. Abstracted so tests can supply an in-memory
 /// double rather than driving the Android Keystore over a platform channel.
 abstract class MasterKeyStore {
@@ -41,7 +58,10 @@ abstract class MasterKeyStore {
 
 class KeystoreMasterKeyStore implements MasterKeyStore {
   const KeystoreMasterKeyStore([
-    this._storage = const FlutterSecureStorage(iOptions: kMasterKeyIOSOptions),
+    this._storage = const FlutterSecureStorage(
+      iOptions: kMasterKeyIOSOptions,
+      mOptions: kMasterKeyMacOSOptions,
+    ),
   ]);
 
   final FlutterSecureStorage _storage;
@@ -63,8 +83,14 @@ class KeystoreMasterKeyStore implements MasterKeyStore {
 /// device.
 class SecretCipher {
   SecretCipher({MasterKeyStore? store, Random? random})
-    : _store = store ?? const KeystoreMasterKeyStore(),
+    : _store = store ?? _platformStore(),
       _random = random;
+
+  /// A Linux session may have no keyring at all; there the key falls back to
+  /// a private file rather than failing to seal anything.
+  static MasterKeyStore _platformStore() => isLinuxPlatform
+      ? FileFallbackMasterKeyStore()
+      : const KeystoreMasterKeyStore();
 
   static final SecretCipher instance = SecretCipher();
 

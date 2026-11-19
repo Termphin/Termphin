@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -361,5 +362,48 @@ void main() {
       expect(find.text('one'), findsOneWidget);
       expect(find.text('two'), findsOneWidget);
     });
+  });
+
+  group('from the keyboard on a desktop', () {
+    const desktop = TargetPlatformVariant({TargetPlatform.linux});
+    final machines = [
+      profileFixture(id: 'p1', name: 'Alpha'),
+      profileFixture(id: 'p2', name: 'Bravo'),
+    ];
+
+    testWidgets('typing starts a search that takes the next keys', (
+      tester,
+    ) async {
+      await pump(tester, machines);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyB);
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyR);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(GlobalSearchScreen), findsOneWidget);
+      final field = tester.widget<TextField>(
+        find.byKey(const ValueKey('globalSearchField')),
+      );
+      expect(field.controller!.text, 'b');
+      expect(field.focusNode!.hasFocus, isTrue);
+      expect(
+        field.controller!.selection,
+        const TextSelection.collapsed(offset: 1),
+      );
+    }, variant: desktop);
+
+    testWidgets('the arrows walk the machines and Enter picks one', (
+      tester,
+    ) async {
+      await pump(tester, machines);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+
+      expect(selected.map((p) => p.name), ['Alpha']);
+    }, variant: desktop);
   });
 }

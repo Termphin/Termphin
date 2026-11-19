@@ -34,7 +34,7 @@ void main() {
     var order = splits.join(['a', 'b', 'c'], 'b', 'a');
     order = splits.join(order, 'b', 'c');
 
-    expect(splits.partnerOf('a'), isNull);
+    expect(splits.isSplit('a'), isFalse);
     expect(splits.entries(order), [
       ['a'],
       ['c', 'b'],
@@ -77,6 +77,8 @@ void main() {
     final order = splits.join(['a', 'b', 'c'], 'c', 'a');
     splits.setRatio('a', 0.3);
 
-    expect(splits.saved(order), [(first: 'a', second: 'c', ratio: 0.3)]);
+    expect(splits.saved(order), [
+      (first: 'a', second: 'c', ratio: 0.3, axis: null),
+    ]);
   });
 }

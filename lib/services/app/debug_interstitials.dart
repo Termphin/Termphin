@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import 'tag_migration_service.dart';
 
 /// Testing switch: re-offers the what's-new popup and the tag conversion on
@@ -7,7 +9,23 @@ import 'tag_migration_service.dart';
 /// **Set this back to `false` before a release.** Every read of it is also
 /// guarded by `kDebugMode`, so a release build ignores it whatever it says
 /// here - but leaving it on still means every debug run is interrupted twice.
-const bool kForceInterstitials = true;
+const bool kForceInterstitials = false;
+
+/// Testing switch: shows the onboarding on every launch, finished or not.
+/// Only the gate at startup reads it - whether onboarding was ever finished
+/// stays as stored, since migrations key off it.
+///
+/// **Set this back to `false` before a release.** Guarded by `kDebugMode`
+/// like the one above.
+const bool kForceOnboarding = false;
+
+/// Lets a test turn [kForceOnboarding] off: tests run in debug mode, so they
+/// would otherwise all start on the onboarding.
+@visibleForTesting
+bool? debugForceOnboardingOverride;
+
+bool get forceOnboarding =>
+    kDebugMode && (debugForceOnboardingOverride ?? kForceOnboarding);
 
 /// What the conversion dialog is shown when forced on a device with no tags.
 ///

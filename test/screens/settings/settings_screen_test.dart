@@ -67,6 +67,8 @@ void main() {
       120,
       scrollable: find.byType(Scrollable).first,
     );
+    await tester.ensureVisible(row);
+    await tester.pumpAndSettle();
     await tester.tap(row);
     for (var i = 0; i < 5; i++) {
       await tester.pump();
@@ -306,6 +308,61 @@ void main() {
     });
   });
 
+  testWidgets('a desktop has no touch controls or phone permissions to set', (
+    tester,
+  ) async {
+    await open(tester, t.settings.terminal);
+    await scrollTo(tester, find.text(t.settings.commandSuggestions));
+
+    expect(find.text(t.settings.keyToolbar), findsNothing);
+    expect(find.text(t.settings.actionDock), findsNothing);
+    expect(
+      find.text(t.settings.actionDockLayout, skipOffstage: false),
+      findsNothing,
+    );
+    expect(
+      find.byKey(
+        const ValueKey('mouseKeyboardGuardSwitch'),
+        skipOffstage: false,
+      ),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('keyboardShortcutsRow'), skipOffstage: false),
+      findsOneWidget,
+    );
+    expect(find.text(t.settings.tabsAtBottom), findsNothing);
+    expect(
+      find.text(t.settings.terminalTyping.toUpperCase(), skipOffstage: false),
+      findsOneWidget,
+    );
+
+    Future<void> openNext(String title) async {
+      tester.state<NavigatorState>(find.byType(Navigator)).pop();
+      await tester.pumpAndSettle();
+      final row = find.text(title).first;
+      await scrollTo(tester, row);
+      await tester.tap(row);
+      for (var i = 0; i < 5; i++) {
+        await tester.pump();
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 50)),
+        );
+      }
+      await tester.pumpAndSettle();
+    }
+
+    await openNext(t.settings.notificationsSection);
+    expect(find.text(t.settings.notificationsPermission), findsNothing);
+
+    await openNext(t.settings.connection);
+    expect(find.text(t.settings.batteryUnrestricted), findsNothing);
+
+    await openNext(t.settings.privacySecurity);
+    expect(find.text(t.settings.pinLock), findsOneWidget);
+    expect(find.text(t.settings.biometricUnlock), findsNothing);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.linux));
+
   testWidgets('the groups row opens the groups screen', (tester) async {
     await pump(tester);
     await scrollTo(tester, find.text(t.groups.title));
@@ -516,6 +573,26 @@ void main() {
 
     expect(find.text('Explained here'), findsOneWidget);
     expect(commandSuggestionsSetting.value, isTrue);
+  });
+
+  testWidgets('on a desktop Autocomplete says which keys work it', (
+    tester,
+  ) async {
+    await open(tester, t.settings.terminal);
+    final keys = find.byKey(const ValueKey('commandSuggestionsKeys'));
+    await scrollTo(tester, keys);
+
+    expect(keys, findsOneWidget);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.linux));
+
+  testWidgets('a phone names no keys beside Autocomplete', (tester) async {
+    await open(tester, t.settings.terminal);
+    await scrollTo(
+      tester,
+      find.byKey(const ValueKey('commandSuggestionsInfo')),
+    );
+
+    expect(find.byKey(const ValueKey('commandSuggestionsKeys')), findsNothing);
   });
 
   testWidgets('the info beside Fast upload explains it, sitting by its title', (

@@ -9,6 +9,7 @@ import '../../services/analytics/analytics_service.dart';
 import '../../services/app/manual_urls.dart';
 import '../../theme/theme.dart';
 import '../../widgets/ui/app_notifications.dart';
+import '../../widgets/ui/app_sheet.dart';
 import '../../widgets/ui/clipboard_and_links.dart';
 import '../../widgets/ui/empty_state.dart';
 
@@ -99,7 +100,7 @@ class _ManualScreenState extends State<ManualScreen> {
     return Scaffold(
       backgroundColor: context.colors.backgroundPrimary,
       appBar: AppBar(
-        title: Text(t.manual.title),
+        title: AppWindowTitle(child: Text(t.manual.title)),
         actions: [
           IconButton(
             tooltip: t.manual.openInBrowser,

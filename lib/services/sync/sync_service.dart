@@ -301,7 +301,10 @@ class PreferencesSyncBase implements SyncBaseStore {
 
 class KeystoreSyncKeyVault implements SyncKeyVault {
   KeystoreSyncKeyVault([
-    this._storage = const FlutterSecureStorage(iOptions: kMasterKeyIOSOptions),
+    this._storage = const FlutterSecureStorage(
+      iOptions: kMasterKeyIOSOptions,
+      mOptions: kMasterKeyMacOSOptions,
+    ),
   ]);
 
   final FlutterSecureStorage _storage;

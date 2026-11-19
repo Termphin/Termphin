@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../theme/theme.dart';
+import 'modal_actions.dart';
 
 /// The one action of a backup screen, pinned under the scroll.
 ///
@@ -41,32 +42,29 @@ class BackupActionBar extends StatelessWidget {
         color: context.colors.backgroundPrimary,
         border: Border(top: BorderSide(color: context.colors.surfaceDivider)),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (secondaryLabel case final secondary?) ...[
-            OutlinedButton(
-              onPressed: onSecondaryPressed,
-              child: Text(secondary),
-            ),
-            const SizedBox(height: AppTheme.space10),
-          ],
-          ElevatedButton.icon(
-            onPressed: onPressed,
-            icon: busy
-                ? SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: context.colors.onPrimary,
-                    ),
-                  )
-                : Icon(icon, size: AppTheme.icon20),
-            label: Text(label),
+      child: ModalActions(
+        secondaryFirst: true,
+        secondary: switch (secondaryLabel) {
+          final secondary? => OutlinedButton(
+            onPressed: onSecondaryPressed,
+            child: Text(secondary),
           ),
-        ],
+          null => null,
+        },
+        primary: ElevatedButton.icon(
+          onPressed: onPressed,
+          icon: busy
+              ? SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: context.colors.onPrimary,
+                  ),
+                )
+              : Icon(icon, size: AppTheme.icon20),
+          label: Text(label),
+        ),
       ),
     );
   }

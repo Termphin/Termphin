@@ -7,6 +7,7 @@ import '../../theme/theme.dart';
 import '../settings/manual_link.dart';
 import '../ui/app_sheet.dart';
 import '../ui/clipboard_and_links.dart';
+import '../ui/modal_actions.dart';
 
 const _agentRepoUrl = 'https://github.com/Termphin/termphin-agent';
 
@@ -85,9 +86,9 @@ class RemoteAgentInfoSheet extends StatelessWidget {
               ),
             ),
             const SizedBox(height: AppTheme.space16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
+            ModalActions(
+              gap: AppTheme.space4,
+              primary: FilledButton.icon(
                 onPressed: () => _openRepo(context),
                 icon: const Icon(
                   PhosphorIconsRegular.githubLogo,
@@ -95,11 +96,7 @@ class RemoteAgentInfoSheet extends StatelessWidget {
                 ),
                 label: Text(t.settings.agentSheetRepoButton),
               ),
-            ),
-            const SizedBox(height: AppTheme.space4),
-            SizedBox(
-              width: double.infinity,
-              child: TextButton(
+              secondary: TextButton(
                 onPressed: () => openManual(context, ManualPage.remoteAgent),
                 child: Text(t.manual.readMore),
               ),

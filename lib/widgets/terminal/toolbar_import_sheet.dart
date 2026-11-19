@@ -13,6 +13,9 @@ import '../ui/app_badge.dart';
 import '../ui/app_divider.dart';
 import '../ui/app_notifications.dart';
 import '../ui/app_sheet.dart';
+import '../ui/modal_actions.dart';
+import '../ui/motion_page.dart';
+import '../ui/motion_size.dart';
 import 'session_quick_sheet.dart' show ToolbarLayoutPreview;
 
 /// Asks before a toolbar from a link becomes one of the user's layouts.
@@ -153,24 +156,18 @@ class _ToolbarImportSheetState extends State<ToolbarImportSheet> {
               AppTheme.space16,
               AppTheme.space12,
             ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    key: const ValueKey('toolbarImportAdd'),
-                    onPressed: _busy ? null : () => unawaited(_add(use: false)),
-                    child: Text(t.toolbar.importAdd),
-                  ),
-                ),
-                const SizedBox(width: AppTheme.space10),
-                Expanded(
-                  child: ElevatedButton(
-                    key: const ValueKey('toolbarImportAddAndUse'),
-                    onPressed: _busy ? null : () => unawaited(_add(use: true)),
-                    child: Text(t.toolbar.importAddAndUse),
-                  ),
-                ),
-              ],
+            child: ModalActions(
+              layout: ModalActionsLayout.sideBySide,
+              secondary: OutlinedButton(
+                key: const ValueKey('toolbarImportAdd'),
+                onPressed: _busy ? null : () => unawaited(_add(use: false)),
+                child: Text(t.toolbar.importAdd),
+              ),
+              primary: ElevatedButton(
+                key: const ValueKey('toolbarImportAddAndUse'),
+                onPressed: _busy ? null : () => unawaited(_add(use: true)),
+                child: Text(t.toolbar.importAddAndUse),
+              ),
             ),
           ),
         ],
@@ -236,7 +233,7 @@ class _PagedPreviewState extends State<_PagedPreview> {
                     behavior: HitTestBehavior.opaque,
                     onTap: () {
                       HapticFeedback.selectionClick();
-                      _controller.animateToPage(
+                      _controller.goToPage(
                         i,
                         duration: AppTheme.motionFast,
                         curve: Curves.easeOutCubic,
@@ -361,7 +358,7 @@ class _TextKeys extends StatelessWidget {
               ),
             ),
           ),
-          AnimatedSize(
+          MotionSize(
             duration: AppTheme.motionFast,
             curve: Curves.easeOutCubic,
             alignment: Alignment.topCenter,

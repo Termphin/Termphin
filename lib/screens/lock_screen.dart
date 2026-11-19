@@ -9,6 +9,8 @@ import '../i18n/strings.g.dart';
 import '../services/analytics/analytics_service.dart';
 import '../services/security/lock_service.dart';
 import '../theme/theme.dart';
+import '../utils/platform_info.dart';
+import '../widgets/ui/pin_keys.dart';
 
 /// Where the PIN entry is: taking digits, checking them, or paused after too
 /// many wrong ones.
@@ -104,6 +106,36 @@ class _LockScreenState extends State<LockScreen>
     if (_pin.length == _pinLength) unawaited(_verify());
   }
 
+  /// A desktop types its PIN: digits from the row or the number pad,
+  /// Backspace to take one back, Esc to start over, and Enter or Space for
+  /// the biometric unlock when there is one.
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+    final key = event.logicalKey;
+    final digit = pinDigitFor(event);
+    if (digit != null) {
+      _onDigit(digit);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.backspace) {
+      _onDelete();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.escape) {
+      if (_keysEnabled && _pin.isNotEmpty) setState(() => _pin = '');
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.numpadEnter ||
+        key == LogicalKeyboardKey.space) {
+      unawaited(_tryBiometric());
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
   void _onDelete() {
     if (!_keysEnabled || _pin.isEmpty) return;
     HapticFeedback.lightImpact();
@@ -176,28 +208,86 @@ class _LockScreenState extends State<LockScreen>
 
     return Scaffold(
       backgroundColor: colors.backgroundPrimary,
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final wide = constraints.maxWidth > constraints.maxHeight;
-            final keypadHeight = wide
-                ? constraints.maxHeight - 32
-                : constraints.maxHeight * 0.52;
-            final key = ((keypadHeight - 3 * AppTheme.space14) / 4).clamp(
-              52.0,
-              80.0,
-            );
+      body: Focus(
+        autofocus: true,
+        onKeyEvent: _onKey,
+        child: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              if (isDesktopPlatform) {
+                return _desktopLayout(t, status, statusColor);
+              }
+              final wide = constraints.maxWidth > constraints.maxHeight;
+              final keypadHeight = wide
+                  ? constraints.maxHeight - 32
+                  : constraints.maxHeight * 0.52;
+              final key = ((keypadHeight - 3 * AppTheme.space14) / 4).clamp(
+                52.0,
+                80.0,
+              );
 
-            final header = _Header(
+              final header = _Header(
+                pin: _pin,
+                length: _pinLength,
+                phase: _phase,
+                status: status,
+                statusColor: statusColor,
+                shake: _shake,
+              );
+              final keypad = _Keypad(
+                keySize: key,
+                enabled: _keysEnabled,
+                showBiometric: _biometricEnabled,
+                biometricBusy: _checkingBiometric,
+                faceUnlock: _faceUnlock,
+                onDigit: _onDigit,
+                onDelete: _onDelete,
+                onBiometric: _tryBiometric,
+              );
+              if (wide) {
+                return Row(
+                  children: [
+                    Expanded(child: Center(child: header)),
+                    Expanded(child: Center(child: keypad)),
+                  ],
+                );
+              }
+              return Column(
+                children: [
+                  Expanded(child: Center(child: header)),
+                  keypad,
+                  SizedBox(height: key * 0.5),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// A desktop's lock: one narrow column in the middle of the window, the
+  /// keys at a pointer's size rather than a thumb's, and a hint that the PIN
+  /// can simply be typed.
+  Widget _desktopLayout(Translations t, String status, Color statusColor) {
+    return Center(
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _Header(
               pin: _pin,
               length: _pinLength,
               phase: _phase,
-              status: status,
-              statusColor: statusColor,
+              status: status.isEmpty ? t.lock.typePinHint : status,
+              statusColor: status.isEmpty
+                  ? context.colors.textSecondary
+                  : statusColor,
               shake: _shake,
-            );
-            final keypad = _Keypad(
-              keySize: key,
+            ),
+            const SizedBox(height: AppTheme.space24),
+            _Keypad(
+              keySize: AppTheme.space48,
               enabled: _keysEnabled,
               showBiometric: _biometricEnabled,
               biometricBusy: _checkingBiometric,
@@ -205,23 +295,8 @@ class _LockScreenState extends State<LockScreen>
               onDigit: _onDigit,
               onDelete: _onDelete,
               onBiometric: _tryBiometric,
-            );
-            if (wide) {
-              return Row(
-                children: [
-                  Expanded(child: Center(child: header)),
-                  Expanded(child: Center(child: keypad)),
-                ],
-              );
-            }
-            return Column(
-              children: [
-                Expanded(child: Center(child: header)),
-                keypad,
-                SizedBox(height: key * 0.5),
-              ],
-            );
-          },
+            ),
+          ],
         ),
       ),
     );

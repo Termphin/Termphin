@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:termphin/screens/terminal/state/session_swipe.dart';
@@ -40,9 +41,18 @@ class _Harness {
 
   static const _origin = Offset(200, 300);
 
-  void down({int pointer = 1, Duration at = Duration.zero}) {
+  void down({
+    int pointer = 1,
+    Duration at = Duration.zero,
+    PointerDeviceKind kind = PointerDeviceKind.touch,
+  }) {
     controller.onPointerDown(
-      PointerDownEvent(pointer: pointer, position: _origin, timeStamp: at),
+      PointerDownEvent(
+        pointer: pointer,
+        position: _origin,
+        timeStamp: at,
+        kind: kind,
+      ),
     );
   }
 
@@ -105,6 +115,20 @@ void main() {
       addTearDown(harness.dispose);
       return harness;
     }
+
+    testWidgets('a mouse dragged sideways selects text, not a tab', (
+      tester,
+    ) async {
+      final h = await build(tester);
+
+      h.down(kind: PointerDeviceKind.mouse);
+      h.move(-_farEnough, at: const Duration(seconds: 1));
+      h.up(-_farEnough, at: const Duration(seconds: 1));
+      await tester.pumpAndSettle();
+
+      expect(h.committed, isEmpty);
+      expect(h.controller.offset.value, 0);
+    });
 
     testWidgets('a drag past the lock distance takes the next tab', (
       tester,

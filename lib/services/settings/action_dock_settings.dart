@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
+import '../../utils/platform_info.dart';
 import 'setting.dart';
 
 /// One entry the command palette grid can show. Fixed set, unlike the
@@ -19,7 +20,17 @@ enum DockAction {
   tunnels,
   rename,
   viewLog,
+  split,
+  zoom,
 }
+
+/// Actions that mean something only where panes can be split further than
+/// two - a desktop. A phone neither shows nor offers them.
+const kDesktopOnlyDockActions = <DockAction>{DockAction.split, DockAction.zoom};
+
+/// Whether [action] belongs on this platform's dock and in its editor.
+bool dockActionAvailable(DockAction action) =>
+    isDesktopPlatform || !kDesktopOnlyDockActions.contains(action);
 
 /// Everything past the first four starts hidden: the palette is meant to be
 /// the few tiles you actually reach for, not the whole action list. The rest
@@ -46,6 +57,8 @@ IconData dockActionIcon(DockAction action) => switch (action) {
   DockAction.tunnels => PhosphorIconsFill.arrowsLeftRight,
   DockAction.rename => PhosphorIconsRegular.pencilSimple,
   DockAction.viewLog => PhosphorIconsRegular.terminalWindow,
+  DockAction.split => PhosphorIconsRegular.squareSplitHorizontal,
+  DockAction.zoom => PhosphorIconsRegular.cornersOut,
 };
 
 /// [DockAction.uploadFile]'s label breaks between its two words rather than
@@ -62,6 +75,8 @@ String dockActionLabel(Translations t, DockAction action) => switch (action) {
   DockAction.tunnels => t.portForwarding.manageTunnels,
   DockAction.rename => t.session.rename,
   DockAction.viewLog => t.connection.viewLog,
+  DockAction.split => t.actionDock.split,
+  DockAction.zoom => t.actionDock.zoom,
 };
 
 /// The dock's order and hidden set as one value, the shape every edit in the
@@ -80,11 +95,18 @@ List<DockAction> _normalized(List<DockAction> order, Set<DockAction> hidden) =>
         if (hidden.contains(a)) a,
     ];
 
-/// [layout] with [action] on the dock at [index] among the visible actions,
-/// whether it was on the dock already or hidden. The rest shift to make room,
-/// so dragging a tile forward drops it after the tile it was let go on and
-/// dragging it back drops it before that tile.
-DockLayout placeDockAction(DockLayout layout, DockAction action, int index) {
+/// [layout] with [action] on the dock at [index] among the visible actions
+/// that pass [isAvailable], whether it was on the dock already or hidden. The
+/// rest shift to make room, so dragging a tile forward drops it after the tile
+/// it was let go on and dragging it back drops it before that tile. Actions
+/// unavailable on this platform stay where they sit in the stored order so a
+/// phone edit never drops a desktop user's layout.
+DockLayout placeDockAction(
+  DockLayout layout,
+  DockAction action,
+  int index, {
+  bool Function(DockAction)? isAvailable,
+}) {
   final hidden = {...layout.hidden}..remove(action);
   final rest = [
     for (final a in layout.order)
@@ -94,7 +116,10 @@ DockLayout placeDockAction(DockLayout layout, DockAction action, int index) {
     for (final a in rest)
       if (!hidden.contains(a)) a,
   ];
-  visible.insert(index.clamp(0, visible.length), action);
+  final insertAt = isAvailable == null
+      ? index.clamp(0, visible.length)
+      : _translatedVisibleIndex(visible, index, isAvailable);
+  visible.insert(insertAt, action);
   return (
     order: [
       ...visible,
@@ -103,6 +128,20 @@ DockLayout placeDockAction(DockLayout layout, DockAction action, int index) {
     ],
     hidden: hidden,
   );
+}
+
+int _translatedVisibleIndex(
+  List<DockAction> visible,
+  int index,
+  bool Function(DockAction) isAvailable,
+) {
+  final shown = [
+    for (final a in visible)
+      if (isAvailable(a)) a,
+  ];
+  if (index <= 0 || shown.isEmpty) return 0;
+  if (index >= shown.length) return visible.indexOf(shown.last) + 1;
+  return visible.indexOf(shown[index]);
 }
 
 /// [layout] with [action] taken off the dock, at the end of the hidden ones -

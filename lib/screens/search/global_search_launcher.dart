@@ -4,6 +4,9 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../i18n/strings.g.dart';
 import '../../models/ssh_profile.dart';
 import '../../theme/theme.dart';
+import '../../utils/platform_info.dart';
+import '../../widgets/terminal/terminal_scheme_theme.dart';
+import '../../widgets/ui/app_sheet.dart';
 import 'global_search_screen.dart';
 
 /// Height of the search box, closed and open, so the flight between the two
@@ -143,6 +146,9 @@ HeroFlightShuttleBuilder searchBoxFlight(String hint) =>
       );
     };
 
+/// Opens the global search. A desktop has no box to fly up from a thumb's
+/// reach, so there the search opens as a palette over the window, the way
+/// Ctrl+Shift+K opens it from anywhere.
 Future<void> openGlobalSearch(
   BuildContext context, {
   required Object heroTag,
@@ -150,7 +156,43 @@ Future<void> openGlobalSearch(
   List<SshProfile>? pickFrom,
   ValueChanged<SshProfile>? onPick,
   Widget? header,
+  String initialQuery = '',
 }) {
+  if (isDesktopPlatform) {
+    return showDialog<void>(
+      context: context,
+      animationStyle: AppTheme.popUpAnimation,
+      builder: (ctx) {
+        final window = MediaQuery.sizeOf(ctx);
+        return followTerminalOnScreen(
+          AppModalScope(
+            presentation: ModalPresentation.dialog,
+            child: EscapeToPop(
+              child: Dialog(
+                alignment: const Alignment(0, -0.55),
+                clipBehavior: Clip.antiAlias,
+                insetPadding: const EdgeInsets.all(AppTheme.space32),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 720),
+                  child: SizedBox(
+                    height: appDialogMaxHeight(window.height) * 0.8,
+                    child: GlobalSearchScreen(
+                      heroTag: heroTag,
+                      hint: hint,
+                      pickFrom: pickFrom,
+                      onPick: onPick,
+                      header: header,
+                      initialQuery: initialQuery,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
   return Navigator.of(context).push(
     PageRouteBuilder<void>(
       transitionDuration: AppTheme.motionPage,
@@ -161,6 +203,7 @@ Future<void> openGlobalSearch(
         pickFrom: pickFrom,
         onPick: onPick,
         header: header,
+        initialQuery: initialQuery,
       ),
       transitionsBuilder: (context, animation, _, child) => FadeTransition(
         opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),

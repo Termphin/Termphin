@@ -95,6 +95,11 @@ void main() {
 
     test('the key never syncs to iCloud', () {
       expect(kMasterKeyIOSOptions.synchronizable, isFalse);
+      expect(kMasterKeyMacOSOptions.synchronizable, isFalse);
+    });
+
+    test('a Mac keeps it in the login keychain, which needs no entitlement', () {
+      expect(kMasterKeyMacOSOptions.usesDataProtectionKeychain, isFalse);
     });
   });
 }

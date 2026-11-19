@@ -71,6 +71,7 @@ It is in `.gitignore` and never gets committed.
 | `docs/architecture/data.md` | Storage, groups, `Setting<T>`, backup and restore |
 | `docs/architecture/transfers.md` | SFTP transfers, copy and move, download location |
 | `docs/architecture/ui.md` | Screens, terminal widgets, toolbar, dock, notifications, sheets, layout, theme |
+| `docs/architecture/desktop.md` | Anything that differs off a phone: hiding by platform, dialogs vs sheets, the title bar, shortcuts, Esc, right click |
 | `docs/architecture/analytics.md` | Anything that reaches Firebase Analytics or Crashlytics |
 | `docs/architecture/onboarding.md` | First run, review prompt, changelog and what's new |
 | `docs/release.md` | Building, what a release ships, signing, export compliance, the Android toolchain |
@@ -157,6 +158,25 @@ after editing the JSON.
   goes inside `LegacyMaterial`, or it finds no `Material` ancestor and throws.
 - **Transient feedback is `AppNotifications`, sheets are `showAppSheet`.** Do not
   use `ScaffoldMessenger`/`SnackBar` or `showModalBottomSheet`.
+- **Pages, forms and windows open through `pushAppPage`, `pushAppForm` and
+  `pushAppWindow`**, never a `MaterialPageRoute` of your own: each picks the
+  desktop's presentation (a page beside the sidebar with no back arrow, a
+  dialog, a large dialog). `showAppSheet` is a dialog on a desktop.
+- **Screens hide things by what the system can do, not by its name.** They
+  ask `platformHas(PlatformFeature.x)` or `isDesktopPlatform`; a new thing to
+  hide is a new `PlatformFeature`. The named getters stay for wording that
+  really is one platform's (the App Store vs Play). `defaultTargetPlatform` and
+  `Platform.isX` never appear in `lib/screens` or `lib/widgets` -
+  `test/architecture/platform_branching_test.dart` enforces it
+  (`docs/architecture/desktop.md`).
+- **Anything that closes closes with Esc on a desktop**, and a desktop
+  shortcut is an `AppCommand`, never a `Shortcuts` widget of its own.
+- **A desktop action with a key shows the key** - in its tooltip
+  (`AppCommands.tooltip`), its menu row (`ShortcutHint`) and the title bar's
+  menus, which a screen fills through a `ContextMenuScope` rather than a
+  fixed list (`docs/architecture/desktop.md`).
+- **Radii are `AppTheme.radiusXs…`, never a number**: they are smaller on a
+  desktop, and getters, so the expression is not `const`.
 - **No sliders.** Numeric settings use `StepperRow`/`ValueStepperRow`.
 - **Scrolling content takes its reading width from `ContentGutter`**, not
   `DesktopContentWidth`, which boxes the scroll view.
@@ -179,6 +199,10 @@ after editing the JSON.
   on the pub release (the version is in `pubspec.yaml`), not a path. To work
   on both at once, add a temporary `dependency_overrides` pointing at a local
   clone. Selection behaviour lives in that repo's `lib/src/ui/render.dart`.
+- **`tray_kit`** - the desktop tray icon plugin (Linux over D-Bus in Dart,
+  Windows, macOS), at https://github.com/Termphin/tray_kit, published to pub.
+  Same workflow as `terminal_view`: a temporary `dependency_overrides` to
+  `repos/tray_kit` to work on both.
 - **`termphin-agent`** - the Rust helper that keeps a remote shell alive across
   disconnects, uploaded over SSH by `RemoteAgentService`. Source at
   https://github.com/Termphin/termphin-agent; this repo ships only the prebuilt

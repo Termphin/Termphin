@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:termphin/services/app/debug_interstitials.dart';
 import 'package:termphin/services/app/whats_new_service.dart';
 
 const _a = ReleaseHighlight(
@@ -304,7 +305,10 @@ void main() {
 
         final pending = await service.pendingSince('1.2.0');
 
-        expect(pending.map((h) => h.id), ['a', 'b', 'c']);
+        expect(
+          pending.map((h) => h.id),
+          kForceInterstitials ? ['a', 'b', 'c'] : isEmpty,
+        );
       },
     );
   });

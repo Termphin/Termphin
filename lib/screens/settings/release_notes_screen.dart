@@ -8,7 +8,9 @@ import '../../services/analytics/analytics_service.dart';
 import '../../services/app/release_notes_service.dart';
 import '../../theme/theme.dart';
 import '../../widgets/ui/app_divider.dart';
+import '../../widgets/ui/app_sheet.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
+import '../../widgets/ui/motion_size.dart';
 import '../../widgets/ui/section_header.dart';
 
 /// Full history of release notes, opened from Settings.
@@ -45,7 +47,9 @@ class _ReleaseNotesScreenState extends State<ReleaseNotesScreen> {
     final t = Translations.of(context);
     final entries = _entries;
     return Scaffold(
-      appBar: AppBar(title: Text(t.settings.releaseNotes)),
+      appBar: AppBar(
+        title: AppWindowTitle(child: Text(t.settings.releaseNotes)),
+      ),
       body: SafeArea(
         top: false,
         child: entries == null
@@ -120,7 +124,7 @@ class _VersionSectionState extends State<_VersionSection> {
             ),
           ),
         ),
-        AnimatedSize(
+        MotionSize(
           duration: AppTheme.interactiveDuration,
           curve: Curves.easeOut,
           alignment: Alignment.topLeft,

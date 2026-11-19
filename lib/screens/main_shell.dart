@@ -4,31 +4,48 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:uuid/uuid.dart';
 
 import '../i18n/strings.g.dart';
 import '../models/active_session.dart';
+import '../models/session_tab.dart';
 import '../models/ssh_profile.dart';
 import '../providers/anonymize_provider.dart';
+import '../providers/profiles_provider.dart';
 import '../providers/ssh_session_manager_provider.dart';
 import '../providers/terminal_overlay_provider.dart';
 import '../services/analytics/analytics_service.dart';
+import '../services/app/app_commands.dart';
 import '../services/app/identity_anonymizer.dart';
+import '../services/app/manual_urls.dart';
+import '../services/platform/desktop_window.dart';
 import '../services/settings/sidebar_settings.dart';
+import '../services/settings/terminal_settings.dart';
 import '../services/ssh/ssh_session_manager.dart';
 import '../theme/theme.dart';
 import '../utils/platform_info.dart';
 import '../widgets/profiles/profile_avatar.dart';
+import '../widgets/profiles/profile_form_dialog.dart';
 import '../widgets/settings/analytics_ask_card.dart';
+import '../widgets/settings/manual_link.dart';
 import '../widgets/shell/nav_rail.dart';
+import '../widgets/terminal/add_session_sheet.dart';
 import '../widgets/terminal/notice_dot.dart';
+import '../widgets/terminal/session_tab_pill.dart';
 import '../widgets/terminal/terminal_scheme_theme.dart';
 import '../widgets/ui/app_badge.dart';
+import '../widgets/ui/app_sheet.dart';
 import '../widgets/ui/fade_over_color.dart';
 import '../widgets/ui/large_title_scaffold.dart';
+import '../widgets/ui/section_navigator.dart';
+import '../widgets/window/app_menu.dart';
+import '../widgets/window/shortcuts_dialog.dart';
 import 'home_screen.dart';
 import 'keys/key_manager_screen.dart';
+import 'search/global_search_launcher.dart';
 import 'settings/settings_screen.dart';
 import 'snippets/snippets_screen.dart';
+import 'terminal/state/split_layout.dart';
 import 'terminal/terminal_screen.dart';
 
 class MainShell extends ConsumerStatefulWidget {
@@ -169,12 +186,235 @@ class _MainShellState extends ConsumerState<MainShell>
       ),
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _syncTerminalOnScreen();
+      if (!mounted) return;
+      _syncWindowTitle();
+      _syncTerminalOnScreen();
     });
+    _registerCommands();
+  }
+
+  final _unregisterCommands = <VoidCallback>[];
+
+  /// What the shell answers of the desktop's shortcuts and menus: going
+  /// places, and - while a session is on screen - the terminal's own, handed
+  /// to the strip.
+  ///
+  /// A new session with no strip on screen opens the same picker the
+  /// terminal opens, so a session is asked for in one place wherever it is
+  /// asked from. The zoom commands work with or without a session on screen,
+  /// since the terminal's text size is one preference wherever it is changed
+  /// from.
+  void _registerCommands() {
+    void on(AppCommand command, bool Function(int? argument) handler) =>
+        _unregisterCommands.add(
+          AppCommands.instance.register(command, handler),
+        );
+
+    void available(AppCommand command, bool Function() check) =>
+        _unregisterCommands.add(
+          AppCommands.instance.registerAvailability(command, check),
+        );
+
+    TerminalScreenState? liveTerminal() =>
+        _terminalVisible ? _terminalKey.currentState : null;
+
+    bool terminal(void Function(TerminalScreenState state) action) {
+      final state = liveTerminal();
+      if (state == null) return false;
+      action(state);
+      return true;
+    }
+
+    on(AppCommand.globalSearch, (_) {
+      final ctx = _commandContext();
+      if (ctx == null) return false;
+      unawaited(openGlobalSearch(ctx, heroTag: 'globalSearch-shortcut'));
+      return true;
+    });
+    on(AppCommand.newMachine, (_) {
+      final ctx = _commandContext();
+      if (ctx == null) return false;
+      unawaited(
+        pushAppForm<void>(ctx, builder: (_) => const ProfileFormDialog()),
+      );
+      return true;
+    });
+    on(AppCommand.openSettings, (_) {
+      _selectSection(3);
+      return true;
+    });
+    on(AppCommand.toggleSidebar, (_) {
+      unawaited(sidebarCollapsedSetting.set(!sidebarCollapsedSetting.value));
+      return true;
+    });
+    on(AppCommand.showShortcuts, (_) {
+      final ctx = _commandContext();
+      if (ctx == null) return false;
+      unawaited(showShortcutsDialog(ctx));
+      return true;
+    });
+    on(AppCommand.openManual, (_) {
+      final ctx = _commandContext();
+      if (ctx == null) return false;
+      unawaited(openManual(ctx, ManualPage.home));
+      return true;
+    });
+    on(AppCommand.newSession, (_) {
+      final state = liveTerminal();
+      if (state != null) {
+        state.newSession();
+        return true;
+      }
+      final ctx = _commandContext();
+      if (ctx == null) return false;
+      final overlay = ref.read(terminalOverlayProvider.notifier);
+      unawaited(
+        showAppSheet<void>(
+          context: ctx,
+          handle: false,
+          builder: (sheetCtx) => AddSessionSheetContent(
+            profiles: ref.read(profilesProvider),
+            resumableFor: _manager.resumableTabsForProfile,
+            onSelect: (profile) {
+              Navigator.of(sheetCtx).pop();
+              overlay.show(
+                const Uuid().v4(),
+                profile,
+                scope: SiblingScope.none,
+              );
+            },
+            onAttach: (tabId, profile) {
+              Navigator.of(sheetCtx).pop();
+              overlay.show(tabId, profile, scope: SiblingScope.none);
+            },
+          ),
+        ),
+      );
+      return true;
+    });
+    on(AppCommand.closeTab, (_) => terminal((s) => s.closeActiveTab()));
+    on(AppCommand.nextTab, (_) => terminal((s) => s.selectRelativeTab(1)));
+    on(AppCommand.previousTab, (_) => terminal((s) => s.selectRelativeTab(-1)));
+    on(
+      AppCommand.selectTab,
+      (index) => terminal((s) => s.selectTabAt(index ?? 0)),
+    );
+    on(
+      AppCommand.findInTerminal,
+      (_) => terminal((s) => s.findInActiveSession()),
+    );
+    on(
+      AppCommand.uploadFile,
+      (_) => terminal((s) => s.uploadToActiveSession()),
+    );
+    on(AppCommand.toggleFiles, (_) => terminal((s) => s.toggleActiveFiles()));
+    on(AppCommand.endSession, (_) => terminal((s) => s.endActiveSession()));
+    on(AppCommand.zoomIn, (_) => _zoomTerminal(1));
+    on(AppCommand.zoomOut, (_) => _zoomTerminal(-1));
+    on(AppCommand.zoomReset, (_) {
+      unawaited(terminalSettings.fontSize.set(kTerminalDefaultFontSize));
+      return true;
+    });
+    on(AppCommand.splitRight, (_) => terminal((s) => s.splitRight()));
+    on(AppCommand.splitDown, (_) => terminal((s) => s.splitDown()));
+    on(
+      AppCommand.focusPaneLeft,
+      (_) => terminal((s) => s.focusPane(SplitDirection.left)),
+    );
+    on(
+      AppCommand.focusPaneRight,
+      (_) => terminal((s) => s.focusPane(SplitDirection.right)),
+    );
+    on(
+      AppCommand.focusPaneUp,
+      (_) => terminal((s) => s.focusPane(SplitDirection.up)),
+    );
+    on(
+      AppCommand.focusPaneDown,
+      (_) => terminal((s) => s.focusPane(SplitDirection.down)),
+    );
+    on(
+      AppCommand.resizePaneLeft,
+      (_) => terminal((s) => s.nudgePane(SplitDirection.left)),
+    );
+    on(
+      AppCommand.resizePaneRight,
+      (_) => terminal((s) => s.nudgePane(SplitDirection.right)),
+    );
+    on(
+      AppCommand.resizePaneUp,
+      (_) => terminal((s) => s.nudgePane(SplitDirection.up)),
+    );
+    on(
+      AppCommand.resizePaneDown,
+      (_) => terminal((s) => s.nudgePane(SplitDirection.down)),
+    );
+    on(AppCommand.zoomPane, (_) => terminal((s) => s.toggleZoomPane()));
+
+    available(
+      AppCommand.focusPaneLeft,
+      () => liveTerminal()?.canFocusPane(SplitDirection.left) ?? false,
+    );
+    available(
+      AppCommand.focusPaneRight,
+      () => liveTerminal()?.canFocusPane(SplitDirection.right) ?? false,
+    );
+    available(
+      AppCommand.focusPaneUp,
+      () => liveTerminal()?.canFocusPane(SplitDirection.up) ?? false,
+    );
+    available(
+      AppCommand.focusPaneDown,
+      () => liveTerminal()?.canFocusPane(SplitDirection.down) ?? false,
+    );
+    available(
+      AppCommand.resizePaneLeft,
+      () => liveTerminal()?.canResizePane(SplitDirection.left) ?? false,
+    );
+    available(
+      AppCommand.resizePaneRight,
+      () => liveTerminal()?.canResizePane(SplitDirection.right) ?? false,
+    );
+    available(
+      AppCommand.resizePaneUp,
+      () => liveTerminal()?.canResizePane(SplitDirection.up) ?? false,
+    );
+    available(
+      AppCommand.resizePaneDown,
+      () => liveTerminal()?.canResizePane(SplitDirection.down) ?? false,
+    );
+    available(
+      AppCommand.zoomPane,
+      () => liveTerminal()?.canZoomPane() ?? false,
+    );
+  }
+
+  bool _zoomTerminal(double delta) {
+    final size = terminalSettings.fontSize.value + delta;
+    unawaited(
+      terminalSettings.fontSize.set(
+        size.clamp(kTerminalMinFontSize, kTerminalMaxFontSize).toDouble(),
+      ),
+    );
+    return true;
+  }
+
+  /// Where a command opens what it opens: the section on screen, so a page
+  /// lands beside the sidebar, or the app's own context otherwise.
+  BuildContext? _commandContext() {
+    if (!mounted) return null;
+    if (!_terminalVisible) {
+      final section = _sectionKeys[_currentIndex].currentContext;
+      if (section != null) return section;
+    }
+    return context;
   }
 
   @override
   void dispose() {
+    for (final unregister in _unregisterCommands) {
+      unregister();
+    }
     _terminalMotion.dispose();
     super.dispose();
   }
@@ -193,6 +433,21 @@ class _MainShellState extends ConsumerState<MainShell>
     unawaited(AnalyticsService.instance.screen(_screenNames[_currentIndex]));
   }
 
+  /// The window's own title, which the taskbar and the window switcher show:
+  /// the machine on screen, or just the app.
+  void _syncWindowTitle() {
+    terminalOnScreen.value = _terminalVisible;
+    final session = _terminalVisible ? _terminalSession : null;
+    if (session == null) {
+      unawaited(DesktopWindow.instance.setTitle('Termphin'));
+      return;
+    }
+    final name = ref.read(anonymizeProvider)
+        ? IdentityAnonymizer.name(session.$2.id)
+        : session.$2.name;
+    unawaited(DesktopWindow.instance.setTitle('$name - Termphin'));
+  }
+
   void _hideTerminal() {
     _terminalKey.currentState?.blurAll();
     SystemChannels.textInput.invokeMethod<void>('TextInput.hide');
@@ -200,6 +455,7 @@ class _MainShellState extends ConsumerState<MainShell>
       _terminalVisible = false;
     });
     _animateTerminal(visible: false);
+    _syncWindowTitle();
     _syncTerminalOnScreen();
     _reportCurrentTab();
     ref.read(terminalOverlayProvider.notifier).hide();
@@ -224,6 +480,7 @@ class _MainShellState extends ConsumerState<MainShell>
     } else {
       _terminalMotion.reverse().whenCompleteOrCancel(drop);
     }
+    _syncWindowTitle();
     _syncTerminalOnScreen();
     _reportCurrentTab();
     ref.read(terminalOverlayProvider.notifier).hide();
@@ -235,23 +492,23 @@ class _MainShellState extends ConsumerState<MainShell>
     _manager.terminalOnScreen = _terminalVisible;
   }
 
-  List<_NavItemData> _navItems(Translations t) => [
-    _NavItemData(
+  List<ShellNavItem> _navItems(Translations t) => [
+    ShellNavItem(
       label: t.nav.home,
       icon: PhosphorIconsRegular.terminal,
       selectedIcon: PhosphorIconsFill.terminal,
     ),
-    _NavItemData(
+    ShellNavItem(
       label: t.nav.snippets,
       icon: PhosphorIconsRegular.codeBlock,
       selectedIcon: PhosphorIconsFill.codeBlock,
     ),
-    _NavItemData(
+    ShellNavItem(
       label: t.nav.keys,
       icon: PhosphorIconsRegular.key,
       selectedIcon: PhosphorIconsFill.key,
     ),
-    _NavItemData(
+    ShellNavItem(
       label: t.nav.settings,
       icon: PhosphorIconsRegular.gearSix,
       selectedIcon: PhosphorIconsFill.gearSix,
@@ -264,7 +521,9 @@ class _MainShellState extends ConsumerState<MainShell>
       body: Stack(
         children: [
           _AnimatedNavBody(currentIndex: _currentIndex, children: _screens),
-          _AnalyticsAskOverlay(visible: _currentIndex == 0 && !_terminalVisible),
+          _AnalyticsAskOverlay(
+            visible: _currentIndex == 0 && !_terminalVisible,
+          ),
         ],
       ),
       bottomNavigationBar: ListenableBuilder(
@@ -298,6 +557,36 @@ class _MainShellState extends ConsumerState<MainShell>
     );
   }
 
+  /// One navigator per section on a desktop, so a page opened from a list
+  /// or a settings row stays beside the sidebar. Keyed so a click on the
+  /// section already selected can take it back to its root.
+  final _sectionKeys = List.generate(
+    4,
+    (_) => GlobalKey<SectionNavigatorState>(),
+  );
+
+  void _selectSection(int index) {
+    if (index == _currentIndex && !_terminalVisible) {
+      _sectionKeys[index].currentState?.popToRoot();
+    }
+    if (_terminalVisible) _hideTerminal();
+    _selectTab(index);
+  }
+
+  List<Widget> _sectionBodies(Translations t) {
+    if (!isDesktopPlatform) return _screens;
+    final items = _navItems(t);
+    return [
+      for (var i = 0; i < _screens.length; i++)
+        SectionNavigator(
+          key: _sectionKeys[i],
+          label: items[i].label,
+          active: i == _currentIndex && !_terminalVisible,
+          child: _screens[i],
+        ),
+    ];
+  }
+
   /// The rail already covers the left edge, cutout and all, but the screens
   /// beside it would still read the window's own left inset off
   /// `MediaQuery` - `Scaffold` passes left/right padding straight through to
@@ -306,6 +595,7 @@ class _MainShellState extends ConsumerState<MainShell>
   /// it is nowhere near, so its content would sit further from the rail than
   /// from the right edge.
   Widget _buildDesktopScaffold(Translations t) {
+    final desktop = isDesktopPlatform;
     return Scaffold(
       body: Row(
         children: [
@@ -313,13 +603,12 @@ class _MainShellState extends ConsumerState<MainShell>
             listenable: _manager,
             builder: (context, _) {
               final manager = _manager;
-              final dockSession = manager.lastSession;
-              return ValueListenableBuilder<bool>(
-                valueListenable: sidebarCollapsedSetting,
-                builder: (context, collapsed, _) => _Sidebar(
+              final dockSession = desktop ? null : manager.lastSession;
+              return SidebarBuilder(
+                builder: (context, collapsed) => _Sidebar(
                   key: const ValueKey('sidebarNav'),
                   currentIndex: _currentIndex,
-                  onSelected: _selectTab,
+                  onSelected: _selectSection,
                   items: _navItems(t),
                   collapsed: collapsed,
                   dockSession: !_terminalVisible ? dockSession : null,
@@ -331,6 +620,10 @@ class _MainShellState extends ConsumerState<MainShell>
                       : () => ref
                             .read(terminalOverlayProvider.notifier)
                             .show(dockSession.id, dockSession.profile),
+                  sessions: desktop ? manager.restorableTabs : const [],
+                  onSessionTap: (session) => ref
+                      .read(terminalOverlayProvider.notifier)
+                      .show(session.id, session.profile),
                 ),
               );
             },
@@ -343,7 +636,8 @@ class _MainShellState extends ConsumerState<MainShell>
                 children: [
                   _AnimatedNavBody(
                     currentIndex: _currentIndex,
-                    children: _screens,
+                    covered: desktop && _terminalVisible,
+                    children: _sectionBodies(t),
                   ),
                   _AnalyticsAskOverlay(
                     visible: _currentIndex == 0 && !_terminalVisible,
@@ -355,6 +649,32 @@ class _MainShellState extends ConsumerState<MainShell>
         ],
       ),
     );
+  }
+
+  /// What the title bar's menus hold for where the user is: the session's
+  /// while one is on screen, the list's on a list. A section with nothing
+  /// of its own to offer adds no menu rather than an empty one.
+  List<AppMenu> _contextMenus(Translations t) {
+    if (_terminalVisible) {
+      return _terminalKey.currentState?.menus(t) ?? const [];
+    }
+    if (_currentIndex != 0) return const [];
+    return [
+      AppMenu(t.window.menuMachines, [
+        [
+          AppMenuItem.command(
+            t,
+            AppCommand.newMachine,
+            icon: PhosphorIconsRegular.plus,
+          ),
+          AppMenuItem.command(
+            t,
+            AppCommand.newSession,
+            icon: PhosphorIconsRegular.terminalWindow,
+          ),
+        ],
+      ]),
+    ];
   }
 
   @override
@@ -374,6 +694,7 @@ class _MainShellState extends ConsumerState<MainShell>
             _terminalKey = GlobalKey<TerminalScreenState>();
           }
         });
+        _syncWindowTitle();
         if (hasLiveScreen) {
           _terminalKey.currentState?.openSession(next.$1, next.$2);
         }
@@ -397,46 +718,52 @@ class _MainShellState extends ConsumerState<MainShell>
           _selectTab(0);
         }
       },
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          ColoredBox(color: context.colors.backgroundPrimary),
-          FadeOverColorTransition(
-            opacity: _backgroundFade,
-            color: context.colors.backgroundPrimary,
-            child: ScaleTransition(
-              scale: _backgroundScale,
-              child: RepaintBoundary(
-                child: isWideLayout(context)
-                    ? _buildDesktopScaffold(t)
-                    : _buildMobileScaffold(t),
+      child: ContextMenuScope(
+        active: isDesktopPlatform,
+        menus: _contextMenus,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            ColoredBox(color: context.colors.backgroundPrimary),
+            FadeOverColorTransition(
+              opacity: _backgroundFade,
+              color: context.colors.backgroundPrimary,
+              child: ScaleTransition(
+                scale: _backgroundScale,
+                child: RepaintBoundary(
+                  child: isWideLayout(context)
+                      ? _buildDesktopScaffold(t)
+                      : _buildMobileScaffold(t),
+                ),
               ),
             ),
-          ),
-          if (_terminalSession != null)
-            IgnorePointer(
-              ignoring: !_terminalVisible,
-              child: FadeOverColorTransition(
-                opacity: _terminalFade,
-                color: context.colors.backgroundPrimary,
-                child: ScaleTransition(
-                  scale: _terminalScale,
-                  child: RepaintBoundary(
-                    child: TerminalSchemeTheme(
-                      child: TerminalScreen(
-                        key: _terminalKey,
-                        initialSessionId: _terminalSession!.$1,
-                        initialProfile: _terminalSession!.$2,
-                        siblingScope: _siblingScope,
-                        onClose: _onTerminalClose,
-                        onHide: _hideTerminal,
+            if (_terminalSession != null)
+              IgnorePointer(
+                ignoring: !_terminalVisible,
+                child: FadeOverColorTransition(
+                  opacity: _terminalFade,
+                  color: context.colors.backgroundPrimary,
+                  child: ScaleTransition(
+                    scale: _terminalScale,
+                    child: RepaintBoundary(
+                      child: TerminalSchemeTheme(
+                        child: TerminalScreen(
+                          key: _terminalKey,
+                          initialSessionId: _terminalSession!.$1,
+                          initialProfile: _terminalSession!.$2,
+                          siblingScope: _siblingScope,
+                          onClose: _onTerminalClose,
+                          onHide: _hideTerminal,
+                          navItems: isDesktopPlatform ? _navItems(t) : const [],
+                          onNavigate: _selectSection,
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -583,10 +910,18 @@ class _SessionDock extends ConsumerWidget {
 }
 
 class _AnimatedNavBody extends StatelessWidget {
-  const _AnimatedNavBody({required this.currentIndex, required this.children});
+  const _AnimatedNavBody({
+    required this.currentIndex,
+    required this.children,
+    this.covered = false,
+  });
 
   final int currentIndex;
   final List<Widget> children;
+
+  /// Whether something is drawn over every section - a session on a
+  /// desktop - so that none of them is the page in front.
+  final bool covered;
 
   @override
   Widget build(BuildContext context) {
@@ -598,9 +933,15 @@ class _AnimatedNavBody extends StatelessWidget {
             ignoring: i != currentIndex,
             child: AnimatedOpacity(
               opacity: i == currentIndex ? 1 : 0,
-              duration: AppTheme.motionSlow,
+              duration: isDesktopPlatform ? Duration.zero : AppTheme.motionSlow,
               curve: Curves.easeOutCubic,
-              child: children[i],
+              child: ExcludeFocus(
+                excluding: i != currentIndex || covered,
+                child: TickerMode(
+                  enabled: i == currentIndex && !covered,
+                  child: children[i],
+                ),
+              ),
             ),
           ),
       ],
@@ -626,7 +967,7 @@ class _BottomNavBar extends StatelessWidget {
 
   final int currentIndex;
   final ValueChanged<int> onSelected;
-  final List<_NavItemData> items;
+  final List<ShellNavItem> items;
 
   /// The session dock, carried inside the bar: the capsule grows into one
   /// rounded panel with the way back to the session on top of the tabs, so
@@ -687,7 +1028,7 @@ class _BottomNavBar extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: colors.backgroundPrimary,
-        borderRadius: const BorderRadius.vertical(
+        borderRadius: BorderRadius.vertical(
           top: Radius.circular(AppTheme.radiusLg + AppTheme.space16),
         ),
       ),
@@ -735,20 +1076,6 @@ class _BottomNavBar extends StatelessWidget {
   }
 }
 
-class _NavItemData {
-  const _NavItemData({
-    required this.label,
-    required this.icon,
-    required this.selectedIcon,
-  });
-
-  final String label;
-  final IconData icon;
-  final IconData selectedIcon;
-}
-
-/// One tab: its icon over its label, in the accent and bolder when open.
-/// The segment behind the open one is the bar's, so it can slide.
 class _BottomNavItem extends StatelessWidget {
   const _BottomNavItem({
     required this.data,
@@ -756,7 +1083,7 @@ class _BottomNavItem extends StatelessWidget {
     required this.onTap,
   });
 
-  final _NavItemData data;
+  final ShellNavItem data;
   final bool selected;
   final VoidCallback onTap;
 
@@ -802,7 +1129,13 @@ class _BottomNavItem extends StatelessWidget {
 ///
 /// The hamburger at the top collapses it to [kNavRailCollapsedWidth], where
 /// the labels drop and only the icons remain - a wide window can afford 240pt
-/// of chrome, a phone held sideways cannot.
+/// of chrome, a phone held sideways cannot, so there it stays collapsed and
+/// the hamburger goes.
+///
+/// On a desktop the open sessions are listed under the destinations, the way
+/// the terminal's own rail lists them under the same destinations: the two
+/// are one strip, and the terminal is a place in it rather than a screen
+/// stacked over it. A phone keeps the single dock row at the bottom.
 ///
 /// A landscape cutout is inset the rail sits behind, not room taken out of
 /// it: the rail grows by it and the `SafeArea` below hands its contents the
@@ -822,24 +1155,33 @@ class _Sidebar extends StatelessWidget {
     required this.dockSession,
     required this.dockSessionCount,
     required this.onDockTap,
+    this.sessions = const [],
+    this.onSessionTap,
   });
 
   final int currentIndex;
   final ValueChanged<int> onSelected;
-  final List<_NavItemData> items;
+  final List<ShellNavItem> items;
   final bool collapsed;
   final ActiveSessionView? dockSession;
   final int dockSessionCount;
   final VoidCallback? onDockTap;
 
+  /// What the strip would hold: live tabs, and dropped ones it will pick
+  /// back up. One detached on purpose is not a session on screen - it waits
+  /// in the new-session sheet, as on a phone.
+  final List<ActiveSessionView> sessions;
+  final ValueChanged<ActiveSessionView>? onSessionTap;
+
   @override
   Widget build(BuildContext context) {
+    final t = Translations.of(context);
     final safeInset = MediaQuery.paddingOf(context).left;
     final width = navRailWidth(collapsed) + safeInset;
     final itemInset = collapsed ? AppTheme.space8 : AppTheme.space12;
 
     return AnimatedContainer(
-      duration: AppTheme.motionSlow,
+      duration: navRailMotion,
       curve: AppTheme.interactiveCurve,
       width: width,
       decoration: BoxDecoration(
@@ -883,13 +1225,47 @@ class _Sidebar extends StatelessWidget {
                           padding: const EdgeInsets.only(
                             bottom: AppTheme.space4,
                           ),
-                          child: _SidebarNavItem(
+                          child: SidebarNavItem(
                             data: items[i],
                             selected: currentIndex == i,
                             collapsed: collapsed,
                             onTap: () => onSelected(i),
                           ),
                         ),
+                      if (sessions.isNotEmpty && onSessionTap != null) ...[
+                        Row(
+                          children: [
+                            Expanded(
+                              child: SidebarSectionLabel(
+                                t.nav.sessions,
+                                collapsed: collapsed,
+                              ),
+                            ),
+                            if (!collapsed)
+                              StripActionButton(
+                                tooltip: AppCommands.tooltip(
+                                  t.terminal.selectDevice,
+                                  AppCommand.newSession,
+                                ),
+                                icon: PhosphorIconsRegular.plus,
+                                onTap: () => AppCommands.instance.run(
+                                  AppCommand.newSession,
+                                ),
+                              ),
+                          ],
+                        ),
+                        for (final session in sessions)
+                          Padding(
+                            padding: const EdgeInsets.only(
+                              bottom: AppTheme.space2,
+                            ),
+                            child: _SidebarSessionRow(
+                              session: session,
+                              collapsed: collapsed,
+                              onTap: () => onSessionTap!(session),
+                            ),
+                          ),
+                      ],
                     ],
                   ),
                 ),
@@ -909,76 +1285,58 @@ class _Sidebar extends StatelessWidget {
   }
 }
 
-/// Collapsed, the icon is all there is to go on, so the label it replaced
-/// stays reachable as a tooltip instead.
-class _SidebarNavItem extends StatelessWidget {
-  const _SidebarNavItem({
-    required this.data,
-    required this.selected,
+/// An open session in the desktop sidebar: the same pill the terminal's strip
+/// draws, so a session looks alike whether or not it is on screen. A click
+/// brings the terminal back on it.
+///
+/// Its status is read off the session rather than its connection provider:
+/// that is keyed by the profile object too, and watching it from here could
+/// stand up a second notifier for a session the strip already owns.
+class _SidebarSessionRow extends ConsumerWidget {
+  const _SidebarSessionRow({
+    required this.session,
     required this.collapsed,
     required this.onTap,
   });
 
-  final _NavItemData data;
-  final bool selected;
+  final ActiveSessionView session;
   final bool collapsed;
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    final foreground = selected
-        ? context.colors.primary
-        : context.colors.textSecondary;
-    final icon = Icon(
-      selected ? data.selectedIcon : data.icon,
-      size: AppTheme.icon20,
-      color: foreground,
+  Widget build(BuildContext context, WidgetRef ref) {
+    final anonymize = ref.watch(anonymizeProvider);
+    final profile = session.profile;
+    final name = anonymize ? IdentityAnonymizer.name(profile.id) : profile.name;
+    final manager = ref.read(sshSessionManagerProvider);
+    final sessionName = session.multiplexer.isPersistent
+        ? manager.muxNameFor(session.id)
+        : null;
+    final status = session.connecting
+        ? context.colors.warning
+        : session.dropped
+        ? Theme.of(context).dividerColor
+        : context.colors.success;
+    final pill = SessionTabPill(
+      key: ValueKey('sidebarSession-${session.id}'),
+      sessionId: session.id,
+      profile: profile,
+      statusColor: status,
+      sessionName: sessionName,
+      displayName: name,
+      collapsed: collapsed,
+      unread: manager.hasUnreadNotice(session.id),
+      onTap: onTap,
     );
-
-    final Widget button = Material(
-      color: context.colors.backgroundPrimary.invisible,
-      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-        child: AnimatedContainer(
-          duration: AppTheme.interactiveDuration,
-          curve: AppTheme.interactiveCurve,
-          padding: EdgeInsets.symmetric(
-            horizontal: collapsed ? 0 : AppTheme.space14,
-            vertical: AppTheme.space10,
-          ),
-          decoration: BoxDecoration(
-            color: selected
-                ? context.colors.primaryHighlight
-                : context.colors.primaryHighlight.invisible,
-            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-          ),
-          child: collapsed
-              ? Center(child: icon)
-              : Row(
-                  children: [
-                    icon,
-                    const SizedBox(width: AppTheme.space12),
-                    Text(
-                      data.label,
-                      style: context.colors.uiStyle.copyWith(
-                        fontWeight: selected
-                            ? FontWeight.w600
-                            : FontWeight.w500,
-                        color: foreground,
-                      ),
-                    ),
-                  ],
-                ),
-        ),
-      ),
+    if (!collapsed) return pill;
+    return Tooltip(
+      message: sessionName != null
+          ? '${SessionTab.displayName(sessionName)} - $name'
+          : name,
+      child: pill,
     );
-
-    return collapsed ? Tooltip(message: data.label, child: button) : button;
   }
 }
-
 
 /// The card asking to share anonymous stats, over the home screen just above
 /// the navigation bar, while [AnalyticsService.asking] is up. It belongs to
@@ -1005,8 +1363,7 @@ class _AnalyticsAskOverlay extends StatelessWidget {
             bottom: false,
             child: DesktopContentWidth(
               child: AnalyticsAskCard(
-                onAnswer: (granted) =>
-                    unawaited(service.setConsent(granted)),
+                onAnswer: (granted) => unawaited(service.setConsent(granted)),
               ),
             ),
           ),

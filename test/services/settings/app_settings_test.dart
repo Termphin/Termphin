@@ -8,6 +8,7 @@ import 'package:termphin/services/pro/pro_hints.dart';
 import 'package:termphin/services/settings/action_dock_settings.dart';
 import 'package:termphin/services/settings/anonymize_setting.dart';
 import 'package:termphin/services/settings/app_settings.dart';
+import 'package:termphin/services/settings/desktop_settings.dart';
 import 'package:termphin/services/settings/editor_settings.dart';
 import 'package:termphin/services/settings/floating_dock_settings.dart';
 import 'package:termphin/services/settings/lock_settings.dart';
@@ -39,6 +40,7 @@ List<Setting<Object?>> get _loaded => [
   remoteAgentSetting,
   lastBackupAtSetting,
   sidebarCollapsedSetting,
+  sidebarWidthSetting,
   commandSuggestionsSetting,
   proTipsSetting,
   sftpShowHiddenSetting,
@@ -47,6 +49,7 @@ List<Setting<Object?>> get _loaded => [
   sftpSortDescendingSetting,
   tabBarPositionSetting,
   lockTimeoutSetting,
+  closeToTraySetting,
   profileFormMoreOptionsSetting,
 ];
 
@@ -179,6 +182,7 @@ void main() {
 final Set<Setting<Object?>> _notBackedUp = {
   floatingDockSettings.side,
   floatingDockSettings.verticalFraction,
+  sidebarWidthSetting,
   anonymizeSetting,
   lastBackupAtSetting,
 };
@@ -260,9 +264,11 @@ final Map<Setting<Object?>, Object?> _alternatives = {
   remoteAgentSetting: !remoteAgentSetting.fallback,
   lastBackupAtSetting: '2026-05-06T07:08:09.000Z',
   sidebarCollapsedSetting: !sidebarCollapsedSetting.fallback,
+  sidebarWidthSetting: 300.0,
   commandSuggestionsSetting: !commandSuggestionsSetting.fallback,
   proTipsSetting: !proTipsSetting.fallback,
   tabBarPositionSetting: TabBarPosition.bottom,
   lockTimeoutSetting: LockTimeout.minutes5,
+  closeToTraySetting: !closeToTraySetting.fallback,
   profileFormMoreOptionsSetting: !profileFormMoreOptionsSetting.fallback,
 };

@@ -2,6 +2,7 @@ import 'dart:io';
 
 import '../../models/remote_shell.dart';
 import '../ssh/remote_agent_service.dart' show shellQuote, windowsQuote;
+import '../terminal/terminal_text.dart' show isTypedInput;
 
 /// Where a fast upload's files are going to land, and what gets pasted at the
 /// cursor afterwards.
@@ -125,6 +126,24 @@ String _unique(String name, Set<String> taken) {
 String uploadPasteText(Iterable<String> displayPaths, RemoteShellType shell) {
   final quote = shell == RemoteShellType.powershell ? windowsQuote : shellQuote;
   return displayPaths.map(quote).join(' ');
+}
+
+/// Counts what the user types into a terminal, so an upload can tell
+/// whether anything was typed while it ran.
+///
+/// Only keys count. The terminal also answers on its own - a focus report
+/// when the window comes back from a file picker, a cursor position some
+/// prompts ask for every time they draw - and counting those made every
+/// upload look interrupted, so its paths were offered instead of typed in.
+class TypingCounter {
+  int _serial = 0;
+
+  /// Changes each time something typed is heard.
+  int get serial => _serial;
+
+  void hear(List<int> bytes) {
+    if (isTypedInput(bytes)) _serial++;
+  }
 }
 
 /// What a finished terminal upload does with its paths.

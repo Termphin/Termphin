@@ -2,13 +2,15 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../i18n/strings.g.dart';
 import '../../screens/settings/error_reports_screen.dart';
-import '../../screens/settings/manual_screen.dart';
+import '../../services/app/manual_urls.dart';
 import '../../theme/theme.dart';
+import '../../utils/platform_info.dart';
 import '../ui/app_card.dart';
 import '../ui/app_divider.dart';
 import '../ui/clipboard_and_links.dart';
 import '../ui/section_header.dart';
 import '../ui/settings_tile.dart';
+import 'manual_link.dart';
 
 /// Feedback section: email, the error reports to send with a bug, and the
 /// manual. The issue tracker sits in the open source section.
@@ -71,7 +73,10 @@ class FeedbackSettingsSection extends StatelessWidget {
             SettingsTile(
               title: t.settings.manual,
               subtitle: t.settings.manualSubtitle,
-              destination: () => const ManualScreen(),
+              trailing: platformHas(PlatformFeature.embeddedWebView)
+                  ? SettingsTileTrailing.chevron
+                  : SettingsTileTrailing.external,
+              onTap: () => openManual(context, ManualPage.home),
             ),
           ],
         ),

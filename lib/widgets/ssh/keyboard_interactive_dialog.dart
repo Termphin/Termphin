@@ -19,6 +19,7 @@ Future<List<String>?> showKeyboardInteractivePrompt(
   if (context == null) return null;
   return showDialog<List<String>>(
     context: context,
+    animationStyle: AppTheme.popUpAnimation,
     barrierDismissible: false,
     builder: (ctx) => _KeyboardInteractiveDialog(request: request),
   );

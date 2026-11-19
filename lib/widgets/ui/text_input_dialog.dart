@@ -1,10 +1,15 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../i18n/strings.g.dart';
+import '../../theme/theme.dart';
 
 /// Asks for one line of text - a new name, a folder, a file. Returns the
 /// trimmed text when [confirmLabel] is pressed or the field is submitted and
 /// [validator] (if any) accepts it; null when cancelled.
+///
+/// [obscure] is for a secret - a passphrase - which is hidden as it is
+/// typed and returned exactly as typed: a space at either end of one is
+/// part of it.
 ///
 /// The controller is disposed a frame late: the dialog's exit transition can
 /// still rebuild the field for a frame after the route is popped, and
@@ -32,6 +37,7 @@ Future<String?> showTextInputDialog(
 
   final result = await showDialog<String>(
     context: context,
+    animationStyle: AppTheme.popUpAnimation,
     builder: (ctx) => AlertDialog(
       title: Text(title),
       content: Form(

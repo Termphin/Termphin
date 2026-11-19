@@ -17,7 +17,9 @@ import '../../widgets/ui/app_search_field.dart';
 import '../../widgets/ui/empty_state.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
 import '../../widgets/ui/new_badge.dart';
+import '../../widgets/ui/section_navigator.dart';
 import '../../widgets/ui/settings_tile.dart';
+import '../../widgets/window/app_menu.dart';
 import '../backup/export_screen.dart';
 import '../groups/groups_screen.dart';
 import 'notifications_settings_screen.dart';
@@ -85,48 +87,71 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _clearSearch();
       return;
     }
-    Navigator.push(context, MaterialPageRoute<void>(builder: (_) => open()));
+    pushAppPage<void>(
+      context,
+      window: true,
+      title: entry.title,
+      builder: (_) => open(),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final t = Translations.of(context);
     final searching = _query.trim().isNotEmpty;
-    return LargeTitleScaffold(
-      title: t.settings.title,
-      bodyBuilder: (context, scrollController, gutter) => _loading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              controller: scrollController,
-              padding: const EdgeInsets.fromLTRB(
-                AppTheme.space16,
-                0,
-                AppTheme.space16,
-                AppTheme.space32,
-              ).add(gutter),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  LargeTitleHeader(
-                    title: t.settings.title,
-                    subtitle: t.settings.subtitle,
-                    padding: const EdgeInsets.only(
-                      top: AppTheme.space24,
-                      bottom: AppTheme.space8,
-                    ),
-                  ),
-                  const SizedBox(height: AppTheme.space8),
-                  AppSearchField(
-                    controller: _search,
-                    hint: t.settings.searchHint,
-                    clearTooltip: t.common.clearSearch,
-                    onChanged: (value) => setState(() => _query = value),
-                  ),
-                  const SizedBox(height: AppTheme.space16),
-                  if (searching) _results(t) else ..._categories(t),
-                ],
+    return SectionMenus(
+      menus: (t) => [
+        AppMenu(t.window.menuSettings, [
+          [
+            for (final category in SettingsCategory.values)
+              AppMenuItem(
+                label: category.title(t),
+                onSelected: () => pushAppPage<void>(
+                  context,
+                  window: true,
+                  title: category.title(t),
+                  builder: (_) => category.screen(t),
+                ),
               ),
-            ),
+          ],
+        ]),
+      ],
+      child: LargeTitleScaffold(
+        title: t.settings.title,
+        bodyBuilder: (context, scrollController, gutter) => _loading
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                controller: scrollController,
+                padding: const EdgeInsets.fromLTRB(
+                  AppTheme.space16,
+                  0,
+                  AppTheme.space16,
+                  AppTheme.space32,
+                ).add(gutter),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    LargeTitleHeader(
+                      title: t.settings.title,
+                      subtitle: t.settings.subtitle,
+                      padding: const EdgeInsets.only(
+                        top: AppTheme.space24,
+                        bottom: AppTheme.space8,
+                      ),
+                    ),
+                    const SizedBox(height: AppTheme.space8),
+                    AppSearchField(
+                      controller: _search,
+                      hint: t.settings.searchHint,
+                      clearTooltip: t.common.clearSearch,
+                      onChanged: (value) => setState(() => _query = value),
+                    ),
+                    const SizedBox(height: AppTheme.space16),
+                    if (searching) _results(t) else ..._categories(t),
+                  ],
+                ),
+              ),
+      ),
     );
   }
 
@@ -267,11 +292,11 @@ class _ConnectionRowState extends State<_ConnectionRow>
 
   Future<void> _open() async {
     final t = Translations.of(context);
-    await Navigator.push(
+    await pushAppPage<void>(
       context,
-      MaterialPageRoute<void>(
-        builder: (_) => SettingsCategory.connection.screen(t),
-      ),
+      window: true,
+      title: t.settings.connection,
+      builder: (_) => SettingsCategory.connection.screen(t),
     );
     await _refresh();
   }

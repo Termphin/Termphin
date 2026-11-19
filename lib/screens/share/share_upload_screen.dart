@@ -29,6 +29,7 @@ import '../../widgets/sftp/upload_progress.dart';
 import '../../widgets/ssh/host_key_dialog.dart';
 import '../../widgets/ssh/keyboard_interactive_dialog.dart';
 import '../../widgets/ui/app_notifications.dart';
+import '../../widgets/ui/app_sheet.dart';
 import '../../widgets/ui/empty_state.dart';
 
 enum _Stage { connecting, failed, picking, uploading, done }
@@ -281,14 +282,14 @@ class _ShareUploadScreenState extends ConsumerState<ShareUploadScreen> {
       },
       child: switch (_stage) {
         _Stage.connecting => Scaffold(
-          appBar: AppBar(title: Text(machine)),
+          appBar: AppBar(title: AppWindowTitle(child: Text(machine))),
           body: _Status(
             leading: const CircularProgressIndicator(),
             title: t.share.connecting(name: machine),
           ),
         ),
         _Stage.failed => Scaffold(
-          appBar: AppBar(title: Text(machine)),
+          appBar: AppBar(title: AppWindowTitle(child: Text(machine))),
           body: SafeArea(
             top: false,
             child: EmptyStatePanel(

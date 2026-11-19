@@ -5,10 +5,12 @@ import 'dart:math' as math;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:terminal_view/terminal_view.dart';
 
 import '../../i18n/strings.g.dart';
 import '../../models/active_session.dart';
+import '../../services/app/app_commands.dart';
 import '../../services/completion/command_line_reader.dart';
 import '../../services/settings/terminal_settings.dart';
 import '../../services/terminal/predictive_echo.dart';
@@ -172,6 +174,7 @@ class TerminalPane extends StatefulWidget {
     this.onScrollModeChanged,
     this.onLinkDetected,
     this.onReady,
+    this.onKeyEvent,
   });
 
   /// The session's terminal, which outlives this pane: mounting draws what
@@ -193,6 +196,10 @@ class TerminalPane extends StatefulWidget {
   final void Function(bool isManual)? onScrollModeChanged;
   final void Function(String url, double tapY)? onLinkDetected;
   final VoidCallback? onReady;
+
+  /// Asked first about every key the terminal gets; one it handles never
+  /// reaches the shell.
+  final FocusOnKeyEventCallback? onKeyEvent;
 
   @override
   State<TerminalPane> createState() => _TerminalPaneState();
@@ -249,7 +256,7 @@ class _TerminalPaneState extends State<TerminalPane> {
         this,
         onOutput: (data) => widget.onInput(utf8.encode(data)),
         onResize: (columns, rows) => widget.onResize(columns, rows),
-        onBell: HapticFeedback.mediumImpact,
+        onBell: _onBell,
         onPrivateOsc: _handlePrivateOSC,
       );
     _terminal = _session.terminal;
@@ -285,6 +292,7 @@ class _TerminalPaneState extends State<TerminalPane> {
 
   @override
   void dispose() {
+    _bellTimer?.cancel();
     widget.controller?._detach(this);
     _autoScrollTimer?.cancel();
     _searchRefresh?.cancel();
@@ -727,6 +735,184 @@ class _TerminalPaneState extends State<TerminalPane> {
     if (geometry != null) setState(() => _selection = geometry);
   }
 
+  bool get _desktop => isDesktopPlatform;
+
+  /// The one place a key can be kept from the shell. `HardwareKeyboard`
+  /// handlers - the app's shortcuts, and anything else listening there -
+  /// see a key first, but the terminal is handed it all the same and would
+  /// send Ctrl+Shift+T on as ^T; here it is taken instead.
+  KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
+    final own = widget.onKeyEvent?.call(node, event);
+    if (own != null && own != KeyEventResult.ignored) return own;
+    if (_desktop && AppCommands.instance.claims(event)) {
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  bool _bellFlash = false;
+  Timer? _bellTimer;
+
+  /// A phone buzzes; a desktop has nothing to buzz, so the screen blinks
+  /// once instead - quietly, the way a terminal's visual bell does.
+  void _onBell() {
+    if (platformHas(PlatformFeature.haptics)) {
+      unawaited(HapticFeedback.mediumImpact());
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _bellFlash = true);
+    _bellTimer?.cancel();
+    _bellTimer = Timer(const Duration(milliseconds: 120), () {
+      if (mounted) setState(() => _bellFlash = false);
+    });
+  }
+
+  /// Ctrl and the wheel - Cmd on a Mac - is the pinch of a desktop.
+  void _onPointerSignal(PointerSignalEvent event) {
+    if (!_desktop || event is! PointerScrollEvent) return;
+    final keyboard = HardwareKeyboard.instance;
+    final held = isMacOSPlatform
+        ? keyboard.isMetaPressed
+        : keyboard.isControlPressed;
+    if (!held || event.scrollDelta.dy == 0) return;
+    final next = (_fontSize + (event.scrollDelta.dy < 0 ? 1 : -1))
+        .clamp(8.0, 24.0)
+        .toDouble();
+    if (next == _fontSize) return;
+    setState(() => _fontSize = next);
+    widget.onFontSizeChanged?.call(next);
+  }
+
+  /// The right-click menu, the desktop's way to the clipboard. The keys it
+  /// shows are what [desktopTerminalShortcuts] binds: Cmd on a Mac;
+  /// elsewhere plain Ctrl for copy and paste, Ctrl+Shift for select-all.
+  /// The middle button pastes, as it does in every terminal on Linux: the
+  /// text selected in this terminal, the closest the app gets to the X
+  /// primary selection, or the clipboard when nothing is selected. A program
+  /// with mouse reporting on gets the click instead and never calls this.
+  Future<void> _onMiddleClick(TapDownDetails details, CellOffset offset) async {
+    final selected = selectedText;
+    final text = selected != null && selected.isNotEmpty
+        ? selected
+        : (await Clipboard.getData(Clipboard.kTextPlain))?.text;
+    if (!mounted || text == null || text.isEmpty) return;
+    focusTerminal();
+    _terminal.paste(text);
+  }
+
+  Future<void> _onSecondaryTapDown(
+    TapDownDetails details,
+    CellOffset offset,
+  ) async {
+    final t = Translations.of(context);
+    final hasSelection = (selectedText ?? '').isNotEmpty;
+    final overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox?;
+    if (overlay == null) return;
+    final at = overlay.globalToLocal(details.globalPosition);
+    String keys(LogicalKeyboardKey key) {
+      final activator = isMacOSPlatform
+          ? SingleActivator(key, meta: true)
+          : SingleActivator(
+              key,
+              control: true,
+              shift: key == LogicalKeyboardKey.keyA,
+            );
+      return AppCommands.describeActivator(activator);
+    }
+
+    PopupMenuItem<String> item(
+      String value,
+      String label,
+      IconData icon, {
+      String? shortcut,
+      bool enabled = true,
+    }) => PopupMenuItem<String>(
+      value: value,
+      enabled: enabled,
+      height: 36,
+      child: Row(
+        children: [
+          Icon(icon, size: app_theme.AppTheme.icon16),
+          const SizedBox(width: app_theme.AppTheme.space10),
+          Expanded(child: Text(label)),
+          if (shortcut != null) ...[
+            const SizedBox(width: app_theme.AppTheme.space24),
+            Text(
+              shortcut,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).hintColor,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+
+    final choice = await showMenu<String>(
+      context: context,
+      popUpAnimationStyle: app_theme.AppTheme.popUpAnimation,
+      position: RelativeRect.fromRect(
+        Rect.fromLTWH(at.dx, at.dy, 0, 0),
+        Offset.zero & overlay.size,
+      ),
+      items: [
+        item(
+          'copy',
+          t.contextMenu.copy,
+          PhosphorIconsRegular.copy,
+          shortcut: keys(LogicalKeyboardKey.keyC),
+          enabled: hasSelection,
+        ),
+        item(
+          'paste',
+          t.contextMenu.paste,
+          PhosphorIconsRegular.clipboardText,
+          shortcut: keys(LogicalKeyboardKey.keyV),
+        ),
+        item(
+          'selectAll',
+          t.contextMenu.selectAll,
+          PhosphorIconsRegular.selectionAll,
+          shortcut: keys(LogicalKeyboardKey.keyA),
+        ),
+        const PopupMenuDivider(height: 8),
+        item(
+          'find',
+          t.contextMenu.find,
+          PhosphorIconsRegular.magnifyingGlass,
+          shortcut: AppCommands.shortcutLabel(AppCommand.findInTerminal),
+        ),
+        if (hasSelection)
+          item(
+            'clear',
+            t.contextMenu.clearSelection,
+            PhosphorIconsRegular.selectionSlash,
+          ),
+      ],
+    );
+    if (!mounted || choice == null) return;
+    switch (choice) {
+      case 'copy':
+        copySelection();
+      case 'paste':
+        final data = await Clipboard.getData(Clipboard.kTextPlain);
+        final text = data?.text;
+        if (text != null && text.isNotEmpty) {
+          _terminal.paste(text);
+          clearSelection();
+        }
+      case 'selectAll':
+        _terminalController.selectAll(_terminal.buffer);
+      case 'find':
+        openSearch();
+      case 'clear':
+        clearSelection();
+    }
+    focusTerminal();
+  }
+
   /// A tap on a link or inside a mouse-reporting TUI leaves the keyboard as it
   /// was: raising it would push a link out from under its preview or pop the
   /// keyboard on every TUI button click, and closing it would fight typing
@@ -781,6 +967,9 @@ class _TerminalPaneState extends State<TerminalPane> {
   }
 
   void _onPointerDown(PointerDownEvent event) {
+    if (_desktop && event.buttons == kPrimaryButton && !_focusNode.hasFocus) {
+      focusTerminal();
+    }
     if (_tapPointer != null) {
       _tapPointer = null;
       return;
@@ -900,16 +1089,25 @@ class _TerminalPaneState extends State<TerminalPane> {
   /// `autofocus` stays off. The tap-toggles-keyboard overlay is a
   /// `Listener`, not a detector, so the view's own tap recogniser wins the
   /// arena against it.
+  ///
+  /// A desktop gets a right-click menu where a phone has its own selection
+  /// bubble, and its clipboard keys from [desktopTerminalShortcuts]: off a
+  /// Mac plain Ctrl+A and Ctrl+V belong to the shell (line start, tmux's
+  /// prefix, literal next) and were being swallowed as select-all and
+  /// paste. Selection handles are for a finger; a mouse drags the selection
+  /// itself, so a desktop draws none.
   Widget _build(BuildContext context, double availableHeight) {
     final view = TerminalView(
       _terminal,
       key: _terminalViewKey,
       controller: _terminalController,
+      onKeyEvent: _onKeyEvent,
       scrollController: _scrollController,
       onSelectionDragChanged: (active) =>
           terminalSelectionDragActive.value = active,
       focusNode: _focusNode,
       theme: _terminalTheme,
+      textScaler: app_theme.AppTheme.terminalTextScaler(context),
       textStyle: TerminalStyle(
         fontSize: _fontSize,
         height: _lineHeight,
@@ -953,6 +1151,9 @@ class _TerminalPaneState extends State<TerminalPane> {
       glyphAtlas: terminalGlyphAtlas.value,
       simulateScroll: true,
       onTapUp: _onTapUp,
+      onSecondaryTapDown: _desktop ? _onSecondaryTapDown : null,
+      onTertiaryTapDown: _desktop ? _onMiddleClick : null,
+      shortcuts: _desktop ? desktopTerminalShortcuts() : null,
       foregroundPainter: _linkUnderlines(
         _terminal,
         _colors.foreground.withValues(alpha: 0.6),
@@ -966,6 +1167,7 @@ class _TerminalPaneState extends State<TerminalPane> {
         children: [
           Positioned.fill(
             child: Listener(
+              onPointerSignal: _onPointerSignal,
               onPointerDown: _onPointerDown,
               onPointerMove: _onPointerMove,
               onPointerUp: _onPointerUp,
@@ -997,7 +1199,14 @@ class _TerminalPaneState extends State<TerminalPane> {
                 },
                 child: Transform.scale(
                   scale: (_scalePreviewFontSize ?? _fontSize) / _fontSize,
-                  child: view,
+                  child: _desktop
+                      ? Actions(
+                          actions: {
+                            CopyIfSelectedIntent: _CopyIfSelectedAction(this),
+                          },
+                          child: view,
+                        )
+                      : view,
                 ),
               ),
             ),
@@ -1009,8 +1218,16 @@ class _TerminalPaneState extends State<TerminalPane> {
               right: app_theme.AppTheme.space4,
               child: FrameStatsOverlay(),
             ),
-
-          if (selection != null) ...[
+          if (_bellFlash)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: ColoredBox(
+                  key: const ValueKey('terminalBellFlash'),
+                  color: _colors.foreground.withValues(alpha: 0.08),
+                ),
+              ),
+            ),
+          if (selection != null && !_desktop) ...[
             _buildSelectionHandle(
               isBegin: true,
               anchor:
@@ -1170,3 +1387,64 @@ TerminalForegroundPainter _linkUnderlines(Terminal terminal, Color color) =>
 }
 
 const _maxLineRows = 16;
+
+/// Copies the terminal's selection - and only claims the key when there is
+/// one, so a Ctrl+C with nothing selected still reaches the shell as the
+/// interrupt it has always been there.
+class CopyIfSelectedIntent extends Intent {
+  const CopyIfSelectedIntent();
+}
+
+/// Copies and then drops the selection: copied is done with, so the next
+/// Ctrl+C is an interrupt again, as in every terminal that copies on it.
+class _CopyIfSelectedAction extends Action<CopyIfSelectedIntent> {
+  _CopyIfSelectedAction(this.state);
+
+  final _TerminalPaneState state;
+
+  @override
+  bool isEnabled(CopyIfSelectedIntent intent) =>
+      (state.selectedText ?? '').isNotEmpty;
+
+  @override
+  Object? invoke(CopyIfSelectedIntent intent) {
+    state.copySelection();
+    state.clearSelection();
+    return null;
+  }
+}
+
+/// The terminal's own clipboard keys on a desktop.
+///
+/// Off a Mac, Ctrl+C copies when something is selected and is the shell's
+/// interrupt when nothing is, and Ctrl+V pastes - what people expect from a
+/// desktop app - with Ctrl+Shift+C/V and Shift+Insert as every terminal there
+/// has them. On a Mac it is Cmd, and Ctrl stays the shell's entirely.
+/// Select-all is never plain Ctrl+A: that is the shell's line start and
+/// tmux's prefix.
+Map<ShortcutActivator, Intent> desktopTerminalShortcuts() {
+  if (isMacOSPlatform) {
+    return {
+      const SingleActivator(LogicalKeyboardKey.keyC, meta: true):
+          CopySelectionTextIntent.copy,
+      const SingleActivator(LogicalKeyboardKey.keyV, meta: true):
+          const PasteTextIntent(SelectionChangedCause.keyboard),
+      const SingleActivator(LogicalKeyboardKey.keyA, meta: true):
+          const SelectAllTextIntent(SelectionChangedCause.keyboard),
+    };
+  }
+  return {
+    const SingleActivator(LogicalKeyboardKey.keyC, control: true):
+        const CopyIfSelectedIntent(),
+    const SingleActivator(LogicalKeyboardKey.keyV, control: true):
+        const PasteTextIntent(SelectionChangedCause.keyboard),
+    const SingleActivator(LogicalKeyboardKey.keyC, control: true, shift: true):
+        CopySelectionTextIntent.copy,
+    const SingleActivator(LogicalKeyboardKey.keyV, control: true, shift: true):
+        const PasteTextIntent(SelectionChangedCause.keyboard),
+    const SingleActivator(LogicalKeyboardKey.insert, shift: true):
+        const PasteTextIntent(SelectionChangedCause.keyboard),
+    const SingleActivator(LogicalKeyboardKey.keyA, control: true, shift: true):
+        const SelectAllTextIntent(SelectionChangedCause.keyboard),
+  };
+}

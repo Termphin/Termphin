@@ -24,8 +24,10 @@ import '../../widgets/sftp/editor_find_bar.dart';
 import '../../widgets/sftp/editor_selection_toolbar.dart';
 import '../../widgets/terminal/pinch_font_zoom.dart';
 import '../../widgets/ui/app_notifications.dart';
+import '../../widgets/ui/app_sheet.dart';
 import '../../widgets/ui/confirm_dialog.dart';
 import '../../widgets/ui/empty_state.dart';
+import '../../widgets/ui/save_shortcuts.dart';
 
 /// Files larger than this are shown without syntax highlighting to keep the
 /// editor responsive.
@@ -58,12 +60,17 @@ class SftpEditorScreen extends StatefulWidget {
   final String path;
   final SftpService? sftp;
 
+  /// Called after each save that reached the server, so the file list
+  /// behind the editor can show the new size and date.
+  final VoidCallback? onSaved;
+
   const SftpEditorScreen({
     super.key,
     required this.session,
     required this.fileItem,
     required this.path,
     this.sftp,
+    this.onSaved,
   });
 
   @override
@@ -427,6 +434,7 @@ class _SftpEditorScreenState extends State<SftpEditorScreen> {
           ? _allLines.join('\n')
           : _ctrl!.text;
       await _sftp.writeStringToFile(widget.path, contentToSave);
+      widget.onSaved?.call();
       if (mounted) {
         _originalContent = contentToSave;
         if (_isLargeFileMode) {
@@ -447,6 +455,14 @@ class _SftpEditorScreenState extends State<SftpEditorScreen> {
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
+  }
+
+  /// Ctrl+S, or Cmd+S on a Mac: saves when the Save button would. The code
+  /// editor binds the same keys to its own save intent and answers them
+  /// before they reach [SaveShortcuts], so both lead here.
+  void _saveFromKeys() {
+    if (_isLoading || _isSaving || _error.isNotEmpty || !_hasChanges) return;
+    unawaited(_saveFile());
   }
 
   Future<bool> _confirmDiscard() async {
@@ -471,78 +487,84 @@ class _SftpEditorScreenState extends State<SftpEditorScreen> {
           Navigator.of(context).pop();
         }
       },
-      child: Scaffold(
-        backgroundColor: context.colors.backgroundPrimary,
-        appBar: AppBar(
-          bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(AppTheme.hairline),
-            child: Container(
-              height: AppTheme.hairline,
-              color: context.colors.surfaceBorder,
+      child: SaveShortcuts(
+        onSave: _saveFromKeys,
+        onClose: () => Navigator.of(context).maybePop(),
+        child: Scaffold(
+          backgroundColor: context.colors.backgroundPrimary,
+          appBar: AppBar(
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(AppTheme.hairline),
+              child: Container(
+                height: AppTheme.hairline,
+                color: context.colors.surfaceBorder,
+              ),
             ),
-          ),
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                widget.fileItem.filename,
-                style: const TextStyle(fontSize: AppTheme.font16),
-              ),
-              Text(
-                sftpPathToDisplay(widget.path),
-                style: context.colors.monoSmall.copyWith(
-                  color: context.colors.textTertiary,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-          actions: [
-            if (_find != null)
-              IconButton(
-                tooltip: Translations.of(context).editor.find,
-                icon: const Icon(PhosphorIconsRegular.magnifyingGlass),
-                onPressed: _openFind,
-              ),
-            IconButton(
-              tooltip: Translations.of(context).editor.toggleWordWrap,
-              icon: Icon(
-                editorSettings.wordWrap.value
-                    ? PhosphorIconsFill.textAlignLeft
-                    : PhosphorIconsFill.arrowElbowDownLeft,
-                color: editorSettings.wordWrap.value
-                    ? context.colors.primary
-                    : context.colors.textTertiary,
-              ),
-              onPressed: _toggleWordWrap,
-            ),
-            if (_isSaving)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: AppTheme.space16),
-                  child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+            title: AppWindowTitle(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.fileItem.filename,
+                    style: const TextStyle(fontSize: AppTheme.font16),
                   ),
+                  Text(
+                    sftpPathToDisplay(widget.path),
+                    style: context.colors.monoSmall.copyWith(
+                      color: context.colors.textTertiary,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              if (_find != null)
+                IconButton(
+                  tooltip: Translations.of(context).editor.find,
+                  icon: const Icon(PhosphorIconsRegular.magnifyingGlass),
+                  onPressed: _openFind,
                 ),
-              )
-            else
               IconButton(
-                tooltip: Translations.of(context).common.save,
+                tooltip: Translations.of(context).editor.toggleWordWrap,
                 icon: Icon(
-                  PhosphorIconsFill.floppyDisk,
-                  color: _hasChanges
+                  editorSettings.wordWrap.value
+                      ? PhosphorIconsFill.textAlignLeft
+                      : PhosphorIconsFill.arrowElbowDownLeft,
+                  color: editorSettings.wordWrap.value
                       ? context.colors.primary
                       : context.colors.textTertiary,
                 ),
-                onPressed: _isLoading || _error.isNotEmpty || !_hasChanges
-                    ? null
-                    : _saveFile,
+                onPressed: _toggleWordWrap,
               ),
-          ],
+              if (_isSaving)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: AppTheme.space16),
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                )
+              else
+                IconButton(
+                  tooltip: Translations.of(context).common.save,
+                  icon: Icon(
+                    PhosphorIconsFill.floppyDisk,
+                    color: _hasChanges
+                        ? context.colors.primary
+                        : context.colors.textTertiary,
+                  ),
+                  onPressed: _isLoading || _error.isNotEmpty || !_hasChanges
+                      ? null
+                      : _saveFile,
+                ),
+            ],
+          ),
+          body: SafeArea(top: false, child: _buildBody()),
         ),
-        body: SafeArea(top: false, child: _buildBody()),
       ),
     );
   }
@@ -567,6 +589,14 @@ class _SftpEditorScreenState extends State<SftpEditorScreen> {
         toolbarController: _selectionToolbar,
         findBuilder: (context, controller, readOnly) =>
             EditorFindBar(controller: controller, readOnly: readOnly),
+        shortcutOverrideActions: {
+          re.CodeShortcutSaveIntent: CallbackAction<re.CodeShortcutSaveIntent>(
+            onInvoke: (_) {
+              _saveFromKeys();
+              return null;
+            },
+          ),
+        },
         scrollController: _editorScrollController,
         wordWrap: editorSettings.wordWrap.value,
         style: codeEditorStyle(

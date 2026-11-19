@@ -1,6 +1,7 @@
 import '../completion/command_completion.dart';
 import '../pro/pro_hints.dart';
 import '../settings/action_dock_settings.dart';
+import '../settings/desktop_settings.dart';
 import '../settings/editor_settings.dart';
 import '../settings/floating_dock_settings.dart';
 import '../settings/lock_settings.dart';
@@ -14,6 +15,7 @@ import '../settings/theme_settings.dart';
 import '../settings/toolbar_layout.dart';
 import '../settings/upload_settings.dart';
 import '../ssh/ssh_session_manager.dart';
+import 'form_factor_settings.dart';
 
 /// The `terminalSettings` section of a backup, and its restorer.
 ///
@@ -23,19 +25,39 @@ import '../ssh/ssh_session_manager.dart';
 /// whose round-trip test fails otherwise.
 ///
 /// Re-read rather than trusting whatever is in memory, since an export can be
-/// taken in a process that never loaded them.
-Future<Map<String, dynamic>> exportTerminalSettings() async {
+/// taken in a process that never loaded them. How text is set belongs to one
+/// [FormFactor]: the flat fields carry the phone's, [kDesktopTerminalKey] the
+/// desktop's, and the side this device is not comes from the last backup
+/// restored here ([OtherFormFactorStore]).
+Future<Map<String, dynamic>> exportTerminalSettings({
+  FormFactor? formFactor,
+}) async {
   final settings = terminalSettings;
   await settings.load();
-  return {
-    'schemeId': settings.scheme.value,
+  final own = {
     'fontFamily': settings.fontFamily.value,
     'fontSize': settings.fontSize.value,
     'lineHeight': settings.lineHeight.value,
     'sidePadding': settings.sidePadding.value,
+  };
+  final isDesktop = formFactor == FormFactor.desktop;
+  final other = formFactor == null
+      ? null
+      : await const OtherFormFactorStore().read(
+          OtherFormFactorStore.terminal,
+        );
+  final desktop = isDesktop ? own : other;
+  return {
+    'schemeId': settings.scheme.value,
     'cursorStyle': settings.cursorStyle.value,
     'cursorBlink': settings.cursorBlink.value,
     'predictiveEcho': settings.predictiveEcho.value,
+    if (formFactor == null)
+      ...own
+    else ...{
+      ...?(isDesktop ? other : own),
+      kDesktopTerminalKey: ?desktop,
+    },
     'programNotifications': settings.programNotifications.value,
     'finishedNotifications': settings.finishedNotifications.value,
     'quietNotifications': settings.quietNotifications.value,
@@ -50,8 +72,20 @@ Future<Map<String, dynamic>> exportTerminalSettings() async {
 ///
 /// The active toolbar layout is written out alongside the full profile list,
 /// so a backup taken here still restores onto a build that predates
-/// profiles.
-Future<Map<String, dynamic>> exportAppPreferences() async {
+/// profiles. The editor's text settings are split by [FormFactor] like the
+/// terminal's, under [kDesktopEditorKey].
+Future<Map<String, dynamic>> exportAppPreferences({
+  FormFactor? formFactor,
+}) async {
+  final isDesktop = formFactor == FormFactor.desktop;
+  final ownEditor = {
+    'editorFontSize': await editorSettings.fontSize.load(),
+    'editorFontFamily': await editorSettings.fontFamily.load(),
+    'editorLineHeight': await editorSettings.lineHeight.load(),
+  };
+  final otherEditor = formFactor == null
+      ? null
+      : await const OtherFormFactorStore().read(OtherFormFactorStore.editor);
   final toolbar = (await toolbarSettings.layout.load());
   final profiles = (await toolbarSettings.profiles.load());
   return {
@@ -87,12 +121,16 @@ Future<Map<String, dynamic>> exportAppPreferences() async {
     'proTips': await proTipsSetting.load(),
     'tabBarPosition': (await tabBarPositionSetting.load()).name,
     'lockTimeout': (await lockTimeoutSetting.load()).name,
+    'closeToTray': await closeToTraySetting.load(),
     'editorWordWrap': await editorSettings.wordWrap.load(),
-    'editorFontSize': await editorSettings.fontSize.load(),
-    'editorFontFamily': await editorSettings.fontFamily.load(),
     'editorLineNumbers': await editorSettings.lineNumbers.load(),
-    'editorLineHeight': await editorSettings.lineHeight.load(),
     'editorTabWidth': await editorSettings.tabWidth.load(),
+    if (formFactor == null)
+      ...ownEditor
+    else ...{
+      ...?(isDesktop ? otherEditor : ownEditor),
+      kDesktopEditorKey: ?(isDesktop ? ownEditor : otherEditor),
+    },
   };
 }
 
@@ -101,8 +139,13 @@ Future<Map<String, dynamic>> exportAppPreferences() async {
 /// A field the export did not carry keeps whatever this device has, rather
 /// than being reset to the default by its absence. Whatever came in has to
 /// go back through the readers' clamping and allow-lists before anything
-/// paints with it, hence the final reload.
-Future<void> importTerminalSettings(Map<String, dynamic> ts) async {
+/// paints with it, hence the final reload. Only this [formFactor]'s text
+/// settings are applied; the other side's are kept in [OtherFormFactorStore]
+/// so the next backup taken here carries them on.
+Future<void> importTerminalSettings(
+  Map<String, dynamic> ts, {
+  FormFactor? formFactor,
+}) async {
   final settings = terminalSettings;
 
   Future<void> restore<T>(Setting<T> setting, Object? raw) async {
@@ -110,18 +153,39 @@ Future<void> importTerminalSettings(Map<String, dynamic> ts) async {
   }
 
   await restore<String>(settings.scheme, ts['schemeId']);
-  await restore<String>(settings.fontFamily, ts['fontFamily']);
+
+  final Map<String, dynamic> text;
+  if (formFactor == null) {
+    text = ts;
+  } else {
+    final isDesktop = formFactor == FormFactor.desktop;
+    final mobile = pickFields(ts, kTerminalFormFactorFields);
+    final rawDesktop = ts[kDesktopTerminalKey];
+    final desktop = rawDesktop is Map
+        ? Map<String, dynamic>.from(rawDesktop)
+        : null;
+    final own = isDesktop ? desktop : mobile;
+    final other = isDesktop ? mobile : desktop;
+    if (other != null && other.isNotEmpty) {
+      await const OtherFormFactorStore().write(
+        OtherFormFactorStore.terminal,
+        other,
+      );
+    }
+    text = own ?? const <String, dynamic>{};
+  }
+  await restore<String>(settings.fontFamily, text['fontFamily']);
   await restore<double>(
     settings.fontSize,
-    (ts['fontSize'] as num?)?.toDouble(),
+    (text['fontSize'] as num?)?.toDouble(),
   );
   await restore<double>(
     settings.lineHeight,
-    (ts['lineHeight'] as num?)?.toDouble(),
+    (text['lineHeight'] as num?)?.toDouble(),
   );
   await restore<double>(
     settings.sidePadding,
-    (ts['sidePadding'] as num?)?.toDouble(),
+    (text['sidePadding'] as num?)?.toDouble(),
   );
   await restore<String>(settings.cursorStyle, ts['cursorStyle']);
   await restore<bool>(settings.cursorBlink, ts['cursorBlink']);
@@ -150,8 +214,12 @@ Future<void> importTerminalSettings(Map<String, dynamic> ts) async {
 /// layout to end on; a shared id there is the same layout under two names,
 /// so the incoming one replaces it rather than landing beside it. A dock
 /// action this build has but the backup predates lands at the end of
-/// `dockOrder` rather than disappearing from the dock.
-Future<void> importAppPreferences(Map<String, dynamic> appPrefs) async {
+/// `dockOrder` rather than disappearing from the dock. The editor's text
+/// settings follow [formFactor] as in [importTerminalSettings].
+Future<void> importAppPreferences(
+  Map<String, dynamic> appPrefs, {
+  FormFactor? formFactor,
+}) async {
   final toolbarOrderRaw = appPrefs['toolbarOrder'] as List?;
   if (toolbarOrderRaw != null) {
     final current = (await toolbarSettings.layout.load());
@@ -282,20 +350,43 @@ Future<void> importAppPreferences(Map<String, dynamic> appPrefs) async {
   );
   if (tabBarPosition != null) await tabBarPositionSetting.set(tabBarPosition);
 
+  final closeToTray = appPrefs['closeToTray'];
+  if (closeToTray is bool) await closeToTraySetting.set(closeToTray);
+
   final editorWordWrap = appPrefs['editorWordWrap'];
   if (editorWordWrap is bool) {
     await editorSettings.wordWrap.set(editorWordWrap);
   }
-  final editorFontSize = appPrefs['editorFontSize'];
+  final Map<String, dynamic> editorText;
+  if (formFactor == null) {
+    editorText = appPrefs;
+  } else {
+    final isDesktop = formFactor == FormFactor.desktop;
+    final mobileEditor = pickFields(appPrefs, kEditorFormFactorFields);
+    final rawDesktopEditor = appPrefs[kDesktopEditorKey];
+    final desktopEditor = rawDesktopEditor is Map
+        ? Map<String, dynamic>.from(rawDesktopEditor)
+        : null;
+    final otherEditor = isDesktop ? mobileEditor : desktopEditor;
+    if (otherEditor != null && otherEditor.isNotEmpty) {
+      await const OtherFormFactorStore().write(
+        OtherFormFactorStore.editor,
+        otherEditor,
+      );
+    }
+    editorText =
+        (isDesktop ? desktopEditor : mobileEditor) ?? const <String, dynamic>{};
+  }
+  final editorFontSize = editorText['editorFontSize'];
   if (editorFontSize is num) {
     await editorSettings.fontSize.set(editorFontSize.toDouble());
   }
-  final editorFontFamily = appPrefs['editorFontFamily'];
+  final editorFontFamily = editorText['editorFontFamily'];
   if (editorFontFamily is String &&
       kTerminalFontLabels.containsKey(editorFontFamily)) {
     await editorSettings.fontFamily.set(editorFontFamily);
   }
-  final editorLineHeight = appPrefs['editorLineHeight'];
+  final editorLineHeight = editorText['editorLineHeight'];
   if (editorLineHeight is num) {
     await editorSettings.lineHeight.set(editorLineHeight.toDouble());
   }

@@ -17,6 +17,7 @@ import '../../widgets/ssh/public_key_dialog.dart';
 import '../../widgets/ui/app_card.dart';
 import '../../widgets/ui/app_form_field.dart';
 import '../../widgets/ui/app_notifications.dart';
+import '../../widgets/ui/app_sheet.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
 import '../../widgets/ui/section_header.dart';
 import '../../widgets/ui/unsaved_changes_guard.dart';
@@ -31,14 +32,12 @@ Future<SshKey?> showKeyFormScreen(
   String? initialName,
   SshKey? existing,
 }) {
-  return Navigator.of(context).push(
-    MaterialPageRoute<SshKey>(
-      builder: (_) => KeyFormScreen(
-        initialGroup: initialGroup,
-        initialName: initialName,
-        existing: existing,
-      ),
-      fullscreenDialog: true,
+  return pushAppForm<SshKey>(
+    context,
+    builder: (_) => KeyFormScreen(
+      initialGroup: initialGroup,
+      initialName: initialName,
+      existing: existing,
     ),
   );
 }
@@ -308,9 +307,11 @@ class _KeyFormScreenState extends ConsumerState<KeyFormScreen> {
         appBar: AppBar(
           elevation: 0,
           scrolledUnderElevation: 0,
-          title: Text(
-            _isEditing ? t.keys.editKeyTitle : t.keys.newKeyTitle,
-            style: Theme.of(context).textTheme.titleLarge,
+          title: AppWindowTitle(
+            child: Text(
+              _isEditing ? t.keys.editKeyTitle : t.keys.newKeyTitle,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
           ),
           leading: IconButton(
             tooltip: t.common.close,

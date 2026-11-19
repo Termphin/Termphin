@@ -18,6 +18,7 @@ Future<ConflictChoice?> askTransferConflict(
   final folderName = sftpPathToDisplay(folder);
   return showDialog<ConflictChoice>(
     context: context,
+    animationStyle: AppTheme.popUpAnimation,
     builder: (ctx) => AlertDialog(
       title: Text(t.sftp.conflictTitle),
       content: Text(

@@ -7,14 +7,13 @@ import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
-import '../../providers/groups_provider.dart';
-import '../../providers/profiles_provider.dart';
-import '../../providers/snippets_provider.dart';
+import '../../providers/stored_data_reload.dart';
 import '../../services/backup/backup_crypto.dart';
 import '../../services/backup/export_service.dart';
 import '../../theme/theme.dart';
 import '../../widgets/backup/backup_import_options.dart';
 import '../../widgets/ui/app_notifications.dart';
+import '../../widgets/ui/app_sheet.dart';
 import '../../widgets/ui/backup_action_bar.dart';
 import '../../widgets/ui/empty_state.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
@@ -117,9 +116,7 @@ class _BackupImportScreenState extends ConsumerState<BackupImportScreen> {
     setState(() => _busy = true);
     try {
       final outcome = await _service.importBackup(preview, options);
-      await ref.read(profileGroupsProvider.notifier).loadGroups();
-      await ref.read(profilesProvider.notifier).loadProfiles();
-      await ref.read(snippetsProvider.notifier).loadSnippets();
+      await reloadStoredData(ref.read);
       if (!mounted) return;
       _report(outcome, t);
       Navigator.pop(context);
@@ -186,7 +183,9 @@ class _BackupImportScreenState extends ConsumerState<BackupImportScreen> {
     final t = Translations.of(context);
     final preview = _preview;
     return Scaffold(
-      appBar: AppBar(title: Text(t.exportScreen.importSection)),
+      appBar: AppBar(
+        title: AppWindowTitle(child: Text(t.exportScreen.importSection)),
+      ),
       body: SafeArea(
         child: ContentGutter(
           builder: (context, gutter) => Column(

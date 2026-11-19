@@ -11,6 +11,7 @@ Future<void> showPublicKeyDialog(BuildContext context, SshKey key) {
   final t = Translations.of(context);
   return showDialog<void>(
     context: context,
+    animationStyle: AppTheme.popUpAnimation,
     builder: (ctx) => AlertDialog(
       title: Text(t.keys.keyCreatedTitle),
       content: Column(

@@ -1,10 +1,9 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pointycastle/export.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:termphin/services/security/lock_service.dart';
 
 Future<String?> storedPin() async =>
@@ -192,4 +191,13 @@ void main() {
       expect(await LockService.instance.verifyPin('1234'), isTrue);
     },
   );
+
+  test('Windows Hello is not held to biometrics alone, which it refuses', () {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    expect(biometricOnlyUnlock, isFalse);
+
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    expect(biometricOnlyUnlock, isTrue);
+  });
 }

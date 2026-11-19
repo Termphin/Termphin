@@ -13,6 +13,7 @@ import '../ui/app_card.dart';
 import '../ui/app_divider.dart';
 import '../ui/app_notifications.dart';
 import '../ui/section_header.dart';
+import '../ui/section_navigator.dart';
 import '../ui/settings_tile.dart';
 import 'settings_rows_reveal.dart';
 
@@ -67,6 +68,7 @@ class _SftpSettingsSectionState extends State<SftpSettingsSection> {
   @override
   Widget build(BuildContext context) {
     final t = Translations.of(context);
+    final canPick = platformHas(PlatformFeature.downloadFolderPicker);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -78,18 +80,18 @@ class _SftpSettingsSectionState extends State<SftpSettingsSection> {
           children: [
             SettingsTile(
               title: t.settings.downloadFolder,
-              subtitle: isIOSPlatform
+              subtitle: !canPick
                   ? t.settings.downloadFolderIos
                   : (_downloadFolder?.label.isNotEmpty ?? false
                         ? _downloadFolder!.label
                         : t.settings.downloadFolderDefault),
-              trailing: isIOSPlatform
-                  ? SettingsTileTrailing.none
-                  : SettingsTileTrailing.chevron,
-              onTap: isIOSPlatform ? null : _onPickDownloadFolder,
+              trailing: canPick
+                  ? SettingsTileTrailing.chevron
+                  : SettingsTileTrailing.none,
+              onTap: canPick ? _onPickDownloadFolder : null,
             ),
             SettingsRowsReveal(
-              visible: !isIOSPlatform && _downloadFolder != null,
+              visible: canPick && _downloadFolder != null,
               children: [
                 const AppDivider(),
                 SettingsTile(
@@ -128,11 +130,11 @@ class _SftpSettingsSectionState extends State<SftpSettingsSection> {
                 size: editorSettings.fontSize.value.toStringAsFixed(1),
               ),
               onTap: () async {
-                await Navigator.push(
+                await pushAppPage<void>(
                   context,
-                  MaterialPageRoute<void>(
-                    builder: (_) => const EditorSettingsScreen(),
-                  ),
+                  window: true,
+                  title: t.settings.textEditor,
+                  builder: (_) => const EditorSettingsScreen(),
                 );
                 if (mounted) setState(() {});
               },

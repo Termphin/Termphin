@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../i18n/strings.g.dart';
 import '../../services/settings/toolbar_layout.dart';
 import '../../theme/theme.dart';
+import '../ui/motion_page.dart';
 import 'toolbar_key_button.dart';
 
 export '../../services/settings/toolbar_layout.dart';
@@ -325,7 +326,7 @@ class _SpecialKeysToolbarState extends State<SpecialKeysToolbar> {
                     behavior: HitTestBehavior.opaque,
                     onTap: () {
                       HapticFeedback.selectionClick();
-                      _pageController.animateToPage(
+                      _pageController.goToPage(
                         i,
                         duration: AppTheme.motionFast,
                         curve: Curves.easeOutCubic,

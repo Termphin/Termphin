@@ -7,6 +7,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
 import '../../theme/theme.dart';
+import '../../utils/platform_info.dart';
 
 /// What a toast is about. [alert] is a program in another session asking
 /// for attention while Termphin is in front, the in-app stand-in for the
@@ -333,12 +334,16 @@ class _NotificationHostState extends State<_NotificationHost> {
     setState(() => _items.remove(data));
   }
 
+  /// A strip across a 1600pt window is a banner nobody reads; a desktop
+  /// stacks the notifications in the corner instead, at a card's width.
   @override
   Widget build(BuildContext context) {
+    final desktop = isDesktopPlatform;
     return Positioned(
       top: MediaQuery.paddingOf(context).top + AppTheme.space6,
-      left: 0,
-      right: 0,
+      left: desktop ? null : 0,
+      right: desktop ? AppTheme.space8 : 0,
+      width: desktop ? 420 : null,
       child: SafeArea(
         top: false,
         bottom: false,
