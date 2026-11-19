@@ -1150,6 +1150,12 @@ class Translations$sftp$en {
 	String get openItem => 'Open';
 
 	late final Translations$sftp$queue$en queue = Translations$sftp$queue$en.internal(_root);
+
+	/// en: '{count} items'
+	String dragItems({required Object count}) => '${count} items';
+
+	/// en: 'Drop to copy into {folder}'
+	String dropToCopyInto({required Object folder}) => 'Drop to copy into ${folder}';
 }
 
 // Path: editor
@@ -5486,6 +5492,8 @@ extension on Translations {
 			'sftp.queue.downloading' => 'Downloading',
 			'sftp.queue.copyingTitle' => 'Copying',
 			'sftp.queue.movingTitle' => 'Moving',
+			'sftp.dragItems' => ({required Object count}) => '${count} items',
+			'sftp.dropToCopyInto' => ({required Object folder}) => 'Drop to copy into ${folder}',
 			'editor.unsavedTitle' => 'Unsaved changes',
 			'editor.discardConfirm' => 'Discard changes?',
 			'editor.savedSuccess' => 'File saved successfully',
@@ -5647,10 +5655,10 @@ extension on Translations {
 			'settings.analytics' => 'Analytics',
 			'settings.analyticsToggle' => 'Share usage analytics',
 			'settings.analyticsToggleSubtitle' => 'Anonymous usage and crash reports',
-			'settings.terminalControls' => 'On-screen controls',
-			'settings.keyToolbar' => 'Key toolbar',
 			_ => null,
 		} ?? switch (path) {
+			'settings.terminalControls' => 'On-screen controls',
+			'settings.keyToolbar' => 'Key toolbar',
 			'settings.keyToolbarSubtitle' => 'Esc, Tab, Ctrl, arrows above the keyboard',
 			'settings.toolbarLayout' => 'Toolbar layout',
 			'settings.actionDock' => 'Action dock',
@@ -6161,10 +6169,10 @@ extension on Translations {
 			'toolbar.alt' => 'Alt',
 			'toolbar.shift' => 'Shift',
 			'toolbar.enter' => 'Enter',
-			'toolbar.delete' => 'Delete',
-			'toolbar.backspace' => 'Backspace',
 			_ => null,
 		} ?? switch (path) {
+			'toolbar.delete' => 'Delete',
+			'toolbar.backspace' => 'Backspace',
 			'toolbar.pageUp' => 'Page up',
 			'toolbar.pageDown' => 'Page down',
 			'toolbar.insert' => 'Insert',

@@ -40,6 +40,7 @@ import '../ui/context_menu.dart';
 import '../ui/shortcut_hint.dart';
 import '../ui/text_input_dialog.dart';
 import '../window/app_menu.dart';
+import 'sftp_drag.dart';
 import 'sftp_file_actions_menu.dart';
 import 'sftp_file_row.dart';
 import 'sftp_folder_picker.dart';
@@ -906,35 +907,244 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
   /// Files dropped on the browser from the desktop's file manager: uploaded
   /// into the folder on screen, as the + button's picker would. Folders are
   /// left out - a dropped tree is a sync, not an upload.
-  Future<void> _uploadDropped(List<String> paths) async {
-    final files = <_LocalFile>[];
-    for (final path in paths) {
-      final file = File(path);
-      if (!await file.exists()) continue;
-      files.add((
-        name: path.split(Platform.pathSeparator).last,
-        path: path,
-        size: await file.length(),
-      ));
+  /// The rows a drag starting on [item] carries: the selection when [item]
+  /// is in it, else [item] alone.
+  List<SftpName> _dragItems(SftpName item) => _selected.contains(item.filename)
+      ? _items.where((i) => _selected.contains(i.filename)).toList()
+      : [item];
+
+  SftpDragPayload? _dragPayloadFor(SftpName item) {
+    final sftp = _sftp;
+    if (sftp == null) return null;
+    return SftpDragPayload(
+      machine: widget.session.profile.id,
+      sftp: sftp,
+      sourceDirectory: _currentPath,
+      items: _dragItems(item),
+      origin: this,
+      onSourceChanged: () {
+        if (mounted) unawaited(_loadDirectory(showSpinner: false));
+      },
+    );
+  }
+
+  /// Whether a drag may land in [destination]: from another machine always,
+  /// from this one only where [sftpCanDropOnSameMachine] allows. The list
+  /// itself ([listLevel]) takes drops from other lists only - a drop back
+  /// onto the folder the rows came from means nothing.
+  bool _acceptsDrop(
+    SftpDragPayload payload,
+    String destination, {
+    required bool listLevel,
+  }) {
+    if (_sftp == null) return false;
+    if (listLevel && identical(payload.origin, this)) return false;
+    if (payload.machine != widget.session.profile.id) return true;
+    return sftpCanDropOnSameMachine(payload, destination);
+  }
+
+  /// Settles what the drop does by [sftpDropAction], with the keys held as
+  /// the button comes up, and does it.
+  Future<void> _onDrop(SftpDragPayload payload, String destination) async {
+    final keyboard = HardwareKeyboard.instance;
+    final sameList = identical(payload.origin, this);
+    final action = sftpDropAction(
+      sameMachine: payload.machine == widget.session.profile.id,
+      sameList: sameList,
+      shift: keyboard.isShiftPressed,
+      primary: isMacOSPlatform
+          ? keyboard.isMetaPressed
+          : keyboard.isControlPressed,
+    );
+    _keysFocus.requestFocus();
+    switch (action) {
+      case SftpDropAction.copyAcross:
+        await _copyAcross(payload, destination);
+      case SftpDropAction.copy || SftpDropAction.move:
+        final move = action == SftpDropAction.move;
+        if (sameList) _clearSelection();
+        await _transferInto(
+          payload.items,
+          sourceDirectory: payload.sourceDirectory,
+          destination: destination,
+          move: move,
+        );
+        if (move && !sameList) payload.onSourceChanged();
     }
-    await _uploadLocalFiles(files);
+  }
+
+  /// A drop from another machine: everything comes down into a temporary
+  /// folder and goes up from there, through this list's upload with its
+  /// progress. A clash is asked about before anything is fetched, and the
+  /// temporary folder goes away however it ends.
+  Future<void> _copyAcross(SftpDragPayload payload, String destination) async {
+    final t = Translations.of(context);
+    final existing = await _namesIn(destination);
+    if (existing == null || !mounted) return;
+    final items = <SftpName>[];
+    for (final item in payload.items) {
+      if (existing.contains(item.filename)) {
+        if (await _confirmOverwrite(item.filename) != true) continue;
+        if (!mounted) return;
+      }
+      items.add(item);
+    }
+    if (items.isEmpty) return;
+    final separator = Platform.pathSeparator;
+    final temp = await Directory.systemTemp.createTemp('termphin-drop-');
+    try {
+      await _queue.add<void>(
+        kind: TransferJobKind.download,
+        label: items.length == 1
+            ? items.single.filename
+            : t.sftp.queue.items(count: items.length),
+        run: (job) async {
+          for (final item in items) {
+            await _pullTree(
+              payload.sftp,
+              joinRemotePath(payload.sourceDirectory, item.filename),
+              '${temp.path}$separator${item.filename}',
+              isDirectory: item.attr.isDirectory && !item.attr.isSymbolicLink,
+              cancel: job.cancel,
+            );
+          }
+        },
+      );
+      if (!mounted) return;
+      await _uploadPaths(
+        [for (final item in items) '${temp.path}$separator${item.filename}'],
+        destination: destination,
+        confirmed: true,
+      );
+    } on TransferCancelled {
+      if (mounted) AppNotifications.info(context, t.sftp.queue.cancelled);
+    } catch (e) {
+      if (mounted) AppNotifications.error(context, resolveSftpError(e, t));
+    } finally {
+      try {
+        await temp.delete(recursive: true);
+      } catch (_) {}
+    }
+  }
+
+  /// Copies [remote] down to [local], a folder with everything in it.
+  static Future<void> _pullTree(
+    SftpService sftp,
+    String remote,
+    String local, {
+    required bool isDirectory,
+    required CancelToken cancel,
+  }) async {
+    cancel.throwIfCancelled();
+    if (!isDirectory) {
+      await sftp.downloadFile(remote, local, cancel: cancel);
+      return;
+    }
+    await Directory(local).create(recursive: true);
+    final entries = [...await sftp.listDirectory(remote)];
+    for (final entry in entries) {
+      if (entry.filename == '.' || entry.filename == '..') continue;
+      await _pullTree(
+        sftp,
+        joinRemotePath(remote, entry.filename),
+        '$local${Platform.pathSeparator}${entry.filename}',
+        isDirectory: entry.attr.isDirectory && !entry.attr.isSymbolicLink,
+        cancel: cancel,
+      );
+    }
+  }
+
+  /// What a drop from the computer's file manager runs, for a test to call
+  /// without a platform drag.
+  @visibleForTesting
+  Future<void> Function(List<String> paths) get debugUploadDropped =>
+      _uploadDropped;
+
+  Future<void> _uploadDropped(List<String> paths) =>
+      _uploadPaths(paths, destination: _currentPath);
+
+  /// Uploads [paths] - files, and folders with everything in them - into
+  /// [destination]. A folder used to be skipped without a word, since only
+  /// files were looked for. [confirmed] says the clashes were already settled.
+  Future<void> _uploadPaths(
+    List<String> paths, {
+    required String destination,
+    bool confirmed = false,
+  }) async {
+    final files = <_LocalFile>[];
+    final folders = <String>[];
+    for (final path in paths) {
+      final name = path.split(Platform.pathSeparator).last;
+      switch (await FileSystemEntity.type(path)) {
+        case FileSystemEntityType.file:
+          files.add((name: name, path: path, size: await File(path).length()));
+        case FileSystemEntityType.directory:
+          folders.add(name);
+          final root = Directory(path).path;
+          await for (final entry in Directory(
+            path,
+          ).list(recursive: true, followLinks: false)) {
+            final relative = entry.path
+                .substring(root.length + 1)
+                .split(Platform.pathSeparator)
+                .join('/');
+            if (entry is Directory) {
+              folders.add('$name/$relative');
+            } else if (entry is File) {
+              files.add((
+                name: '$name/$relative',
+                path: entry.path,
+                size: await entry.length(),
+              ));
+            }
+          }
+        default:
+          break;
+      }
+    }
+    await _uploadLocalFiles(
+      files,
+      folders: folders,
+      destination: destination,
+      confirmed: confirmed,
+    );
   }
 
   /// Overwrite prompts have to come before the progress dialog, or a modal
   /// would be asking a question from behind another modal.
-  Future<void> _uploadLocalFiles(List<_LocalFile> files) async {
-    if (files.isEmpty || !mounted) return;
+  ///
+  /// A name with a `/` in it is a file inside one of [folders], which are
+  /// created first, parents before children. An existing entry is asked about
+  /// once per top-level name, unless [confirmed] says that happened already.
+  Future<void> _uploadLocalFiles(
+    List<_LocalFile> files, {
+    List<String> folders = const [],
+    String? destination,
+    bool confirmed = false,
+  }) async {
+    if ((files.isEmpty && folders.isEmpty) || !mounted) return;
     final t = Translations.of(context);
-    final planned = <_LocalFile>[];
-    for (final file in files) {
-      final remotePath = _joinPath(file.name);
-      if (_sftp != null && await _sftp!.exists(remotePath)) {
-        if (!mounted) return;
-        if (await _confirmOverwrite(file.name) != true) continue;
+    final target = destination ?? _currentPath;
+    String topOf(String name) => name.split('/').first;
+    final tops = {...files.map((f) => topOf(f.name)), ...folders.map(topOf)};
+    final declined = <String>{};
+    if (!confirmed) {
+      for (final top in tops) {
+        if (_sftp != null && await _sftp!.exists(joinRemotePath(target, top))) {
+          if (!mounted) return;
+          if (await _confirmOverwrite(top) != true) declined.add(top);
+        }
       }
-      planned.add(file);
     }
-    if (planned.isEmpty || !mounted) return;
+    final planned = [
+      for (final file in files)
+        if (!declined.contains(topOf(file.name))) file,
+    ];
+    final plannedFolders = [
+      for (final folder in folders)
+        if (!declined.contains(topOf(folder))) folder,
+    ]..sort((a, b) => '/'.allMatches(a).length - '/'.allMatches(b).length);
+    if ((planned.isEmpty && plannedFolders.isEmpty) || !mounted) return;
 
     var knownTotal = 0;
     for (final file in planned) {
@@ -942,23 +1152,32 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
     }
     final sftp = _sftp;
     if (sftp == null || !mounted) return;
-    final directory = _currentPath;
+    final directory = target;
+    final label = tops.length == 1 ? tops.single : planned.first.name;
     var uploadedAny = false;
     try {
       await _queue.add<void>(
         kind: TransferJobKind.upload,
-        label: planned.first.name,
+        label: label,
         run: (job) async {
           await TransferNotification.runUpload(
-            label: planned.first.name,
-            completeTarget: planned.length == 1
-                ? planned.single.name
+            label: label,
+            completeTarget: tops.length == 1
+                ? tops.single
                 : (remotePathSegments(directory).lastOrNull ??
                       sftpPathToDisplay(directory)),
             fileCount: planned.length,
             cancel: job.cancel,
             showAndroidComplete: false,
             body: (reportNotification) async {
+              for (final folder in plannedFolders) {
+                job.cancel.throwIfCancelled();
+                final remote = joinRemotePath(directory, folder);
+                if (!await sftp.exists(remote)) {
+                  await sftp.createDirectory(remote);
+                }
+                uploadedAny = true;
+              }
               var bytesBefore = 0;
               for (var i = 0; i < planned.length; i++) {
                 job.cancel.throwIfCancelled();
@@ -1317,7 +1536,24 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
       ..removeWhere((r) => sameSftpPath(r, destination))
       ..insert(0, destination);
     if (recent.length > 4) recent.removeRange(4, recent.length);
+    await _transferInto(
+      items,
+      sourceDirectory: sourceDirectory,
+      destination: destination,
+      move: move,
+    );
+  }
 
+  /// The server-side copy or move of [items] from [sourceDirectory] into
+  /// [destination], on this list's machine: the clashes settled once for the
+  /// lot, then the queue does the rest. Copy to / Move to land here after
+  /// the folder picker, and so does a drop from a list on the same machine.
+  Future<void> _transferInto(
+    List<SftpName> items, {
+    required String sourceDirectory,
+    required String destination,
+    required bool move,
+  }) async {
     final entries = _entriesOf(items);
     final existing = await _namesIn(destination);
     if (existing == null || !mounted) return;
@@ -1829,47 +2065,93 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
       child: Focus(
         focusNode: _keysFocus,
         onKeyEvent: _onBrowserKey,
-        child: DropTarget(
-          onDragEntered: (_) => setState(() => _dropHovering = true),
-          onDragExited: (_) => setState(() => _dropHovering = false),
-          onDragDone: (details) {
-            setState(() => _dropHovering = false);
-            unawaited(
-              _uploadDropped([for (final file in details.files) file.path]),
-            );
-          },
-          child: Stack(
-            children: [
-              list,
-              if (_dropHovering)
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: Container(
-                      key: const ValueKey('sftpDropTarget'),
-                      margin: const EdgeInsets.all(AppTheme.space8),
-                      decoration: BoxDecoration(
-                        color: _accent.withValues(alpha: 0.08),
-                        border: Border.all(color: _accent, width: 1.5),
-                        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        Translations.of(context).sftp.dropToUpload(
-                          folder: sftpPathToDisplay(_currentPath),
-                        ),
-                        style: TextStyle(
-                          color: _accent,
-                          fontSize: AppTheme.font14,
-                          fontWeight: FontWeight.w600,
+        child: DragTarget<SftpDragPayload>(
+          onWillAcceptWithDetails: (details) =>
+              _acceptsDrop(details.data, _currentPath, listLevel: true),
+          onAcceptWithDetails: (details) =>
+              unawaited(_onDrop(details.data, _currentPath)),
+          builder: (context, candidates, _) => _withDragHighlight(
+            show: candidates.isNotEmpty,
+            child: DropTarget(
+              onDragEntered: (_) => setState(() => _dropHovering = true),
+              onDragExited: (_) => setState(() => _dropHovering = false),
+              onDragDone: (details) {
+                setState(() => _dropHovering = false);
+                unawaited(
+                  _uploadDropped([for (final file in details.files) file.path]),
+                );
+              },
+              child: Stack(
+                children: [
+                  list,
+                  if (_dropHovering)
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: Container(
+                          key: const ValueKey('sftpDropTarget'),
+                          margin: const EdgeInsets.all(AppTheme.space8),
+                          decoration: BoxDecoration(
+                            color: _accent.withValues(alpha: 0.08),
+                            border: Border.all(color: _accent, width: 1.5),
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.radiusMd,
+                            ),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            Translations.of(context).sftp.dropToUpload(
+                              folder: sftpPathToDisplay(_currentPath),
+                            ),
+                            style: TextStyle(
+                              color: _accent,
+                              fontSize: AppTheme.font14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-            ],
+                ],
+              ),
+            ),
           ),
         ),
       ),
+    );
+  }
+
+  /// The frame and the line of text over the list while rows dragged out of
+  /// another list hover over it.
+  Widget _withDragHighlight({required bool show, required Widget child}) {
+    if (!show) return child;
+    return Stack(
+      children: [
+        child,
+        Positioned.fill(
+          child: IgnorePointer(
+            child: Container(
+              key: const ValueKey('sftpDragTarget'),
+              margin: const EdgeInsets.all(AppTheme.space8),
+              decoration: BoxDecoration(
+                color: _accent.withValues(alpha: 0.08),
+                border: Border.all(color: _accent, width: 1.5),
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                Translations.of(
+                  context,
+                ).sftp.dropToCopyInto(folder: sftpPathToDisplay(_currentPath)),
+                style: TextStyle(
+                  color: _accent,
+                  fontSize: AppTheme.font14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -1973,10 +2255,39 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
       onAction: (action) => _handleFileAction(action, item, path),
     );
     if (isUp || !desktop) return row;
-    return GestureDetector(
+    Widget result = GestureDetector(
       onSecondaryTapDown: (details) =>
           _onRowSecondaryTap(item, details.globalPosition),
       child: row,
+    );
+    if (item.attr.isDirectory) {
+      final folder = result;
+      result = DragTarget<SftpDragPayload>(
+        onWillAcceptWithDetails: (details) =>
+            _acceptsDrop(details.data, path, listLevel: false),
+        onAcceptWithDetails: (details) =>
+            unawaited(_onDrop(details.data, path)),
+        builder: (context, candidates, _) => candidates.isEmpty
+            ? folder
+            : Container(
+                foregroundDecoration: BoxDecoration(
+                  color: _accent.withValues(alpha: 0.08),
+                  border: Border.all(color: _accent, width: 1.5),
+                ),
+                child: folder,
+              ),
+      );
+    }
+    final payload = _dragPayloadFor(item);
+    if (payload == null) return result;
+    return Draggable<SftpDragPayload>(
+      data: payload,
+      dragAnchorStrategy: pointerDragAnchorStrategy,
+      feedback: SftpDragFeedback(items: payload.items),
+      onDragStarted: () {
+        if (!_selected.contains(item.filename)) _selectOnly(item.filename);
+      },
+      child: result,
     );
   }
 }

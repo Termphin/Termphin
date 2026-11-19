@@ -197,7 +197,7 @@
     "keyFileTooLarge": "The key file is too large.",
     "keyFileEmpty": "The selected file is empty.",
     "keyFileReadFailed": "Could not read key file: {error}",
-        "importSuccess": "Key \"{name}\" imported.",
+    "importSuccess": "Key \"{name}\" imported.",
     "localTitle": "On this computer",
     "localSubtitle": "Found in ~/.ssh and not in Termphin yet",
     "localImport": "Import",
@@ -383,7 +383,9 @@
       "downloading": "Downloading",
       "copyingTitle": "Copying",
       "movingTitle": "Moving"
-    }
+    },
+    "dragItems": "{count} items",
+    "dropToCopyInto": "Drop to copy into {folder}"
   },
   "editor": {
     "unsavedTitle": "Unsaved changes",
