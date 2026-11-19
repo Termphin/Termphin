@@ -364,8 +364,8 @@ class Translations$profiles$en {
 	/// en: 'Connect to your SSH servers'
 	String get machinesSubtitle => 'Connect to your SSH servers';
 
-	/// en: 'No machines yet Tap + to add one'
-	String get emptyMachines => 'No machines yet\nTap + to add one';
+	/// en: 'No machines yet Use + to add one'
+	String get emptyMachines => 'No machines yet\nUse + to add one';
 
 	/// en: 'Delete profile?'
 	String get deleteTitle => 'Delete profile?';
@@ -628,8 +628,8 @@ class Translations$keys$en {
 	/// en: 'No SSH keys yet'
 	String get emptyTitle => 'No SSH keys yet';
 
-	/// en: 'Tap + to generate or import a key.'
-	String get emptySubtitle => 'Tap + to generate or import a key.';
+	/// en: 'Use + to generate or import a key.'
+	String get emptySubtitle => 'Use + to generate or import a key.';
 
 	/// en: 'Delete key?'
 	String get deleteTitle => 'Delete key?';
@@ -2943,8 +2943,8 @@ class Translations$snippets$en {
 	/// en: 'No snippets yet'
 	String get emptyTitle => 'No snippets yet';
 
-	/// en: 'Tap + to save a command or script.'
-	String get emptySubtitle => 'Tap + to save a command or script.';
+	/// en: 'Use + to save a command or script.'
+	String get emptySubtitle => 'Use + to save a command or script.';
 
 	/// en: 'Copy command'
 	String get copyCommand => 'Copy command';
@@ -4548,8 +4548,8 @@ class Translations$sftp$queue$en {
 	/// en: '{position} of {count}'
 	String position({required Object position, required Object count}) => '${position} of ${count}';
 
-	/// en: '{count} failed - tap to see why'
-	String failedCount({required Object count}) => '${count} failed - tap to see why';
+	/// en: '{count} failed - open to see why'
+	String failedCount({required Object count}) => '${count} failed - open to see why';
 
 	/// en: 'Clear'
 	String get clearFinished => 'Clear';
@@ -5213,7 +5213,7 @@ extension on Translations {
 			'profiles.keys' => 'Keys',
 			'profiles.machinesHeading' => 'Your machines',
 			'profiles.machinesSubtitle' => 'Connect to your SSH servers',
-			'profiles.emptyMachines' => 'No machines yet\nTap + to add one',
+			'profiles.emptyMachines' => 'No machines yet\nUse + to add one',
 			'profiles.deleteTitle' => 'Delete profile?',
 			'profiles.deleteConfirm' => ({required Object name}) => 'Are you sure you want to delete "${name}"?',
 			'profiles.deleted' => 'Profile deleted.',
@@ -5293,7 +5293,7 @@ extension on Translations {
 			'keys.subtitle' => 'Generate, import and manage your SSH keys',
 			'keys.allKeys' => 'All keys',
 			'keys.emptyTitle' => 'No SSH keys yet',
-			'keys.emptySubtitle' => 'Tap + to generate or import a key.',
+			'keys.emptySubtitle' => 'Use + to generate or import a key.',
 			'keys.deleteTitle' => 'Delete key?',
 			'keys.deleteConfirm' => ({required Object name}) => 'Delete "${name}"? This cannot be undone.',
 			'keys.renameTitle' => 'Rename key',
@@ -5479,7 +5479,7 @@ extension on Translations {
 			'sftp.queue.copying' => 'Copying on the server',
 			'sftp.queue.moving' => 'Moving on the server',
 			'sftp.queue.position' => ({required Object position, required Object count}) => '${position} of ${count}',
-			'sftp.queue.failedCount' => ({required Object count}) => '${count} failed - tap to see why',
+			'sftp.queue.failedCount' => ({required Object count}) => '${count} failed - open to see why',
 			'sftp.queue.clearFinished' => 'Clear',
 			'sftp.queue.items' => ({required Object count}) => '${count} items',
 			'sftp.queue.uploading' => 'Uploading',
@@ -6088,7 +6088,7 @@ extension on Translations {
 			'snippets.deleteConfirm' => ({required Object name}) => 'Are you sure you want to delete "${name}"?',
 			'snippets.empty' => 'No snippets yet\nTap + to add one',
 			'snippets.emptyTitle' => 'No snippets yet',
-			'snippets.emptySubtitle' => 'Tap + to save a command or script.',
+			'snippets.emptySubtitle' => 'Use + to save a command or script.',
 			'snippets.copyCommand' => 'Copy command',
 			'snippets.commandCopied' => 'Command copied.',
 			'snippets.run' => 'Run',
