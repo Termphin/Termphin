@@ -5,7 +5,8 @@ import 'dart:math' as math;
 import 'package:dartssh2/dartssh2.dart';
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/gestures.dart' show kDoubleTapTimeout;
+import 'package:flutter/gestures.dart'
+    show PointerDeviceKind, kDoubleTapTimeout;
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
@@ -1804,51 +1805,69 @@ class SftpBrowserViewState extends State<SftpBrowserView> {
 
   bool _dropHovering = false;
 
+  /// A click anywhere in the list - between rows, under the last one -
+  /// leaves the keys with the browser, as a file manager does. The screen
+  /// around it drops the focus on a click of empty space, on the same
+  /// pointer-up, so the focus is taken now and once more a frame later.
+  void _keepKeysAfterClick(PointerUpEvent event) {
+    if (event.kind != PointerDeviceKind.mouse) return;
+    _keysFocus.requestFocus();
+    WidgetsBinding.instance
+      ..addPostFrameCallback((_) {
+        if (mounted && !_keysFocus.hasFocus) _keysFocus.requestFocus();
+      })
+      ..scheduleFrame();
+  }
+
   /// On a desktop the list takes keys and dropped files. A phone gets the
   /// list as it was: no keys to take, nothing dragged in from outside.
   Widget _buildDesktopInput(Widget list) {
     if (!isDesktopPlatform) return list;
-    return Focus(
-      focusNode: _keysFocus,
-      onKeyEvent: _onBrowserKey,
-      child: DropTarget(
-        onDragEntered: (_) => setState(() => _dropHovering = true),
-        onDragExited: (_) => setState(() => _dropHovering = false),
-        onDragDone: (details) {
-          setState(() => _dropHovering = false);
-          unawaited(
-            _uploadDropped([for (final file in details.files) file.path]),
-          );
-        },
-        child: Stack(
-          children: [
-            list,
-            if (_dropHovering)
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: Container(
-                    key: const ValueKey('sftpDropTarget'),
-                    margin: const EdgeInsets.all(AppTheme.space8),
-                    decoration: BoxDecoration(
-                      color: _accent.withValues(alpha: 0.08),
-                      border: Border.all(color: _accent, width: 1.5),
-                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      Translations.of(context).sftp.dropToUpload(
-                        folder: sftpPathToDisplay(_currentPath),
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerUp: _keepKeysAfterClick,
+      child: Focus(
+        focusNode: _keysFocus,
+        onKeyEvent: _onBrowserKey,
+        child: DropTarget(
+          onDragEntered: (_) => setState(() => _dropHovering = true),
+          onDragExited: (_) => setState(() => _dropHovering = false),
+          onDragDone: (details) {
+            setState(() => _dropHovering = false);
+            unawaited(
+              _uploadDropped([for (final file in details.files) file.path]),
+            );
+          },
+          child: Stack(
+            children: [
+              list,
+              if (_dropHovering)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: Container(
+                      key: const ValueKey('sftpDropTarget'),
+                      margin: const EdgeInsets.all(AppTheme.space8),
+                      decoration: BoxDecoration(
+                        color: _accent.withValues(alpha: 0.08),
+                        border: Border.all(color: _accent, width: 1.5),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                       ),
-                      style: TextStyle(
-                        color: _accent,
-                        fontSize: AppTheme.font14,
-                        fontWeight: FontWeight.w600,
+                      alignment: Alignment.center,
+                      child: Text(
+                        Translations.of(context).sftp.dropToUpload(
+                          folder: sftpPathToDisplay(_currentPath),
+                        ),
+                        style: TextStyle(
+                          color: _accent,
+                          fontSize: AppTheme.font14,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );

@@ -355,4 +355,23 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(EditableText), findsWidgets);
   }, variant: _desktop);
+
+  testWidgets('a click on the empty part of the list keeps the keys working', (
+    tester,
+  ) async {
+    await _pumpBrowser(tester);
+    final t = AppLocale.en.buildSync();
+    final list = tester.getRect(find.byType(SftpBrowserView));
+
+    await tester.tapAt(
+      Offset(list.center.dx, list.bottom - 20),
+      kind: PointerDeviceKind.mouse,
+    );
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.f7);
+    await tester.pumpAndSettle();
+
+    expect(find.text(t.sftp.newFolder), findsWidgets);
+    expect(find.byType(EditableText), findsOneWidget);
+  }, variant: _desktop);
 }
