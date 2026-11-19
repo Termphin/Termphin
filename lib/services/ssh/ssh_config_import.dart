@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import '../../utils/platform_info.dart';
 import '../storage/ssh_key_storage.dart';
 
 /// One `Host` of an OpenSSH client config, with what ssh would use for it.
@@ -167,9 +168,24 @@ String _unquote(String value) =>
     : value;
 
 /// The user's home, where `~/.ssh` is; null where there is none to read.
-String? sshHomeDirectory() {
-  final env = Platform.environment;
-  final home = Platform.isWindows ? env['USERPROFILE'] : env['HOME'];
+///
+/// A sandboxed Mac app is told its container as `HOME`; the folder the user
+/// knows as home - and keeps `.ssh` in - is `/Users/<name>`. [environment]
+/// replaces the process's own in tests.
+String? sshHomeDirectory([Map<String, String>? environment]) {
+  final env = environment ?? Platform.environment;
+  if (isWindowsPlatform) {
+    final profile = env['USERPROFILE'];
+    return profile == null || profile.isEmpty ? null : profile;
+  }
+  final home = env['HOME'];
+  final user = env['USER'];
+  if (isMacOSPlatform &&
+      home != null &&
+      user != null &&
+      home.contains('/Library/Containers/')) {
+    return '/Users/$user';
+  }
   return home == null || home.isEmpty ? null : home;
 }
 

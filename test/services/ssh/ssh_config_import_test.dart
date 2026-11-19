@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:termphin/services/ssh/ssh_config_import.dart';
 
@@ -131,6 +132,37 @@ Host mine
       expect(found[0].problem, SshConfigProblem.noKey);
       expect(found[1].problem, SshConfigProblem.unreadableKey);
       expect(found[2].problem, SshConfigProblem.alreadyAdded);
+    });
+  });
+
+  group('sshHomeDirectory', () {
+    tearDown(() => debugDefaultTargetPlatformOverride = null);
+
+    test('a sandboxed Mac app reads the real home, not its container', () {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      expect(
+        sshHomeDirectory({
+          'HOME': '/Users/ana/Library/Containers/dev.termphin/Data',
+          'USER': 'ana',
+        }),
+        '/Users/ana',
+      );
+    });
+
+    test('elsewhere HOME is the home', () {
+      debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+      expect(
+        sshHomeDirectory({'HOME': '/home/ana', 'USER': 'ana'}),
+        '/home/ana',
+      );
+    });
+
+    test('Windows names it USERPROFILE', () {
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      expect(
+        sshHomeDirectory({'USERPROFILE': r'C:\Users\ana'}),
+        r'C:\Users\ana',
+      );
     });
   });
 }

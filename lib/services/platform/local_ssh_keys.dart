@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/ssh_key.dart';
-import '../../utils/platform_info.dart';
+import '../ssh/ssh_config_import.dart';
 import '../storage/ssh_key_storage.dart';
 
 /// A private key found in the user's own `.ssh` folder, not yet in the app.
@@ -66,18 +66,7 @@ class LocalSshKeys {
   static const _skippedNames = {'config', 'authorized_keys', 'environment'};
 
   /// The home folder as the system names it, or null where it is not told.
-  String? get _home {
-    if (isWindowsPlatform) return _environment['USERPROFILE'];
-    final home = _environment['HOME'];
-    final user = _environment['USER'];
-    if (isMacOSPlatform &&
-        home != null &&
-        user != null &&
-        home.contains('/Library/Containers/')) {
-      return '/Users/$user';
-    }
-    return home;
-  }
+  String? get _home => sshHomeDirectory(_environment);
 
   Directory? get directory {
     if (_directory != null) return _directory;
