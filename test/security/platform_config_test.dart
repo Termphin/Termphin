@@ -274,4 +274,20 @@ void main() {
       );
     });
   });
+
+  group('Linux', () {
+    test('a plugin\'s C++ exception unwinds to its own catch', () {
+      final runner = File('linux/runner/CMakeLists.txt').readAsStringSync();
+      final first = runner.indexOf('-lgcc_s');
+      expect(
+        first,
+        isNonNegative,
+        reason:
+            'libflutter_linux_gtk.so exports its own _Unwind_RaiseException; '
+            'linked ahead of libgcc_s it takes over every throw, finds no '
+            'catch, and a keyring error aborts the app at launch',
+      );
+      expect(first, lessThan(runner.indexOf('PRIVATE flutter)')));
+    });
+  });
 }
