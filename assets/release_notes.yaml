@@ -17,8 +17,9 @@
 # and the landing changelog both drop any entry whose version is not a dotted
 # number. Give it the real number at release time and it appears in both.
 - version: "Unreleased"
-  date: "2026-11-18"
+  date: "2026-11-19"
   added:
+    - "Clickable TUIs no longer toggle the keyboard on tap, with a button in the tab bar (Settings → Terminal → Manual keyboard in TUIs)"
     - "Live progress for SFTP downloads, uploads, fast upload and shared files in the status bar, Lock Screen and Dynamic Island"
     - "Redeem a Google Play or App Store code for Pro from the Pro screen"
   changed:

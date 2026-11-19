@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:termphin/services/app/onboarding_service.dart';
 import 'package:termphin/services/settings/terminal_settings.dart';
 
 void main() {
@@ -20,6 +21,7 @@ void main() {
     expect(settings.cursorStyle.value, settings.cursorStyle.fallback);
     expect(settings.cursorBlink.value, isTrue);
     expect(settings.predictiveEcho.value, isTrue);
+    expect(settings.mouseKeyboardGuard.value, isTrue);
     expect(settings.fontFamily.value, settings.fontFamily.fallback);
   });
 
@@ -69,5 +71,35 @@ void main() {
     await settings.cursorBlink.set(false);
 
     expect(fired, 2);
+  });
+
+  group('pinLegacyMouseKeyboardGuard', () {
+    test('turns off once for an existing user who never picked', () async {
+      SharedPreferences.setMockInitialValues({
+        kOnboardingCompletedPrefsKey: true,
+      });
+      await pinLegacyMouseKeyboardGuard();
+      expect(await settings.mouseKeyboardGuard.load(), isFalse);
+
+      await settings.mouseKeyboardGuard.set(true);
+      await pinLegacyMouseKeyboardGuard();
+      expect(await settings.mouseKeyboardGuard.load(), isTrue);
+    });
+
+    test('leaves an existing user\'s own choice alone', () async {
+      SharedPreferences.setMockInitialValues({
+        kOnboardingCompletedPrefsKey: true,
+        kTerminalMouseKeyboardGuardPrefsKey: true,
+      });
+      await pinLegacyMouseKeyboardGuard();
+      expect(await settings.mouseKeyboardGuard.load(), isTrue);
+    });
+
+    test('keeps the guard on for a fresh install, also after onboarding', () async {
+      await pinLegacyMouseKeyboardGuard();
+      await OnboardingService.instance.markCompleted();
+      await pinLegacyMouseKeyboardGuard();
+      expect(await settings.mouseKeyboardGuard.load(), isTrue);
+    });
   });
 }

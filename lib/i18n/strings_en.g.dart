@@ -829,6 +829,9 @@ class Translations$terminal$en {
 	/// en: 'Remote host copied to clipboard.'
 	String get remoteCopied => 'Remote host copied to clipboard.';
 
+	/// en: 'Mouse mode: tap keyboard icon to type.'
+	String get mouseModeActive => 'Mouse mode: tap keyboard icon to type.';
+
 	/// en: 'Split screen with…'
 	String get splitWith => 'Split screen with…';
 
@@ -1541,6 +1544,12 @@ class Translations$settings$en {
 
 	/// en: 'Suggests commands and paths as you type'
 	String get commandSuggestionsSubtitle => 'Suggests commands and paths as you type';
+
+	/// en: 'Manual keyboard in TUIs'
+	String get mouseKeyboardGuard => 'Manual keyboard in TUIs';
+
+	/// en: 'Keeps the keyboard down on taps when a program uses the mouse, with a toggle in the tab bar'
+	String get mouseKeyboardGuardSubtitle => 'Keeps the keyboard down on taps when a program uses the mouse, with a toggle in the tab bar';
 
 	/// en: 'How it works'
 	String get howItWorks => 'How it works';
@@ -3117,6 +3126,9 @@ class Translations$toolbar$en {
 	/// en: 'Arrow right'
 	String get arrowRight => 'Arrow right';
 
+	/// en: 'Show keyboard'
+	String get showKeyboard => 'Show keyboard';
+
 	/// en: 'Hide keyboard'
 	String get hideKeyboard => 'Hide keyboard';
 
@@ -4244,6 +4256,9 @@ class Translations$settings$searchKeywords$en {
 	/// en: 'autocomplete completion suggest'
 	String get commandSuggestions => 'autocomplete completion suggest';
 
+	/// en: 'tui mouse keyboard tap toggle clickable'
+	String get mouseKeyboardGuard => 'tui mouse keyboard tap toggle clickable';
+
 	/// en: 'upload paste path'
 	String get fastUpload => 'upload paste path';
 
@@ -4972,6 +4987,7 @@ extension on Translations {
 			'terminal.searchDevices' => 'Search devices…',
 			'terminal.noDevices' => 'No devices found',
 			'terminal.remoteCopied' => 'Remote host copied to clipboard.',
+			'terminal.mouseModeActive' => 'Mouse mode: tap keyboard icon to type.',
 			'terminal.splitWith' => 'Split screen with…',
 			'terminal.splitWithTitle' => 'Split screen with',
 			'terminal.splitNewConnection' => 'New connection',
@@ -5160,6 +5176,7 @@ extension on Translations {
 			'settings.searchKeywords.actionDock' => 'palette shortcuts buttons',
 			'settings.searchKeywords.tabsAtBottom' => 'tab strip position',
 			'settings.searchKeywords.commandSuggestions' => 'autocomplete completion suggest',
+			'settings.searchKeywords.mouseKeyboardGuard' => 'tui mouse keyboard tap toggle clickable',
 			'settings.searchKeywords.fastUpload' => 'upload paste path',
 			'settings.searchKeywords.downloadFolder' => 'save location downloads',
 			'settings.searchKeywords.textEditor' => 'editor code font',
@@ -5254,18 +5271,20 @@ extension on Translations {
 			'settings.tabsAtBottomSubtitle' => 'Above the key toolbar, within reach of your thumb',
 			'settings.commandSuggestions' => 'Autocomplete',
 			'settings.commandSuggestionsSubtitle' => 'Suggests commands and paths as you type',
+			'settings.mouseKeyboardGuard' => 'Manual keyboard in TUIs',
+			'settings.mouseKeyboardGuardSubtitle' => 'Keeps the keyboard down on taps when a program uses the mouse, with a toggle in the tab bar',
 			'settings.howItWorks' => 'How it works',
 			'settings.actionDockLayout' => 'Dock actions',
 			'settings.actionDockSubtitle' => 'Drag to move, − to hide, + to restore',
 			'settings.actionDockPreview' => 'Dock',
 			'settings.actionDockHiddenLabel' => 'Hidden',
 			'settings.actionDockAllHidden' => 'Every tile is hidden. Tap + below or drag one here.',
+			_ => null,
+		} ?? switch (path) {
 			'settings.actionDockNoneHidden' => 'Nothing hidden - drag a tile here to hide it.',
 			'settings.actionDockHide' => ({required Object name}) => 'Hide ${name}',
 			'settings.actionDockShow' => ({required Object name}) => 'Add ${name} to the dock',
 			'settings.actionDockReset' => 'Reset dock',
-			_ => null,
-		} ?? switch (path) {
 			'settings.actionDockResetTitle' => 'Reset the dock?',
 			'settings.actionDockResetMessage' => 'The default actions come back, in the default order.',
 			'settings.actionDockResetDone' => 'Dock reset',
@@ -5757,6 +5776,7 @@ extension on Translations {
 			'toolbar.arrowUp' => 'Arrow up',
 			'toolbar.arrowDown' => 'Arrow down',
 			'toolbar.arrowRight' => 'Arrow right',
+			'toolbar.showKeyboard' => 'Show keyboard',
 			'toolbar.hideKeyboard' => 'Hide keyboard',
 			'toolbar.functionKey' => ({required Object number}) => 'F${number}',
 			'toolbar.ctrlCombo' => ({required Object key}) => 'Control ${key}',
@@ -5773,13 +5793,13 @@ extension on Translations {
 			'toolbar.textMode' => 'Text',
 			'toolbar.comboHint' => 'Tap the box and press a key - whatever the keyboard sends becomes the key.',
 			'toolbar.comboAwaitingKey' => 'press a key',
+			_ => null,
+		} ?? switch (path) {
 			'toolbar.comboSpecialKeys' => 'Keys the keyboard cannot send',
 			'actionDock.uploadFile' => 'Fast upload',
 			'actionDock.uploadNameTo' => ({required Object name}) => 'Upload ${name} to',
 			'actionDock.uploadItemsTo' => ({required Object count}) => 'Upload ${count} files to',
 			'actionDock.uploadHere' => 'Upload here',
-			_ => null,
-		} ?? switch (path) {
 			'actionDock.copyPath' => 'Copy path',
 			'actionDock.copyPathRequiresAgent' => 'Copying the current path needs a Termphin agent session - this connection doesn\'t have one.',
 			'actionDock.copyPathUnknown' => 'Couldn\'t find the current directory.',

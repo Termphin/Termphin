@@ -44,7 +44,8 @@ class SessionTerminal {
     terminal
       ..resize(columns, rows)
       ..onOutput = _reply
-      ..onPrivateOSC = _privateOsc;
+      ..onPrivateOSC = _privateOsc
+      ..addListener(_syncMouseReporting);
     _utf8Sink = const Utf8Decoder(
       allowMalformed: true,
     ).startChunkedConversion(_StringChunkSink(_decoded));
@@ -55,6 +56,21 @@ class SessionTerminal {
   }
 
   final Terminal terminal;
+
+  /// Whether the running program has mouse reporting enabled (`MouseMode != none`).
+  ///
+  /// Tracked separately from [terminal] so widgets showing a mouse-mode
+  /// control rebuild only when mouse reporting turns on or off, not on every
+  /// byte of output.
+  ValueListenable<bool> get mouseReporting => _mouseReporting;
+  final ValueNotifier<bool> _mouseReporting = ValueNotifier(false);
+
+  void _syncMouseReporting() {
+    final active = terminal.mouseMode != MouseMode.none;
+    if (_mouseReporting.value != active) {
+      _mouseReporting.value = active;
+    }
+  }
 
   /// Takes what the terminal answers the program with while no pane is bound.
   void Function(String data)? onReply;
@@ -167,7 +183,9 @@ class SessionTerminal {
     _pendingBytes.clear();
     _pendingLength = 0;
     TerminalParseScheduler.instance._forget(this);
-    terminal.dispose();
+    terminal
+      ..removeListener(_syncMouseReporting)
+      ..dispose();
   }
 
   void _reply(String data) {

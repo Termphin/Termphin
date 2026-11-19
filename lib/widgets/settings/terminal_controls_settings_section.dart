@@ -6,6 +6,7 @@ import '../../screens/settings/toolbar_profiles_screen.dart';
 import '../../services/completion/command_completion.dart';
 import '../../services/settings/floating_dock_settings.dart';
 import '../../services/settings/tab_bar_settings.dart';
+import '../../services/settings/terminal_settings.dart';
 import '../../services/settings/toolbar_layout.dart';
 import '../../theme/theme.dart';
 import '../onboarding/whats_new_modal.dart';
@@ -114,6 +115,17 @@ class TerminalControlsSettingsSection extends StatelessWidget {
                 subtitle: t.settings.commandSuggestionsSubtitle,
                 value: enabled,
                 onChanged: commandSuggestionsSetting.set,
+              ),
+            ),
+            const AppDivider(),
+            ValueListenableBuilder<bool>(
+              valueListenable: terminalSettings.mouseKeyboardGuard,
+              builder: (context, enabled, _) => SettingsSwitchTile(
+                key: const ValueKey('mouseKeyboardGuardSwitch'),
+                title: t.settings.mouseKeyboardGuard,
+                subtitle: t.settings.mouseKeyboardGuardSubtitle,
+                value: enabled,
+                onChanged: terminalSettings.mouseKeyboardGuard.set,
               ),
             ),
           ],

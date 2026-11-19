@@ -5,8 +5,10 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:terminal_view/terminal_view.dart';
 import 'package:termphin/i18n/strings.g.dart';
+import 'package:termphin/services/settings/terminal_settings.dart';
 import 'package:termphin/services/terminal/session_terminal.dart';
 import 'package:termphin/services/terminal/terminal_text.dart';
 import 'package:termphin/widgets/terminal/terminal_pane.dart';
@@ -359,20 +361,26 @@ void main() {
     late StreamController<Uint8List> output;
     late List<String> links;
 
-    setUp(() {
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      await terminalSettings.load();
       output = StreamController<Uint8List>();
       links = [];
     });
 
     tearDown(() => output.close());
 
-    Future<FocusNode> mount(WidgetTester tester, String text) async {
+    Future<FocusNode> mount(
+      WidgetTester tester,
+      String text, {
+      void Function(List<int>)? onInput,
+    }) async {
       await pumpTestApp(
         tester,
         Scaffold(
           body: TerminalPane(
             terminal: terminalFedBy(output.stream),
-            onInput: (_) {},
+            onInput: onInput ?? (_) {},
             onResize: (_, _) {},
             onLinkDetected: (url, _) => links.add(url),
           ),
@@ -504,6 +512,100 @@ void main() {
         expect(position.pixels, closeTo(position.maxScrollExtent, 1));
       }
       addTearDown(() => tester.view.resetViewInsets());
+      await tester.pump(const Duration(milliseconds: 350));
+    });
+
+    testWidgets(
+      'mouse reporting forwards the tap without raising the keyboard',
+      (tester) async {
+        final sent = <String>[];
+        final focus = await mount(
+          tester,
+          '\x1b[?1000h\x1b[?1006hTUI button\r\n',
+          onInput: (bytes) => sent.add(utf8.decode(bytes)),
+        );
+
+        await tester.tapAt(cellAt(tester, 0));
+        await tester.pumpAndSettle();
+
+        expect(sent, ['\x1b[<0;4;1M', '\x1b[<0;4;1m']);
+        expect(focus.hasFocus, isFalse);
+
+        output.add(Uint8List.fromList(utf8.encode('\x1b[?1000l')));
+        await tester.pumpAndSettle();
+        await tester.pump(const Duration(milliseconds: 350));
+
+        await tester.tapAt(cellAt(tester, 0));
+        await tester.pumpAndSettle();
+        expect(focus.hasFocus, isTrue);
+        await tester.pump(const Duration(milliseconds: 350));
+      },
+    );
+
+    testWidgets('mouse reporting leaves an open keyboard up on tap', (
+      tester,
+    ) async {
+      final sent = <String>[];
+      final focus = await mount(
+        tester,
+        'shell\r\n',
+        onInput: (bytes) => sent.add(utf8.decode(bytes)),
+      );
+
+      await tester.tapAt(cellAt(tester, 0));
+      await tester.pumpAndSettle();
+      expect(focus.hasFocus, isTrue);
+      tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+      addTearDown(() => tester.view.resetViewInsets());
+      await tester.pump(const Duration(milliseconds: 350));
+
+      output.add(
+        Uint8List.fromList(utf8.encode('\x1b[?1000h\x1b[?1006hTUI button\r\n')),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tapAt(cellAt(tester, 1));
+      await tester.pumpAndSettle();
+
+      expect(sent, containsAllInOrder(['\x1b[<0;4;2M', '\x1b[<0;4;2m']));
+      expect(focus.hasFocus, isTrue);
+      await tester.pump(const Duration(milliseconds: 350));
+    });
+
+    testWidgets(
+      'mouse reporting drops stale focus left when the soft keyboard was dismissed',
+      (tester) async {
+        final focus = await mount(tester, 'shell\r\n');
+
+        await tester.tapAt(cellAt(tester, 0));
+        await tester.pumpAndSettle();
+        expect(focus.hasFocus, isTrue);
+
+        output.add(
+          Uint8List.fromList(
+            utf8.encode('\x1b[?1000h\x1b[?1006hTUI button\r\n'),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.pump(const Duration(milliseconds: 350));
+
+        await tester.tapAt(cellAt(tester, 1));
+        await tester.pumpAndSettle();
+        expect(focus.hasFocus, isFalse);
+        await tester.pump(const Duration(milliseconds: 350));
+      },
+    );
+
+    testWidgets('mouse reporting still raises the keyboard when guard is off', (
+      tester,
+    ) async {
+      await terminalSettings.mouseKeyboardGuard.set(false);
+      final focus = await mount(tester, '\x1b[?1000h\x1b[?1006hTUI button\r\n');
+
+      await tester.tapAt(cellAt(tester, 0));
+      await tester.pumpAndSettle();
+
+      expect(focus.hasFocus, isTrue);
       await tester.pump(const Duration(milliseconds: 350));
     });
   });

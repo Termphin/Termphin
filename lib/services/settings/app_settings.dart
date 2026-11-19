@@ -26,7 +26,10 @@ import 'upload_settings.dart';
 /// the app persists, which is the point - a setting added without being put
 /// here reads as its default forever, and that shows up immediately.
 Future<void> loadAppSettings() async {
-  await pinLegacyUploadDestination();
+  await Future.wait([
+    pinLegacyUploadDestination(),
+    pinLegacyMouseKeyboardGuard(),
+  ]);
   await Future.wait([
     terminalSettings.load(),
     editorSettings.load(),
