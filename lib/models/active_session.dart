@@ -1,14 +1,15 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:dartssh2/dartssh2.dart';
+import 'package:flutter/foundation.dart';
 
 import '../services/ssh/ssh_service.dart';
 import '../services/terminal/osc_markers.dart';
 import '../services/terminal/session_terminal.dart';
 import '../services/terminal/terminal_notification.dart';
 import 'remote_shell.dart';
+import 'session_control.dart';
 import 'session_tab.dart';
 import 'ssh_profile.dart';
 
@@ -75,6 +76,15 @@ class ActiveSessionView {
   /// output has arrived a [masterVersion] still null means an old master
   /// rather than one that has not spoken yet - with or without a replay.
   bool masterChecked = false;
+
+  /// Who holds the session, as its master last said: null from a master
+  /// that does not hand control around, or before it has said. While
+  /// another device holds it this one shows the session at that device's
+  /// size and types nothing; see [SessionControl].
+  final control = ValueNotifier<SessionControl?>(null);
+
+  /// Whether another device holds the session, so this one only watches.
+  bool get watching => control.value?.holds == false;
 
   /// Whether this session told its master the phone went to the background,
   /// so the master relays its notifications instead of sending them here.
@@ -250,6 +260,7 @@ class ActiveSessionView {
   bool _disposed = false;
 
   void dispose() {
+    if (!_disposed) control.dispose();
     _disposed = true;
     unawaited(serviceOutputSubscription?.cancel());
     serviceOutputSubscription = null;

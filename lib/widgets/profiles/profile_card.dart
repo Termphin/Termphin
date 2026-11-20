@@ -6,6 +6,7 @@ import '../../i18n/strings.g.dart';
 import '../../models/ssh_profile.dart';
 import '../../providers/anonymize_provider.dart';
 import '../../providers/groups_provider.dart';
+import '../../providers/live_presence_provider.dart';
 import '../../services/app/identity_anonymizer.dart';
 import '../../theme/theme.dart';
 import '../ui/app_card.dart';
@@ -85,6 +86,7 @@ class ProfileCard extends ConsumerWidget {
         ? IdentityAnonymizer.host(profile.id)
         : profile.host;
     final t = Translations.of(context);
+    final online = ref.watch(livePresenceProvider)[profile.id]?.online ?? false;
 
     return AppCard.segment(
       first: true,
@@ -105,6 +107,8 @@ class ProfileCard extends ConsumerWidget {
               iconName: profile.iconName,
               colorHex: profile.colorHex ?? groupColor,
               isActive: isActive,
+              online: online,
+              onlineLabel: t.session.serverOnline,
               size: 42,
             ),
           ),

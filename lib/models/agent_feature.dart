@@ -17,7 +17,17 @@ enum AgentFeature {
 
   /// Told that the phone went to the background, so its notifications reach
   /// an iPhone through the relay while iOS has the app frozen.
-  backgroundNotices('0.18.0');
+  backgroundNotices('0.18.0'),
+
+  /// Told which device is attached, so the user's other devices can show it
+  /// on the session's row. The agent ships it as 0.20.0; 0.19.4 is its
+  /// development build, and this moves to 0.20.0 with the release.
+  deviceInfo('0.19.4'),
+
+  /// Lets one attached device hold the session while the others watch it
+  /// at its size, until one of them takes control. Development build of
+  /// 0.20.0, like [deviceInfo].
+  control('0.19.8');
 
   const AgentFeature(this.since);
 
@@ -30,6 +40,8 @@ enum AgentFeature {
     AgentFeature.inPlaceUpdates => t.agentFeatures.inPlaceUpdates,
     AgentFeature.wentQuietNotice => t.agentFeatures.wentQuietNotice,
     AgentFeature.backgroundNotices => t.agentFeatures.backgroundNotices,
+    AgentFeature.deviceInfo => t.agentFeatures.deviceInfo,
+    AgentFeature.control => t.agentFeatures.control,
   };
 
   /// What a session served by a master of [masterVersion] cannot do. A

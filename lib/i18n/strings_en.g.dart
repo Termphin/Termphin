@@ -819,6 +819,7 @@ class Translations$terminal$en {
 	final Translations _root; // ignore: unused_field
 
 	// Translations
+	late final Translations$terminal$control$en control = Translations$terminal$control$en.internal(_root);
 
 	/// en: 'Pick a machine to connect to'
 	String get selectDevice => 'Pick a machine to connect to';
@@ -2772,6 +2773,39 @@ class Translations$session$en {
 
 	// Translations
 
+	/// en: 'Online'
+	String get serverOnline => 'Online';
+
+	/// en: 'Open on {devices}'
+	String openOnDevices({required Object devices}) => 'Open on ${devices}';
+
+	/// en: 'Phone'
+	String get deviceKindPhone => 'Phone';
+
+	/// en: 'Tablet'
+	String get deviceKindTablet => 'Tablet';
+
+	/// en: 'Computer'
+	String get deviceKindDesktop => 'Computer';
+
+	/// en: '+{count}'
+	String moreDevices({required Object count}) => '+${count}';
+
+	/// en: 'Working'
+	String get activityWorking => 'Working';
+
+	/// en: 'Waiting for you'
+	String get activityWaiting => 'Waiting for you';
+
+	/// en: 'Running'
+	String get activityRunning => 'Running';
+
+	/// en: '{command} · {state}'
+	String activityLine({required Object command, required Object state}) => '${command} · ${state}';
+
+	/// en: 'Restores when opened'
+	String get restoresWhenOpened => 'Restores when opened';
+
 	/// en: 'Session'
 	String get untitled => 'Session';
 
@@ -4296,6 +4330,7 @@ class Translations$account$en {
 	final Translations _root; // ignore: unused_field
 
 	// Translations
+	late final Translations$account$live$en live = Translations$account$live$en.internal(_root);
 
 	/// en: 'Account'
 	String get section => 'Account';
@@ -4497,6 +4532,12 @@ class Translations$agentFeatures$en {
 	/// en: 'Notifications while Termphin is in the background on iPhone'
 	String get backgroundNotices => 'Notifications while Termphin is in the background on iPhone';
 
+	/// en: 'Showing your other devices that this session is open here'
+	String get deviceInfo => 'Showing your other devices that this session is open here';
+
+	/// en: 'Taking control of the session from another device'
+	String get control => 'Taking control of the session from another device';
+
 	/// en: 'A new session has all of them. Programs running here keep running until you close it.'
 	String get hint => 'A new session has all of them. Programs running here keep running until you close it.';
 
@@ -4553,6 +4594,27 @@ class Translations$legalUpdate$en {
 
 	/// en: 'Got it'
 	String get gotIt => 'Got it';
+}
+
+// Path: terminal.control
+class Translations$terminal$control$en {
+	Translations$terminal$control$en.internal(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: '{device} is in control'
+	String heldBy({required Object device}) => '${device} is in control';
+
+	/// en: 'Another device is in control'
+	String get heldElsewhere => 'Another device is in control';
+
+	/// en: 'Take control'
+	String get take => 'Take control';
+
+	/// en: 'Show the whole terminal'
+	String get showAll => 'Show the whole terminal';
 }
 
 // Path: sftp.errors
@@ -4834,6 +4896,24 @@ class Translations$connection$errors$en {
 	String get jumpHostConfig => 'This profile\'s jump host is not set up right.';
 }
 
+// Path: account.live
+class Translations$account$live$en {
+	Translations$account$live$en.internal(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'Live status'
+	String get title => 'Live status';
+
+	/// en: 'Online machines and what their sessions are doing, without connecting. Adds a line to each machine's crontab.'
+	String get subtitle => 'Online machines and what their sessions are doing, without connecting. Adds a line to each machine\'s crontab.';
+
+	/// en: 'Online machines and live sessions, without connecting'
+	String get proHint => 'Online machines and live sessions, without connecting';
+}
+
 // Path: account.pro
 class Translations$account$pro$en {
 	Translations$account$pro$en.internal(this._root);
@@ -5095,20 +5175,20 @@ class Translations$account$pro$paywall$en {
 
 	// Translations
 
-	/// en: 'Termphin'
-	String get titleLead => 'Termphin';
-
-	/// en: 'Pro'
-	String get titlePro => 'Pro';
-
-	/// en: 'More from the servers you already use.'
-	String get tagline => 'More from the servers you already use.';
+	/// en: 'More from your servers'
+	String get tagline => 'More from your servers';
 
 	/// en: 'Notifications from your servers'
 	String get pushTitle => 'Notifications from your servers';
 
 	/// en: 'A long job finished or an agent needs you: it reaches you even with Termphin closed.'
 	String get pushBody => 'A long job finished or an agent needs you: it reaches you even with Termphin closed.';
+
+	/// en: 'Your machines, live'
+	String get liveTitle => 'Your machines, live';
+
+	/// en: 'See which machines are online, which sessions are open and which one is waiting for you, without connecting.'
+	String get liveBody => 'See which machines are online, which sessions are open and which one is waiting for you, without connecting.';
 
 	/// en: 'Sync across your devices'
 	String get syncTitle => 'Sync across your devices';
@@ -5143,8 +5223,20 @@ class Translations$account$pro$paywall$en {
 	/// en: '{price} a month, billed yearly'
 	String yearlyPerMonth({required Object price}) => '${price} a month, billed yearly';
 
-	/// en: 'Save {percent}%'
-	String save({required Object percent}) => 'Save ${percent}%';
+	/// en: '{percent}% OFF'
+	String saveShort({required Object percent}) => '${percent}% OFF';
+
+	/// en: '/yr'
+	String get perYearShort => '/yr';
+
+	/// en: '/mo'
+	String get perMonthShort => '/mo';
+
+	/// en: '{price}/mo'
+	String perMonthCompact({required Object price}) => '${price}/mo';
+
+	/// en: 'Billed monthly'
+	String get billedMonthly => 'Billed monthly';
 
 	/// en: 'Continue'
 	String get subscribe => 'Continue';
@@ -5173,8 +5265,8 @@ class Translations$account$pro$paywall$en {
 	/// en: 'Close'
 	String get close => 'Close';
 
-	/// en: '{days} days free'
-	String trialBadge({required Object days}) => '${days} days free';
+	/// en: 'Try Pro free for {days} days'
+	String trialHero({required Object days}) => 'Try Pro free for ${days} days';
 
 	/// en: 'Try free for {days} days'
 	String startTrial({required Object days}) => 'Try free for ${days} days';
@@ -5439,6 +5531,10 @@ extension on Translations {
 			'keys.inUseTitle' => 'Key is in use',
 			'keys.inUseBody' => ({required num n, required Object count}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '1 machine uses this key and will stop connecting:', other: '${count} machines use this key and will stop connecting:', ), 
 			'keys.deleteAnyway' => 'Delete anyway',
+			'terminal.control.heldBy' => ({required Object device}) => '${device} is in control',
+			'terminal.control.heldElsewhere' => 'Another device is in control',
+			'terminal.control.take' => 'Take control',
+			'terminal.control.showAll' => 'Show the whole terminal',
 			'terminal.selectDevice' => 'Pick a machine to connect to',
 			'terminal.suggestionDismiss' => 'Hide suggestion',
 			'terminal.suggestionPick' => 'pick',
@@ -5732,12 +5828,12 @@ extension on Translations {
 			'settings.lockAfterImmediately' => 'Right away',
 			'settings.lockAfter30s' => 'After 30 seconds',
 			'settings.lockAfter1m' => 'After 1 minute',
+			_ => null,
+		} ?? switch (path) {
 			'settings.lockAfter5m' => 'After 5 minutes',
 			'settings.pinLockDisabled' => 'Disabled',
 			'settings.biometricUnlock' => 'Biometric unlock',
 			'settings.biometricSubtitle' => 'Use fingerprint or face as alternative',
-			_ => null,
-		} ?? switch (path) {
 			'settings.biometricSubtitleDesktop' => 'Unlock with the computer\'s own sign-in, a fingerprint or face, instead of the PIN',
 			'settings.biometricUnavailable' => 'Not available on this device',
 			'settings.enablePinFirst' => 'Enable PIN lock first',
@@ -6121,6 +6217,17 @@ extension on Translations {
 			'linkPreview.loading' => 'Loading preview…',
 			'linkPreview.copyLink' => 'Copy Link',
 			'linkPreview.noPreview' => 'No preview available',
+			'session.serverOnline' => 'Online',
+			'session.openOnDevices' => ({required Object devices}) => 'Open on ${devices}',
+			'session.deviceKindPhone' => 'Phone',
+			'session.deviceKindTablet' => 'Tablet',
+			'session.deviceKindDesktop' => 'Computer',
+			'session.moreDevices' => ({required Object count}) => '+${count}',
+			'session.activityWorking' => 'Working',
+			'session.activityWaiting' => 'Waiting for you',
+			'session.activityRunning' => 'Running',
+			'session.activityLine' => ({required Object command, required Object state}) => '${command} · ${state}',
+			'session.restoresWhenOpened' => 'Restores when opened',
 			'session.untitled' => 'Session',
 			'session.rebootRestored' => 'The remote shell was restarted - reattached in the same directory, previous shell state is gone.',
 			'session.offlineTitle' => 'Session detached',
@@ -6235,6 +6342,8 @@ extension on Translations {
 			'toolbar.quickSettings' => 'Quick settings',
 			'toolbar.quickTabToolbar' => 'Toolbar',
 			'toolbar.quickTabAppearance' => 'Appearance',
+			_ => null,
+		} ?? switch (path) {
 			'toolbar.allTerminalSettings' => 'All terminal settings',
 			'toolbar.importTitle' => 'Add toolbar layout',
 			'toolbar.importUnnamed' => 'Shared layout',
@@ -6250,8 +6359,6 @@ extension on Translations {
 			'toolbar.manageLayouts' => 'Manage layouts',
 			'toolbar.emptyLayout' => 'No keys yet',
 			'toolbar.escape' => 'Escape',
-			_ => null,
-		} ?? switch (path) {
 			'toolbar.tab' => 'Tab',
 			'toolbar.backTab' => 'Back tab',
 			'toolbar.home' => 'Home',
@@ -6551,6 +6658,9 @@ extension on Translations {
 			'frameStats.summary' => ({required Object frames, required Object ui, required Object raster, required Object slow}) => '${frames} frames · ui ${ui} ms · raster ${raster} ms · ${slow} slow',
 			'frameStats.glyphAtlas' => 'glyph atlas · tap for text',
 			'frameStats.paragraphs' => 'text · tap for glyph atlas',
+			'account.live.title' => 'Live status',
+			'account.live.subtitle' => 'Online machines and what their sessions are doing, without connecting. Adds a line to each machine\'s crontab.',
+			'account.live.proHint' => 'Online machines and live sessions, without connecting',
 			'account.section' => 'Account',
 			'account.signIn' => 'Sign in',
 			'account.signInSubtitle' => 'For Pro: notifications from your servers on every device, and sync',
@@ -6612,11 +6722,11 @@ extension on Translations {
 			'account.pro.manage' => 'Manage subscription',
 			'account.pro.tips' => 'Pro tips',
 			'account.pro.tipsSubtitle' => 'A rare note about what Pro would do, where it would have helped',
-			'account.pro.paywall.titleLead' => 'Termphin',
-			'account.pro.paywall.titlePro' => 'Pro',
-			'account.pro.paywall.tagline' => 'More from the servers you already use.',
+			'account.pro.paywall.tagline' => 'More from your servers',
 			'account.pro.paywall.pushTitle' => 'Notifications from your servers',
 			'account.pro.paywall.pushBody' => 'A long job finished or an agent needs you: it reaches you even with Termphin closed.',
+			'account.pro.paywall.liveTitle' => 'Your machines, live',
+			'account.pro.paywall.liveBody' => 'See which machines are online, which sessions are open and which one is waiting for you, without connecting.',
 			'account.pro.paywall.syncTitle' => 'Sync across your devices',
 			'account.pro.paywall.syncBody' => 'Machines, keys, snippets and groups everywhere, end-to-end encrypted with a passphrase only you know.',
 			'account.pro.paywall.supportTitle' => 'Keep Termphin going',
@@ -6628,7 +6738,11 @@ extension on Translations {
 			'account.pro.paywall.perYear' => ({required Object price}) => '${price} a year',
 			'account.pro.paywall.perMonth' => ({required Object price}) => '${price} a month',
 			'account.pro.paywall.yearlyPerMonth' => ({required Object price}) => '${price} a month, billed yearly',
-			'account.pro.paywall.save' => ({required Object percent}) => 'Save ${percent}%',
+			'account.pro.paywall.saveShort' => ({required Object percent}) => '${percent}% OFF',
+			'account.pro.paywall.perYearShort' => '/yr',
+			'account.pro.paywall.perMonthShort' => '/mo',
+			'account.pro.paywall.perMonthCompact' => ({required Object price}) => '${price}/mo',
+			'account.pro.paywall.billedMonthly' => 'Billed monthly',
 			'account.pro.paywall.subscribe' => 'Continue',
 			'account.pro.paywall.signInFirst' => 'Sign in to continue',
 			'account.pro.paywall.noOffers' => 'Prices could not be loaded.',
@@ -6638,7 +6752,7 @@ extension on Translations {
 			'account.pro.paywall.terms' => 'Terms',
 			'account.pro.paywall.privacy' => 'Privacy',
 			'account.pro.paywall.close' => 'Close',
-			'account.pro.paywall.trialBadge' => ({required Object days}) => '${days} days free',
+			'account.pro.paywall.trialHero' => ({required Object days}) => 'Try Pro free for ${days} days',
 			'account.pro.paywall.startTrial' => ({required Object days}) => 'Try free for ${days} days',
 			'account.pro.paywall.trialTerms' => ({required Object days, required Object price}) => 'Free for ${days} days, then ${price}. Cancel before it ends and you pay nothing.',
 			'account.pro.paywall.nothingToRestore' => 'No purchase to restore on this account',
@@ -6718,6 +6832,8 @@ extension on Translations {
 			'agentFeatures.inPlaceUpdates' => 'Updating on its own without restarting',
 			'agentFeatures.wentQuietNotice' => 'A notification when an agent or program stops and may need you',
 			'agentFeatures.backgroundNotices' => 'Notifications while Termphin is in the background on iPhone',
+			'agentFeatures.deviceInfo' => 'Showing your other devices that this session is open here',
+			'agentFeatures.control' => 'Taking control of the session from another device',
 			'agentFeatures.hint' => 'A new session has all of them. Programs running here keep running until you close it.',
 			'agentFeatures.newSession' => 'Open a new session',
 			'proHints.longCommand' => 'Know when a command finishes, even with Termphin closed',

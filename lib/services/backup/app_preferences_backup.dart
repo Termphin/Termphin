@@ -4,6 +4,7 @@ import '../settings/action_dock_settings.dart';
 import '../settings/desktop_settings.dart';
 import '../settings/editor_settings.dart';
 import '../settings/floating_dock_settings.dart';
+import '../settings/live_presence_setting.dart';
 import '../settings/lock_settings.dart';
 import '../settings/profile_form_settings.dart';
 import '../settings/setting.dart';
@@ -43,9 +44,7 @@ Future<Map<String, dynamic>> exportTerminalSettings({
   final isDesktop = formFactor == FormFactor.desktop;
   final other = formFactor == null
       ? null
-      : await const OtherFormFactorStore().read(
-          OtherFormFactorStore.terminal,
-        );
+      : await const OtherFormFactorStore().read(OtherFormFactorStore.terminal);
   final desktop = isDesktop ? own : other;
   return {
     'schemeId': settings.scheme.value,
@@ -119,6 +118,7 @@ Future<Map<String, dynamic>> exportAppPreferences({
     'sftpSortDescending': await sftpSortDescendingSetting.load(),
     'commandSuggestions': await commandSuggestionsSetting.load(),
     'proTips': await proTipsSetting.load(),
+    'livePresence': await livePresenceSetting.load(),
     'tabBarPosition': (await tabBarPositionSetting.load()).name,
     'lockTimeout': (await lockTimeoutSetting.load()).name,
     'closeToTray': await closeToTraySetting.load(),
@@ -343,6 +343,9 @@ Future<void> importAppPreferences(
 
   final proTips = appPrefs['proTips'];
   if (proTips is bool) await proTipsSetting.set(proTips);
+
+  final livePresence = appPrefs['livePresence'];
+  if (livePresence is bool) await livePresenceSetting.set(livePresence);
 
   final tabBarPosition = _byName(
     TabBarPosition.values,

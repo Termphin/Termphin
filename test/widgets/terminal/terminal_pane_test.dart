@@ -71,6 +71,44 @@ void main() {
     expect(sent, ['\x1b[0n']);
   });
 
+  testWidgets('a pane watching another device keeps that device\'s size, '
+      'and follows its own again once it holds the session', (tester) async {
+    final terminal = SessionTerminal();
+    final resizes = <(int, int)>[];
+    Future<void> mount(({int columns, int rows})? fixed) async {
+      await pumpTestApp(
+        tester,
+        Scaffold(
+          body: TerminalPane(
+            terminal: terminal,
+            fixedSize: fixed,
+            onInput: (_) {},
+            onResize: (cols, rows) => resizes.add((cols, rows)),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    await mount(null);
+    final own = (terminal.terminal.viewWidth, terminal.terminal.viewHeight);
+    expect(own, isNot((217, 61)));
+
+    await mount((columns: 217, rows: 61));
+    expect(
+      (terminal.terminal.viewWidth, terminal.terminal.viewHeight),
+      (217, 61),
+    );
+    expect(
+      tester.widget<TerminalView>(find.byType(TerminalView)).readOnly,
+      isTrue,
+    );
+    expect(tester.takeException(), isNull);
+
+    await mount(null);
+    expect((terminal.terminal.viewWidth, terminal.terminal.viewHeight), own);
+  });
+
   testWidgets('pinch zoom resizes the terminal only when the gesture ends', (
     tester,
   ) async {
@@ -937,6 +975,364 @@ void main() {
 
       expect(sent, ['pasted']);
       debugDefaultTargetPlatformOverride = null;
+    });
+  });
+
+  group('watching zoom and pan', () {
+    late SessionTerminal terminal;
+    late TerminalPaneController controller;
+    late List<double> fontChanges;
+
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      await terminalSettings.load();
+      terminal = SessionTerminal();
+      controller = TerminalPaneController();
+      fontChanges = [];
+    });
+
+    Future<void> mountWatching(
+      WidgetTester tester, {
+      ({int columns, int rows})? fixedSize = const (columns: 200, rows: 100),
+      Size paneSize = const Size(400, 500),
+    }) async {
+      await pumpTestApp(
+        tester,
+        Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: paneSize.width,
+              height: paneSize.height,
+              child: TerminalPane(
+                terminal: terminal,
+                fixedSize: fixedSize,
+                controller: controller,
+                onInput: (_) {},
+                onResize: (_, _) {},
+                onFontSizeChanged: fontChanges.add,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    Rect renderedViewRect(WidgetTester tester) {
+      final finder = find.byType(TerminalView);
+      return Rect.fromPoints(
+        tester.getTopLeft(finder),
+        tester.getBottomRight(finder),
+      );
+    }
+
+    double renderedFontSize(WidgetTester tester) => tester
+        .widget<TerminalView>(find.byType(TerminalView))
+        .textStyle
+        .fontSize;
+
+    Future<void> pinch(
+      WidgetTester tester, {
+      required Offset center,
+      required double startHalfSpan,
+      required double endHalfSpan,
+    }) async {
+      final first = await tester.startGesture(
+        center - Offset(startHalfSpan, 0),
+        pointer: 1,
+      );
+      final second = await tester.startGesture(
+        center + Offset(startHalfSpan, 0),
+        pointer: 2,
+      );
+      await tester.pump();
+      await first.moveTo(center - Offset(endHalfSpan, 0));
+      await second.moveTo(center + Offset(endHalfSpan, 0));
+      await tester.pump();
+      await first.up();
+      await second.up();
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> doubleTapAt(WidgetTester tester, Offset pos) async {
+      await tester.tapAt(pos);
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.tapAt(pos);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets(
+      'a watching pane starts fitted: the rendered grid is no larger than the pane',
+      (tester) async {
+        await mountWatching(tester);
+
+        final pane = tester.getRect(find.byType(TerminalPane));
+        final grid = renderedViewRect(tester);
+
+        expect(grid.width, lessThanOrEqualTo(pane.width + 0.5));
+        expect(grid.height, lessThanOrEqualTo(pane.height + 0.5));
+      },
+    );
+
+    testWidgets(
+      'a pinch while watching zooms the view (rendered grid grows) and never calls onFontSizeChanged',
+      (tester) async {
+        await mountWatching(tester);
+        final initialGrid = renderedViewRect(tester);
+        final initialFont = renderedFontSize(tester);
+
+        await pinch(
+          tester,
+          center: tester.getCenter(find.byType(TerminalPane)),
+          startHalfSpan: 20,
+          endHalfSpan: 100,
+        );
+
+        final zoomedGrid = renderedViewRect(tester);
+        expect(zoomedGrid.width, greaterThan(initialGrid.width));
+        expect(renderedFontSize(tester), greaterThan(initialFont));
+        expect(fontChanges, isEmpty);
+      },
+    );
+
+    testWidgets('zoom is clamped to [fitted, 2x]', (tester) async {
+      await mountWatching(tester);
+      final pane = tester.getRect(find.byType(TerminalPane));
+      final fittedGrid = renderedViewRect(tester);
+      final fittedFont = renderedFontSize(tester);
+      final center = pane.center;
+
+      await pinch(tester, center: center, startHalfSpan: 100, endHalfSpan: 10);
+      expect(renderedViewRect(tester).width, closeTo(fittedGrid.width, 0.5));
+      expect(renderedFontSize(tester), closeTo(fittedFont, 0.05));
+
+      for (var i = 0; i < 4; i++) {
+        await pinch(
+          tester,
+          center: center,
+          startHalfSpan: 10,
+          endHalfSpan: 150,
+        );
+      }
+      expect(renderedFontSize(tester), closeTo(24.0, 0.05));
+      expect(fontChanges, isEmpty);
+    });
+
+    testWidgets(
+      'double-tap zooms in, a second double-tap goes back to fitted',
+      (tester) async {
+        await mountWatching(tester);
+        final pane = tester.getRect(find.byType(TerminalPane));
+        final fittedGrid = renderedViewRect(tester);
+
+        await doubleTapAt(tester, pane.topLeft + const Offset(100, 80));
+        final zoomedGrid = renderedViewRect(tester);
+        expect(zoomedGrid.width, greaterThan(pane.width));
+        expect(renderedFontSize(tester), closeTo(12.0, 0.05));
+
+        await doubleTapAt(tester, pane.center);
+        final restoredGrid = renderedViewRect(tester);
+        expect(restoredGrid.width, closeTo(fittedGrid.width, 0.5));
+        expect(restoredGrid.topLeft, pane.topLeft);
+      },
+    );
+
+    testWidgets(
+      'at fitted zoom drag scrolls scrollback and long-press selects; while zoomed in one-finger drag pans and terminal does not get the drag',
+      (tester) async {
+        await mountWatching(tester);
+        terminal.add(
+          Uint8List.fromList(
+            utf8.encode([for (var i = 0; i < 250; i++) 'line $i\r\n'].join()),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final scrollPosition = tester
+            .widget<TerminalView>(find.byType(TerminalView))
+            .scrollController!
+            .position;
+        final bottomPixels = scrollPosition.pixels;
+        expect(bottomPixels, greaterThan(0));
+
+        final fittedGrid = renderedViewRect(tester);
+        await tester.dragFrom(fittedGrid.center, const Offset(0, 60));
+        await tester.pumpAndSettle();
+        expect(scrollPosition.pixels, lessThan(bottomPixels));
+
+        await tester.longPressAt(fittedGrid.topLeft + const Offset(16, 12));
+        await tester.pumpAndSettle();
+        expect(await controller.getSelectedText(), isNotNull);
+
+        final scrolledPixels = scrollPosition.pixels;
+        final pane = tester.getRect(find.byType(TerminalPane));
+        await doubleTapAt(tester, fittedGrid.center);
+        final gridBeforePan = renderedViewRect(tester);
+
+        await tester.dragFrom(pane.center, const Offset(-80, -40));
+        await tester.pumpAndSettle();
+
+        final gridAfterPan = renderedViewRect(tester);
+        expect(gridAfterPan.topLeft.dx, lessThan(gridBeforePan.topLeft.dx));
+        expect(scrollPosition.pixels, scrolledPixels);
+      },
+    );
+
+    testWidgets(
+      'desktop Ctrl+wheel and PointerScaleEvent zoom around the pointer without changing saved font size',
+      (tester) async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+        await mountWatching(tester);
+        final pane = tester.getRect(find.byType(TerminalPane));
+        final initialWidth = renderedViewRect(tester).width;
+
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+        final pointer = TestPointer(1, PointerDeviceKind.mouse);
+        await tester.sendEventToBinding(
+          pointer.hover(pane.topLeft + const Offset(120, 60)),
+        );
+        await tester.sendEventToBinding(pointer.scroll(const Offset(0, -120)));
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+        await tester.pumpAndSettle();
+
+        final afterWheelWidth = renderedViewRect(tester).width;
+        expect(afterWheelWidth, greaterThan(initialWidth));
+        expect(fontChanges, isEmpty);
+
+        final trackpad = TestPointer(2, PointerDeviceKind.trackpad);
+        await tester.sendEventToBinding(
+          trackpad.hover(pane.topLeft + const Offset(160, 80)),
+        );
+        await tester.sendEventToBinding(
+          PointerScaleEvent(
+            position: pane.topLeft + const Offset(160, 80),
+            scale: 1.5,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(renderedViewRect(tester).width, greaterThan(afterWheelWidth));
+        expect(fontChanges, isEmpty);
+        debugDefaultTargetPlatformOverride = null;
+      },
+    );
+
+    testWidgets(
+      'when fixedSize changes, fitted zoom recomputes and current zoom is clamped',
+      (tester) async {
+        await mountWatching(tester, fixedSize: const (columns: 200, rows: 100));
+        final pane = tester.getRect(find.byType(TerminalPane));
+        final smallFont = renderedFontSize(tester);
+
+        await mountWatching(tester, fixedSize: const (columns: 40, rows: 20));
+        final widerFont = renderedFontSize(tester);
+        expect(widerFont, greaterThan(smallFont));
+        expect(
+          renderedViewRect(tester).width,
+          lessThanOrEqualTo(pane.width + 0.5),
+        );
+      },
+    );
+
+    testWidgets(
+      'after fixedSize goes back to null the pane renders exactly like a normal pane (no leftover scale/offset)',
+      (tester) async {
+        await mountWatching(tester);
+        final pane = tester.getRect(find.byType(TerminalPane));
+
+        await doubleTapAt(tester, pane.center);
+        await tester.drag(find.byType(TerminalPane), const Offset(-90, -50));
+        await tester.pumpAndSettle();
+        expect(renderedViewRect(tester).width, greaterThan(pane.width));
+
+        await mountWatching(tester, fixedSize: null);
+
+        final view = tester.widget<TerminalView>(find.byType(TerminalView));
+        expect(view.autoResize, isTrue);
+        expect(view.readOnly, isFalse);
+        expect(view.textStyle.fontSize, 12.0);
+        expect(renderedViewRect(tester), pane);
+      },
+    );
+
+    testWidgets('the reveal-cell helper brings an off-screen cell into view', (
+      tester,
+    ) async {
+      await mountWatching(tester);
+      final pane = tester.getRect(find.byType(TerminalPane));
+
+      await doubleTapAt(tester, pane.topLeft + const Offset(20, 20));
+      await tester.pumpAndSettle();
+
+      final render = tester
+          .state<TerminalViewState>(find.byType(TerminalView))
+          .renderTerminal;
+      Offset cellGlobalCenter(int col, int row) {
+        final local =
+            render.getOffset(CellOffset(col, row)) +
+            Offset(render.cellSize.width / 2, render.cellSize.height / 2);
+        return render.localToGlobal(local);
+      }
+
+      expect(pane.contains(cellGlobalCenter(180, 90)), isFalse);
+
+      controller.revealWatchingCell(180, 90);
+      await tester.pumpAndSettle();
+
+      expect(pane.contains(cellGlobalCenter(180, 90)), isTrue);
+    });
+
+    testWidgets('zoomed in, a button zooms all the way out and the session '
+        'swipe is held off until then', (tester) async {
+      await mountWatching(tester);
+      final pane = tester.getRect(find.byType(TerminalPane));
+      final fittedGrid = renderedViewRect(tester);
+      expect(find.byKey(const ValueKey('watchingFit')), findsNothing);
+      expect(terminalWatchingZoomedIn.value, isFalse);
+
+      await doubleTapAt(tester, pane.topLeft + const Offset(100, 80));
+      await tester.pump();
+      expect(terminalWatchingZoomedIn.value, isTrue);
+
+      await tester.tap(find.byKey(const ValueKey('watchingFit')));
+      await tester.pumpAndSettle();
+      expect(renderedViewRect(tester).width, closeTo(fittedGrid.width, 0.5));
+      expect(find.byKey(const ValueKey('watchingFit')), findsNothing);
+      expect(terminalWatchingZoomedIn.value, isFalse);
+    });
+
+    testWidgets('a pane gone while zoomed in does not hold the swipe off', (
+      tester,
+    ) async {
+      await mountWatching(tester);
+      final pane = tester.getRect(find.byType(TerminalPane));
+      await doubleTapAt(tester, pane.topLeft + const Offset(100, 80));
+      await tester.pump();
+      expect(terminalWatchingZoomedIn.value, isTrue);
+
+      await tester.pumpWidget(const SizedBox());
+
+      expect(terminalWatchingZoomedIn.value, isFalse);
+    });
+
+    testWidgets('the holder\'s cursor wears a badge while it is shown', (
+      tester,
+    ) async {
+      await mountWatching(tester);
+      terminal.add(Uint8List.fromList(utf8.encode('\$ ls')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('holderCursor')), findsOneWidget);
+
+      terminal.add(Uint8List.fromList(utf8.encode('\x1b[?25l')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('holderCursor')), findsNothing);
+
+      terminal.add(Uint8List.fromList(utf8.encode('\x1b[?25h')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('holderCursor')), findsOneWidget);
+
+      await mountWatching(tester, fixedSize: null);
+      expect(find.byKey(const ValueKey('holderCursor')), findsNothing);
     });
   });
 }

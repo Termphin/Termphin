@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
@@ -153,12 +154,23 @@ class OutputOffsetCounter {
 
   OutputPosition? _position;
   int? _countFrom;
+  int _uncounted = 0;
 
   OutputPosition? get position => _position;
+
+  /// Markers the agent writes for this client alone, outside the session's
+  /// output: the master never counted them, so neither may the app.
+  static const _ownMarkers = ['5384;termphin-control;', '5386;termphin-back'];
 
   /// For the payload [OscMarkerTracker] reports, with its
   /// [OscMarkerTracker.position].
   void onOsc(String payload, int endIndex) {
+    if (_ownMarkers.any(payload.startsWith)) {
+      if (_position != null && endIndex >= (_countFrom ?? 0)) {
+        _uncounted += utf8.encode(payload).length + 3;
+      }
+      return;
+    }
     final match = _marker.firstMatch(payload);
     if (match == null) return;
     final offset = int.tryParse(match.group(2)!);
@@ -173,8 +185,9 @@ class OutputOffsetCounter {
     if (position == null) return;
     _position = (
       epoch: position.epoch,
-      offset: position.offset + length - (_countFrom ?? 0),
+      offset: position.offset + length - (_countFrom ?? 0) - _uncounted,
     );
     _countFrom = null;
+    _uncounted = 0;
   }
 }

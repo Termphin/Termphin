@@ -114,6 +114,14 @@ void main() {
       expect(counter.position, isNull);
     });
 
+    test('leaves out the markers the agent writes for this client alone', () {
+      feed('\x1b]5383;termphin-offset;9:100\x07ab');
+      feed('c\x1b]5384;termphin-control;other;80;24;\x07d');
+      feed('\x1b]5386;termphin-back\x07e');
+
+      expect(counter.position, (epoch: '9', offset: 105));
+    });
+
     test('counts from the marker, not from the start of the chunk', () {
       feed(
         'replay\x1b]5380;termphin-replay-end\x07'

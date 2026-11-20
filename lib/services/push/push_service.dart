@@ -15,9 +15,12 @@ import '../analytics/analytics_service.dart';
 import '../firebase/firebase_service.dart';
 import '../platform/local_notifications_service.dart';
 import '../pro/pro_service.dart';
+import '../realtime/presence_keys.dart';
 import '../security/aead.dart';
+import '../settings/live_presence_setting.dart';
 import '../settings/terminal_settings.dart';
-import '../ssh/remote_agent_service.dart' show powerShellCommandLine;
+import '../ssh/remote_agent_service.dart'
+    show powerShellCommandLine, shellQuote;
 import '../ssh/ssh_session_manager.dart';
 import '../terminal/in_app_alerts.dart';
 
@@ -247,6 +250,10 @@ class PushService {
   CollectionReference<Map<String, dynamic>> _devices(String uid) =>
       _db.collection('users').doc(uid).collection('devices');
 
+  /// This install's id: random, made once, and what a device is known by in
+  /// the account - for pushes, and to the agents its sessions attach to.
+  Future<String> installId() => _installId();
+
   Future<String> _installId() async {
     final preferences = await SharedPreferences.getInstance();
     final existing = preferences.getString(_installIdPrefsKey);
@@ -271,7 +278,10 @@ class PushService {
     if (!_checks.start(profile.id)) return;
     var outcome = MachineCheck.notReady;
     try {
-      if (!await enabled) return;
+      final pushEnabled = await enabled;
+      final live = livePresenceSetting.value;
+      if (!pushEnabled && !live) return;
+      final push = pushEnabled && profile.serverNotifications;
       final uid = AccountService.instance.user?.uid;
       if (uid == null || !await FirebaseService.instance.start()) return;
       if (!ProService.instance.confirmed.value && !_proRefreshed) {
@@ -281,13 +291,14 @@ class PushService {
       if (!ProService.instance.confirmed.value) return;
       final keys = await _serverKeys();
       final given = keys[profile.id];
-      if (!profile.serverNotifications) {
+      if (!push && !live) {
         if (given != null) {
           final windows = await _onWindows(manager, sessionId);
           await manager.exec(
             sessionId,
             windows ? relayRemoveCommandWindows() : relayRemoveCommand,
           );
+          await _removePresence(manager, sessionId);
           await _forget(profile.id, given);
         }
         outcome = MachineCheck.settled;
@@ -303,6 +314,13 @@ class PushService {
           allowMalformed: true,
         );
         if (keyIdAnswered(onServer, given)) {
+          await manager.exec(
+            sessionId,
+            windows
+                ? relayQuietCommandWindows(quiet: !push)
+                : relayQuietCommand(quiet: !push),
+          );
+          await _syncPresence(manager, sessionId, profile.id, live: live);
           outcome = MachineCheck.settled;
           return;
         }
@@ -312,9 +330,11 @@ class PushService {
         sessionId: sessionId,
         label: profile.name,
         profileId: profile.id,
+        quiet: !push,
       );
       if (given != null) await _deleteKey(given);
       await _rememberKey(profile.id, keyId);
+      await _syncPresence(manager, sessionId, profile.id, live: live);
       outcome = MachineCheck.settled;
       unawaited(
         AnalyticsService.instance.capture(AnalyticsEvent.relayServerAdded),
@@ -327,6 +347,65 @@ class PushService {
     } finally {
       _checks.finish(profile.id, outcome);
     }
+  }
+
+  /// Puts live status on the server behind [sessionId] in line with [live]:
+  /// a presence key and the crontab lines when on, neither when off.
+  Future<void> _syncPresence(
+    SshSessionManager manager,
+    String sessionId,
+    String profileId, {
+    required bool live,
+  }) => live
+      ? _ensurePresenceKey(manager, sessionId, profileId)
+      : _removePresence(manager, sessionId);
+
+  /// Takes live status off the server behind [sessionId]: its presence key
+  /// and, on a POSIX server, the crontab lines. Quiet on failure.
+  Future<void> _removePresence(
+    SshSessionManager manager,
+    String sessionId,
+  ) async {
+    try {
+      final windows = await _onWindows(manager, sessionId);
+      await manager.exec(
+        sessionId,
+        windows ? presenceRemoveCommandWindows() : presenceRemoveCommand,
+      );
+      if (!windows) await manager.exec(sessionId, presenceCronRemoveCommand());
+    } catch (_) {}
+  }
+
+  /// Machines already set up are looked at again on their next connect -
+  /// for live status being switched on or off.
+  void recheckMachines() => _checks.reset();
+
+  /// Gives the server behind [sessionId] a presence key when it has none and
+  /// keeps whichever key it holds on this device, so this device can read the
+  /// sessions its agent reports; on a POSIX server also puts the crontab
+  /// lines in place that keep it online while it has no session. Quiet on failure: live presence is a bonus
+  /// on top of the relay, never a reason to call the machine failed.
+  Future<void> _ensurePresenceKey(
+    SshSessionManager manager,
+    String sessionId,
+    String profileId,
+  ) async {
+    try {
+      final windows = await _onWindows(manager, sessionId);
+      final fresh = encodePresenceKey(newPresenceKey());
+      final output = utf8.decode(
+        await manager.exec(
+          sessionId,
+          windows
+              ? presenceKeyCommandWindows(kPresenceUrl, fresh)
+              : presenceKeyCommand(kPresenceUrl, fresh),
+        ),
+        allowMalformed: true,
+      );
+      final key = parsePresenceKey(output);
+      if (key != null) await presenceKeys.remember(profileId, key);
+      if (!windows) await manager.exec(sessionId, presenceCronInstallCommand());
+    } catch (_) {}
   }
 
   /// Makes a relay key for the server behind [sessionId] and writes it
@@ -342,6 +421,7 @@ class PushService {
     required String sessionId,
     required String label,
     String? profileId,
+    bool quiet = false,
   }) async {
     final uid = AccountService.instance.user?.uid;
     if (uid == null || !await FirebaseService.instance.start()) {
@@ -352,8 +432,8 @@ class PushService {
     await manager.exec(
       sessionId,
       windows
-          ? relayInstallCommandWindows(kRelayUrl, key.token)
-          : relayInstallCommand(kRelayUrl, key.token),
+          ? relayInstallCommandWindows(kRelayUrl, key.token, quiet: quiet)
+          : relayInstallCommand(kRelayUrl, key.token, quiet: quiet),
     );
     final written = utf8.decode(
       await manager.exec(
@@ -515,12 +595,30 @@ RelayKey newRelayKey() {
 }
 
 /// The shell command that writes `<url> <token>` to the server's relay file,
-/// created readable by its owner only. Both values are URL-safe, so single
-/// quotes are all the quoting they need.
+/// created readable by its owner only, with ` quiet` after them when the
+/// machine's notifications are off: the agent then keeps the key for live
+/// status but sends no push. Both values are URL-safe, so single quotes are
+/// all the quoting they need.
 @visibleForTesting
-String relayInstallCommand(String url, String token) =>
+String relayInstallCommand(String url, String token, {bool quiet = false}) =>
     "umask 077 && mkdir -p ~/.config/termphin && "
-    "printf '%s %s\\n' '$url' '$token' > ~/.config/termphin/relay";
+    "printf '%s %s${quiet ? ' quiet' : ''}\\n' '$url' '$token' > ~/.config/termphin/relay";
+
+/// Sets or clears the ` quiet` mark on the relay file already there, keeping
+/// its URL and key; does nothing without one. Through `sh`, so the user's
+/// shell does not matter.
+@visibleForTesting
+String relayQuietCommand({required bool quiet}) {
+  final script =
+      'f="\$HOME/.config/termphin/relay"; [ -s "\$f" ] || exit 0; '
+      'set -- \$(cat "\$f"); [ -n "\$2" ] || exit 0; umask 077; '
+      'printf "%s %s${quiet ? ' quiet' : ''}\\n" "\$1" "\$2" > "\$f.tmp" && mv "\$f.tmp" "\$f"';
+  return 'sh -c ${shellQuote(script)}';
+}
+
+/// Deletes the server's presence key.
+@visibleForTesting
+const presenceRemoveCommand = 'rm -f ~/.config/termphin/presence';
 
 /// Prints the id half of the server's relay key and nothing of its secret,
 /// or nothing when there is no key.
@@ -557,19 +655,22 @@ bool unameSaysPosix(String output) {
 /// through [powerShellCommandLine]. The file is restricted to the current
 /// user with icacls, since a Windows file is not owner-only by default.
 @visibleForTesting
-String relayInstallCommandWindows(String url, String token) =>
-    powerShellCommandLine(
-      r'''
+String relayInstallCommandWindows(
+  String url,
+  String token, {
+  bool quiet = false,
+}) => powerShellCommandLine(
+  r'''
 $ProgressPreference = 'SilentlyContinue'
 $dir = Join-Path $env:USERPROFILE '.config\termphin'
 New-Item -ItemType Directory -Force -Path $dir | Out-Null
 $file = Join-Path $dir 'relay'
 Set-Content -Path $file -Value '''
-      "'$url $token'"
-      r''' -NoNewline -Encoding ascii
+  "'$url $token${quiet ? ' quiet' : ''}'"
+  r''' -NoNewline -Encoding ascii
 icacls $file /inheritance:r /grant:r "$($env:USERNAME):F" | Out-Null
 ''',
-    );
+);
 
 /// The Windows twin of [relayKeyIdCommand]: prints the id half of the relay
 /// key, nothing when the file is missing.
@@ -581,6 +682,30 @@ if (Test-Path -LiteralPath $file) {
   $fields = (Get-Content -LiteralPath $file -Raw -ErrorAction SilentlyContinue).Trim() -split ' '
   if ($fields.Count -ge 2) { $fields[1].Split('.')[0] }
 }
+''');
+
+/// The Windows twin of [relayQuietCommand].
+@visibleForTesting
+String relayQuietCommandWindows({required bool quiet}) => powerShellCommandLine(
+  r'''
+$ProgressPreference = 'SilentlyContinue'
+$file = Join-Path $env:USERPROFILE '.config\termphin\relay'
+if (Test-Path -LiteralPath $file) {
+  $fields = (Get-Content -LiteralPath $file -Raw).Trim() -split ' '
+  if ($fields.Count -ge 2) {
+    Set-Content -Path $file -Value "$($fields[0]) $($fields[1])'''
+  '${quiet ? ' quiet' : ''}'
+  r'''" -NoNewline -Encoding ascii
+  }
+}
+''',
+);
+
+/// The Windows twin of [presenceRemoveCommand].
+@visibleForTesting
+String presenceRemoveCommandWindows() => powerShellCommandLine(r'''
+$ProgressPreference = 'SilentlyContinue'
+Remove-Item -Path (Join-Path $env:USERPROFILE '.config\termphin\presence') -Force -ErrorAction SilentlyContinue
 ''');
 
 /// The Windows twin of [relayRemoveCommand].

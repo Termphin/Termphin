@@ -86,18 +86,28 @@ class ProfileAvatarColor {
 
 /// A machine's icon in its colour, on a plain neutral disc: the colour is
 /// carried by the glyph alone, with no tint of the same hue behind it.
+///
+/// The green ring says this device holds a connection to the machine; the
+/// green dot says the machine is online - its agent reports to the presence
+/// backend, or this device is connected to it, which proves the same.
 class ProfileAvatar extends StatelessWidget {
   const ProfileAvatar({
     super.key,
     required this.iconName,
     required this.colorHex,
     this.isActive = false,
+    this.online = false,
+    this.onlineLabel,
     this.size = 42,
   });
 
   final String? iconName;
   final String? colorHex;
   final bool isActive;
+  final bool online;
+
+  /// Read out for the dot when [online] puts it there.
+  final String? onlineLabel;
   final double size;
 
   @override
@@ -124,11 +134,12 @@ class ProfileAvatar extends StatelessWidget {
             color: avatarColor.color,
           ),
         ),
-        if (isActive)
+        if (isActive || online)
           Positioned(
             right: -2,
             bottom: -2,
             child: Container(
+              key: online ? const ValueKey('profileOnlineDot') : null,
               width: 14,
               height: 14,
               decoration: BoxDecoration(
@@ -139,6 +150,9 @@ class ProfileAvatar extends StatelessWidget {
                   width: 2,
                 ),
               ),
+              child: online && onlineLabel != null
+                  ? Semantics(label: onlineLabel)
+                  : null,
             ),
           ),
       ],

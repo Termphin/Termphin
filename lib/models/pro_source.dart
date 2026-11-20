@@ -5,6 +5,7 @@ enum ProSource {
   account('account'),
   settingsNotifications('settings_notifications'),
   syncCard('sync_card'),
+  liveStatus('live_status'),
   longCommandHint('long_command_hint');
 
   const ProSource(this.id);

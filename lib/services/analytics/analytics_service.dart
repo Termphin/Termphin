@@ -24,10 +24,6 @@ const kAnalyticsConsentResetPrefsKey = 'analytics_consent_reset';
 /// used for real by then.
 const _askAfterConnections = 3;
 
-/// Days since the first connection before it is asked: past the first
-/// evening of setting machines up.
-const _askAfterDays = 2;
-
 /// The only events this app ever sends. Deliberately an enum rather than a
 /// free-form string - automatic screen reporting is off and nothing is
 /// logged anywhere but through [AnalyticsService.capture], so this list is
@@ -263,14 +259,10 @@ class AnalyticsService {
   /// by an answer or by [dismissAsk].
   final asking = ValueNotifier<bool>(false);
 
-  /// Clock for the gate in [maybeAsk], swapped in tests.
-  @visibleForTesting
-  static DateTime Function() now = DateTime.now;
-
   /// Puts the question up if it has never been asked or answered and the app
-  /// has been used for real: a few successful connections, spread over a
-  /// couple of days. It is marked asked the moment it shows, so it never
-  /// comes back, answered or not. Returns whether it is up.
+  /// has been used for real: a few successful connections, however soon they
+  /// came. It is marked asked the moment it shows, so it never comes back,
+  /// answered or not. Returns whether it is up.
   Future<bool> maybeAsk() async {
     if (_backend == null) return false;
     final preferences = await SharedPreferences.getInstance();
@@ -279,10 +271,6 @@ class AnalyticsService {
     final connections =
         preferences.getInt(kReviewSuccessfulConnectionsPrefsKey) ?? 0;
     if (connections < _askAfterConnections) return false;
-    final first = preferences.getInt(kReviewFirstConnectionAtPrefsKey);
-    if (first == null) return false;
-    final since = now().difference(DateTime.fromMillisecondsSinceEpoch(first));
-    if (since < const Duration(days: _askAfterDays)) return false;
     await preferences.setBool(kAnalyticsAskedPrefsKey, true);
     asking.value = true;
     return true;

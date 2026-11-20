@@ -11,6 +11,7 @@ import 'package:termphin/services/settings/app_settings.dart';
 import 'package:termphin/services/settings/desktop_settings.dart';
 import 'package:termphin/services/settings/editor_settings.dart';
 import 'package:termphin/services/settings/floating_dock_settings.dart';
+import 'package:termphin/services/settings/live_presence_setting.dart';
 import 'package:termphin/services/settings/lock_settings.dart';
 import 'package:termphin/services/settings/profile_form_settings.dart';
 import 'package:termphin/services/settings/setting.dart';
@@ -43,6 +44,7 @@ List<Setting<Object?>> get _loaded => [
   sidebarWidthSetting,
   commandSuggestionsSetting,
   proTipsSetting,
+  livePresenceSetting,
   sftpShowHiddenSetting,
   sftpFollowTerminalSetting,
   sftpSortFieldSetting,
@@ -267,6 +269,7 @@ final Map<Setting<Object?>, Object?> _alternatives = {
   sidebarWidthSetting: 300.0,
   commandSuggestionsSetting: !commandSuggestionsSetting.fallback,
   proTipsSetting: !proTipsSetting.fallback,
+  livePresenceSetting: !livePresenceSetting.fallback,
   tabBarPositionSetting: TabBarPosition.bottom,
   lockTimeoutSetting: LockTimeout.minutes5,
   closeToTraySetting: !closeToTraySetting.fallback,

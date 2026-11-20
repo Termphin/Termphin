@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:termphin/i18n/strings.g.dart';
@@ -29,11 +30,12 @@ ProviderContainer _signedIn() {
   return container;
 }
 
-ProOffer _offer(String period, {double? amount}) => ProOffer(
+ProOffer _offer(String period, {double? amount, int? trialDays}) => ProOffer(
   package: _FakePackage(),
   price: '',
   period: period,
   amount: amount,
+  trialDays: trialDays,
 );
 
 void main() {
@@ -120,46 +122,49 @@ void main() {
     });
   });
 
-  group('redeem a code', () {
-    setUp(() {
-      SharedPreferences.setMockInitialValues({});
-      AnalyticsService.instance.resetForTest();
-    });
-    tearDown(() => ProService.redeemOverride = null);
+  group('trial', () {
+    setUp(() => SharedPreferences.setMockInitialValues({}));
 
-    testWidgets('signed in, the link hands the code to the store and says '
-        'so to the funnel', (tester) async {
-      await tester.runAsync(() => AnalyticsService.instance.setConsent(true));
-      analyticsRecorder.clear();
-      var redeemed = 0;
-      ProService.redeemOverride = () async => redeemed++;
-
+    testWidgets('a plan with a free trial is the one headline', (tester) async {
       await pumpTestApp(
         tester,
         ProPaywallScreen(
-          source: ProSource.syncCard,
-          offers: [_offer('annual')],
+          source: ProSource.liveStatus,
+          offers: [_offer('annual', trialDays: 7), _offer('monthly')],
         ),
         container: _signedIn(),
       );
       await tester.pump();
-
-      final t = AppLocale.en.buildSync().account.pro;
-      await tester.tap(find.text(t.redeem));
-      await tester.pump();
-
-      expect(redeemed, 1);
-      final opened = analyticsRecorder.events.where(
-        (event) => event.name == AnalyticsEvent.redeemCodeOpened.eventName,
-      );
-      expect(opened.single.parameters, {
-        AnalyticsProperty.source.propertyName: 'sync_card',
-      });
+      expect(find.text('Try Pro free for\u00a07\u00a0days'), findsOneWidget);
+      expect(find.text('More from your servers'), findsNothing);
     });
 
-    testWidgets('a build that cannot take a store code shows no link', (
-      tester,
-    ) async {
+    testWidgets('without one the headline is the tagline', (tester) async {
+      await pumpTestApp(
+        tester,
+        ProPaywallScreen(
+          source: ProSource.liveStatus,
+          offers: [_offer('annual'), _offer('monthly')],
+        ),
+        container: _signedIn(),
+      );
+      await tester.pump();
+      expect(
+        tester.widget<Text>(find.byKey(const ValueKey('paywallHeadline'))).data,
+        'More from your servers',
+      );
+      expect(find.textContaining('free for'), findsNothing);
+    });
+  });
+
+  group('footer', () {
+    setUp(() => SharedPreferences.setMockInitialValues({}));
+    tearDown(() => ProService.redeemOverride = null);
+
+    testWidgets('keeps to restore and the legal links, even where a store '
+        'code could be taken', (tester) async {
+      ProService.redeemOverride = () async {};
+
       await pumpTestApp(
         tester,
         ProPaywallScreen(
@@ -173,23 +178,7 @@ void main() {
       final t = AppLocale.en.buildSync().account.pro;
       expect(find.text(t.restore), findsOneWidget);
       expect(find.text(t.redeem), findsNothing);
-    });
-
-    testWidgets('signed out, there is no link to redeem a code', (
-      tester,
-    ) async {
-      ProService.redeemOverride = () async {};
-
-      await pumpTestApp(
-        tester,
-        const ProPaywallScreen(source: ProSource.syncCard, offers: []),
-      );
-      await tester.pump();
-
-      expect(
-        find.text(AppLocale.en.buildSync().account.pro.redeem),
-        findsNothing,
-      );
+      expect(find.text(t.paywall.supporter), findsNothing);
     });
   });
 }

@@ -244,6 +244,12 @@
     "deleteAnyway": "Delete anyway"
   },
   "terminal": {
+    "control": {
+      "heldBy": "{device} is in control",
+      "heldElsewhere": "Another device is in control",
+      "take": "Take control",
+      "showAll": "Show the whole terminal"
+    },
     "selectDevice": "Pick a machine to connect to",
     "suggestionDismiss": "Hide suggestion",
     "suggestionPick": "pick",
@@ -985,6 +991,17 @@
     "noPreview": "No preview available"
   },
   "session": {
+    "serverOnline": "Online",
+    "openOnDevices": "Open on {devices}",
+    "deviceKindPhone": "Phone",
+    "deviceKindTablet": "Tablet",
+    "deviceKindDesktop": "Computer",
+    "moreDevices": "+{count}",
+    "activityWorking": "Working",
+    "activityWaiting": "Waiting for you",
+    "activityRunning": "Running",
+    "activityLine": "{command} · {state}",
+    "restoresWhenOpened": "Restores when opened",
     "untitled": "Session",
     "rebootRestored": "The remote shell was restarted - reattached in the same directory, previous shell state is gone.",
     "offlineTitle": "Session detached",
@@ -1500,6 +1517,11 @@
     "paragraphs": "text · tap for glyph atlas"
   },
   "account": {
+    "live": {
+      "title": "Live status",
+      "subtitle": "Online machines and what their sessions are doing, without connecting. Adds a line to each machine's crontab.",
+      "proHint": "Online machines and live sessions, without connecting"
+    },
     "section": "Account",
     "signIn": "Sign in",
     "signInSubtitle": "For Pro: notifications from your servers on every device, and sync",
@@ -1563,11 +1585,11 @@
       "tips": "Pro tips",
       "tipsSubtitle": "A rare note about what Pro would do, where it would have helped",
       "paywall": {
-        "titleLead": "Termphin",
-        "titlePro": "Pro",
-        "tagline": "More from the servers you already use.",
+        "tagline": "More from your servers",
         "pushTitle": "Notifications from your servers",
         "pushBody": "A long job finished or an agent needs you: it reaches you even with Termphin closed.",
+        "liveTitle": "Your machines, live",
+        "liveBody": "See which machines are online, which sessions are open and which one is waiting for you, without connecting.",
         "syncTitle": "Sync across your devices",
         "syncBody": "Machines, keys, snippets and groups everywhere, end-to-end encrypted with a passphrase only you know.",
         "supportTitle": "Keep Termphin going",
@@ -1579,7 +1601,11 @@
         "perYear": "{price} a year",
         "perMonth": "{price} a month",
         "yearlyPerMonth": "{price} a month, billed yearly",
-        "save": "Save {percent}%",
+        "saveShort": "{percent}% OFF",
+        "perYearShort": "/yr",
+        "perMonthShort": "/mo",
+        "perMonthCompact": "{price}/mo",
+        "billedMonthly": "Billed monthly",
         "subscribe": "Continue",
         "signInFirst": "Sign in to continue",
         "noOffers": "Prices could not be loaded.",
@@ -1589,7 +1615,7 @@
         "terms": "Terms",
         "privacy": "Privacy",
         "close": "Close",
-        "trialBadge": "{days} days free",
+        "trialHero": "Try Pro free for\u00a0{days}\u00a0days",
         "startTrial": "Try free for {days} days",
         "trialTerms": "Free for {days} days, then {price}. Cancel before it ends and you pay nothing.",
         "nothingToRestore": "No purchase to restore on this account"
@@ -1683,6 +1709,8 @@
     "inPlaceUpdates": "Updating on its own without restarting",
     "wentQuietNotice": "A notification when an agent or program stops and may need you",
     "backgroundNotices": "Notifications while Termphin is in the background on iPhone",
+    "deviceInfo": "Showing your other devices that this session is open here",
+    "control": "Taking control of the session from another device",
     "hint": "A new session has all of them. Programs running here keep running until you close it.",
     "newSession": "Open a new session"
   },

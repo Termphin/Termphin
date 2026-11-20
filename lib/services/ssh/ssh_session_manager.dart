@@ -12,6 +12,7 @@ import '../../models/active_session.dart';
 import '../../models/agent_feature.dart';
 import '../../models/remote_agent_status.dart';
 import '../../models/remote_shell.dart';
+import '../../models/session_control.dart';
 import '../../models/session_tab.dart';
 import '../../models/ssh_profile.dart';
 import '../settings/setting.dart';
@@ -414,6 +415,46 @@ class SshSessionManager extends ChangeNotifier {
   static final presenceBack = Uint8List.fromList(
     utf8.encode('\x1b]5386;back\x07'),
   );
+
+  /// What the app types to take control of a session another device
+  /// holds. The master's attach client takes it out of the input.
+  static final takeControlKeys = Uint8List.fromList(
+    utf8.encode('\x1b]5386;control;take\x07'),
+  );
+
+  /// Takes [sessionId] from the device holding it: the master moves the
+  /// session to this device's size and says so in its next control marker.
+  /// Nothing for a session whose master does not hand control around.
+  void takeControl(String sessionId) {
+    final session = _sessions[sessionId];
+    final service = session?.sshService;
+    if (session == null || service == null || session.dropped) return;
+    if (session.control.value == null) return;
+    service.write(takeControlKeys);
+  }
+
+  /// What this device types to tell an agent master which device it is,
+  /// built by the composition root from the install id and the device's
+  /// kind and name. Null until it is known, and then nothing is sent.
+  Uint8List? deviceAnnouncement;
+
+  /// Tells [session]'s master which device is attached, once per attach -
+  /// the master names its version at the start of every one. Only a master
+  /// that knows the message, [AgentFeature.deviceInfo], is ever sent it: an
+  /// older one would pass it to the shell.
+  void _announceDevice(ActiveSessionView session) {
+    final announcement = deviceAnnouncement;
+    final service = session.sshService;
+    if (announcement == null ||
+        service == null ||
+        session.multiplexer != Multiplexer.termphin ||
+        AgentFeature.missingFor(
+          session.masterVersion,
+        ).contains(AgentFeature.deviceInfo)) {
+      return;
+    }
+    service.write(announcement);
+  }
 
   /// How long notifications stay held after coming back if the marker never
   /// arrives - a master that went down meanwhile sends none.
@@ -859,6 +900,7 @@ class SshSessionManager extends ChangeNotifier {
               resumeFrom: RemoteMuxCommands.agentCanResume(agentVersion)
                   ? resumeFrom
                   : null,
+              control: RemoteMuxCommands.agentCanControl(agentVersion),
             );
       session
         ..multiplexer = backend
@@ -869,7 +911,8 @@ class SshSessionManager extends ChangeNotifier {
 
       session
         ..masterVersion = null
-        ..masterChecked = false;
+        ..masterChecked = false
+        ..control.value = null;
       final replayWaiter = ReplayWaiter(
         enabled: replayRemoteHistory && backend == Multiplexer.termphin,
       );
@@ -885,7 +928,12 @@ class SshSessionManager extends ChangeNotifier {
           session.notifyRebootRestored();
         }
         final master = masterVersionFrom(payload);
-        if (master != null) session.masterVersion = master;
+        if (master != null) {
+          session.masterVersion = master;
+          _announceDevice(session);
+        }
+        final control = SessionControl.parse(payload);
+        if (control != null) session.control.value = control;
         _handleCwdMarker(session, payload);
       });
       session.serviceOutputSubscription = service.output.listen((bytes) {
@@ -1216,6 +1264,35 @@ class SshSessionManager extends ChangeNotifier {
     return stale.length;
   }
 
+  /// Drops the offline tabs for [profileId] whose `termphin-agent` session
+  /// the agent's latest presence report no longer lists - a session ended
+  /// on the server or from another device. Tabs of other multiplexers stay,
+  /// since the agent reports only its own sessions, and so does any tab with
+  /// a live transport. Returns how many went.
+  int pruneReportedSessions(String profileId, Set<String> alive) {
+    final stale = _tabs.values
+        .where(
+          (tab) =>
+              tab.profileId == profileId &&
+              tab.multiplexer == Multiplexer.termphin &&
+              !alive.contains(tab.muxName) &&
+              (_sessions[tab.tabId]?.dropped ?? true),
+        )
+        .map((tab) => tab.tabId)
+        .toList();
+    for (final tabId in stale) {
+      _tabs.remove(tabId);
+      _sessions.remove(tabId)?.dispose();
+      _sessionOrder.remove(tabId);
+    }
+    if (stale.isNotEmpty) {
+      unawaited(_saveTabs());
+      unawaited(_saveSessionUiState());
+      notifyListeners();
+    }
+    return stale.length;
+  }
+
   /// Kills [name] on the server. The tabs bound to it are forgotten before
   /// the server is asked, so they leave the screen without waiting on a
   /// connection that may take seconds to open.
@@ -1375,11 +1452,14 @@ class SshSessionManager extends ChangeNotifier {
   ///
   /// A dropped session still writes - nothing is listening on the far end
   /// anyway - but skips noting the input, since keys typed into a dead
-  /// transport go nowhere and should not be drawn as if they had.
+  /// transport go nowhere and should not be drawn as if they had. Nothing
+  /// is sent while another device holds the session: its master would drop
+  /// it, and predictive echo would draw keys that never land.
   void sendInput(String sessionId, Uint8List data) {
     final session = _sessions[sessionId];
     final service = session?.sshService;
     if (session == null || service == null) return;
+    if (session.watching) return;
     service.write(data);
     if (session.dropped) return;
     session.noteInput(data);

@@ -23,6 +23,7 @@ import '../ui/app_notifications.dart';
 import 'frame_stats_overlay.dart';
 import 'terminal_rendering.dart';
 import 'terminal_search_bar.dart';
+import 'watching_zoom.dart';
 
 export '../../services/terminal/session_terminal.dart'
     show kTerminalScrollbackLines;
@@ -63,6 +64,14 @@ double terminalBottomPadding({
 /// selection claims the pointer here instead, and the swipe checks the flag
 /// on every move.
 final ValueNotifier<bool> terminalSelectionDragActive = ValueNotifier(false);
+
+/// Whether a pane watching another device's session is zoomed in. A finger
+/// dragged across it pans the view, so the session swipe in
+/// `TerminalScreen` - which reads raw pointers like it does for
+/// [terminalSelectionDragActive] - must leave it alone.
+final ValueNotifier<bool> terminalWatchingZoomedIn = ValueNotifier(false);
+
+final Set<Object> _zoomedPanes = {};
 
 class TerminalPaneController {
   _TerminalPaneState? _state;
@@ -122,6 +131,11 @@ class TerminalPaneController {
 
   void enterFollowMode() => _state?.scrollToBottom();
 
+  /// Test hook for [_TerminalPaneState._revealWatchingCell].
+  @visibleForTesting
+  void revealWatchingCell(int column, int row) =>
+      _state?._revealWatchingCell(column, row);
+
   void refreshTerminal() => _state?.refreshTerminal();
 
   /// The cursor's current on-screen position, in the coordinate space of the
@@ -175,6 +189,8 @@ class TerminalPane extends StatefulWidget {
     this.onLinkDetected,
     this.onReady,
     this.onKeyEvent,
+    this.fixedSize,
+    this.holderIcon,
   });
 
   /// The session's terminal, which outlives this pane: mounting draws what
@@ -201,12 +217,28 @@ class TerminalPane extends StatefulWidget {
   /// reaches the shell.
   final FocusOnKeyEventCallback? onKeyEvent;
 
+  /// The size another device holds the session at, while this one only
+  /// watches it. The terminal keeps that size instead of following the
+  /// pane, is drawn scaled down to fit when it is wider or taller, and
+  /// takes no typing; null gives the pane back its own size.
+  final ({int columns, int rows})? fixedSize;
+
+  /// What the device holding the session is, drawn as a small badge on its
+  /// cursor while this pane watches, so it is plain where the typing
+  /// happens. The badge is where an avatar goes once sessions are shared
+  /// between people whose accounts are known.
+  final IconData? holderIcon;
+
   @override
   State<TerminalPane> createState() => _TerminalPaneState();
 }
 
 class _TerminalPaneState extends State<TerminalPane> {
   final _terminalViewKey = GlobalKey<TerminalViewState>();
+
+  /// The stack the holder's pin is placed in, which its position is
+  /// measured against through whatever zoom and pan lie in between.
+  final _watchingOverlayKey = GlobalKey();
   final _terminalController = TerminalController();
   final _scrollController = ScrollController();
   final _focusNode = FocusNode();
@@ -271,6 +303,7 @@ class _TerminalPaneState extends State<TerminalPane> {
     widget.controller?._attach(this);
 
     _listenToInput();
+    _applyFixedSize();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       widget.onReady?.call();
@@ -288,11 +321,91 @@ class _TerminalPaneState extends State<TerminalPane> {
       oldWidget.controller?._detach(this);
       widget.controller?._attach(this);
     }
+    if (oldWidget.fixedSize != widget.fixedSize) {
+      if (widget.fixedSize == null) {
+        _watchingZoom.reset();
+        _measuredForFontSize = null;
+        _syncZoomedIn();
+      } else if (oldWidget.fixedSize == null) {
+        final cell = _terminalViewKey.currentState?.renderTerminal.cellSize;
+        if (cell != null) _watchingZoom.seedBaseCellSize(cell);
+      }
+      _applyFixedSize();
+    }
+  }
+
+  /// Puts the terminal at [TerminalPane.fixedSize]. Once that is gone the
+  /// view sizes it to the pane again on its next layout.
+  void _applyFixedSize() {
+    final fixed = widget.fixedSize;
+    if (fixed == null) return;
+    _terminal.resize(fixed.columns, fixed.rows);
+  }
+
+  /// Where the holder's cursor is drawn in this watching pane, with the
+  /// size of one cell there; null while the cursor is hidden - a full-screen
+  /// program that hides it is not typing at it - or not laid out yet.
+  Rect? _holderCursor() {
+    if (widget.fixedSize == null || !_terminal.cursorVisibleMode) return null;
+    final render = _terminalViewKey.currentState?.renderTerminal;
+    if (render == null || !render.hasSize) return null;
+    final overlay = _watchingOverlayKey.currentContext?.findRenderObject();
+    if (overlay is! RenderBox || !overlay.hasSize) return null;
+    final cell = render.cellSize;
+    final local = render.cursorOffset;
+    final toOverlay = render.getTransformTo(overlay);
+    return MatrixUtils.transformRect(toOverlay, local & cell);
+  }
+
+  /// Keeps [terminalWatchingZoomedIn] true while this pane is zoomed in,
+  /// set after the frame since the screen listening to it builds too.
+  void _syncZoomedIn() {
+    final zoomed = widget.fixedSize != null && _watchingZoom.isZoomedIn;
+    if (zoomed == _zoomedPanes.contains(this)) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final now =
+          mounted && widget.fixedSize != null && _watchingZoom.isZoomedIn;
+      if (now) {
+        _zoomedPanes.add(this);
+      } else {
+        _zoomedPanes.remove(this);
+      }
+      terminalWatchingZoomedIn.value = _zoomedPanes.isNotEmpty;
+    });
+  }
+
+  /// Scrolls the zoomed watching viewport so cell ([column], [row]) is visible
+  /// on screen.
+  void _revealWatchingCell(int column, int row) {
+    if (widget.fixedSize == null) return;
+    setState(() => _watchingZoom.revealCell(column, row));
+  }
+
+  void _scheduleWatchingMeasure() {
+    if (_watchingMeasureScheduled) return;
+    final fontSize = _watchingZoom.renderedFontSize;
+    if (_watchingZoom.hasMeasuredCellSize && _measuredForFontSize == fontSize) {
+      return;
+    }
+    _watchingMeasureScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _watchingMeasureScheduled = false;
+      if (!mounted || widget.fixedSize == null) return;
+      final render = _terminalViewKey.currentState?.renderTerminal;
+      if (render == null || !render.hasSize) return;
+      _measuredForFontSize = _watchingZoom.renderedFontSize;
+      if (_watchingZoom.updateMeasuredCellSize(render.cellSize)) {
+        setState(() {});
+      }
+    });
   }
 
   @override
   void dispose() {
     _bellTimer?.cancel();
+    if (_zoomedPanes.remove(this)) {
+      terminalWatchingZoomedIn.value = _zoomedPanes.isNotEmpty;
+    }
     widget.controller?._detach(this);
     _autoScrollTimer?.cancel();
     _searchRefresh?.cancel();
@@ -455,18 +568,28 @@ class _TerminalPaneState extends State<TerminalPane> {
     setState(() {
       _fontSize = value;
       _scalePreviewFontSize = null;
+      _watchingZoom.invalidateCellMetrics();
+      _measuredForFontSize = null;
     });
   }
 
   void setFontFamily(String fontFamily) {
     if (_fontFamily == fontFamily) return;
-    setState(() => _fontFamily = fontFamily);
+    setState(() {
+      _fontFamily = fontFamily;
+      _watchingZoom.invalidateCellMetrics();
+      _measuredForFontSize = null;
+    });
   }
 
   void setLineHeight(double lineHeight) {
     final value = lineHeight.clamp(1.0, 2.0);
     if ((_lineHeight - value).abs() < 0.001) return;
-    setState(() => _lineHeight = value);
+    setState(() {
+      _lineHeight = value;
+      _watchingZoom.invalidateCellMetrics();
+      _measuredForFontSize = null;
+    });
   }
 
   void setSidePadding(double padding) {
@@ -768,14 +891,41 @@ class _TerminalPaneState extends State<TerminalPane> {
     });
   }
 
-  /// Ctrl and the wheel - Cmd on a Mac - is the pinch of a desktop.
-  void _onPointerSignal(PointerSignalEvent event) {
-    if (!_desktop || event is! PointerScrollEvent) return;
+  bool get _isZoomModifierPressed {
     final keyboard = HardwareKeyboard.instance;
-    final held = isMacOSPlatform
-        ? keyboard.isMetaPressed
-        : keyboard.isControlPressed;
-    if (!held || event.scrollDelta.dy == 0) return;
+    return isMacOSPlatform ? keyboard.isMetaPressed : keyboard.isControlPressed;
+  }
+
+  /// Ctrl and the wheel - Cmd on a Mac - is the pinch of a desktop, and
+  /// trackpad pinch arrives as [PointerScaleEvent].
+  void _onPointerSignal(PointerSignalEvent event) {
+    if (!_desktop) return;
+    if (widget.fixedSize != null) {
+      if (event is PointerScaleEvent) {
+        if (event.scale <= 0 || (event.scale - 1.0).abs() < 1e-6) return;
+        setState(
+          () => _watchingZoom.zoomAround(
+            factor: event.scale,
+            focalInPane: event.localPosition,
+          ),
+        );
+        return;
+      }
+      if (event is PointerScrollEvent &&
+          _isZoomModifierPressed &&
+          event.scrollDelta.dy != 0) {
+        final factor = event.scrollDelta.dy < 0 ? 1.15 : 1 / 1.15;
+        setState(
+          () => _watchingZoom.zoomAround(
+            factor: factor,
+            focalInPane: event.localPosition,
+          ),
+        );
+      }
+      return;
+    }
+    if (event is! PointerScrollEvent) return;
+    if (!_isZoomModifierPressed || event.scrollDelta.dy == 0) return;
     final next = (_fontSize + (event.scrollDelta.dy < 0 ? 1 : -1))
         .clamp(8.0, 24.0)
         .toDouble();
@@ -1047,7 +1197,7 @@ class _TerminalPaneState extends State<TerminalPane> {
   @override
   Widget build(BuildContext context) {
     final terminal = LayoutBuilder(
-      builder: (context, constraints) => _build(context, constraints.maxHeight),
+      builder: (context, constraints) => _build(context, constraints.biggest),
     );
     return Column(
       children: [
@@ -1096,10 +1246,30 @@ class _TerminalPaneState extends State<TerminalPane> {
   /// prefix, literal next) and were being swallowed as select-all and
   /// paste. Selection handles are for a finger; a mouse drags the selection
   /// itself, so a desktop draws none.
-  Widget _build(BuildContext context, double availableHeight) {
+  Widget _build(BuildContext context, Size viewportSize) {
+    final availableHeight = viewportSize.height;
+    final fixed = widget.fixedSize;
+    final baseBottomPadding = terminalBottomPadding(
+      availableHeight: availableHeight,
+      lineHeight: _lineHeight,
+      cellHeight: _fontSize * _lineHeight,
+    );
+    if (fixed != null) {
+      _watchingZoom.configure(
+        fixedSize: fixed,
+        viewportSize: viewportSize,
+        baseFontSize: _fontSize,
+        lineHeight: _lineHeight,
+        sidePadding: _sidePadding,
+        bottomPadding: baseBottomPadding,
+      );
+      _scheduleWatchingMeasure();
+    }
     final view = TerminalView(
       _terminal,
       key: _terminalViewKey,
+      autoResize: fixed == null,
+      readOnly: fixed != null,
       controller: _terminalController,
       onKeyEvent: _onKeyEvent,
       scrollController: _scrollController,
@@ -1109,7 +1279,7 @@ class _TerminalPaneState extends State<TerminalPane> {
       theme: _terminalTheme,
       textScaler: app_theme.AppTheme.terminalTextScaler(context),
       textStyle: TerminalStyle(
-        fontSize: _fontSize,
+        fontSize: fixed == null ? _fontSize : _watchingZoom.renderedFontSize,
         height: _lineHeight,
         fontFamily: _fontFamily,
         fontFamilyFallback: const [
@@ -1131,16 +1301,19 @@ class _TerminalPaneState extends State<TerminalPane> {
           'sans-serif',
         ],
       ),
-      padding: EdgeInsets.fromLTRB(
-        _sidePadding,
-        0,
-        _sidePadding,
-        terminalBottomPadding(
-          availableHeight: availableHeight,
-          lineHeight: _lineHeight,
-          cellHeight: _fontSize * _lineHeight,
-        ),
-      ),
+      padding: fixed == null
+          ? EdgeInsets.fromLTRB(
+              _sidePadding,
+              0,
+              _sidePadding,
+              baseBottomPadding,
+            )
+          : EdgeInsets.fromLTRB(
+              _watchingZoom.renderedSidePadding,
+              0,
+              _watchingZoom.renderedSidePadding,
+              _watchingZoom.renderedBottomPadding,
+            ),
       autofocus: false,
       deleteDetection: true,
       keyboardType: TextInputType.text,
@@ -1172,43 +1345,45 @@ class _TerminalPaneState extends State<TerminalPane> {
               onPointerMove: _onPointerMove,
               onPointerUp: _onPointerUp,
               onPointerCancel: (_) => _tapPointer = null,
-              child: GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onScaleStart: (_) {
-                  _scaleStartFontSize = _fontSize;
-                  _scalePreviewFontSize = null;
-                },
-                onScaleUpdate: (details) {
-                  if (details.pointerCount < 2) return;
-                  final value = (_scaleStartFontSize * details.scale).clamp(
-                    8.0,
-                    24.0,
-                  );
-                  final preview = _scalePreviewFontSize ?? _fontSize;
-                  if ((preview - value).abs() < 0.01) return;
-                  setState(() => _scalePreviewFontSize = value);
-                },
-                onScaleEnd: (_) {
-                  final value = _scalePreviewFontSize;
-                  if (value == null) return;
-                  setState(() {
-                    _fontSize = value;
-                    _scalePreviewFontSize = null;
-                  });
-                  widget.onFontSizeChanged?.call(value);
-                },
-                child: Transform.scale(
-                  scale: (_scalePreviewFontSize ?? _fontSize) / _fontSize,
-                  child: _desktop
-                      ? Actions(
-                          actions: {
-                            CopyIfSelectedIntent: _CopyIfSelectedAction(this),
-                          },
-                          child: view,
-                        )
-                      : view,
-                ),
-              ),
+              child: fixed != null
+                  ? _buildWatchingView(view)
+                  : GestureDetector(
+                      behavior: HitTestBehavior.translucent,
+                      onScaleStart: (_) {
+                        _scaleStartFontSize = _fontSize;
+                        _scalePreviewFontSize = null;
+                      },
+                      onScaleUpdate: (details) {
+                        if (details.pointerCount < 2) return;
+                        final value = (_scaleStartFontSize * details.scale)
+                            .clamp(8.0, 24.0);
+                        final preview = _scalePreviewFontSize ?? _fontSize;
+                        if ((preview - value).abs() < 0.01) return;
+                        setState(() => _scalePreviewFontSize = value);
+                      },
+                      onScaleEnd: (_) {
+                        final value = _scalePreviewFontSize;
+                        if (value == null) return;
+                        setState(() {
+                          _fontSize = value;
+                          _scalePreviewFontSize = null;
+                        });
+                        widget.onFontSizeChanged?.call(value);
+                      },
+                      child: Transform.scale(
+                        scale: (_scalePreviewFontSize ?? _fontSize) / _fontSize,
+                        child: _desktop
+                            ? Actions(
+                                actions: {
+                                  CopyIfSelectedIntent: _CopyIfSelectedAction(
+                                    this,
+                                  ),
+                                },
+                                child: view,
+                              )
+                            : view,
+                      ),
+                    ),
             ),
           ),
 
@@ -1299,6 +1474,304 @@ class _TerminalPaneState extends State<TerminalPane> {
 
   double _scaleStartFontSize = 12;
   double? _scalePreviewFontSize;
+
+  final _watchingZoom = WatchingZoom();
+  Offset _lastWatchingFocal = Offset.zero;
+  Offset _doubleTapPosition = Offset.zero;
+  double? _measuredForFontSize;
+  bool _watchingMeasureScheduled = false;
+
+  /// Wraps [view] with watching zoom/pan transforms and gestures.
+  ///
+  /// While zoomed out to fit, single-finger drags pass through to the
+  /// terminal (scrollback, selection) and two-finger pinches zoom. Once zoomed
+  /// in, pointers to [view] are blocked so one-finger drags pan cleanly.
+  Widget _buildWatchingView(Widget view) {
+    final gridSize = _watchingZoom.committedGridSize;
+    final sizedView = SizedBox(
+      width: gridSize.width,
+      height: gridSize.height,
+      child: IgnorePointer(ignoring: _watchingZoom.isZoomedIn, child: view),
+    );
+    final transformed = ClipRect(
+      child: OverflowBox(
+        alignment: Alignment.topLeft,
+        minWidth: 0,
+        maxWidth: double.infinity,
+        minHeight: 0,
+        maxHeight: double.infinity,
+        child: Transform.translate(
+          offset: -_watchingZoom.panOffset,
+          child: Transform.scale(
+            scale: _watchingZoom.displayScale,
+            alignment: Alignment.topLeft,
+            child: sizedView,
+          ),
+        ),
+      ),
+    );
+    final gestures = <Type, GestureRecognizerFactory>{
+      _WatchingScaleGestureRecognizer:
+          GestureRecognizerFactoryWithHandlers<_WatchingScaleGestureRecognizer>(
+            () => _WatchingScaleGestureRecognizer(
+              allowSingleFingerPan: _watchingZoom.isZoomedIn,
+              debugOwner: this,
+            ),
+            (_WatchingScaleGestureRecognizer instance) {
+              instance
+                ..allowSingleFingerPan = _watchingZoom.isZoomedIn
+                ..onStart = (details) {
+                  _watchingZoom.startGesture();
+                  _lastWatchingFocal = details.localFocalPoint;
+                }
+                ..onUpdate = (details) {
+                  if (details.pointerCount < 2 && !_watchingZoom.isZoomedIn) {
+                    return;
+                  }
+                  setState(() {
+                    _watchingZoom.updateGesture(
+                      scale: details.scale,
+                      focalInPane: details.localFocalPoint,
+                      previousFocalInPane: _lastWatchingFocal,
+                    );
+                    _lastWatchingFocal = details.localFocalPoint;
+                  });
+                }
+                ..onEnd = (_) {
+                  setState(() => _watchingZoom.endGesture());
+                };
+            },
+          ),
+      DoubleTapGestureRecognizer:
+          GestureRecognizerFactoryWithHandlers<DoubleTapGestureRecognizer>(
+            () => DoubleTapGestureRecognizer(debugOwner: this),
+            (DoubleTapGestureRecognizer instance) {
+              instance
+                ..onDoubleTapDown = (details) {
+                  _doubleTapPosition = details.localPosition;
+                }
+                ..onDoubleTap = () {
+                  setState(
+                    () => _watchingZoom.toggleDoubleTap(_doubleTapPosition),
+                  );
+                };
+            },
+          ),
+    };
+    _syncZoomedIn();
+    final interactive = Stack(
+      children: [
+        Positioned.fill(
+          child: RawGestureDetector(
+            behavior: _watchingZoom.isZoomedIn
+                ? HitTestBehavior.opaque
+                : HitTestBehavior.translucent,
+            gestures: gestures,
+            child: Stack(
+              key: _watchingOverlayKey,
+              children: [
+                Positioned.fill(child: transformed),
+                _CursorBadge(
+                  terminal: _terminal,
+                  scroll: _scrollController,
+                  icon: widget.holderIcon,
+                  locate: _holderCursor,
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (_watchingZoom.isZoomedIn)
+          Positioned(
+            right: app_theme.AppTheme.space12,
+            bottom: app_theme.AppTheme.space12,
+            child: _FitButton(onPressed: () => setState(_watchingZoom.fit)),
+          ),
+      ],
+    );
+    return _desktop
+        ? Actions(
+            actions: {CopyIfSelectedIntent: _CopyIfSelectedAction(this)},
+            child: interactive,
+          )
+        : interactive;
+  }
+}
+
+/// The holder's pin on its cursor: an accent circle with its device's icon
+/// and a point aimed down at the cursor cell, standing just above it so the
+/// character being typed stays visible. Follows output and scrolling.
+class _CursorBadge extends StatefulWidget {
+  const _CursorBadge({
+    required this.terminal,
+    required this.scroll,
+    required this.icon,
+    required this.locate,
+  });
+
+  final Terminal terminal;
+  final ScrollController scroll;
+  final IconData? icon;
+  final Rect? Function() locate;
+
+  @override
+  State<_CursorBadge> createState() => _CursorBadgeState();
+}
+
+class _CursorBadgeState extends State<_CursorBadge> {
+  @override
+  void initState() {
+    super.initState();
+    widget.terminal.addListener(_moved);
+    widget.scroll.addListener(_moved);
+  }
+
+  @override
+  void dispose() {
+    widget.terminal.removeListener(_moved);
+    widget.scroll.removeListener(_moved);
+    super.dispose();
+  }
+
+  Rect? _shown;
+
+  void _moved() {
+    if (mounted) setState(() {});
+  }
+
+  /// The cursor is measured on the layout of the frame before, and a zoom
+  /// that just re-rendered the terminal moves it after that: checked again
+  /// once the frame is laid out, the pin catches up rather than staying a
+  /// frame behind until the next output.
+  void _recheckAfterLayout() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && widget.locate() != _shown) setState(() {});
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cursor = widget.locate();
+    _shown = cursor;
+    _recheckAfterLayout();
+    if (cursor == null) return const SizedBox.shrink();
+    final colors = context.colors;
+    const head = app_theme.AppTheme.icon20;
+    const tail = Size(app_theme.AppTheme.space8, app_theme.AppTheme.space6);
+    return Positioned(
+      key: const ValueKey('holderCursor'),
+      left: cursor.center.dx - head / 2,
+      top: cursor.top - head - tail.height + app_theme.AppTheme.space2,
+      child: IgnorePointer(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: head,
+              height: head,
+              decoration: BoxDecoration(
+                color: colors.primary,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                widget.icon ?? PhosphorIconsFill.user,
+                size: app_theme.AppTheme.icon12,
+                color: colors.onPrimary,
+              ),
+            ),
+            Transform.translate(
+              offset: const Offset(0, -app_theme.AppTheme.space2),
+              child: CustomPaint(
+                size: tail,
+                painter: _PinTailPainter(colors.primary),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The point of the pin, aimed down at the cursor cell.
+class _PinTailPainter extends CustomPainter {
+  _PinTailPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path()
+      ..moveTo(0, 0)
+      ..lineTo(size.width, 0)
+      ..lineTo(size.width / 2, size.height)
+      ..close();
+    canvas.drawPath(path, Paint()..color = color);
+  }
+
+  @override
+  bool shouldRepaint(_PinTailPainter oldDelegate) => oldDelegate.color != color;
+}
+
+/// Zooms a watching pane all the way out again, for when pinching back
+/// down is more work than a tap.
+class _FitButton extends StatelessWidget {
+  const _FitButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Material(
+      key: const ValueKey('watchingFit'),
+      color: colors.surfaceElevated,
+      shape: CircleBorder(
+        side: BorderSide(
+          color: colors.surfaceBorder,
+          width: app_theme.AppTheme.hairline,
+        ),
+      ),
+      child: IconButton(
+        tooltip: Translations.of(context).terminal.control.showAll,
+        icon: Icon(
+          PhosphorIconsRegular.arrowsIn,
+          size: app_theme.AppTheme.icon20,
+          color: colors.textPrimary,
+        ),
+        onPressed: onPressed,
+      ),
+    );
+  }
+}
+
+/// Scale recogniser that stays out of single-finger drags at fitted zoom so
+/// scrollback scrolling and selection still reach `TerminalView`.
+class _WatchingScaleGestureRecognizer extends ScaleGestureRecognizer {
+  _WatchingScaleGestureRecognizer({
+    required this.allowSingleFingerPan,
+    super.debugOwner,
+  });
+
+  bool allowSingleFingerPan;
+
+  @override
+  void handleEvent(PointerEvent event) {
+    super.handleEvent(event);
+    if (event is PointerDownEvent && pointerCount >= 2) {
+      super.resolve(GestureDisposition.accepted);
+    }
+  }
+
+  @override
+  void resolve(GestureDisposition disposition) {
+    if (!allowSingleFingerPan &&
+        disposition == GestureDisposition.accepted &&
+        pointerCount < 2) {
+      return;
+    }
+    super.resolve(disposition);
+  }
 }
 
 class _SelectionGeometry {
