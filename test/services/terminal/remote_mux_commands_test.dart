@@ -41,10 +41,10 @@ void main() {
       expect(script, contains('attach --control "work"'));
     });
 
-    test('only an agent from 0.19.8 on is asked to join control', () {
-      expect(RemoteMuxCommands.agentCanControl('0.19.8'), isTrue);
+    test('only an agent from 0.20.0 on is asked to join control', () {
       expect(RemoteMuxCommands.agentCanControl('0.20.0'), isTrue);
-      expect(RemoteMuxCommands.agentCanControl('0.19.7'), isFalse);
+      expect(RemoteMuxCommands.agentCanControl('0.21.0'), isTrue);
+      expect(RemoteMuxCommands.agentCanControl('0.19.8'), isFalse);
       expect(RemoteMuxCommands.agentCanControl(null), isFalse);
       expect(RemoteMuxCommands.agentCanControl('dev'), isFalse);
     });

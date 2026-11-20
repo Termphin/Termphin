@@ -20,14 +20,12 @@ enum AgentFeature {
   backgroundNotices('0.18.0'),
 
   /// Told which device is attached, so the user's other devices can show it
-  /// on the session's row. The agent ships it as 0.20.0; 0.19.4 is its
-  /// development build, and this moves to 0.20.0 with the release.
-  deviceInfo('0.19.4'),
+  /// on the session's row.
+  deviceInfo('0.20.0'),
 
   /// Lets one attached device hold the session while the others watch it
-  /// at its size, until one of them takes control. Development build of
-  /// 0.20.0, like [deviceInfo].
-  control('0.19.8');
+  /// at its size, until one of them takes control.
+  control('0.20.0');
 
   const AgentFeature(this.since);
 

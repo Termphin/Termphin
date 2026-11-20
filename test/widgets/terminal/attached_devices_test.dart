@@ -95,9 +95,9 @@ void main() {
     final semantics = tester.ensureSemantics();
     await pump(tester, [
       _device('this-device', PresenceDeviceKind.phone, 'Android'),
-      _device('pc', PresenceDeviceKind.desktop, 'mbpc'),
+      _device('pc', PresenceDeviceKind.desktop, 'Office PC'),
     ]);
-    expect(find.bySemanticsLabel('Open on mbpc'), findsOneWidget);
+    expect(find.bySemanticsLabel('Open on Office PC'), findsOneWidget);
     semantics.dispose();
   });
 
@@ -106,7 +106,7 @@ void main() {
   ) async {
     await pump(
       tester,
-      [_device('pc', PresenceDeviceKind.desktop, 'mbpc')],
+      [_device('pc', PresenceDeviceKind.desktop, 'Office PC')],
       user: const AccountUser(
         uid: 'u',
         provider: AccountProvider.google,
@@ -143,7 +143,7 @@ void main() {
     ]);
     expect(find.byKey(const ValueKey('attachedDevices')), findsNothing);
     await pump(tester, [
-      _device('pc', PresenceDeviceKind.desktop, 'mbpc'),
+      _device('pc', PresenceDeviceKind.desktop, 'Office PC'),
     ], muxName: 'other');
     expect(find.byKey(const ValueKey('attachedDevices')), findsNothing);
   });

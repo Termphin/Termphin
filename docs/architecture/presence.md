@@ -66,7 +66,7 @@ holds a connection.
 
 ## Who is attached
 
-When a master from 0.19.4 (shipping as 0.20.0) names its version, `SshSessionManager` types
+When a master from 0.20.0 names its version, `SshSessionManager` types
 `ESC ] 5386;device;<install id>;<kind>;<base64url name> BEL`
 (`presenceDeviceAnnouncement`, built in `main.dart`: the host name on a
 computer, the kind of device elsewhere). The attach client takes it out of

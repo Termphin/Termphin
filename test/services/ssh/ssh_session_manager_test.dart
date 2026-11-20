@@ -253,10 +253,10 @@ void main() {
     ];
 
     Future<ActiveSessionView> open() async {
-      remoteAgentService.remoteVersion = '0.19.8';
+      remoteAgentService.remoteVersion = '0.20.0';
       backend
         ..markerWithoutReplay = true
-        ..masterVersion = '0.19.8';
+        ..masterVersion = '0.20.0';
       await manager.startSession(profileFixture(), sessionId: 'shared');
       await Future<void>.delayed(Duration.zero);
       return manager.getSession('shared')!;

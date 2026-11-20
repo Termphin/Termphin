@@ -25,11 +25,10 @@ void main() {
         AgentFeature.deviceInfo,
         AgentFeature.control,
       ]);
-      expect(AgentFeature.missingFor('0.19.4'), [AgentFeature.control]);
     });
 
     test('a current master misses nothing', () {
-      expect(AgentFeature.missingFor('0.19.8'), isEmpty);
+      expect(AgentFeature.missingFor('0.20.0'), isEmpty);
       expect(AgentFeature.missingFor('1.0.0'), isEmpty);
     });
 

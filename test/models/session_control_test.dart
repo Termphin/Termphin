@@ -35,6 +35,10 @@ void main() {
       expect(SessionControl.parse('5384;termphin-control;you;0;20;'), isNull);
       expect(SessionControl.parse('5384;termphin-control;you;x;20;'), isNull);
       expect(SessionControl.parse('5384;termphin-control;you;40'), isNull);
+      expect(
+        SessionControl.parse('5384;termphin-control;other;99999;99999;'),
+        isNull,
+      );
     });
   });
 }

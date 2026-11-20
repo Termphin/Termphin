@@ -58,13 +58,13 @@ void main() {
           'name': 'main',
           'created': 1,
           'clients': 2,
-          'devices': ['id1;desktop;bWJwYw', 'garbage', 7],
+          'devices': ['id1;desktop;T2ZmaWNlIFBD', 'garbage', 7],
         },
         {'name': 'old', 'created': 1, 'clients': 0},
       ],
     });
     final sessions = openPresenceState(_key(), _keyId, state)!.sessions;
-    expect(sessions[0].devices.single.name, 'mbpc');
+    expect(sessions[0].devices.single.name, 'Office PC');
     expect(sessions[0].devices.single.kind, PresenceDeviceKind.desktop);
     expect(sessions[1].devices, isEmpty);
   });

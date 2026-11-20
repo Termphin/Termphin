@@ -28,6 +28,13 @@ class SessionControl {
 
   static const _prefix = '5384;termphin-control;';
 
+  /// The largest size taken from a marker. The marker travels in the
+  /// session's output, where any program could print one; a size past what
+  /// a real screen holds would have this device build a terminal of
+  /// millions of cells.
+  static const maxColumns = 1000;
+  static const maxRows = 1000;
+
   /// Reads `5384;termphin-control;<you|other>;<cols>;<rows>;<device>`; null
   /// for any other payload.
   static SessionControl? parse(String payload) {
@@ -43,6 +50,7 @@ class SessionControl {
     final rows = int.tryParse(parts[2]);
     if (holds == null || columns == null || rows == null) return null;
     if (columns < 1 || rows < 1) return null;
+    if (columns > maxColumns || rows > maxRows) return null;
     final description = parts.sublist(3).join(';');
     return SessionControl(
       holds: holds,

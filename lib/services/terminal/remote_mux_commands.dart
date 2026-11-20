@@ -68,7 +68,7 @@ class RemoteMuxCommands {
   };
 
   /// The first agent that takes `--control`.
-  static const controlSinceVersion = '0.19.8';
+  static const controlSinceVersion = '0.20.0';
 
   /// Whether an agent at [version] understands `--control`. One that
   /// predates it reads the flag as the session name and fails the attach.
