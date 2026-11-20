@@ -513,6 +513,7 @@ class AppTheme {
   static const double font20 = 20;
   static const double font26 = 26;
   static const double font30 = 30;
+  static const double font40 = 40;
 
   /// Icon sizes. Values not on this scale snap to the nearest step;
   /// ties snap toward the smaller value.
@@ -545,6 +546,11 @@ class AppTheme {
 
   /// The wrong-PIN shake: long enough to read as a shake, not a flinch.
   static Duration get motionShake => _motion(420);
+
+  /// One beat of a pulse that says something is going on - a session at
+  /// work. Not scaled down on a desktop like the transitions above: a
+  /// repeating animation of zero length would only spin.
+  static const Duration motionPulse = Duration(milliseconds: 1100);
 
   /// What a dialog or a popup menu opens and closes with: nothing on a
   /// desktop, Material's own elsewhere.
@@ -665,6 +671,9 @@ class AppTheme {
   /// Geist is used throughout the interface; terminal content stays monospace.
   static const String headingFamily = 'Geist';
   static const String uiFamily = 'Geist';
+
+  /// For a single headline that should stand out, the paywall's.
+  static const String displayFamily = 'HubotSans';
 
   /// How much smaller the interface's text is drawn on a desktop: 13 where a
   /// phone has 14. A screen at arm's length and a pointer that needs no

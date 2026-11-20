@@ -1,5 +1,8 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:termphin/providers/live_presence_provider.dart';
+import 'package:termphin/services/realtime/presence_state.dart';
 import 'package:termphin/widgets/profiles/profile_card.dart';
 
 import '../../support/fixtures.dart';
@@ -85,4 +88,56 @@ void main() {
 
     expect(find.byKey(const ValueKey('cancelLoadSessions')), findsNothing);
   });
+
+  testWidgets('a server its agent reports for shows the online dot', (
+    tester,
+  ) async {
+    Future<void> pumpWith(Map<String, ServerPresence> presence) {
+      final container = ProviderContainer(
+        overrides: [
+          livePresenceProvider.overrideWith(() => _FixedPresence(presence)),
+        ],
+      );
+      addTearDown(container.dispose);
+      return pumpTestApp(
+        tester,
+        Scaffold(
+          body: ProfileCard(
+            profile: profileFixture(),
+            onTap: () {},
+            onEdit: () {},
+            onLoadSessions: () {},
+            onDelete: () {},
+          ),
+        ),
+        container: container,
+      );
+    }
+
+    final semantics = tester.ensureSemantics();
+    final id = profileFixture().id;
+    await pumpWith({
+      id: ServerPresence(keyId: 'k', online: true, at: DateTime(2026)),
+    });
+    expect(find.byKey(const ValueKey('profileOnlineDot')), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp(r'\bOnline\b')), findsOneWidget);
+
+    await pumpWith({
+      id: ServerPresence(keyId: 'k', online: false, at: DateTime(2026)),
+    });
+    expect(find.byKey(const ValueKey('profileOnlineDot')), findsNothing);
+
+    await pumpWith(const {});
+    expect(find.byKey(const ValueKey('profileOnlineDot')), findsNothing);
+    semantics.dispose();
+  });
+}
+
+class _FixedPresence extends LivePresenceNotifier {
+  _FixedPresence(this.value);
+
+  final Map<String, ServerPresence> value;
+
+  @override
+  Map<String, ServerPresence> build() => value;
 }

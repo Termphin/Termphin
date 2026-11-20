@@ -688,7 +688,8 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
 
   /// The swipe is blocked while a selection in the terminal, or the handle
   /// between split panes, is being dragged - both own the pointer and must
-  /// not have it taken away mid-drag.
+  /// not have it taken away mid-drag - and while a pane watching another
+  /// device is zoomed in, where a sideways drag pans the view.
   ///
   /// Which tabs come along as restored siblings is
   /// `SshSessionManager.restorableSession` - shared so the session dock
@@ -717,6 +718,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
           onCommit: _onSwipeCommitted,
           isBlocked: () =>
               terminalSelectionDragActive.value ||
+              terminalWatchingZoomedIn.value ||
               _dividerHeld ||
               _axis.isAnimating,
         )..addListener(() {

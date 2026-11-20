@@ -25,11 +25,9 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     service.resetForTest();
     analyticsRecorder.clear();
-    AnalyticsService.now = () => today;
   });
 
   tearDown(() {
-    AnalyticsService.now = DateTime.now;
     AnalyticsService.firebaseUpOverride = null;
     AnalyticsService.startOverride = null;
   });
@@ -42,10 +40,10 @@ void main() {
       expect(service.asking.value, isFalse);
     });
 
-    test('is not asked before two days since the first connection', () async {
-      SharedPreferences.setMockInitialValues(used(daysAgo: 1));
+    test('is asked after a few connections, even on the first day', () async {
+      SharedPreferences.setMockInitialValues(used(daysAgo: 0));
 
-      expect(await service.maybeAsk(), isFalse);
+      expect(await service.maybeAsk(), isTrue);
     });
 
     test('is asked once the app has been used for real', () async {

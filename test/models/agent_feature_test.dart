@@ -13,14 +13,22 @@ void main() {
         AgentFeature.inPlaceUpdates,
         AgentFeature.wentQuietNotice,
         AgentFeature.backgroundNotices,
+        AgentFeature.deviceInfo,
+        AgentFeature.control,
       ]);
       expect(AgentFeature.missingFor('0.17.0'), [
         AgentFeature.backgroundNotices,
+        AgentFeature.deviceInfo,
+        AgentFeature.control,
+      ]);
+      expect(AgentFeature.missingFor('0.19.3'), [
+        AgentFeature.deviceInfo,
+        AgentFeature.control,
       ]);
     });
 
     test('a current master misses nothing', () {
-      expect(AgentFeature.missingFor('0.18.0'), isEmpty);
+      expect(AgentFeature.missingFor('0.20.0'), isEmpty);
       expect(AgentFeature.missingFor('1.0.0'), isEmpty);
     });
 

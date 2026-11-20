@@ -44,12 +44,16 @@ class RemoteMuxCommands {
     bool replayRemoteHistory, {
     String? operatingSystem,
     OutputPosition? resumeFrom,
+    bool control = false,
   }) => switch (backend) {
     Multiplexer.termphin when operatingSystem == 'Windows' =>
       powerShellCommandLine(
-        replayRemoteHistory
-            ? '& ${windowsQuote(binary)} attach --replay ${windowsQuote(name)}'
-            : '& ${windowsQuote(binary)} attach ${windowsQuote(name)}',
+        [
+          '& ${windowsQuote(binary)} attach',
+          if (replayRemoteHistory) '--replay',
+          if (control) '--control',
+          windowsQuote(name),
+        ].join(' '),
         interactive: true,
       ),
     Multiplexer.termphin => [
@@ -57,10 +61,21 @@ class RemoteMuxCommands {
       if (replayRemoteHistory) '--replay',
       if (resumeFrom != null)
         '--resume ${resumeFrom.epoch}:${resumeFrom.offset}',
+      if (control) '--control',
       shellQuote(name),
     ].join(' '),
     Multiplexer.none => '',
   };
+
+  /// The first agent that takes `--control`.
+  static const controlSinceVersion = '0.20.0';
+
+  /// Whether an agent at [version] understands `--control`. One that
+  /// predates it reads the flag as the session name and fails the attach.
+  static bool agentCanControl(String? version) {
+    if (version == null || !isReleasedVersion(version)) return false;
+    return compareVersions(version, controlSinceVersion) >= 0;
+  }
 
   /// The first agent that takes `--resume`.
   static const resumeSinceVersion = '0.12.0';

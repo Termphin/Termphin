@@ -16,6 +16,39 @@ void main() {
       );
     });
 
+    test('joins control when the agent hands it around', () {
+      expect(
+        mux.attachCommand(
+          Multiplexer.termphin,
+          '/opt/agent',
+          'work',
+          true,
+          control: true,
+        ),
+        "exec '/opt/agent' attach --replay --control 'work'",
+      );
+      final command = mux.attachCommand(
+        Multiplexer.termphin,
+        r'C:\agent.exe',
+        'work',
+        false,
+        operatingSystem: 'Windows',
+        control: true,
+      );
+      final script = String.fromCharCodes(
+        _utf16le(base64Decode(command.split(' ').last)),
+      );
+      expect(script, contains('attach --control "work"'));
+    });
+
+    test('only an agent from 0.20.0 on is asked to join control', () {
+      expect(RemoteMuxCommands.agentCanControl('0.20.0'), isTrue);
+      expect(RemoteMuxCommands.agentCanControl('0.21.0'), isTrue);
+      expect(RemoteMuxCommands.agentCanControl('0.19.8'), isFalse);
+      expect(RemoteMuxCommands.agentCanControl(null), isFalse);
+      expect(RemoteMuxCommands.agentCanControl('dev'), isFalse);
+    });
+
     test('asks for a replay when the tab is being picked back up', () {
       expect(
         mux.attachCommand(Multiplexer.termphin, '/opt/agent', 'work', true),

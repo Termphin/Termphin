@@ -111,7 +111,9 @@ void main() {
     expect(find.text(t.settings.seePro), findsOneWidget);
 
     await tester.tap(find.text(t.settings.seePro));
-    await tester.pumpAndSettle();
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
 
     expect(find.byType(ProPaywallScreen), findsOneWidget);
   });

@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:ui';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -18,9 +20,11 @@ import 'services/platform/local_notifications_service.dart';
 import 'services/pro/pro_hints.dart';
 import 'services/pro/pro_service.dart';
 import 'services/push/push_service.dart';
+import 'services/realtime/presence_device.dart';
 import 'services/security/secret_cipher.dart';
 import 'services/settings/anonymize_setting.dart';
 import 'services/settings/app_settings.dart';
+import 'services/settings/live_presence_setting.dart';
 import 'services/settings/terminal_settings.dart';
 import 'services/ssh/network_monitor.dart';
 import 'services/ssh/ssh_prompts.dart';
@@ -91,6 +95,7 @@ Future<void> main() async {
   await AccountService.instance.init();
   unawaited(PushService.instance.init());
   _bindPushEnrollment();
+  unawaited(_bindDeviceAnnouncement());
   unawaited(AnalyticsService.instance.capture(AnalyticsEvent.appOpened));
   runApp(const SshClientApp());
 }
@@ -173,11 +178,41 @@ void _bindPushEnrollment() {
   manager.addListener(enroll);
   ProService.instance.confirmed.addListener(enroll);
   PushService.instance.enabledNotifier.addListener(enroll);
+  livePresenceSetting.addListener(() {
+    PushService.instance.recheckMachines();
+    enroll();
+  });
   void syncNotices() => unawaited(PushService.instance.syncNoticePrefs());
   terminalSettings.finishedNotifications.addListener(syncNotices);
   terminalSettings.quietNotifications.addListener(syncNotices);
   terminalSettings.noticeLines.addListener(syncNotices);
   ProService.instance.confirmed.addListener(syncNotices);
+}
+
+/// Gives the session manager what to tell agent masters about this device,
+/// so the user's other devices can show which sessions are open here. The
+/// name is the host name on a computer and the kind of device elsewhere,
+/// where the system gives no name without asking for more.
+Future<void> _bindDeviceAnnouncement() async {
+  final view = PlatformDispatcher.instance.views.firstOrNull;
+  final shortestSide = view == null
+      ? 0.0
+      : view.physicalSize.shortestSide / view.devicePixelRatio;
+  final kind = isDesktopPlatform
+      ? PresenceDeviceKind.desktop
+      : shortestSide >= 600
+      ? PresenceDeviceKind.tablet
+      : PresenceDeviceKind.phone;
+  final name = switch (kind) {
+    PresenceDeviceKind.desktop => Platform.localHostname,
+    PresenceDeviceKind.tablet => isIOSPlatform ? 'iPad' : 'Android tablet',
+    PresenceDeviceKind.phone => isIOSPlatform ? 'iPhone' : 'Android',
+  };
+  SshSessionManager.instance.deviceAnnouncement = presenceDeviceAnnouncement(
+    installId: await PushService.instance.installId(),
+    kind: kind,
+    name: name,
+  );
 }
 
 /// What `ShareActivity` runs instead of [main]: an engine of its own that

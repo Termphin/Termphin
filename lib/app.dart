@@ -12,6 +12,7 @@ import 'i18n/strings.g.dart';
 import 'models/ssh_profile.dart';
 import 'providers/account_provider.dart';
 import 'providers/groups_provider.dart';
+import 'providers/live_presence_provider.dart';
 import 'providers/profiles_provider.dart';
 import 'providers/snippets_provider.dart';
 import 'providers/ssh_session_manager_provider.dart';
@@ -292,10 +293,15 @@ class _AppGateState extends ConsumerState<_AppGate> {
   void initState() {
     super.initState();
     final sync = ref.read(syncCoordinatorProvider);
+    final presence = ref.read(livePresenceControllerProvider);
     _lifecycle = AppLifecycleListener(
-      onHide: RelockGuard.instance.appHidden,
+      onHide: () {
+        RelockGuard.instance.appHidden();
+        presence.setForeground(false);
+      },
       onShow: () {
         RelockGuard.instance.appShown();
+        presence.setForeground(true);
         sync.resumed();
         unawaited(ProService.instance.resumed());
         ProHints.instance.flush();

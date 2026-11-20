@@ -26,6 +26,7 @@ void main() {
       'Google Analytics for Firebase',
       'Firebase Crashlytics',
       'RevenueCat',
+      'Hetzner',
     ]) {
       expect(policy, contains(provider), reason: provider);
     }

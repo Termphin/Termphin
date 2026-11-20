@@ -50,7 +50,9 @@ import '../ui/app_card.dart';
 import '../ui/app_notifications.dart';
 import '../ui/clipboard_and_links.dart';
 import '../ui/cursor_menu.dart';
+import 'attached_devices.dart';
 import 'command_suggestion_popup.dart';
+import 'control_bar.dart';
 import 'floating_action_dock.dart';
 import 'link_preview_popup.dart';
 import 'special_keys_toolbar.dart';
@@ -979,7 +981,13 @@ class SessionViewState extends ConsumerState<SessionView> {
     },
   );
 
-  void _onResize(int cols, int rows) => _resizeReporter.report(cols, rows);
+  /// What the pane sizes its terminal to, sent on to the server - except
+  /// while another device holds the session: the terminal then follows
+  /// that device's size, which is not this device's to report.
+  void _onResize(int cols, int rows) {
+    if (_manager.getSession(widget.sessionKey.$1)?.watching ?? false) return;
+    _resizeReporter.report(cols, rows);
+  }
 
   void _clearSelection() {
     _nativeController.clearSelection();
@@ -1471,6 +1479,16 @@ class SessionViewState extends ConsumerState<SessionView> {
             ],
           ),
         ),
+        if (widget.viewMode == SessionViewMode.terminal)
+          ValueListenableBuilder(
+            valueListenable: session.control,
+            builder: (context, control, _) => control == null || control.holds
+                ? const SizedBox.shrink()
+                : ControlBar(
+                    control: control,
+                    onTake: () => _manager.takeControl(session.id),
+                  ),
+          ),
       ],
     );
 
@@ -1513,31 +1531,57 @@ class SessionViewState extends ConsumerState<SessionView> {
       },
       child: IgnorePointer(
         ignoring: !live,
-        child: TerminalPane(
-          terminal: session.terminal,
-          inputStream: session.inputStream,
-          inputReceipts: session.inputReceipts,
-          onInput: _onInput,
-          onResize: live ? _onResize : _ignoreResize,
-          controller: live ? _nativeController : null,
-          onReady: () => _onTerminalReady(attachId),
-          onFontSizeChanged: _onFontSizeChanged,
-          onSelectionStateChanged: (active, topY, bottomY) {
-            setState(() {
-              _selectionPopupVisible = active;
-              _selTopY = topY;
-              _selBottomY = bottomY;
-            });
-          },
-          onScrollModeChanged: (isManual) {
-            if (mounted) {
-              setState(() => _scrollModeManual = isManual);
-            }
-          },
-          onLinkDetected: _handleLinkDetected,
-          onKeyEvent: _onTerminalKey,
+        child: ValueListenableBuilder(
+          valueListenable: session.control,
+          builder: (context, control, _) => _pane(
+            session,
+            attachId,
+            live: live,
+            fixedSize: control == null || control.holds
+                ? null
+                : (columns: control.columns, rows: control.rows),
+            holderIcon: switch (control?.device) {
+              final device? => AttachedDevices.iconFor(device.kind),
+              null => null,
+            },
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _pane(
+    ActiveSessionView session,
+    int attachId, {
+    required bool live,
+    required ({int columns, int rows})? fixedSize,
+    IconData? holderIcon,
+  }) {
+    return TerminalPane(
+      fixedSize: fixedSize,
+      holderIcon: holderIcon,
+      terminal: session.terminal,
+      inputStream: session.inputStream,
+      inputReceipts: session.inputReceipts,
+      onInput: _onInput,
+      onResize: live ? _onResize : _ignoreResize,
+      controller: live ? _nativeController : null,
+      onReady: () => _onTerminalReady(attachId),
+      onFontSizeChanged: _onFontSizeChanged,
+      onSelectionStateChanged: (active, topY, bottomY) {
+        setState(() {
+          _selectionPopupVisible = active;
+          _selTopY = topY;
+          _selBottomY = bottomY;
+        });
+      },
+      onScrollModeChanged: (isManual) {
+        if (mounted) {
+          setState(() => _scrollModeManual = isManual);
+        }
+      },
+      onLinkDetected: _handleLinkDetected,
+      onKeyEvent: _onTerminalKey,
     );
   }
 

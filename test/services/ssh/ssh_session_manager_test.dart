@@ -245,6 +245,63 @@ void main() {
     },
   );
 
+  group('control', () {
+    List<String> written() => [
+      for (final call in backend.calls)
+        if (call.method == 'write')
+          utf8.decode(call.arguments['data'] as Uint8List),
+    ];
+
+    Future<ActiveSessionView> open() async {
+      remoteAgentService.remoteVersion = '0.20.0';
+      backend
+        ..markerWithoutReplay = true
+        ..masterVersion = '0.20.0';
+      await manager.startSession(profileFixture(), sessionId: 'shared');
+      await Future<void>.delayed(Duration.zero);
+      return manager.getSession('shared')!;
+    }
+
+    test('an agent that hands control around is asked to join it', () async {
+      await open();
+
+      final attach = backend.calls.lastWhere((c) => c.method == 'startShell');
+      expect((attach.arguments as Map)['command'], contains('--control'));
+    });
+
+    test('while another device holds the session nothing typed is sent, '
+        'until this one takes it', () async {
+      final session = await open();
+      final service = backend.latestService;
+
+      service.emit(utf8.encode('\x1b]5384;termphin-control;other;200;50;\x07'));
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(session.watching, isTrue);
+      expect(session.control.value?.columns, 200);
+
+      manager.sendInput('shared', Uint8List.fromList([0x61]));
+      expect(written(), isNot(contains('a')));
+
+      manager.takeControl('shared');
+      expect(written(), contains('\x1b]5386;control;take\x07'));
+
+      service.emit(utf8.encode('\x1b]5384;termphin-control;you;80;24;\x07'));
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(session.watching, isFalse);
+      manager.sendInput('shared', Uint8List.fromList([0x62]));
+      expect(written(), contains('b'));
+    });
+
+    test('a session nobody hands around is never asked to', () async {
+      final session = await open();
+
+      manager.takeControl('shared');
+
+      expect(session.control.value, isNull);
+      expect(written(), isNot(contains('\x1b]5386;control;take\x07')));
+    });
+  });
+
   group('presence', () {
     List<Uint8List> written() => [
       for (final call in backend.calls)

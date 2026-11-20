@@ -13,12 +13,14 @@ import '../models/session_tab.dart';
 import '../models/ssh_profile.dart';
 import '../providers/anonymize_provider.dart';
 import '../providers/groups_provider.dart';
+import '../providers/live_presence_provider.dart';
 import '../providers/profiles_provider.dart';
 import '../providers/ssh_connection_provider.dart';
 import '../providers/ssh_session_manager_provider.dart';
 import '../providers/terminal_overlay_provider.dart';
 import '../services/app/app_commands.dart';
 import '../services/app/identity_anonymizer.dart';
+import '../services/realtime/presence_state.dart';
 import '../services/sftp/cancel_token.dart';
 import '../services/ssh/ssh_link.dart';
 import '../services/ssh/ssh_session_manager.dart';
@@ -36,8 +38,10 @@ import '../widgets/profiles/profile_form_dialog.dart';
 import '../widgets/profiles/profile_search_field.dart';
 import '../widgets/profiles/server_guide.dart';
 import '../widgets/ssh/session_status.dart';
+import '../widgets/terminal/attached_devices.dart';
 import '../widgets/terminal/new_session_row.dart';
 import '../widgets/terminal/rename_session_dialog.dart';
+import '../widgets/terminal/session_activity_line.dart';
 import '../widgets/ui/app_badge.dart';
 import '../widgets/ui/app_card.dart';
 import '../widgets/ui/app_dropdown.dart';
@@ -48,6 +52,7 @@ import '../widgets/ui/confirm_dialog.dart';
 import '../widgets/ui/context_menu.dart';
 import '../widgets/ui/empty_state.dart';
 import '../widgets/ui/large_title_scaffold.dart';
+import '../widgets/ui/pulsing_dot.dart';
 import '../widgets/ui/selection_action_bar.dart';
 import 'search/global_search_launcher.dart';
 
@@ -1082,6 +1087,12 @@ class _SessionRow extends ConsumerWidget {
     final accentColor = status.color;
     final hasMenu = onRename != null || onDetach != null || onEnd != null;
     final anonymize = ref.watch(anonymizeProvider);
+    final activity = sessionActivityOf(
+      ref.watch(livePresenceProvider),
+      session.profile.id,
+      session.muxName,
+    )?.state;
+    final shownActivity = connecting || connected ? null : activity;
 
     return AppCard.segment(
       first: false,
@@ -1103,19 +1114,42 @@ class _SessionRow extends ConsumerWidget {
                 color: accentColor,
               ),
             )
+          else if (shownActivity == SessionActivityState.working)
+            PulsingDot(
+              key: const ValueKey('sessionDot-working'),
+              color: accentColor,
+              size: AppTheme.icon10,
+            )
           else
             Icon(
-              connected
+              connected || shownActivity == SessionActivityState.waiting
                   ? PhosphorIconsFill.circle
                   : PhosphorIconsRegular.circle,
+              key: shownActivity == SessionActivityState.waiting
+                  ? const ValueKey('sessionDot-waiting')
+                  : null,
               size: AppTheme.icon10,
               color: accentColor,
             ),
           const SizedBox(width: AppTheme.space12),
           Expanded(
-            child: _sessionName(context, anonymize, connected || connecting),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _sessionName(context, anonymize, connected || connecting),
+                SessionActivityLine(
+                  profileId: session.profile.id,
+                  muxName: session.muxName,
+                ),
+              ],
+            ),
           ),
           const SizedBox(width: AppTheme.space8),
+          AttachedDevices(
+            profileId: session.profile.id,
+            muxName: session.muxName,
+          ),
           AppBadge(
             status.label,
             tone: connecting

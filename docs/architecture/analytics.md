@@ -61,8 +61,8 @@ names the machine - is never sent to Crashlytics.
   what this exists to avoid.
 - **The consent question is asked once in the app's life**, not in
   onboarding: `AnalyticsService.maybeAsk` puts a card over the home screen
-  (`AnalyticsAskCard`) once there have been three successful connections and
-  two days since the first, from the startup prompts in `app.dart` - only
+  (`AnalyticsAskCard`) once there have been three successful connections,
+  however soon, from the startup prompts in `app.dart` - only
   when nothing else interrupted that launch, and before the store prompt.
   "Sure" and "No thanks" are the same size and nothing is preselected,
   because a pre-ticked box is not consent (CJEU, Planet49). It is marked

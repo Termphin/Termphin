@@ -1,0 +1,78 @@
+import 'dart:async';
+
+import 'package:material_ui/material_ui.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
+
+import '../../i18n/strings.g.dart';
+import '../../models/pro_source.dart';
+import '../../screens/pro/pro_paywall_screen.dart';
+import '../../services/pro/pro_service.dart';
+import '../../services/settings/live_presence_setting.dart';
+import '../../theme/theme.dart';
+import '../ui/app_card.dart';
+import '../ui/settings_tile.dart';
+
+/// The account's switch for live status, off until turned on. Without Pro
+/// it shows what live status is and opens the paywall instead.
+class LiveStatusCard extends StatelessWidget {
+  const LiveStatusCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Translations.of(context);
+    return AppCard(
+      child: ListenableBuilder(
+        listenable: Listenable.merge([
+          ProService.instance.active,
+          livePresenceSetting,
+        ]),
+        builder: (context, _) {
+          if (!ProService.instance.active.value) {
+            return SettingsTile(
+              icon: PhosphorIconsRegular.pulse,
+              title: t.account.live.title,
+              subtitle: t.account.live.proHint,
+              trailingWidget: const _SeePro(),
+              onTap: () =>
+                  ProPaywallScreen.show(context, source: ProSource.liveStatus),
+            );
+          }
+          return SettingsSwitchTile(
+            icon: PhosphorIconsRegular.pulse,
+            title: t.account.live.title,
+            subtitle: t.account.live.subtitle,
+            value: livePresenceSetting.value,
+            onChanged: (on) => unawaited(livePresenceSetting.set(on)),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _SeePro extends StatelessWidget {
+  const _SeePro();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          Translations.of(context).settings.seePro,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: colors.gold,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(width: AppTheme.space4),
+        Icon(
+          PhosphorIconsRegular.caretRight,
+          size: AppTheme.icon16,
+          color: colors.gold,
+        ),
+      ],
+    );
+  }
+}

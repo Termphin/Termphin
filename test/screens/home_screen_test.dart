@@ -7,12 +7,14 @@ import 'package:termphin/models/profile_group.dart';
 import 'package:termphin/models/session_tab.dart';
 import 'package:termphin/models/ssh_profile.dart';
 import 'package:termphin/providers/groups_provider.dart';
+import 'package:termphin/providers/live_presence_provider.dart';
 import 'package:termphin/providers/profiles_provider.dart';
 import 'package:termphin/providers/ssh_keys_provider.dart';
 import 'package:termphin/providers/terminal_overlay_provider.dart';
 import 'package:termphin/screens/groups/group_form_screen.dart';
 import 'package:termphin/screens/home_screen.dart';
 import 'package:termphin/screens/search/global_search_launcher.dart';
+import 'package:termphin/services/realtime/presence_state.dart';
 import 'package:termphin/services/ssh/ssh_session_manager.dart';
 import 'package:termphin/services/storage/group_storage.dart';
 import 'package:termphin/widgets/groups/group_dot.dart';
@@ -50,6 +52,7 @@ void main() {
     WidgetTester tester,
     List<SshProfile> profiles, {
     List<ProfileGroup>? knownGroups,
+    Map<String, ServerPresence>? presence,
   }) async {
     final fakeProfiles = FakeProfileStorage(profiles);
     final initialGroups =
@@ -70,6 +73,8 @@ void main() {
         profileStorageProvider.overrideWithValue(fakeProfiles),
         groupStorageProvider.overrideWithValue(fakeGroups),
         sshKeyStorageProvider.overrideWithValue(FakeSshKeyStorage()),
+        if (presence != null)
+          livePresenceProvider.overrideWith(() => _FixedPresence(presence)),
       ],
     );
     container.read(profilesProvider);
@@ -157,6 +162,55 @@ void main() {
       expect(overlay!.$1, droppedId);
       expect(overlay.$2, profile);
       expect(overlay.$3, SiblingScope.none);
+    },
+  );
+
+  testWidgets(
+    'a detached session that works pulses its dot, one that waits fills it',
+    (tester) async {
+      final profile = profileFixture();
+      createdTabIds.addAll([
+        manager.adoptRemoteSession(profile, 'busy'),
+        manager.adoptRemoteSession(profile, 'asking'),
+        manager.adoptRemoteSession(profile, 'quiet'),
+      ]);
+      PresenceSession session(String name, SessionActivityState state) =>
+          PresenceSession(
+            name: name,
+            createdAt: DateTime(2026),
+            clients: 0,
+            activity: SessionActivity(state: state, command: 'job-$name'),
+          );
+
+      await pumpHome(
+        tester,
+        [profile],
+        presence: {
+          profile.id: ServerPresence(
+            keyId: 'k',
+            online: true,
+            at: DateTime(2026),
+            sessions: [
+              session('busy', SessionActivityState.working),
+              session('asking', SessionActivityState.waiting),
+              session('quiet', SessionActivityState.idle),
+            ],
+          ),
+        },
+      );
+
+      expect(find.byKey(const ValueKey('sessionDot-working')), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('sessionDot-working')),
+          matching: find.byType(FadeTransition),
+        ),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey('sessionDot-waiting')), findsOneWidget);
+      expect(find.byKey(const ValueKey('sessionDot-idle')), findsNothing);
+      expect(find.text('job-busy · Working'), findsOneWidget);
+      expect(find.text('job-asking · Waiting for you'), findsOneWidget);
     },
   );
 
@@ -725,4 +779,13 @@ void main() {
       expect(find.byType(SelectionActionBar), findsOneWidget);
     },
   );
+}
+
+class _FixedPresence extends LivePresenceNotifier {
+  _FixedPresence(this.value);
+
+  final Map<String, ServerPresence> value;
+
+  @override
+  Map<String, ServerPresence> build() => value;
 }

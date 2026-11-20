@@ -67,6 +67,7 @@ It is in `.gitignore` and never gets committed.
 | `docs/architecture/overview.md` | Startup, state, the `lib/` layout |
 | `docs/architecture/ssh.md` | `SshService`, host keys, jump hosts, reconnecting, keepalive, connectivity |
 | `docs/architecture/predictive-echo.md` | Local echo (run its fuzz test) |
+| `docs/architecture/presence.md` | Live presence: the online dot, sessions reported by the agent, `lib/services/realtime/` |
 | `docs/architecture/platform.md` | Foreground service, iOS suspension, local network permission, quick actions, sharing to Termphin |
 | `docs/architecture/data.md` | Storage, groups, `Setting<T>`, backup and restore |
 | `docs/architecture/transfers.md` | SFTP transfers, copy and move, download location |

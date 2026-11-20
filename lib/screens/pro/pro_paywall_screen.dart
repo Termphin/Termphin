@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
@@ -11,8 +12,7 @@ import '../../services/analytics/analytics_service.dart';
 import '../../services/app/legal_urls.dart';
 import '../../services/pro/pro_service.dart';
 import '../../theme/theme.dart';
-import '../../utils/platform_info.dart';
-import '../../widgets/ui/app_badge.dart';
+import '../../widgets/pro/ascii_glow.dart';
 import '../../widgets/ui/app_notifications.dart';
 import '../../widgets/ui/app_sheet.dart';
 import '../../widgets/ui/clipboard_and_links.dart';
@@ -22,9 +22,9 @@ import '../settings/account_screen.dart';
 
 /// Buying Pro: what it brings, the plans side by side, and one button.
 ///
-/// Flat on the app's own background. Gold is the word Pro alone; the
-/// features each carry a colour of their own, and the chosen plan and the
-/// button take the app's accent like every other choice and action in it.
+/// One headline over a glow drawn in ASCII at the top, the features listed
+/// one under another, and the chosen plan and the button in the app's
+/// accent like every other choice and action in it.
 /// The yearly plan is chosen to begin with and carries what it saves
 /// against twelve months.
 ///
@@ -65,15 +65,23 @@ class ProPaywallScreen extends ConsumerStatefulWidget {
 }
 
 class _ProPaywallScreenState extends ConsumerState<ProPaywallScreen> {
+  final _glow = GlobalKey<AsciiGlowState>();
+
+  /// The headline sits at the foot of the glow, clear of the close button
+  /// and straight above the features; the glow dims around its middle.
+  static const _headlineAt = Alignment(0, 0.55);
   List<ProOffer> _offers = const [];
+
+  /// The longest free trial any plan here offers, for the line under the
+  /// title; null when none does.
+  int? get _trialDays => _offers
+      .map((offer) => offer.trialDays)
+      .whereType<int>()
+      .fold<int?>(null, (longest, days) => max(longest ?? 0, days));
   ProOffer? _chosen;
   bool _loaded = false;
   bool _busy = false;
   bool _leaving = false;
-
-  /// Whether a store's code was sent off from here, so Pro arriving after
-  /// it is thanked for rather than met with "you already have Pro".
-  bool _redeeming = false;
 
   ProService get _pro => ProService.instance;
 
@@ -106,12 +114,10 @@ class _ProPaywallScreenState extends ConsumerState<ProPaywallScreen> {
   void _leaveIfPro() {
     if (_leaving || _busy || !mounted || !_pro.active.value) return;
     _leaving = true;
-    final pro = Translations.of(context).account.pro;
-    if (_redeeming) {
-      AppNotifications.success(context, pro.thanks);
-    } else {
-      AppNotifications.info(context, pro.already);
-    }
+    AppNotifications.info(
+      context,
+      Translations.of(context).account.pro.already,
+    );
     final navigator = Navigator.of(context);
     final route = ModalRoute.of(context);
     if (route == null || route.isCurrent) {
@@ -228,29 +234,6 @@ class _ProPaywallScreenState extends ConsumerState<ProPaywallScreen> {
     }),
   );
 
-  /// Takes a store's code for Pro: the App Store's own sheet on iOS, Google
-  /// Play's redeem page on Android. Either way the purchase comes back
-  /// through the store, and [_leaveIfPro] closes the paywall when it does.
-  Future<void> _redeem() async {
-    final t = Translations.of(context);
-    _capture(AnalyticsEvent.redeemCodeOpened);
-    _redeeming = true;
-    try {
-      await _pro.redeemCode();
-    } on ProException catch (error) {
-      if (mounted && error.failure != ProFailure.cancelled) {
-        AppNotifications.error(context, t.account.pro.failed);
-      }
-      return;
-    } catch (_) {
-      if (mounted) AppNotifications.error(context, t.account.pro.failed);
-      return;
-    }
-    if (isAndroidPlatform && mounted) {
-      await openExternalUrl(context, Uri.parse(ProService.playRedeemUrl));
-    }
-  }
-
   Future<void> _signIn() async {
     await pushAppPage<void>(
       context,
@@ -271,8 +254,9 @@ class _ProPaywallScreenState extends ConsumerState<ProPaywallScreen> {
     final signedIn = ref.watch(accountProvider) != null;
     return Scaffold(
       backgroundColor: colors.backgroundPrimary,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: colors.backgroundPrimary,
+        backgroundColor: colors.backgroundPrimary.invisible,
         shape: const Border(),
         scrolledUnderElevation: 0,
         automaticallyImplyLeading: false,
@@ -290,55 +274,86 @@ class _ProPaywallScreenState extends ConsumerState<ProPaywallScreen> {
           children: [
             Expanded(
               child: ContentGutter(
-                builder: (context, gutter) => ListView(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppTheme.space24,
-                    0,
-                    AppTheme.space24,
-                    AppTheme.space24,
-                  ).add(gutter),
-                  children: [
-                    const SizedBox(height: AppTheme.space8),
-                    Text.rich(
-                      TextSpan(
-                        children: [
-                          TextSpan(text: '${p.titleLead} '),
-                          TextSpan(
-                            text: p.titlePro,
-                            style: TextStyle(color: colors.gold),
+                builder: (context, gutter) {
+                  final sides = const EdgeInsets.symmetric(
+                    horizontal: AppTheme.space24,
+                  ).add(gutter);
+                  return ListView(
+                    padding: const EdgeInsets.only(bottom: AppTheme.space24),
+                    children: [
+                      Listener(
+                        onPointerDown: (event) =>
+                            _glow.currentState?.touch(event.localPosition),
+                        onPointerMove: (event) =>
+                            _glow.currentState?.touch(event.localPosition),
+                        child: SizedBox(
+                          height: AsciiGlow.headerHeight,
+                          child: Stack(
+                            children: [
+                              Positioned.fill(
+                                child: IgnorePointer(
+                                  child: AsciiGlow(
+                                    key: _glow,
+                                    quietAround: _headlineAt,
+                                  ),
+                                ),
+                              ),
+                              Align(
+                                alignment: Alignment.bottomCenter,
+                                child: Padding(
+                                  padding: sides,
+                                  child: Text(
+                                    switch (_trialDays) {
+                                      final days? => p.trialHero(days: days),
+                                      null => p.tagline,
+                                    },
+                                    key: const ValueKey('paywallHeadline'),
+                                    textAlign: TextAlign.center,
+                                    style: text.displayLarge?.copyWith(
+                                      fontFamily: AppTheme.displayFamily,
+                                      fontSize: AppTheme.font40,
+                                      height: 1.1,
+                                      letterSpacing: -0.5,
+                                      color: colors.textPrimary,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
-                      style: text.displayLarge,
-                    ),
-                    const SizedBox(height: AppTheme.space8),
-                    Text(
-                      p.tagline,
-                      style: text.bodyLarge?.copyWith(
-                        color: colors.textSecondary,
+                      const SizedBox(height: AppTheme.space24),
+                      Padding(
+                        padding: sides,
+                        child: Column(
+                          children: [
+                            _Feature(
+                              icon: PhosphorIconsRegular.bellRinging,
+                              title: p.pushTitle,
+                              body: p.pushBody,
+                            ),
+                            _Feature(
+                              icon: PhosphorIconsRegular.pulse,
+                              title: p.liveTitle,
+                              body: p.liveBody,
+                            ),
+                            _Feature(
+                              icon: PhosphorIconsRegular.arrowsClockwise,
+                              title: p.syncTitle,
+                              body: p.syncBody,
+                            ),
+                            _Feature(
+                              icon: PhosphorIconsRegular.heart,
+                              title: p.supportTitle,
+                              body: p.supportBody,
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: AppTheme.space32),
-                    _Feature(
-                      icon: PhosphorIconsRegular.bellRinging,
-                      color: colors.primary,
-                      title: p.pushTitle,
-                      body: p.pushBody,
-                    ),
-                    _Feature(
-                      icon: PhosphorIconsRegular.arrowsClockwise,
-                      color: colors.success,
-                      title: p.syncTitle,
-                      body: p.syncBody,
-                    ),
-                    _Feature(
-                      icon: PhosphorIconsRegular.heart,
-                      color: colors.error,
-                      title: p.supportTitle,
-                      body: p.supportBody,
-                    ),
-                  ],
-                ),
+                    ],
+                  );
+                },
               ),
             ),
             _Footer(
@@ -353,7 +368,6 @@ class _ProPaywallScreenState extends ConsumerState<ProPaywallScreen> {
               },
               onSignIn: _signIn,
               onRestore: _restore,
-              onRedeem: _pro.canRedeemCode ? _redeem : null,
             ),
           ],
         ),
@@ -404,17 +418,14 @@ class _ProPaywallScreenState extends ConsumerState<ProPaywallScreen> {
     }
     final monthly = _offers.where((o) => o.period == 'monthly').firstOrNull;
     return [
-      for (final offer in _offers) ...[
-        _PlanTile(
-          offer: offer,
-          selected: identical(offer, _chosen),
-          saving: offer.period == 'annual'
-              ? savingPercent(offer, monthly)
-              : null,
-          onTap: _busy ? null : () => setState(() => _chosen = offer),
-        ),
-        const SizedBox(height: AppTheme.space10),
-      ],
+      _PlanCards(
+        offers: _offers,
+        chosen: _chosen,
+        saving: (offer) =>
+            offer.period == 'annual' ? savingPercent(offer, monthly) : null,
+        onPick: _busy ? null : (offer) => setState(() => _chosen = offer),
+      ),
+      const SizedBox(height: AppTheme.space16),
     ];
   }
 }
@@ -442,38 +453,33 @@ int? savingPercent(ProOffer yearly, ProOffer? monthly) {
 }
 
 class _Feature extends StatelessWidget {
-  const _Feature({
-    required this.icon,
-    required this.color,
-    required this.title,
-    required this.body,
-  });
+  const _Feature({required this.icon, required this.title, required this.body});
 
   final IconData icon;
-
-  /// Each feature its own colour, so the list reads as three things rather
-  /// than one block; gold is kept for the word Pro alone.
-  final Color color;
   final String title;
   final String body;
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final colors = context.colors;
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppTheme.space20),
+      padding: const EdgeInsets.symmetric(vertical: AppTheme.space10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: AppTheme.icon24, color: color),
-          const SizedBox(width: AppTheme.space14),
+          Icon(icon, size: AppTheme.icon20, color: colors.textSecondary),
+          const SizedBox(width: AppTheme.space12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: text.titleMedium),
-                const SizedBox(height: AppTheme.space4),
-                Text(body, style: text.bodyMedium),
+                Text(title, style: text.titleSmall),
+                const SizedBox(height: AppTheme.space2),
+                Text(
+                  body,
+                  style: text.bodySmall?.copyWith(color: colors.textSecondary),
+                ),
               ],
             ),
           ),
@@ -483,11 +489,61 @@ class _Feature extends StatelessWidget {
   }
 }
 
-/// One plan to pick: its name, its price, and for the yearly one what that
-/// comes to a month and what it saves. The chosen one takes the accent's
-/// outline and a filled radio mark.
-class _PlanTile extends StatelessWidget {
-  const _PlanTile({
+/// The plans side by side as cards of equal height, monthly first so the
+/// yearly one sits under the thumb: its name, its price large with the
+/// period small beside it, and a line under that. The chosen card takes a
+/// tint of the accent and an accent edge; the yearly one wears what it
+/// saves as a tilted tag on its corner.
+class _PlanCards extends StatelessWidget {
+  const _PlanCards({
+    required this.offers,
+    required this.chosen,
+    required this.saving,
+    required this.onPick,
+  });
+
+  final List<ProOffer> offers;
+  final ProOffer? chosen;
+  final int? Function(ProOffer offer) saving;
+  final ValueChanged<ProOffer>? onPick;
+
+  /// Monthly, then yearly, then anything else.
+  static List<ProOffer> _shown(List<ProOffer> offers) {
+    int rank(String period) => switch (period) {
+      'monthly' => 0,
+      'annual' => 1,
+      _ => 2,
+    };
+    return [...offers]
+      ..sort((a, b) => rank(a.period).compareTo(rank(b.period)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final shown = _shown(offers);
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final (i, offer) in shown.indexed) ...[
+            if (i > 0) const SizedBox(width: AppTheme.space10),
+            Expanded(
+              child: _PlanCard(
+                offer: offer,
+                selected: identical(offer, chosen),
+                saving: saving(offer),
+                onTap: onPick == null ? null : () => onPick!(offer),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _PlanCard extends StatelessWidget {
+  const _PlanCard({
     required this.offer,
     required this.selected,
     required this.saving,
@@ -501,80 +557,128 @@ class _PlanTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = Translations.of(context);
-    final p = t.account.pro.paywall;
+    final p = Translations.of(context).account.pro.paywall;
     final colors = context.colors;
     final text = Theme.of(context).textTheme;
-    final (name, price) = switch (offer.period) {
-      'annual' => (p.yearly, p.perYear(price: offer.price)),
-      'lifetime' => (p.lifetime, offer.price),
-      _ => (p.monthly, p.perMonth(price: offer.price)),
-    };
-    final perMonth = offer.period == 'annual' ? offer.perMonth : null;
     final radius = BorderRadius.circular(AppTheme.radiusMd);
-    return Material(
-      type: MaterialType.transparency,
-      child: InkWell(
-        borderRadius: radius,
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: AppTheme.interactiveDuration,
-          curve: AppTheme.interactiveCurve,
-          padding: const EdgeInsets.all(AppTheme.space16),
-          decoration: BoxDecoration(
-            color: colors.surfaceCard,
-            borderRadius: radius,
-            border: Border.all(
-              color: selected ? colors.primary : colors.surfaceBorder,
-              width: selected ? AppTheme.strokeWide : AppTheme.hairline,
-            ),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                selected
-                    ? PhosphorIconsFill.radioButton
-                    : PhosphorIconsRegular.circle,
-                size: AppTheme.icon24,
-                color: selected ? colors.primary : colors.textTertiary,
-              ),
-              const SizedBox(width: AppTheme.space14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(name, style: text.titleMedium),
-                        if (offer.trialDays case final days?) ...[
-                          const SizedBox(width: AppTheme.space8),
-                          AppBadge(
-                            p.trialBadge(days: days),
-                            tone: BadgeTone.success,
-                          ),
-                        ] else if (saving != null) ...[
-                          const SizedBox(width: AppTheme.space8),
-                          AppBadge(
-                            p.save(percent: '$saving'),
-                            tone: BadgeTone.success,
-                          ),
-                        ],
-                      ],
+    final (name, suffix) = switch (offer.period) {
+      'annual' => (p.yearly, p.perYearShort),
+      'lifetime' => (p.lifetime, null),
+      _ => (p.monthly, p.perMonthShort),
+    };
+    final detail = switch (offer.period) {
+      'annual' => switch (offer.perMonth) {
+        final perMonth? => p.perMonthCompact(price: perMonth),
+        null => null,
+      },
+      'monthly' => p.billedMonthly,
+      _ => null,
+    };
+    return Semantics(
+      selected: selected,
+      button: true,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: Material(
+              type: MaterialType.transparency,
+              child: InkWell(
+                borderRadius: radius,
+                onTap: onTap,
+                child: AnimatedContainer(
+                  duration: AppTheme.interactiveDuration,
+                  curve: AppTheme.interactiveCurve,
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? colors.primary.withValues(alpha: 0.14)
+                        : colors.surfaceCard,
+                    borderRadius: radius,
+                    border: Border.all(
+                      color: selected
+                          ? colors.primary.withValues(alpha: 0.7)
+                          : colors.surfaceCard,
+                      width: AppTheme.strokeWide,
                     ),
-                    if (perMonth != null) ...[
-                      const SizedBox(height: AppTheme.space2),
-                      Text(
-                        p.yearlyPerMonth(price: perMonth),
-                        style: text.bodySmall,
-                      ),
-                    ],
-                  ],
+                  ),
                 ),
               ),
-              Text(price, style: text.titleSmall),
-            ],
+            ),
           ),
-        ),
+          IgnorePointer(
+            child: Padding(
+              padding: const EdgeInsets.all(AppTheme.space16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    name,
+                    style: text.bodyMedium?.copyWith(
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: AppTheme.space6),
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: offer.price,
+                          style: text.titleLarge?.copyWith(
+                            fontSize: AppTheme.font26,
+                            fontWeight: FontWeight.w700,
+                            color: colors.textPrimary,
+                          ),
+                        ),
+                        if (suffix != null)
+                          TextSpan(
+                            text: suffix,
+                            style: text.bodySmall?.copyWith(
+                              color: colors.textSecondary,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  if (detail != null) ...[
+                    const SizedBox(height: AppTheme.space4),
+                    Text(
+                      detail,
+                      style: text.bodySmall?.copyWith(
+                        color: selected ? colors.primary : colors.textTertiary,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          if (saving case final percent?)
+            Positioned(
+              top: -AppTheme.space10,
+              right: AppTheme.space10,
+              child: Transform.rotate(
+                angle: 0.12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppTheme.space8,
+                    vertical: AppTheme.space2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colors.success,
+                    borderRadius: BorderRadius.circular(AppTheme.radiusXs),
+                  ),
+                  child: Text(
+                    p.saveShort(percent: '$percent'),
+                    style: text.labelSmall?.copyWith(
+                      color: colors.backgroundPrimary,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -593,7 +697,6 @@ class _Footer extends StatelessWidget {
     required this.onBuy,
     required this.onSignIn,
     required this.onRestore,
-    this.onRedeem,
   });
 
   /// The plans to pick from, kept right above the button so the choice and
@@ -609,9 +712,6 @@ class _Footer extends StatelessWidget {
   final VoidCallback onBuy;
   final VoidCallback onSignIn;
   final VoidCallback onRestore;
-
-  /// Takes a store's code for Pro; null where this build cannot.
-  final VoidCallback? onRedeem;
 
   @override
   Widget build(BuildContext context) {
@@ -684,11 +784,6 @@ class _Footer extends StatelessWidget {
                     onPressed: busy ? null : onRestore,
                     child: Text(t.account.pro.restore, style: link),
                   ),
-                if (signedIn && onRedeem != null)
-                  TextButton(
-                    onPressed: busy ? null : onRedeem,
-                    child: Text(t.account.pro.redeem, style: link),
-                  ),
                 TextButton(
                   onPressed: () => openExternalUrl(
                     context,
@@ -704,12 +799,6 @@ class _Footer extends StatelessWidget {
                   child: Text(p.privacy, style: link),
                 ),
               ],
-            ),
-            const SizedBox(height: AppTheme.space8),
-            Text(
-              p.supporter,
-              style: text.bodySmall?.copyWith(color: colors.textTertiary),
-              textAlign: TextAlign.center,
             ),
           ],
         ),

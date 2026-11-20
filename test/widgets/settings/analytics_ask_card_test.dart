@@ -26,12 +26,10 @@ void main() {
     });
     service.resetForTest();
     analyticsRecorder.clear();
-    AnalyticsService.now = () => today;
   });
 
   tearDown(() {
     service.resetForTest();
-    AnalyticsService.now = DateTime.now;
   });
 
   Future<void> settle(WidgetTester tester) async {
