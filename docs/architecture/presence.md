@@ -8,12 +8,9 @@ A Pro feature, on machines with server notifications on.
 | Where | What |
 |---|---|
 | `termphin-agent` (`src/presence.rs`) | Each session process reports the server's sessions when it starts, every five minutes while it runs and when it ends, and `termphin-agent presence` reports from the user's crontab every five minutes and at boot: `POST https://rt.termphin.dev/v1/agent` through `curl`, the relay key in the body. Every report says online; the machine goes offline when reports stop for 12 minutes |
-| `termphin-realtime` (private repo) | Verifies the relay key against `relayKeys/{id}` like the relay function, keeps each server online for 12 minutes per report, and pushes every change to the account's apps over a WebSocket |
+| `rt.termphin.dev` | Passes each report on to the account's apps over a WebSocket; the machine counts as online for 12 minutes after a report |
 | `lib/services/realtime/` | `LivePresence` keeps the WebSocket, `presence_keys.dart` the per-server keys, `presence_state.dart` opens what the agent sealed |
 | `lib/providers/live_presence_provider.dart` | When the connection runs, which relay key belongs to which machine, and which reported sessions become session rows |
-
-The wire protocol and the backend's threat model live in the backend
-repository's `docs/protocol.md` and `docs/security.md`.
 
 ## Keys
 
