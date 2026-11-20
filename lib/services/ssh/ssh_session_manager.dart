@@ -15,6 +15,7 @@ import '../../models/remote_shell.dart';
 import '../../models/session_control.dart';
 import '../../models/session_tab.dart';
 import '../../models/ssh_profile.dart';
+import '../realtime/presence_device.dart';
 import '../settings/setting.dart';
 import '../settings/terminal_settings.dart';
 import '../sftp/cancel_token.dart';
@@ -425,18 +426,56 @@ class SshSessionManager extends ChangeNotifier {
   /// Takes [sessionId] from the device holding it: the master moves the
   /// session to this device's size and says so in its next control marker.
   /// Nothing for a session whose master does not hand control around.
+  ///
+  /// A master that takes device commands is asked with `take` over a
+  /// connection of its own; an older one, never on Windows, with the keys.
   void takeControl(String sessionId) {
     final session = _sessions[sessionId];
     final service = session?.sshService;
     if (session == null || service == null || session.dropped) return;
     if (session.control.value == null) return;
+    if (_deviceCommand(session, 'take') case final command?) {
+      unawaited(_runDeviceCommand(session, command));
+      return;
+    }
     service.write(takeControlKeys);
   }
 
-  /// What this device types to tell an agent master which device it is,
-  /// built by the composition root from the install id and the device's
-  /// kind and name. Null until it is known, and then nothing is sent.
-  Uint8List? deviceAnnouncement;
+  /// `take`, `away` or `back` for [session], when its master takes them
+  /// and this device is known; null otherwise.
+  String? _deviceCommand(ActiveSessionView session, String verb) {
+    final binary = session.agentBinary;
+    final name = session.muxName;
+    final deviceId = deviceDescription?.split(';').first;
+    if (binary == null || name == null || deviceId == null) return null;
+    if (!RemoteMuxCommands.agentTakesDeviceCommands(session.masterVersion)) {
+      return null;
+    }
+    return RemoteMuxCommands.deviceCommand(binary, verb, name, deviceId);
+  }
+
+  Future<void> _runDeviceCommand(
+    ActiveSessionView session,
+    String command,
+  ) async {
+    final client = session.sshService?.client;
+    if (client == null || client.isClosed) return;
+    try {
+      await client.run(command);
+    } catch (_) {}
+  }
+
+  /// Which device this is, `<install id>;<kind>;<base64url name>`, set by
+  /// the composition root. Null until it is known, and then nothing is
+  /// said about the device.
+  String? deviceDescription;
+
+  /// [deviceDescription] as the keys typed to a master that does not take
+  /// it on the command line.
+  Uint8List? get deviceAnnouncement => switch (deviceDescription) {
+    final description? => presenceDeviceAnnouncement(description),
+    null => null,
+  };
 
   /// Tells [session]'s master which device is attached, once per attach -
   /// the master names its version at the start of every one. Only a master
@@ -479,8 +518,21 @@ class SshSessionManager extends ChangeNotifier {
       if (!_hearsPresence(session)) continue;
       session.away = true;
       session.holdingNotices = true;
-      session.sshService!.write(presenceAway);
+      _tellPresence(session, away: true);
     }
+  }
+
+  /// Away or back by a device command where the master takes one - the
+  /// only way a Windows master hears it - and by the keys otherwise.
+  void _tellPresence(ActiveSessionView session, {required bool away}) {
+    final verb = away ? 'away' : 'back';
+    if (session.agentBinary?.isWindows ?? false) {
+      if (_deviceCommand(session, verb) case final command?) {
+        unawaited(_runDeviceCommand(session, command));
+      }
+      return;
+    }
+    session.sshService!.write(away ? presenceAway : presenceBack);
   }
 
   /// Tells the masters told [goAway] that the phone is back. Notifications
@@ -491,9 +543,7 @@ class SshSessionManager extends ChangeNotifier {
     for (final session in _sessions.values) {
       if (!session.away) continue;
       session.away = false;
-      if (_hearsPresence(session)) {
-        session.sshService!.write(presenceBack);
-      }
+      if (_hearsPresence(session)) _tellPresence(session, away: false);
       Timer(presenceMarkerWait, () => session.holdingNotices = false);
     }
   }
@@ -900,7 +950,13 @@ class SshSessionManager extends ChangeNotifier {
               resumeFrom: RemoteMuxCommands.agentCanResume(agentVersion)
                   ? resumeFrom
                   : null,
-              control: RemoteMuxCommands.agentCanControl(agentVersion),
+              control:
+                  RemoteMuxCommands.agentCanControl(agentVersion) &&
+                  (agentOperatingSystem != 'Windows' ||
+                      RemoteMuxCommands.agentTakesDeviceCommands(agentVersion)),
+              device: RemoteMuxCommands.agentTakesDeviceCommands(agentVersion)
+                  ? deviceDescription
+                  : null,
             );
       session
         ..multiplexer = backend

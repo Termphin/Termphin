@@ -38,10 +38,8 @@ class RemoteMuxCommands {
   /// Windows: ConPTY re-renders what the shell wrote, so the bytes received
   /// are not the bytes the agent counted.
   ///
-  /// [control] joins control (`--control`), never on Windows either: the
-  /// console there swallows the `OSC 5386;control;take` the app types to
-  /// take control, so a session joined as a viewer could never be taken
-  /// back. Windows sessions keep going to whoever attaches or types.
+  /// [control] joins control (`--control`) and [device] says which device
+  /// this is (`--device`), from the start rather than typed in afterwards.
   String attachCommand(
     Multiplexer backend,
     String binary,
@@ -50,12 +48,15 @@ class RemoteMuxCommands {
     String? operatingSystem,
     OutputPosition? resumeFrom,
     bool control = false,
+    String? device,
   }) => switch (backend) {
     Multiplexer.termphin when operatingSystem == 'Windows' =>
       powerShellCommandLine(
         [
           '& ${windowsQuote(binary)} attach',
           if (replayRemoteHistory) '--replay',
+          if (control) '--control',
+          if (device != null) '--device ${windowsQuote(device)}',
           windowsQuote(name),
         ].join(' '),
         interactive: true,
@@ -66,6 +67,7 @@ class RemoteMuxCommands {
       if (resumeFrom != null)
         '--resume ${resumeFrom.epoch}:${resumeFrom.offset}',
       if (control) '--control',
+      if (device != null) '--device ${shellQuote(device)}',
       shellQuote(name),
     ].join(' '),
     Multiplexer.none => '',
@@ -80,6 +82,34 @@ class RemoteMuxCommands {
     if (version == null || !isReleasedVersion(version)) return false;
     return compareVersions(version, controlSinceVersion) >= 0;
   }
+
+  /// The first agent that takes `--device` and the `take`, `away` and
+  /// `back` commands.
+  static const deviceCommandsSinceVersion = '0.20.1';
+
+  /// Whether an agent at [version] can be told which device this is and be
+  /// handed control by a command rather than by keys typed into the
+  /// terminal - which a Windows console swallows, so control is only joined
+  /// there from this version on.
+  static bool agentTakesDeviceCommands(String? version) {
+    if (version == null || !isReleasedVersion(version)) return false;
+    return compareVersions(version, deviceCommandsSinceVersion) >= 0;
+  }
+
+  /// `take`, `away` or `back` [verb] for the session called [name], on
+  /// behalf of the device with install id [deviceId].
+  static String deviceCommand(
+    ({String path, bool isWindows}) binary,
+    String verb,
+    String name,
+    String deviceId,
+  ) => binary.isWindows
+      ? powerShellCommandLine(
+          '& ${windowsQuote(binary.path)} $verb ${windowsQuote(name)} '
+          '${windowsQuote(deviceId)}',
+        )
+      : '${shellQuote(binary.path)} $verb ${shellQuote(name)} '
+            '${shellQuote(deviceId)}';
 
   /// The first agent that takes `--resume`.
   static const resumeSinceVersion = '0.12.0';

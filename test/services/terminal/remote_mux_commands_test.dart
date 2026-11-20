@@ -16,7 +16,7 @@ void main() {
       );
     });
 
-    test('joins control when the agent hands it around, except on Windows', () {
+    test('joins control and names the device when asked to', () {
       expect(
         mux.attachCommand(
           Multiplexer.termphin,
@@ -24,8 +24,10 @@ void main() {
           'work',
           true,
           control: true,
+          device: 'id1;phone;UGl4ZWw',
         ),
-        "exec '/opt/agent' attach --replay --control 'work'",
+        "exec '/opt/agent' attach --replay --control --device "
+        "'id1;phone;UGl4ZWw' 'work'",
       );
       final command = mux.attachCommand(
         Multiplexer.termphin,
@@ -34,11 +36,30 @@ void main() {
         false,
         operatingSystem: 'Windows',
         control: true,
+        device: 'id1;phone;UGl4ZWw',
       );
       final script = String.fromCharCodes(
         _utf16le(base64Decode(command.split(' ').last)),
       );
-      expect(script, isNot(contains('--control')));
+      expect(
+        script,
+        contains('attach --control --device "id1;phone;UGl4ZWw" "work"'),
+      );
+    });
+
+    test('device commands go to the agent on its own connection', () {
+      expect(
+        RemoteMuxCommands.deviceCommand(
+          (path: '/opt/agent', isWindows: false),
+          'take',
+          'work',
+          'id1',
+        ),
+        "'/opt/agent' take 'work' 'id1'",
+      );
+      expect(RemoteMuxCommands.agentTakesDeviceCommands('0.20.1'), isTrue);
+      expect(RemoteMuxCommands.agentTakesDeviceCommands('0.20.0'), isFalse);
+      expect(RemoteMuxCommands.agentTakesDeviceCommands(null), isFalse);
     });
 
     test('only an agent from 0.20.0 on is asked to join control', () {
