@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated: 19 November 2026**
+**Last updated: 20 November 2026**
 
 ## Summary
 
@@ -20,6 +20,9 @@ the app, the website at termphin.dev and the account page at app.termphin.dev.
 - **Push notifications pass through, they are not kept.** The text a server
   sends to your phone goes through our relay to Google or Apple for delivery
   and is not stored.
+- **Live status is end-to-end encrypted.** Which sessions are open on your
+  servers reaches your other devices through our server sealed with a key
+  only your devices and that server hold, and is kept in memory only.
 - **Analytics and crash reports are off until you turn them on**, and are never
   tied to your account.
 - **No ads, no advertising identifiers, no data sold or shared for marketing.**
@@ -75,7 +78,8 @@ receive, and could not produce:
 With sync on, your machines, keys and snippets reach us only as encrypted
 data we cannot decrypt (section 5). With push on, the two things that do
 reach us in readable form are the name you gave a machine and the text of a
-notification on its way to your phone (section 6).
+notification on its way to your phone (section 6). With live status on, the
+sessions on your servers reach us only encrypted (section 6).
 
 ## 4. Your account (only for Termphin Pro)
 
@@ -136,7 +140,7 @@ devices; what is on them stays.
 where it stopped. It is kept for 12 months after Pro ends. A month before it
 is deleted we email you once, to the address of your account.
 
-## 6. Push notifications (Termphin Pro)
+## 6. Push notifications and live status (Termphin Pro)
 
 With push on, a program on one of your servers - a long command finishing, an
 assistant asking for you - can reach your phone while nothing is connected to
@@ -168,6 +172,33 @@ What it involves:
 
 Without Pro, Termphin still shows these notifications while it is connected,
 straight from the session, with nothing sent anywhere.
+
+### Live status
+
+With live status on, your devices show which of your servers are online and
+which sessions are open on them, without connecting. It is off until you
+turn it on in Settings, Account, and works on servers that have push on.
+
+What it involves:
+
+- **Each server** gets a second key, written next to its relay key in your
+  home directory, which your devices also keep. On a Linux or macOS server
+  the app also adds two lines marked `termphin-presence` to your crontab, so
+  the server reports every five minutes and after a restart even with no
+  session open; turning live status off removes them.
+- **A report** - the names of the sessions, when they started, which of
+  your devices are attached to them (the name and type of each device), what
+  each one is doing and the name of the program running in it - is sealed
+  on the server with that key before it leaves, and opened only on your
+  devices. Our server passes it on and cannot read it.
+- **What our server does see** is the identifier of the relay key a report
+  comes with, which account each of your devices signs in as, whether a
+  server says it is online, when servers and devices connect and leave, the
+  size and timing of reports, and the network addresses of the connections
+  while they are open. It keeps this in memory only, never on disk, and
+  forgets a server 12 minutes after its last report. Its logs do not record
+  your sessions or your account.
+- **Our server** is run by us on a machine at Hetzner in Nuremberg, Germany.
 
 ## 7. Purchases
 
@@ -244,7 +275,8 @@ backend and keeps nothing.
 
 ## 10. Legal basis for processing
 
-- **Your account, sync, push notifications and purchases** (sections 4 to 7)
+- **Your account, sync, push notifications, live status and purchases**
+  (sections 4 to 7)
   are processed because they are needed to provide Termphin Pro, which you
   asked for: performance of a contract, Article 6(1)(b) GDPR.
 - **Analytics and crash reports** (section 8) are processed on your
@@ -263,6 +295,7 @@ backend and keeps nothing.
 | Sync data | Until you delete it or your account; 12 months after Pro ends, with an email a month before |
 | A relay key you revoke, or a device that turns push off | Deleted at once |
 | A notification on its way to your phone | Not kept |
+| A server's live status | In memory only, until 12 minutes after its last report |
 | RevenueCat's purchase record | Until you delete your account |
 | Analytics events | 2 months |
 | Crash reports | 90 days |
@@ -282,6 +315,7 @@ on your device stays there until you delete it or uninstall the app.
 | Google Play, App Store | Selling Pro; their own terms apply | - |
 | GitHub | Signing in with GitHub, if you choose it; its own terms apply | United States |
 | Cloudflare | Hosting, CDN and DNS for the website and the account page; the Turnstile check on the account page | Global |
+| Hetzner | The machine our live status server runs on | Germany (EU) |
 
 Where data goes to the United States, the transfer relies on the EU-US Data
 Privacy Framework where the provider is certified under it, and otherwise on
