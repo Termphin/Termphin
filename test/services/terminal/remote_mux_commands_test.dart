@@ -16,7 +16,7 @@ void main() {
       );
     });
 
-    test('joins control when the agent hands it around', () {
+    test('joins control when the agent hands it around, except on Windows', () {
       expect(
         mux.attachCommand(
           Multiplexer.termphin,
@@ -38,7 +38,7 @@ void main() {
       final script = String.fromCharCodes(
         _utf16le(base64Decode(command.split(' ').last)),
       );
-      expect(script, contains('attach --control "work"'));
+      expect(script, isNot(contains('--control')));
     });
 
     test('only an agent from 0.20.0 on is asked to join control', () {

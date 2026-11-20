@@ -37,6 +37,11 @@ class RemoteMuxCommands {
   /// of replaying, falling back to the replay when it cannot. Never on
   /// Windows: ConPTY re-renders what the shell wrote, so the bytes received
   /// are not the bytes the agent counted.
+  ///
+  /// [control] joins control (`--control`), never on Windows either: the
+  /// console there swallows the `OSC 5386;control;take` the app types to
+  /// take control, so a session joined as a viewer could never be taken
+  /// back. Windows sessions keep going to whoever attaches or types.
   String attachCommand(
     Multiplexer backend,
     String binary,
@@ -51,7 +56,6 @@ class RemoteMuxCommands {
         [
           '& ${windowsQuote(binary)} attach',
           if (replayRemoteHistory) '--replay',
-          if (control) '--control',
           windowsQuote(name),
         ].join(' '),
         interactive: true,
