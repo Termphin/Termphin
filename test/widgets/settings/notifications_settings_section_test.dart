@@ -6,6 +6,7 @@ import 'package:termphin/screens/pro/pro_paywall_screen.dart';
 import 'package:termphin/screens/settings/notifications_settings_screen.dart';
 import 'package:termphin/services/account/account_service.dart';
 import 'package:termphin/services/settings/terminal_settings.dart';
+import 'package:termphin/widgets/pro/feature_demos.dart';
 import 'package:termphin/widgets/settings/notifications_settings_section.dart';
 import 'package:termphin/widgets/ui/app_card.dart';
 import 'package:termphin/widgets/ui/large_title_scaffold.dart';
@@ -116,5 +117,31 @@ void main() {
     }
 
     expect(find.byType(ProPaywallScreen), findsOneWidget);
+  });
+
+  testWidgets('how it works sits under the closed-app setting and shows the '
+      'demo', (tester) async {
+    AccountService.backendOverride = () => FakeAccountBackend();
+    AccountService.instance.resetForTest();
+    addTearDown(() {
+      AccountService.backendOverride = null;
+      AccountService.instance.resetForTest();
+    });
+    await pumpTestApp(
+      tester,
+      const Scaffold(
+        body: SingleChildScrollView(child: NotificationsSettingsList()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text(t.proFeature.howItWorks));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(
+      tester.widget<FeatureDemo>(find.byType(FeatureDemo)).kind,
+      FeatureDemoKind.notifications,
+    );
   });
 }

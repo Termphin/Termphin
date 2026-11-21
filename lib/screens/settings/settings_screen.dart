@@ -5,6 +5,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
+import '../../services/pro/pro_service.dart';
 import '../../theme/theme.dart';
 import '../../widgets/settings/account_settings_section.dart';
 import '../../widgets/settings/appearance_settings_section.dart';
@@ -22,6 +23,7 @@ import '../../widgets/ui/settings_tile.dart';
 import '../../widgets/window/app_menu.dart';
 import '../backup/export_screen.dart';
 import '../groups/groups_screen.dart';
+import '../pro/pro_features_screen.dart';
 import 'notifications_settings_screen.dart';
 import 'settings_categories.dart';
 import 'settings_search.dart';
@@ -193,6 +195,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
         );
 
     return [
+      ValueListenableBuilder<bool>(
+        valueListenable: ProService.instance.active,
+        builder: (context, pro, _) => !pro
+            ? const SizedBox.shrink()
+            : Padding(
+                padding: const EdgeInsets.only(bottom: AppTheme.space20),
+                child: AppCard(
+                  child: SettingsTile(
+                    key: const ValueKey('settingsProHub'),
+                    icon: PhosphorIconsRegular.sparkle,
+                    title: t.proHub.row,
+                    subtitle: t.proHub.rowSubtitle,
+                    destination: () =>
+                        ProFeaturesScreen(appVersion: _appVersion),
+                  ),
+                ),
+              ),
+      ),
       const AccountSettingsSection(),
       const AppearanceSettingsSection(),
       const SizedBox(height: AppTheme.space20),

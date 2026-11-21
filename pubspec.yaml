@@ -90,6 +90,8 @@ flutter:
     - assets/release_notes.yaml
     - assets/whats_new.yaml
     - assets/whats_new/
+    - assets/feature_demos/pixel/
+    - assets/feature_demos/iphone/
 
   fonts:
     - family: Geist

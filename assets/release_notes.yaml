@@ -24,9 +24,11 @@
     - "Live status (Pro): see which machines are online and which sessions are open, working or waiting for you, without connecting"
     - "See which of your devices are attached to a session"
     - "Take control of a session open on another device, and watch it at that device's size with zoom while it is in control"
+    - "See how notifications and live status work, with a short demo in Settings, on the Pro screen and on the paywall"
   changed:
     - "Multi-file SFTP downloads show one continuous progress update across the whole batch"
     - "A new Pro screen"
+    - "With Pro, the top of Settings leads to everything Pro adds, in one place"
     - "Usage stats and crash reports are asked about after a few connections instead of a few days"
 - version: "1.15.1"
   date: "2026-11-17"
