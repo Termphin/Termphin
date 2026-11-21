@@ -110,6 +110,9 @@ enum PlatformFeature {
   /// The app updates itself outside any store (Sparkle on macOS, or an
   /// AppImage replacing itself on Linux).
   selfUpdates,
+
+  /// Local persistent sessions backed by the bundled agent without SSH.
+  localSessions,
 }
 
 /// Test override for the `APPIMAGE` environment variable so widget tests can
@@ -152,6 +155,7 @@ bool platformHas(PlatformFeature feature) => switch (feature) {
   PlatformFeature.receivesPush => isAndroidPlatform || isIOSPlatform,
   PlatformFeature.selfUpdates =>
     isMacOSPlatform || (isLinuxPlatform && currentAppImagePath != null),
+  PlatformFeature.localSessions => isDesktopPlatform,
 };
 
 /// The narrowest window that gets the sidebar layout. A landscape window

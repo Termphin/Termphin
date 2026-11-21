@@ -134,7 +134,7 @@ class _TerminalTabPillState<T> extends State<TerminalTabPill<T>> {
       stretch: stretch,
       onTap: onTap,
       trailing: [
-        if (status == ConnectionStatus.connected)
+        if (status == ConnectionStatus.connected && !profile.isLocal)
           ViewModeBadge(
             key: ValueKey('viewModeBadge-$sessionId'),
             mode: mode,
