@@ -16,6 +16,12 @@
 # before anyone has decided what version ships it. Nothing renders it: the app
 # and the landing changelog both drop any entry whose version is not a dotted
 # number. Give it the real number at release time and it appears in both.
+- version: "1.16.1"
+  date: "2026-11-21"
+  changed:
+    - "The account screen says when Pro was bought on the web"
+  fixed:
+    - "Deleting your account only warns about a subscription that keeps billing"
 - version: "1.16.0"
   date: "2026-11-21"
   added:
