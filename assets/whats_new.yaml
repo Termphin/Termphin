@@ -34,6 +34,15 @@
 #            announced as new. Its version then means nothing.
 #
 # Newest version first.
+- version: "1.16.0"
+  highlights:
+    - id: "live-status"
+      title: "Live status"
+      image: "assets/whats_new/live-status.png"
+      body: "See which machines are online and what each session is doing -
+        working, waiting for you or just running - without connecting. Part
+        of Termphin Pro; turn it on under Settings, Account."
+
 - version: "1.15.0"
   highlights:
     - id: "long-command-notifications"
