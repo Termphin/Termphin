@@ -104,6 +104,16 @@ Console if it is ever lost. The committed `android/app/debug-keystore.jks` is
 the public AOSP debug key and is meant to be there - it keeps the debug
 signature stable across machines.
 
+The Mac desktop app ships as a signed, notarized DMG outside the Mac App
+Store, not sandboxed (`docs/architecture/desktop.md` says why).
+`.github/workflows/macos-dmg.yml`, started by hand with a branch or tag, signs
+it with the Developer ID Application identity (secrets
+`MACOS_DEVID_P12_BASE64`/`MACOS_DEVID_P12_PASSWORD`, variable
+`MACOS_DEVID_IDENTITY`), notarizes it with the same App Store Connect key the
+iOS build uploads with, and keeps the DMG as an artifact - or, with
+`preview`, publishes it as a pre-release tagged `desktop-<version>-preview.<run>`,
+which the store release workflow ignores.
+
 ## Android toolchain
 
 Gradle 9.6.1, AGP 9.4.0, Kotlin 2.3.21, `compileSdk` 37. Two things about AGP 9
