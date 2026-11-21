@@ -4421,8 +4421,8 @@ class Translations$account$en {
 	/// en: 'Pro keeps renewing'
 	String get deleteRenewsTitle => 'Pro keeps renewing';
 
-	/// en: 'Deleting your account does not cancel your Pro subscription. The store keeps charging for it until you cancel it in your subscriptions.'
-	String get deleteRenewsMessage => 'Deleting your account does not cancel your Pro subscription. The store keeps charging for it until you cancel it in your subscriptions.';
+	/// en: 'Deleting your account does not cancel a Pro subscription bought in the store. The store keeps charging for it until you cancel it in your subscriptions. One bought on the web is cancelled with the account.'
+	String get deleteRenewsMessage => 'Deleting your account does not cancel a Pro subscription bought in the store. The store keeps charging for it until you cancel it in your subscriptions. One bought on the web is cancelled with the account.';
 
 	/// en: 'Delete anyway'
 	String get deleteAnyway => 'Delete anyway';
@@ -5022,6 +5022,12 @@ class Translations$account$pro$en {
 
 	/// en: 'Manage subscription'
 	String get manage => 'Manage subscription';
+
+	/// en: 'Bought on the web'
+	String get boughtOnWeb => 'Bought on the web';
+
+	/// en: 'Manage or cancel it in your account on the web.'
+	String get boughtOnWebSubtitle => 'Manage or cancel it in your account on the web.';
 
 	/// en: 'Pro tips'
 	String get tips => 'Pro tips';
@@ -6743,7 +6749,7 @@ extension on Translations {
 			'account.deleteTitle' => 'Delete your account?',
 			'account.deleteMessage' => 'Your account and everything stored with it are deleted for good. Machines and keys on this device stay.',
 			'account.deleteRenewsTitle' => 'Pro keeps renewing',
-			'account.deleteRenewsMessage' => 'Deleting your account does not cancel your Pro subscription. The store keeps charging for it until you cancel it in your subscriptions.',
+			'account.deleteRenewsMessage' => 'Deleting your account does not cancel a Pro subscription bought in the store. The store keeps charging for it until you cancel it in your subscriptions. One bought on the web is cancelled with the account.',
 			'account.deleteAnyway' => 'Delete anyway',
 			'account.deleteConfirm' => 'Delete account',
 			'account.passwordToDelete' => 'Enter your password to delete the account',
@@ -6773,6 +6779,8 @@ extension on Translations {
 			'account.pro.activeSummary' => 'Thank you for supporting Termphin.',
 			'account.pro.see' => 'See Pro',
 			'account.pro.manage' => 'Manage subscription',
+			'account.pro.boughtOnWeb' => 'Bought on the web',
+			'account.pro.boughtOnWebSubtitle' => 'Manage or cancel it in your account on the web.',
 			'account.pro.tips' => 'Pro tips',
 			'account.pro.tipsSubtitle' => 'A rare note about what Pro would do, where it would have helped',
 			'account.pro.paywall.tagline' => 'More from your servers',
@@ -6907,6 +6915,8 @@ extension on Translations {
 			'proHub.live' => 'Live status',
 			'proHub.sync' => 'Sync',
 			'legalUpdate.title' => 'Our terms and privacy policy have changed',
+			_ => null,
+		} ?? switch (path) {
 			'legalUpdate.gotIt' => 'Got it',
 			_ => null,
 		};
