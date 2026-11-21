@@ -148,15 +148,31 @@ OpenedPresence? openPresenceState(Uint8List key, String keyId, String state) {
 /// so a backend replaying an old state cannot bring back sessions that have
 /// ended. The newest itself is accepted again: it is what every snapshot
 /// after a reconnect carries.
+///
+/// A state written more than [aheadAllowance] past this device's clock is
+/// accepted but not remembered: it comes from a server whose clock ran
+/// ahead - a virtual machine before it synced, a board without a clock
+/// battery - and remembering it would refuse every state that server sends
+/// once its clock is set right, for as long as it had run ahead.
 class PresenceFreshness {
+  PresenceFreshness({int Function()? now})
+    : _now = now ?? (() => DateTime.now().millisecondsSinceEpoch);
+
+  final int Function() _now;
   final _newest = <String, int>{};
 
+  /// How far past this device's clock a state may be written and still be
+  /// remembered as the newest: clocks a few minutes apart are normal.
+  static const aheadAllowance = Duration(minutes: 5);
+
   /// Whether [writtenAt] for [keyId] is at least as new as the last accepted
-  /// one; records it when it is.
+  /// one; records it when it is and is not from the future.
   bool accept(String keyId, int writtenAt) {
     final newest = _newest[keyId];
     if (newest != null && writtenAt < newest) return false;
-    _newest[keyId] = writtenAt;
+    if (writtenAt <= _now() + aheadAllowance.inMilliseconds) {
+      _newest[keyId] = writtenAt;
+    }
     return true;
   }
 
