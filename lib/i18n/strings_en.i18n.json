@@ -1551,7 +1551,7 @@
     "deleteTitle": "Delete your account?",
     "deleteMessage": "Your account and everything stored with it are deleted for good. Machines and keys on this device stay.",
     "deleteRenewsTitle": "Pro keeps renewing",
-    "deleteRenewsMessage": "Deleting your account does not cancel your Pro subscription. The store keeps charging for it until you cancel it in your subscriptions.",
+    "deleteRenewsMessage": "Deleting your account does not cancel a Pro subscription bought in the store. The store keeps charging for it until you cancel it in your subscriptions. One bought on the web is cancelled with the account.",
     "deleteAnyway": "Delete anyway",
     "deleteConfirm": "Delete account",
     "passwordToDelete": "Enter your password to delete the account",
@@ -1582,6 +1582,8 @@
       "activeSummary": "Thank you for supporting Termphin.",
       "see": "See Pro",
       "manage": "Manage subscription",
+      "boughtOnWeb": "Bought on the web",
+      "boughtOnWebSubtitle": "Manage or cancel it in your account on the web.",
       "tips": "Pro tips",
       "tipsSubtitle": "A rare note about what Pro would do, where it would have helped",
       "paywall": {

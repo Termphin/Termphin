@@ -12,6 +12,7 @@ import '../../services/account/account_service.dart';
 import '../../services/app/project_urls.dart';
 import '../../services/pro/pro_service.dart';
 import '../../theme/theme.dart';
+import '../../utils/platform_info.dart';
 import '../../widgets/account/account_avatar.dart';
 import '../../widgets/account/account_failure_text.dart';
 import '../../widgets/account/live_status_card.dart';
@@ -283,18 +284,19 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
       AppCard(
         child: Column(
           children: [
-            SettingsTile(
-              icon: PhosphorIconsRegular.globe,
-              title: t.account.manageOnWeb,
-              subtitle: t.account.manageOnWebSubtitle,
-              trailing: SettingsTileTrailing.external,
-              onTap: _busy
-                  ? null
-                  : () => openExternalUrl(
-                      context,
-                      Uri.parse(ProjectUrls.accountPage),
-                    ),
-            ),
+            if (platformHas(PlatformFeature.webAccountLinks))
+              SettingsTile(
+                icon: PhosphorIconsRegular.globe,
+                title: t.account.manageOnWeb,
+                subtitle: t.account.manageOnWebSubtitle,
+                trailing: SettingsTileTrailing.external,
+                onTap: _busy
+                    ? null
+                    : () => openExternalUrl(
+                        context,
+                        Uri.parse(ProjectUrls.accountPage),
+                      ),
+              ),
             SettingsTile(
               icon: PhosphorIconsRegular.signOut,
               title: t.account.signOut,

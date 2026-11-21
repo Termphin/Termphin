@@ -117,6 +117,15 @@ class ProException implements Exception {
 /// security rules and the relay check. What this service knows about Pro is
 /// for the screen only - it never unlocks anything by itself, which a GPL
 /// client could not keep from being patched out anyway.
+/// Whether a subscription bought through [store] keeps billing after the
+/// account is deleted. A store subscription does, until it is cancelled in
+/// that store; one bought on the web (Stripe, or RevenueCat's own billing)
+/// is cancelled by the backend when the account is deleted.
+bool storeKeepsBilling(Store store) => switch (store) {
+  Store.stripe || Store.rcBilling || Store.paddle => false,
+  _ => true,
+};
+
 class ProService {
   ProService._();
 
@@ -135,6 +144,16 @@ class ProService {
   /// Whether [active] means anything yet: false until the first [refresh]
   /// has finished, with an answer or without one, and again after sign-out.
   final settled = ValueNotifier<bool>(false);
+
+  /// Whether the account's Pro is a subscription bought on the web, as the
+  /// store last told: managed or cancelled in the account on the web, not
+  /// in a store, and cancelled by the backend when the account is deleted.
+  final boughtOnWeb = ValueNotifier<bool>(false);
+
+  void _readStore(CustomerInfo info) {
+    final pro = info.entitlements.active[kProEntitlement];
+    boughtOnWeb.value = pro != null && !storeKeepsBilling(pro.store);
+  }
 
   bool _configured = false;
   String? _loggedIn;
@@ -166,8 +185,10 @@ class ProService {
 
   /// The store's word on a purchase, renewal or expiry, pushed as it
   /// happens - nothing polls for it.
-  void _storeChanged(CustomerInfo info) =>
-      unawaited(_settle(info.entitlements.active.containsKey(kProEntitlement)));
+  void _storeChanged(CustomerInfo info) {
+    _readStore(info);
+    unawaited(_settle(info.entitlements.active.containsKey(kProEntitlement)));
+  }
 
   /// Reads the account's Pro state from the store and the token it already
   /// has, and brings the server along if the store knows more. Called at
@@ -178,6 +199,7 @@ class ProService {
     try {
       if (await _ready()) {
         final info = await Purchases.getCustomerInfo();
+        _readStore(info);
         store = info.entitlements.active.containsKey(kProEntitlement);
       }
     } catch (_) {}
@@ -367,18 +389,20 @@ class ProService {
   @visibleForTesting
   static Future<bool> Function()? renewsOverride;
 
-  /// Whether the account's Pro is a subscription the store will charge for
+  /// Whether the account's Pro is a subscription a store will charge for
   /// again - which deleting the account does not stop, only cancelling it in
-  /// the store does. Not a lifetime purchase, nor a subscription already
-  /// cancelled. When the store cannot be asked, whether Pro is on at all:
-  /// telling someone to check is better than letting them be charged.
+  /// that store does. Not a lifetime purchase, nor a subscription already
+  /// cancelled, nor one bought on the web (see [storeKeepsBilling]). When the
+  /// store cannot be asked, whether Pro is on at all: telling someone to
+  /// check is better than letting them be charged.
   Future<bool> renews() async {
     final override = renewsOverride;
     if (override != null) return override();
     try {
       if (!await _ready()) return active.value;
       final info = await Purchases.getCustomerInfo();
-      return info.entitlements.active[kProEntitlement]?.willRenew ?? false;
+      final pro = info.entitlements.active[kProEntitlement];
+      return pro != null && pro.willRenew && storeKeepsBilling(pro.store);
     } catch (_) {
       return active.value;
     }
@@ -389,6 +413,7 @@ class ProService {
   Future<void> signedOut() async {
     active.value = false;
     confirmed.value = false;
+    boughtOnWeb.value = false;
     settled.value = false;
     _refreshedAt = null;
     _awaitingCode = false;

@@ -6,8 +6,10 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../i18n/strings.g.dart';
 import '../../models/pro_source.dart';
 import '../../screens/pro/pro_paywall_screen.dart';
+import '../../services/app/project_urls.dart';
 import '../../services/pro/pro_service.dart';
 import '../../theme/theme.dart';
+import '../../utils/platform_info.dart';
 import '../ui/app_badge.dart';
 import '../ui/app_card.dart';
 import '../ui/app_divider.dart';
@@ -17,7 +19,10 @@ import '../ui/settings_tile.dart';
 /// Pro, on the account screen: a plain card with a gold crown. Without Pro
 /// it says in a line what Pro brings and opens the paywall; with it, says
 /// thank you, with a row under a hairline - like any settings row - that
-/// leads out to where the store manages the subscription.
+/// leads out to where the store manages the subscription. A subscription
+/// bought on the web has no store to manage it: the row says so, and on a
+/// desktop leads to the plan in the account on the web - on a phone it only
+/// says where, a store not allowing a link to a page that sells Pro.
 class ProCard extends StatefulWidget {
   const ProCard({super.key});
 
@@ -100,13 +105,35 @@ class _ProCardState extends State<ProCard> {
             ),
             if (active) ...[
               const AppDivider(),
-              SettingsTile(
-                title: t.account.pro.manage,
-                trailing: SettingsTileTrailing.external,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: AppTheme.space16,
-                ),
-                onTap: _manage,
+              ValueListenableBuilder<bool>(
+                valueListenable: _pro.boughtOnWeb,
+                builder: (context, onWeb, _) => onWeb
+                    ? SettingsTile(
+                        key: const ValueKey('proBoughtOnWeb'),
+                        icon: PhosphorIconsRegular.globe,
+                        title: t.account.pro.boughtOnWeb,
+                        subtitle: t.account.pro.boughtOnWebSubtitle,
+                        trailing: platformHas(PlatformFeature.webAccountLinks)
+                            ? SettingsTileTrailing.external
+                            : SettingsTileTrailing.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: AppTheme.space16,
+                        ),
+                        onTap: platformHas(PlatformFeature.webAccountLinks)
+                            ? () => openExternalUrl(
+                                context,
+                                Uri.parse('${ProjectUrls.accountPage}/#plan'),
+                              )
+                            : null,
+                      )
+                    : SettingsTile(
+                        title: t.account.pro.manage,
+                        trailing: SettingsTileTrailing.external,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: AppTheme.space16,
+                        ),
+                        onTap: _manage,
+                      ),
               ),
             ],
           ],
