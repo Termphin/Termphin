@@ -26,6 +26,10 @@ on:
         required: true
       IOS_PROVISIONING_PROFILE_NAME:
         required: true
+      IOS_WIDGET_PROVISIONING_PROFILE_BASE64:
+        required: true
+      IOS_WIDGET_PROVISIONING_PROFILE_NAME:
+        required: true
       APPSTORE_API_KEY_ID:
         required: true
       APPSTORE_API_ISSUER_ID:
@@ -103,6 +107,7 @@ jobs:
           IOS_DIST_CERT_PASSWORD: ${{ secrets.IOS_DIST_CERT_PASSWORD }}
           IOS_KEYCHAIN_PASSWORD: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
           IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          IOS_WIDGET_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_WIDGET_PROVISIONING_PROFILE_BASE64 }}
         run: |
           CERT_PATH="$RUNNER_TEMP/build_cert.p12"
           KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
@@ -121,10 +126,12 @@ jobs:
 
           mkdir -p "$PP_DIR"
           echo "$IOS_PROVISIONING_PROFILE_BASE64" | base64 --decode -o "$PP_DIR/profile.mobileprovision"
+          echo "$IOS_WIDGET_PROVISIONING_PROFILE_BASE64" | base64 --decode -o "$PP_DIR/widget.mobileprovision"
 
       - name: Configure ExportOptions.plist
         env:
           IOS_PROVISIONING_PROFILE_NAME: ${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}
+          IOS_WIDGET_PROVISIONING_PROFILE_NAME: ${{ secrets.IOS_WIDGET_PROVISIONING_PROFILE_NAME }}
         run: |
           # plistlib rather than `plutil -replace`, whose keypaths treat the
           # dots in the bundle id as separators.
@@ -136,6 +143,7 @@ jobs:
           with open(path, "rb") as f:
               plist = plistlib.load(f)
           plist["provisioningProfiles"]["dev.termphin.termphin"] = os.environ["IOS_PROVISIONING_PROFILE_NAME"]
+          plist["provisioningProfiles"]["dev.termphin.termphin.TransferActivity"] = os.environ["IOS_WIDGET_PROVISIONING_PROFILE_NAME"]
           with open(path, "wb") as f:
               plistlib.dump(plist, f)
           PY
@@ -162,6 +170,49 @@ jobs:
             printf 'CODE_SIGN_IDENTITY = Apple Distribution\n'
             printf 'CODE_SIGN_IDENTITY[sdk=iphoneos*] = Apple Distribution\n'
           } >> ios/Flutter/Release.xcconfig
+
+      # The Live Activity widget is a target of its own with its own bundle id
+      # and profile. Its Release configuration is based on Generated.xcconfig,
+      # not on Release.xcconfig above, so it is signed here, in the project.
+      - name: Point the widget at manual signing
+        env:
+          IOS_TEAM_ID: ${{ vars.IOS_TEAM_ID }}
+          IOS_WIDGET_PROVISIONING_PROFILE_NAME: ${{ secrets.IOS_WIDGET_PROVISIONING_PROFILE_NAME }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import re
+
+          path = "ios/Runner.xcodeproj/project.pbxproj"
+          with open(path) as f:
+              project = f.read()
+          release = re.compile(
+              r"(/\* Release \*/ = \{\s*isa = XCBuildConfiguration;.*?buildSettings = \{)(.*?)(\n\t\t\t\};)",
+              re.S,
+          )
+          signing = (
+              "\n\t\t\t\tCODE_SIGN_STYLE = Manual;"
+              f"\n\t\t\t\tDEVELOPMENT_TEAM = {os.environ['IOS_TEAM_ID']};"
+              f"\n\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = \"{os.environ['IOS_WIDGET_PROVISIONING_PROFILE_NAME']}\";"
+              '\n\t\t\t\t"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Distribution";'
+          )
+          count = 0
+
+          def sign(match):
+              global count
+              settings = match.group(2)
+              if "dev.termphin.termphin.TransferActivity;" not in settings:
+                  return match.group(0)
+              count += 1
+              settings = settings.replace("\n\t\t\t\tCODE_SIGN_STYLE = Automatic;", "")
+              return match.group(1) + signing + settings + match.group(3)
+
+          project = release.sub(sign, project)
+          if count != 1:
+              raise SystemExit(f"expected one Release configuration of the widget, found {count}")
+          with open(path, "w") as f:
+              f.write(project)
+          PY
 
       # Flutter hides xcodebuild's stderr, and the archive dies in about a
       # second - before any compiling - so the reason is in here, not in the
