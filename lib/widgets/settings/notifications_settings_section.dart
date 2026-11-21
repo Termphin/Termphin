@@ -18,6 +18,7 @@ import '../../services/settings/setting.dart';
 import '../../services/settings/terminal_settings.dart';
 import '../../theme/theme.dart';
 import '../../utils/platform_info.dart';
+import '../account/pro_feature_sheet.dart';
 import '../ui/app_badge.dart';
 import '../ui/app_card.dart';
 import '../ui/app_divider.dart';
@@ -52,59 +53,6 @@ const kNotificationsNewUntil = '1.17.0';
 
 class _NotificationsSettingsListState
     extends ConsumerState<NotificationsSettingsList> {
-  bool _busy = false;
-
-  @override
-  void initState() {
-    super.initState();
-    unawaited(_load());
-  }
-
-  Future<void> _load() async {
-    PushService.instance.enabledNotifier.value =
-        await PushService.instance.enabled;
-  }
-
-  Future<void> _setPush(bool on, bool pro) async {
-    if (on && !pro && !await ProService.instance.refresh()) {
-      if (!mounted) return;
-      await ProPaywallScreen.show(
-        context,
-        source: ProSource.settingsNotifications,
-      );
-      return;
-    }
-    if (!mounted) return;
-    final t = Translations.of(context);
-    setState(() => _busy = true);
-    try {
-      if (on) {
-        final granted = await PushService.instance.enable();
-        _notePush(granted ? 'granted' : 'denied');
-        if (!granted && mounted) {
-          AppNotifications.error(context, t.settings.notifyDenied);
-        }
-      } else {
-        await PushService.instance.disable();
-        unawaited(
-          AnalyticsService.instance.capture(AnalyticsEvent.pushDisabled),
-        );
-      }
-    } catch (_) {
-      if (on) _notePush('failed');
-      if (mounted) AppNotifications.error(context, t.settings.notifyFailed);
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  void _notePush(String outcome) => unawaited(
-    AnalyticsService.instance.capture(
-      AnalyticsEvent.pushEnabled,
-      properties: {AnalyticsProperty.outcome: outcome},
-    ),
-  );
-
   /// What the one "finishes or needs you" switch turns on and off together:
   /// a program's own request, a long command finishing, a program waiting.
   /// Kept as three settings underneath - the relay, backup and sync read
@@ -140,7 +88,6 @@ class _NotificationsSettingsListState
   Widget build(BuildContext context) {
     final t = Translations.of(context);
     final accounts = AccountService.instance.available;
-    final signedIn = ref.watch(accountProvider) != null;
     return AppCard.fields(
       children: [
         ListenableBuilder(
@@ -166,78 +113,7 @@ class _NotificationsSettingsListState
           subtitle: t.settings.noticeLinesSubtitle,
         ),
         const _OpenAppNotices(),
-        if (accounts)
-          ListenableBuilder(
-            listenable: Listenable.merge([
-              ProService.instance.active,
-              PushService.instance.enabledNotifier,
-            ]),
-            builder: (context, _) {
-              final pro = ProService.instance.active.value;
-              final enabled = PushService.instance.enabledNotifier.value;
-              final paused = enabled && signedIn && !pro;
-              final subtitle = isIOSPlatform
-                  ? t.settings.notifyWhenClosedSubtitleIos
-                  : t.settings.notifyWhenClosedSubtitle;
-              if (!pro && !paused) {
-                void paywall() => ProPaywallScreen.show(
-                  context,
-                  source: ProSource.settingsNotifications,
-                );
-                return Column(
-                  children: [
-                    const AppDivider(),
-                    SettingsTile(
-                      title: t.settings.notifyWhenClosed,
-                      subtitle: subtitle,
-                      trailingWidget: const _SeePro(),
-                      onTap: paywall,
-                    ),
-                  ],
-                );
-              }
-              return Column(
-                children: [
-                  const AppDivider(),
-                  SettingsSwitchTile(
-                    title: t.settings.notifyWhenClosed,
-                    subtitle: paused ? t.settings.notifyPaused : subtitle,
-                    titleTrailing: Padding(
-                      padding: const EdgeInsets.only(left: AppTheme.space8),
-                      child: paused
-                          ? AppBadge(
-                              t.account.sync.pausedBadge,
-                              tone: BadgeTone.warning,
-                            )
-                          : NewBadge(
-                              appVersion: widget.appVersion,
-                              until: kNotificationsNewUntil,
-                            ),
-                    ),
-                    value: enabled && signedIn,
-                    onChanged: _busy ? null : (on) => _setPush(on, pro),
-                  ),
-                  if (paused) ...[
-                    const AppDivider(),
-                    SettingsTile(
-                      title: t.account.sync.renew,
-                      onTap: () => ProPaywallScreen.show(
-                        context,
-                        source: ProSource.settingsNotifications,
-                      ),
-                    ),
-                  ],
-                  if (enabled && signedIn) ...[
-                    const AppDivider(),
-                    SettingsTile(
-                      title: t.settings.notifyServers,
-                      destination: () => const RelayServersScreen(),
-                    ),
-                  ],
-                ],
-              );
-            },
-          ),
+        if (accounts) NotifyWhenClosedTiles(appVersion: widget.appVersion),
       ],
     );
   }
@@ -325,6 +201,173 @@ class _OpenAppNotices extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// The Pro part of notifications: the switch that lets servers reach this
+/// device with Termphin closed, and under it, once it is on, the servers
+/// that can, or a way to renew while Pro has lapsed; last, the way to the
+/// demo of how it works.
+///
+/// Without Pro the row carries a gold pill and opens the paywall instead of
+/// turning on. In a card after other rows it starts with a divider;
+/// [divided] off leaves it out where it comes first.
+class NotifyWhenClosedTiles extends ConsumerStatefulWidget {
+  const NotifyWhenClosedTiles({
+    super.key,
+    this.appVersion,
+    this.divided = true,
+    this.icon,
+  });
+
+  /// For the "New" badge, which goes by itself in [kNotificationsNewUntil].
+  final String? appVersion;
+
+  final bool divided;
+
+  /// Drawn before the switch, where the rows around it have icons too.
+  final IconData? icon;
+
+  @override
+  ConsumerState<NotifyWhenClosedTiles> createState() =>
+      _NotifyWhenClosedTilesState();
+}
+
+class _NotifyWhenClosedTilesState extends ConsumerState<NotifyWhenClosedTiles> {
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_load());
+  }
+
+  Future<void> _load() async {
+    PushService.instance.enabledNotifier.value =
+        await PushService.instance.enabled;
+  }
+
+  Future<void> _setPush(bool on, bool pro) async {
+    if (on && !pro && !await ProService.instance.refresh()) {
+      if (!mounted) return;
+      await ProPaywallScreen.show(
+        context,
+        source: ProSource.settingsNotifications,
+      );
+      return;
+    }
+    if (!mounted) return;
+    final t = Translations.of(context);
+    setState(() => _busy = true);
+    try {
+      if (on) {
+        final granted = await PushService.instance.enable();
+        _notePush(granted ? 'granted' : 'denied');
+        if (!granted && mounted) {
+          AppNotifications.error(context, t.settings.notifyDenied);
+        }
+      } else {
+        await PushService.instance.disable();
+        unawaited(
+          AnalyticsService.instance.capture(AnalyticsEvent.pushDisabled),
+        );
+      }
+    } catch (_) {
+      if (on) _notePush('failed');
+      if (mounted) AppNotifications.error(context, t.settings.notifyFailed);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  void _notePush(String outcome) => unawaited(
+    AnalyticsService.instance.capture(
+      AnalyticsEvent.pushEnabled,
+      properties: {AnalyticsProperty.outcome: outcome},
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Translations.of(context);
+    final signedIn = ref.watch(accountProvider) != null;
+    return ListenableBuilder(
+      listenable: Listenable.merge([
+        ProService.instance.active,
+        PushService.instance.enabledNotifier,
+      ]),
+      builder: (context, _) {
+        final pro = ProService.instance.active.value;
+        final enabled = PushService.instance.enabledNotifier.value;
+        final paused = enabled && signedIn && !pro;
+        final subtitle = isIOSPlatform
+            ? t.settings.notifyWhenClosedSubtitleIos
+            : t.settings.notifyWhenClosedSubtitle;
+        if (!pro && !paused) {
+          void paywall() => ProPaywallScreen.show(
+            context,
+            source: ProSource.settingsNotifications,
+          );
+          return Column(
+            children: [
+              if (widget.divided) const AppDivider(),
+              SettingsTile(
+                icon: widget.icon,
+                title: t.settings.notifyWhenClosed,
+                subtitle: subtitle,
+                trailingWidget: const _SeePro(),
+                onTap: paywall,
+              ),
+              const AppDivider(),
+              const HowItWorksTile(feature: ProFeature.notifications),
+            ],
+          );
+        }
+        return Column(
+          children: [
+            if (widget.divided) const AppDivider(),
+            SettingsSwitchTile(
+              icon: widget.icon,
+              title: t.settings.notifyWhenClosed,
+              subtitle: paused ? t.settings.notifyPaused : subtitle,
+              titleTrailing: Padding(
+                padding: const EdgeInsets.only(left: AppTheme.space8),
+                child: paused
+                    ? AppBadge(
+                        t.account.sync.pausedBadge,
+                        tone: BadgeTone.warning,
+                      )
+                    : NewBadge(
+                        appVersion: widget.appVersion,
+                        until: kNotificationsNewUntil,
+                      ),
+              ),
+              value: enabled && signedIn,
+              onChanged: _busy ? null : (on) => _setPush(on, pro),
+            ),
+            if (paused) ...[
+              const AppDivider(),
+              SettingsTile(
+                title: t.account.sync.renew,
+                onTap: () => ProPaywallScreen.show(
+                  context,
+                  source: ProSource.settingsNotifications,
+                ),
+              ),
+            ],
+            if (enabled && signedIn) ...[
+              const AppDivider(),
+              SettingsTile(
+                title: t.settings.notifyServers,
+                destination: () => const RelayServersScreen(),
+              ),
+            ],
+            const AppDivider(),
+            const HowItWorksTile(feature: ProFeature.notifications),
+          ],
+        );
+      },
     );
   }
 }

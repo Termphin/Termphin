@@ -86,6 +86,8 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 	late final Translations$agentFeatures$en agentFeatures = Translations$agentFeatures$en.internal(_root);
 	late final Translations$proHints$en proHints = Translations$proHints$en.internal(_root);
 	late final Translations$proFeature$en proFeature = Translations$proFeature$en.internal(_root);
+	late final Translations$proDemo$en proDemo = Translations$proDemo$en.internal(_root);
+	late final Translations$proHub$en proHub = Translations$proHub$en.internal(_root);
 	late final Translations$legalUpdate$en legalUpdate = Translations$legalUpdate$en.internal(_root);
 }
 
@@ -4579,6 +4581,57 @@ class Translations$proFeature$en {
 
 	/// en: 'See Pro'
 	String get seePro => 'See Pro';
+
+	/// en: 'Your machines, live'
+	String get liveTitle => 'Your machines, live';
+
+	/// en: 'See which machines are online and which sessions are open, working or waiting for you, without connecting. The session list is encrypted on your server and opened only on your devices.'
+	String get liveBody => 'See which machines are online and which sessions are open, working or waiting for you, without connecting. The session list is encrypted on your server and opened only on your devices.';
+
+	/// en: 'How it works'
+	String get howItWorks => 'How it works';
+}
+
+// Path: proDemo
+class Translations$proDemo$en {
+	Translations$proDemo$en.internal(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'A locked phone with notifications from servers arriving: an agent waiting for you, a deploy and a backup finished'
+	String get notifications => 'A locked phone with notifications from servers arriving: an agent waiting for you, a deploy and a backup finished';
+
+	/// en: 'Termphin's home screen: machines online, with their sessions working and waiting'
+	String get liveScreenshot => 'Termphin\'s home screen: machines online, with their sessions working and waiting';
+}
+
+// Path: proHub
+class Translations$proHub$en {
+	Translations$proHub$en.internal(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'Termphin Pro'
+	String get title => 'Termphin Pro';
+
+	/// en: 'Termphin Pro'
+	String get row => 'Termphin Pro';
+
+	/// en: 'Notifications, live status and sync in one place'
+	String get rowSubtitle => 'Notifications, live status and sync in one place';
+
+	/// en: 'Notifications'
+	String get notificationsSection => 'Notifications';
+
+	/// en: 'Live status'
+	String get live => 'Live status';
+
+	/// en: 'Sync'
+	String get sync => 'Sync';
 }
 
 // Path: legalUpdate
@@ -6842,6 +6895,17 @@ extension on Translations {
 			'proFeature.notificationsTitle' => 'Notifications with Termphin closed',
 			'proFeature.notificationsBody' => 'Termphin tells you when a command finishes or a program needs you. With Pro this reaches you even when the app is closed, through a relay that keeps nothing.',
 			'proFeature.seePro' => 'See Pro',
+			'proFeature.liveTitle' => 'Your machines, live',
+			'proFeature.liveBody' => 'See which machines are online and which sessions are open, working or waiting for you, without connecting. The session list is encrypted on your server and opened only on your devices.',
+			'proFeature.howItWorks' => 'How it works',
+			'proDemo.notifications' => 'A locked phone with notifications from servers arriving: an agent waiting for you, a deploy and a backup finished',
+			'proDemo.liveScreenshot' => 'Termphin\'s home screen: machines online, with their sessions working and waiting',
+			'proHub.title' => 'Termphin Pro',
+			'proHub.row' => 'Termphin Pro',
+			'proHub.rowSubtitle' => 'Notifications, live status and sync in one place',
+			'proHub.notificationsSection' => 'Notifications',
+			'proHub.live' => 'Live status',
+			'proHub.sync' => 'Sync',
 			'legalUpdate.title' => 'Our terms and privacy policy have changed',
 			'legalUpdate.gotIt' => 'Got it',
 			_ => null,

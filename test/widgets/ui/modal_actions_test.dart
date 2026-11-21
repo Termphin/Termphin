@@ -33,13 +33,45 @@ void main() {
 
   testWidgets('on a phone they share the full width', (tester) async {
     await pumpTestApp(tester, _host());
+    tester.view.physicalSize = const Size(400, 800);
+    await tester.pump();
 
     final run = tester.getRect(find.widgetWithText(FilledButton, 'Run'));
     final cancel = tester.getRect(
       find.widgetWithText(OutlinedButton, 'Cancel'),
     );
     expect(cancel.left, 20);
-    expect(run.right, 780);
-    expect(run.width, greaterThan(300));
+    expect(run.right, 380);
+    expect(run.width, greaterThan(150));
+  });
+
+  testWidgets('wider than a phone they stop at the button width, centred', (
+    tester,
+  ) async {
+    await pumpTestApp(tester, _host());
+
+    final run = tester.getRect(find.widgetWithText(FilledButton, 'Run'));
+    final cancel = tester.getRect(
+      find.widgetWithText(OutlinedButton, 'Cancel'),
+    );
+    expect(run.right - cancel.left, AppTheme.buttonMaxWidth);
+    expect((cancel.left + run.right) / 2, 400);
+  });
+
+  testWidgets('a lone button grows to the button width, no further, where '
+      'it is put', (tester) async {
+    await pumpTestApp(
+      tester,
+      Scaffold(
+        body: ButtonWidth(
+          alignment: Alignment.centerLeft,
+          child: FilledButton(onPressed: () {}, child: const Text('Go')),
+        ),
+      ),
+    );
+
+    final go = tester.getRect(find.widgetWithText(FilledButton, 'Go'));
+    expect(go.left, 0);
+    expect(go.width, AppTheme.buttonMaxWidth);
   });
 }

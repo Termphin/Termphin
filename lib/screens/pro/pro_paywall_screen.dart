@@ -12,6 +12,7 @@ import '../../services/analytics/analytics_service.dart';
 import '../../services/app/legal_urls.dart';
 import '../../services/pro/pro_service.dart';
 import '../../theme/theme.dart';
+import '../../widgets/account/pro_feature_sheet.dart';
 import '../../widgets/pro/ascii_glow.dart';
 import '../../widgets/ui/app_notifications.dart';
 import '../../widgets/ui/app_sheet.dart';
@@ -274,6 +275,8 @@ class _ProPaywallScreenState extends ConsumerState<ProPaywallScreen> {
           children: [
             Expanded(
               child: ContentGutter(
+                maxWidth: _columnWidth,
+                onlyWide: false,
                 builder: (context, gutter) {
                   final sides = const EdgeInsets.symmetric(
                     horizontal: AppTheme.space24,
@@ -301,7 +304,9 @@ class _ProPaywallScreenState extends ConsumerState<ProPaywallScreen> {
                               Align(
                                 alignment: Alignment.bottomCenter,
                                 child: Padding(
-                                  padding: sides,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: AppTheme.space24,
+                                  ),
                                   child: Text(
                                     switch (_trialDays) {
                                       final days? => p.trialHero(days: days),
@@ -332,11 +337,13 @@ class _ProPaywallScreenState extends ConsumerState<ProPaywallScreen> {
                               icon: PhosphorIconsRegular.bellRinging,
                               title: p.pushTitle,
                               body: p.pushBody,
+                              demo: ProFeature.notifications,
                             ),
                             _Feature(
                               icon: PhosphorIconsRegular.pulse,
                               title: p.liveTitle,
                               body: p.liveBody,
+                              demo: ProFeature.liveStatus,
                             ),
                             _Feature(
                               icon: PhosphorIconsRegular.arrowsClockwise,
@@ -452,17 +459,32 @@ int? savingPercent(ProOffer yearly, ProOffer? monthly) {
   return percent >= 5 ? percent : null;
 }
 
+/// One thing Pro adds: its icon, its name and a line on it, and for a
+/// feature with a demo a link to how it works, which opens the demo's sheet
+/// over the paywall.
+/// The widest the features, plans and buttons run, upright on a tablet as
+/// well as on its side: wider, the two plan cards and the button under them
+/// stretch into bars.
+const double _columnWidth = 480;
+
 class _Feature extends StatelessWidget {
-  const _Feature({required this.icon, required this.title, required this.body});
+  const _Feature({
+    required this.icon,
+    required this.title,
+    required this.body,
+    this.demo,
+  });
 
   final IconData icon;
   final String title;
   final String body;
+  final ProFeature? demo;
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final colors = context.colors;
+    final demo = this.demo;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppTheme.space10),
       child: Row(
@@ -480,6 +502,30 @@ class _Feature extends StatelessWidget {
                   body,
                   style: text.bodySmall?.copyWith(color: colors.textSecondary),
                 ),
+                if (demo != null)
+                  TextButton.icon(
+                    key: ValueKey('paywallHowItWorks-${demo.name}'),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppTheme.space6,
+                      ),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      visualDensity: VisualDensity.compact,
+                      foregroundColor: colors.primary,
+                      textStyle: text.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    icon: const Icon(
+                      PhosphorIconsRegular.playCircle,
+                      size: AppTheme.icon16,
+                    ),
+                    label: Text(Translations.of(context).proFeature.howItWorks),
+                    onPressed: () => unawaited(
+                      showProFeatureSheet(context, demo, offerPro: false),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -721,6 +767,8 @@ class _Footer extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final link = text.bodySmall?.copyWith(color: colors.textSecondary);
     return ContentGutter(
+      maxWidth: _columnWidth,
+      onlyWide: false,
       builder: (context, gutter) => Padding(
         padding: const EdgeInsets.fromLTRB(
           AppTheme.space24,

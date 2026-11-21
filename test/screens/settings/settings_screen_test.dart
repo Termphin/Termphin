@@ -10,6 +10,7 @@ import 'package:termphin/screens/settings/toolbar_profiles_screen.dart';
 import 'package:termphin/services/analytics/analytics_service.dart';
 import 'package:termphin/services/app/whats_new_service.dart';
 import 'package:termphin/services/completion/command_completion.dart';
+import 'package:termphin/services/pro/pro_service.dart';
 import 'package:termphin/services/security/lock_service.dart';
 import 'package:termphin/services/settings/anonymize_setting.dart';
 import 'package:termphin/services/settings/app_settings.dart';
@@ -20,6 +21,7 @@ import 'package:termphin/services/settings/theme_settings.dart';
 import 'package:termphin/services/settings/toolbar_layout.dart';
 import 'package:termphin/services/settings/upload_settings.dart';
 import 'package:termphin/services/ssh/ssh_session_manager.dart';
+import 'package:termphin/widgets/settings/appearance_settings_section.dart';
 import 'package:termphin/widgets/ui/section_header.dart';
 
 import '../../support/secure_storage_channel.dart';
@@ -626,5 +628,28 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Upload explained'), findsOneWidget);
+  });
+
+  testWidgets('without Pro there is no Pro screen at the top', (tester) async {
+    ProService.instance.active.value = false;
+    await pump(tester);
+
+    expect(find.byKey(const ValueKey('settingsProHub')), findsNothing);
+  });
+
+  testWidgets('with Pro the top of Settings leads to everything Pro adds', (
+    tester,
+  ) async {
+    ProService.instance.active.value = true;
+    addTearDown(() => ProService.instance.active.value = false);
+    await pump(tester);
+
+    expect(find.byKey(const ValueKey('settingsProHub')), findsOneWidget);
+    expect(find.text(t.proHub.rowSubtitle), findsOneWidget);
+    final hub = tester.getTopLeft(find.byKey(const ValueKey('settingsProHub')));
+    final appearance = tester.getTopLeft(
+      find.byType(AppearanceSettingsSection),
+    );
+    expect(hub.dy, lessThan(appearance.dy));
   });
 }

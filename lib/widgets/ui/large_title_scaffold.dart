@@ -52,17 +52,27 @@ class ContentGutter extends StatelessWidget {
     super.key,
     required this.builder,
     this.maxWidth = kContentMaxWidth,
+    this.onlyWide = true,
   });
 
   final Widget Function(BuildContext context, EdgeInsets gutter) builder;
   final double maxWidth;
+
+  /// Off, the content is held to [maxWidth] on a narrow layout too - a
+  /// tablet upright - for a screen whose few lines read as a column.
+  final bool onlyWide;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) => builder(
         context,
-        contentGutter(context, constraints.maxWidth, maxWidth: maxWidth),
+        contentGutter(
+          context,
+          constraints.maxWidth,
+          maxWidth: maxWidth,
+          onlyWide: onlyWide,
+        ),
       ),
     );
   }
@@ -74,8 +84,9 @@ EdgeInsets contentGutter(
   BuildContext context,
   double availableWidth, {
   double maxWidth = kContentMaxWidth,
+  bool onlyWide = true,
 }) {
-  if (!isWideLayout(context) || availableWidth <= maxWidth) {
+  if ((onlyWide && !isWideLayout(context)) || availableWidth <= maxWidth) {
     return EdgeInsets.zero;
   }
   return EdgeInsets.symmetric(horizontal: (availableWidth - maxWidth) / 2);

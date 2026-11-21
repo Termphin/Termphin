@@ -1615,7 +1615,7 @@
         "terms": "Terms",
         "privacy": "Privacy",
         "close": "Close",
-        "trialHero": "Try Pro free for\u00a0{days}\u00a0days",
+        "trialHero": "Try Pro free for {days} days",
         "startTrial": "Try free for {days} days",
         "trialTerms": "Free for {days} days, then {price}. Cancel before it ends and you pay nothing.",
         "nothingToRestore": "No purchase to restore on this account"
@@ -1722,7 +1722,22 @@
   "proFeature": {
     "notificationsTitle": "Notifications with Termphin closed",
     "notificationsBody": "Termphin tells you when a command finishes or a program needs you. With Pro this reaches you even when the app is closed, through a relay that keeps nothing.",
-    "seePro": "See Pro"
+    "seePro": "See Pro",
+    "liveTitle": "Your machines, live",
+    "liveBody": "See which machines are online and which sessions are open, working or waiting for you, without connecting. The session list is encrypted on your server and opened only on your devices.",
+    "howItWorks": "How it works"
+  },
+  "proDemo": {
+    "notifications": "A locked phone with notifications from servers arriving: an agent waiting for you, a deploy and a backup finished",
+    "liveScreenshot": "Termphin's home screen: machines online, with their sessions working and waiting"
+  },
+  "proHub": {
+    "title": "Termphin Pro",
+    "row": "Termphin Pro",
+    "rowSubtitle": "Notifications, live status and sync in one place",
+    "notificationsSection": "Notifications",
+    "live": "Live status",
+    "sync": "Sync"
   },
   "legalUpdate": {
     "title": "Our terms and privacy policy have changed",

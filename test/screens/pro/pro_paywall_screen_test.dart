@@ -10,6 +10,7 @@ import 'package:termphin/screens/pro/pro_paywall_screen.dart';
 import 'package:termphin/services/account/account_service.dart';
 import 'package:termphin/services/analytics/analytics_service.dart';
 import 'package:termphin/services/pro/pro_service.dart';
+import 'package:termphin/widgets/pro/feature_demos.dart';
 
 import '../../support/analytics_recorder.dart';
 import '../../support/test_app.dart';
@@ -120,6 +121,31 @@ void main() {
       AnalyticsProperty.source.propertyName: 'sync_card',
       AnalyticsProperty.reason.propertyName: 'not_signed_in',
     });
+  });
+
+  testWidgets('how it works opens the demo over the paywall, with no way '
+      'to a second paywall', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await pumpTestApp(
+      tester,
+      const ProPaywallScreen(source: ProSource.syncCard, offers: []),
+    );
+    await tester.pump();
+
+    final link = find.byKey(const ValueKey('paywallHowItWorks-liveStatus'));
+    await tester.ensureVisible(link);
+    await tester.tap(link);
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    final demo = tester.widget<FeatureDemo>(find.byType(FeatureDemo));
+    expect(demo.kind, FeatureDemoKind.live);
+    final t = AppLocale.en.buildSync();
+    expect(find.text(t.proFeature.seePro), findsNothing);
+    expect(
+      find.byKey(const ValueKey('paywallHowItWorks-notifications')),
+      findsOneWidget,
+    );
   });
 
   group('trial', () {

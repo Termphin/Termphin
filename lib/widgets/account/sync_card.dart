@@ -22,6 +22,7 @@ import '../ui/app_card.dart';
 import '../ui/app_dropdown.dart';
 import '../ui/app_notifications.dart';
 import '../ui/confirm_dialog.dart';
+import '../ui/modal_actions.dart';
 import '../ui/text_input_dialog.dart';
 import 'account_feature_header.dart';
 
@@ -365,7 +366,13 @@ class _SyncCardState extends ConsumerState<SyncCard> {
             ),
           const SizedBox(height: AppTheme.space14),
           if (paused)
-            FilledButton(onPressed: _busy ? null : _renew, child: Text(s.renew))
+            ButtonWidth(
+              alignment: Alignment.centerLeft,
+              child: FilledButton(
+                onPressed: _busy ? null : _renew,
+                child: Text(s.renew),
+              ),
+            )
           else if (state == SyncState.ready)
             Align(
               alignment: Alignment.centerLeft,
@@ -375,20 +382,26 @@ class _SyncCardState extends ConsumerState<SyncCard> {
               ),
             )
           else if (_lagging)
-            OutlinedButton(onPressed: _refresh, child: Text(s.retry))
+            ButtonWidth(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton(onPressed: _refresh, child: Text(s.retry)),
+            )
           else if (!_confirming) ...[
-            FilledButton(
-              onPressed: _busy || state == null
-                  ? null
-                  : state == SyncState.locked
-                  ? _unlock
-                  : _turnOn,
-              child: Text(
-                _busy
-                    ? s.syncing
-                    : state == SyncState.locked && !_needsPro
-                    ? s.unlock
-                    : s.turnOn,
+            ButtonWidth(
+              alignment: Alignment.centerLeft,
+              child: FilledButton(
+                onPressed: _busy || state == null
+                    ? null
+                    : state == SyncState.locked
+                    ? _unlock
+                    : _turnOn,
+                child: Text(
+                  _busy
+                      ? s.syncing
+                      : state == SyncState.locked && !_needsPro
+                      ? s.unlock
+                      : s.turnOn,
+                ),
               ),
             ),
             if (state == SyncState.locked)

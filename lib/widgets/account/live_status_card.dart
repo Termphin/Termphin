@@ -4,16 +4,17 @@ import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
-import '../../models/pro_source.dart';
-import '../../screens/pro/pro_paywall_screen.dart';
 import '../../services/pro/pro_service.dart';
 import '../../services/settings/live_presence_setting.dart';
 import '../../theme/theme.dart';
 import '../ui/app_card.dart';
+import '../ui/app_divider.dart';
 import '../ui/settings_tile.dart';
+import 'pro_feature_sheet.dart';
 
-/// The account's switch for live status, off until turned on. Without Pro
-/// it shows what live status is and opens the paywall instead.
+/// The account's switch for live status, off until turned on, with the way
+/// to the demo of how it works under it. Without Pro the row itself shows
+/// how live status works, with the way to the paywall there.
 class LiveStatusCard extends StatelessWidget {
   const LiveStatusCard({super.key});
 
@@ -33,16 +34,21 @@ class LiveStatusCard extends StatelessWidget {
               title: t.account.live.title,
               subtitle: t.account.live.proHint,
               trailingWidget: const _SeePro(),
-              onTap: () =>
-                  ProPaywallScreen.show(context, source: ProSource.liveStatus),
+              onTap: () => showProFeatureSheet(context, ProFeature.liveStatus),
             );
           }
-          return SettingsSwitchTile(
-            icon: PhosphorIconsRegular.pulse,
-            title: t.account.live.title,
-            subtitle: t.account.live.subtitle,
-            value: livePresenceSetting.value,
-            onChanged: (on) => unawaited(livePresenceSetting.set(on)),
+          return Column(
+            children: [
+              SettingsSwitchTile(
+                icon: PhosphorIconsRegular.pulse,
+                title: t.account.live.title,
+                subtitle: t.account.live.subtitle,
+                value: livePresenceSetting.value,
+                onChanged: (on) => unawaited(livePresenceSetting.set(on)),
+              ),
+              const AppDivider(),
+              const HowItWorksTile(feature: ProFeature.liveStatus),
+            ],
           );
         },
       ),

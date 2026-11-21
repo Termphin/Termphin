@@ -501,6 +501,10 @@ class AppTheme {
   static const double space40 = 40;
   static const double space48 = 48;
 
+  /// The widest a full-width button grows on a screen wider than a phone -
+  /// a tablet, a phone on its side - where edge to edge would be a bar.
+  static const double buttonMaxWidth = 400;
+
   /// Font sizes. Values not on this scale snap to the nearest step;
   /// ties snap toward the smaller value.
   static const double font10 = 10;
