@@ -1,7 +1,42 @@
 import 'dart:convert';
+import 'dart:io' show Platform;
 
 import '../services/storage/group_storage.dart';
 import 'port_forwarding_rule.dart';
+
+/// Reserved id for the synthetic "This computer" profile representing local
+/// agent sessions on a desktop. Never saved to profile storage, exported or
+/// synced.
+const kLocalProfileId = 'this-computer';
+
+extension LocalSshProfile on SshProfile {
+  /// Whether this profile represents local sessions on the current computer.
+  bool get isLocal => id == kLocalProfileId;
+}
+
+/// Builds a synthetic [SshProfile] for local sessions on the current computer.
+SshProfile localComputerProfile({
+  required String name,
+  String? host,
+  String? username,
+}) {
+  final resolvedHost = (host ?? Platform.localHostname).trim();
+  final resolvedUser =
+      (username ??
+              Platform.environment['USER'] ??
+              Platform.environment['USERNAME'] ??
+              '')
+          .trim();
+  return SshProfile(
+    id: kLocalProfileId,
+    name: name,
+    host: resolvedHost.isEmpty ? 'localhost' : resolvedHost,
+    port: 0,
+    username: resolvedUser.isEmpty ? 'local' : resolvedUser,
+    authMethod: AuthMethod.none,
+    createdAt: DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+  );
+}
 
 enum AuthMethod { none, password, privateKey }
 

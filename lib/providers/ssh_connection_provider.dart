@@ -132,6 +132,7 @@ class SshConnectionNotifier extends Notifier<SshConnectionState> {
   /// since - a new host, say - has to reach the next connection attempt.
   SshProfile get _profile {
     final id = _key.$2.id;
+    if (id == kLocalProfileId) return _key.$2;
     return ref.read(profilesProvider).where((p) => p.id == id).firstOrNull ??
         _key.$2;
   }
@@ -365,6 +366,27 @@ class SshConnectionNotifier extends Notifier<SshConnectionState> {
   bool _scheduleReconnect() {
     if (_disposed) return false;
     if (!state.multiplexer.isPersistent) return false;
+
+    if (_profile.isLocal) {
+      _reconnectAttempt++;
+      _reconnectSecondsRemaining = 0;
+      state = state.copyWith(
+        status: ConnectionStatus.reconnecting,
+        clearError: true,
+        waitingForNetwork: false,
+        reconnectAttempt: _reconnectAttempt,
+        reconnectSecondsRemaining: 0,
+      );
+      _reconnectTimer?.cancel();
+      _reconnectTimer = Timer(const Duration(milliseconds: 250), () {
+        _reconnectTimer = null;
+        if (_disposed) return;
+        unawaited(
+          _connect(initialWidth: _lastWidth, initialHeight: _lastHeight),
+        );
+      });
+      return true;
+    }
 
     if (!_network.isOnline) {
       _cancelReconnect();

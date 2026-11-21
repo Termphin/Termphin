@@ -56,6 +56,7 @@ Future<void> loadAppSettings() async {
     tabBarPositionSetting.load(),
     lockTimeoutSetting.load(),
     closeToTraySetting.load(),
+    showThisComputerSetting.load(),
     profileFormMoreOptionsSetting.load(),
   ]);
 }

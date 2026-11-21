@@ -52,6 +52,7 @@ List<SettingsSearchEntry> settingsSearchIndex(
   Translations t, {
   String? appVersion,
   String? version,
+  bool localSessions = false,
 }) {
   final k = t.settings.searchKeywords;
   final top = t.settings.title;
@@ -153,6 +154,8 @@ List<SettingsSearchEntry> settingsSearchIndex(
         t.settings.mouseKeyboardGuard,
         keywords: k.mouseKeyboardGuard,
       ),
+    if (localSessions && platformHas(PlatformFeature.localSessions))
+      inCategory(SettingsCategory.terminal, t.settings.showThisComputer),
     category(SettingsCategory.files),
     inCategory(
       SettingsCategory.files,

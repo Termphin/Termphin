@@ -387,6 +387,14 @@ class _MainShellState extends ConsumerState<MainShell>
       AppCommand.zoomPane,
       () => liveTerminal()?.canZoomPane() ?? false,
     );
+    available(
+      AppCommand.toggleFiles,
+      () => !(liveTerminal()?.activeSessionIsLocal ?? false),
+    );
+    available(
+      AppCommand.uploadFile,
+      () => !(liveTerminal()?.activeSessionIsLocal ?? false),
+    );
   }
 
   bool _zoomTerminal(double delta) {

@@ -6,8 +6,21 @@ import 'package:uuid/uuid.dart';
 import '../models/port_forwarding_rule.dart';
 import '../models/ssh_profile.dart';
 import '../services/analytics/analytics_service.dart';
+import '../services/ssh/remote_agent_service.dart';
 import '../services/storage/group_storage.dart';
 import '../services/storage/profile_storage.dart';
+import '../services/terminal/local_agent_service.dart';
+
+/// Whether the bundled `termphin-agent` manifest is recent enough for local
+/// desktop sessions (`>= localSessionsSinceVersion`).
+final localSessionsSupportedProvider = FutureProvider<bool>((ref) async {
+  try {
+    final version = await bundledAgentVersion();
+    return supportsLocalSessionsVersion(version);
+  } catch (_) {
+    return false;
+  }
+});
 
 final profileStorageProvider = Provider<ProfileStorage>((ref) {
   return ProfileStorage();

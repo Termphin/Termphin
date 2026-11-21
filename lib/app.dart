@@ -601,10 +601,14 @@ class _AppShellState extends ConsumerState<_AppShell> {
     final context = navigatorKey.currentContext;
     if (context == null || !context.mounted) return;
     final container = ProviderScope.containerOf(context);
-    final profile = container
-        .read(profilesProvider)
-        .where((profile) => profile.id == profileId)
-        .firstOrNull;
+    final profile = profileId == kLocalProfileId
+        ? localComputerProfile(
+            name: Translations.of(context).profiles.thisComputer,
+          )
+        : container
+              .read(profilesProvider)
+              .where((profile) => profile.id == profileId)
+              .firstOrNull;
     if (profile == null) return;
     final overlay = container.read(terminalOverlayProvider.notifier);
     if (session.isEmpty) {

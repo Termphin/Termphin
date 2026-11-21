@@ -113,7 +113,9 @@
     "noServerYet": "No server yet?",
     "quickAddHint": "user@host",
     "quickAddTooltip": "Add this machine",
-    "quickAddInvalid": "Type it the way you would after ssh, like user@server."
+    "quickAddInvalid": "Type it the way you would after ssh, like user@server.",
+    "thisComputer": "This computer",
+    "hideThisComputer": "Hide this computer"
   },
   "profileForm": {
     "newTitle": "New Machine",
@@ -712,6 +714,8 @@
     "closeToTray": "Keep running in the tray",
     "closeToTraySubtitle": "Closing the window leaves your sessions connected",
     "closeToTrayUnavailable": "This desktop has no tray to keep Termphin in",
+    "showThisComputer": "Show This computer",
+    "showThisComputerSubtitle": "Pin local terminal sessions at the top of your machines list",
     "notificationsSection": "Notifications",
     "notifyWhenClosed": "Notify me anywhere",
     "seePro": "See Pro",

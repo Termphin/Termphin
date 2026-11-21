@@ -14,7 +14,7 @@ import '../ui/app_dropdown.dart';
 import '../ui/selection_action_bar.dart';
 import 'profile_avatar.dart';
 
-enum _ProfileCardAction { edit, loadSessions, delete }
+enum _ProfileCardAction { edit, loadSessions, delete, hide }
 
 /// A profile row with name, address and session status, plus an edit/load/
 /// delete menu unless the row is in selection mode.
@@ -30,9 +30,10 @@ class ProfileCard extends ConsumerWidget {
     super.key,
     required this.profile,
     required this.onTap,
-    required this.onEdit,
-    required this.onLoadSessions,
-    required this.onDelete,
+    this.onEdit,
+    this.onLoadSessions,
+    this.onDelete,
+    this.onHide,
     this.onCancelLoadSessions,
     this.isLoadingSessions = false,
     this.sessionsCheckedLabel,
@@ -45,9 +46,10 @@ class ProfileCard extends ConsumerWidget {
 
   final SshProfile profile;
   final VoidCallback onTap;
-  final VoidCallback onEdit;
-  final VoidCallback onLoadSessions;
-  final VoidCallback onDelete;
+  final VoidCallback? onEdit;
+  final VoidCallback? onLoadSessions;
+  final VoidCallback? onDelete;
+  final VoidCallback? onHide;
 
   /// Stops this machine's load. Null while nothing is in flight.
   final VoidCallback? onCancelLoadSessions;
@@ -125,7 +127,9 @@ class ProfileCard extends ConsumerWidget {
                 ),
                 const SizedBox(height: AppTheme.space4),
                 Text(
-                  '$displayUsername@$displayHost:${profile.port}',
+                  profile.isLocal
+                      ? '$displayUsername@$displayHost'
+                      : '$displayUsername@$displayHost:${profile.port}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: context.colors.uiStyle,
@@ -196,54 +200,73 @@ class ProfileCard extends ConsumerWidget {
               iconColor: context.colors.textTertiary,
               buttonSize: 40,
               width: 220,
-              items: [
-                DropdownItem(
-                  value: _ProfileCardAction.edit,
-                  intrinsicHeight: true,
-                  child: AppDropdownItem(
-                    icon: PhosphorIconsRegular.pencilSimple,
-                    label: t.common.edit,
-                  ),
-                ),
-                DropdownItem(
-                  value: _ProfileCardAction.loadSessions,
-                  intrinsicHeight: true,
-                  enabled: !isLoadingSessions,
-                  child: isLoadingSessions
-                      ? Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const SizedBox.square(
-                              dimension: AppTheme.icon16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                            const SizedBox(width: AppTheme.space10),
-                            Text(t.session.loadSessions),
-                          ],
-                        )
-                      : AppDropdownItem(
-                          icon: PhosphorIconsRegular.cloudArrowDown,
-                          label: t.session.loadSessions,
+              items: profile.isLocal
+                  ? [
+                      if (onHide != null)
+                        DropdownItem(
+                          value: _ProfileCardAction.hide,
+                          intrinsicHeight: true,
+                          child: AppDropdownItem(
+                            icon: PhosphorIconsRegular.eyeSlash,
+                            label: t.profiles.hideThisComputer,
+                          ),
                         ),
-                ),
-                DropdownItem(
-                  value: _ProfileCardAction.delete,
-                  intrinsicHeight: true,
-                  child: AppDropdownItem(
-                    icon: PhosphorIconsRegular.trash,
-                    label: t.common.delete,
-                    color: context.colors.error,
-                  ),
-                ),
-              ],
+                    ]
+                  : [
+                      if (onEdit != null)
+                        DropdownItem(
+                          value: _ProfileCardAction.edit,
+                          intrinsicHeight: true,
+                          child: AppDropdownItem(
+                            icon: PhosphorIconsRegular.pencilSimple,
+                            label: t.common.edit,
+                          ),
+                        ),
+                      if (onLoadSessions != null)
+                        DropdownItem(
+                          value: _ProfileCardAction.loadSessions,
+                          intrinsicHeight: true,
+                          enabled: !isLoadingSessions,
+                          child: isLoadingSessions
+                              ? Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const SizedBox.square(
+                                      dimension: AppTheme.icon16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    ),
+                                    const SizedBox(width: AppTheme.space10),
+                                    Text(t.session.loadSessions),
+                                  ],
+                                )
+                              : AppDropdownItem(
+                                  icon: PhosphorIconsRegular.cloudArrowDown,
+                                  label: t.session.loadSessions,
+                                ),
+                        ),
+                      if (onDelete != null)
+                        DropdownItem(
+                          value: _ProfileCardAction.delete,
+                          intrinsicHeight: true,
+                          child: AppDropdownItem(
+                            icon: PhosphorIconsRegular.trash,
+                            label: t.common.delete,
+                            color: context.colors.error,
+                          ),
+                        ),
+                    ],
               onSelected: (action) {
                 switch (action) {
                   case _ProfileCardAction.edit:
-                    onEdit();
+                    onEdit?.call();
                   case _ProfileCardAction.loadSessions:
-                    onLoadSessions();
+                    onLoadSessions?.call();
                   case _ProfileCardAction.delete:
-                    onDelete();
+                    onDelete?.call();
+                  case _ProfileCardAction.hide:
+                    onHide?.call();
                 }
               },
             ),

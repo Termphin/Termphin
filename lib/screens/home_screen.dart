@@ -21,12 +21,14 @@ import '../providers/terminal_overlay_provider.dart';
 import '../services/app/app_commands.dart';
 import '../services/app/identity_anonymizer.dart';
 import '../services/realtime/presence_state.dart';
+import '../services/settings/desktop_settings.dart';
 import '../services/sftp/cancel_token.dart';
 import '../services/ssh/ssh_link.dart';
 import '../services/ssh/ssh_session_manager.dart';
 import '../services/storage/group_storage.dart';
 import '../theme/theme.dart';
 import '../utils/group_match.dart';
+import '../utils/platform_info.dart';
 import '../utils/profile_sort.dart';
 import '../widgets/account/account_avatar_button.dart';
 import '../widgets/account/pro_hint_card.dart';
@@ -95,6 +97,72 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   final _sortNotifier = ValueNotifier<ProfileSort>(ProfileSort.recentlyUsed);
 
   late final VoidCallback _unregisterEscape;
+  Timer? _localPollTimer;
+  bool _localSessionsRefreshing = false;
+  bool _listVisible = false;
+  SshProfile? _cachedLocalProfile;
+
+  SshProfile _localProfile(String name) {
+    final existing = _cachedLocalProfile;
+    if (existing != null && existing.name == name) return existing;
+    final created = localComputerProfile(name: name);
+    _cachedLocalProfile = created;
+    return created;
+  }
+
+  bool get _showLocalCard {
+    if (!platformHas(PlatformFeature.localSessions)) return false;
+    if (!showThisComputerSetting.value) return false;
+    return ref.read(localSessionsSupportedProvider).value ?? false;
+  }
+
+  void _onShowThisComputerChanged() {
+    if (!mounted) return;
+    _syncLocalPolling();
+    setState(() {});
+  }
+
+  void _syncLocalPolling() {
+    final active = _listVisible && _showLocalCard;
+    if (active && _localPollTimer == null) {
+      unawaited(_refreshLocalSessions());
+      _localPollTimer = Timer.periodic(
+        const Duration(seconds: 5),
+        (_) => unawaited(_refreshLocalSessions()),
+      );
+    } else if (!active && _localPollTimer != null) {
+      _localPollTimer?.cancel();
+      _localPollTimer = null;
+    }
+  }
+
+  Future<void> _refreshLocalSessions() async {
+    if (!mounted || _localSessionsRefreshing || !_showLocalCard) return;
+    _localSessionsRefreshing = true;
+    try {
+      final profile = _localProfile(
+        Translations.of(context).profiles.thisComputer,
+      );
+      final listed = await _manager.listRemoteSessions(profile);
+      if (!mounted) return;
+      final existingNames = {
+        for (final tab in _manager.allTabsForProfile(kLocalProfileId))
+          if (tab.muxName != null) tab.muxName!,
+      };
+      for (final session in listed) {
+        if (!existingNames.contains(session.name)) {
+          _manager.adoptRemoteSession(
+            profile,
+            session.name,
+            multiplexer: session.multiplexer,
+          );
+        }
+      }
+    } catch (_) {
+    } finally {
+      _localSessionsRefreshing = false;
+    }
+  }
 
   /// Esc on a desktop drops the selection, as a click on its X does.
   bool _clearSelectionOnEscape() {
@@ -109,10 +177,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _unregisterEscape = AppCommands.instance.registerEscape(
       _clearSelectionOnEscape,
     );
+    showThisComputerSetting.addListener(_onShowThisComputerChanged);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final visible = TickerMode.valuesOf(context).enabled;
+    if (visible != _listVisible) {
+      _listVisible = visible;
+      _syncLocalPolling();
+    }
   }
 
   @override
   void dispose() {
+    _localPollTimer?.cancel();
+    _localPollTimer = null;
+    showThisComputerSetting.removeListener(_onShowThisComputerChanged);
     _unregisterEscape();
     _sortNotifier.dispose();
     super.dispose();
@@ -592,6 +674,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   /// press and `⋮` menu do, in one place under the pointer.
   List<ContextMenuEntry?> _profileMenu(SshProfile profile) {
     final t = Translations.of(context);
+    if (profile.isLocal) {
+      return [
+        ContextMenuEntry(
+          label: t.contextMenu.connect,
+          icon: PhosphorIconsRegular.terminalWindow,
+          onSelected: () =>
+              ref.read(terminalOverlayProvider.notifier).openProfile(profile),
+        ),
+        ContextMenuEntry(
+          label: t.profiles.hideThisComputer,
+          icon: PhosphorIconsRegular.eyeSlash,
+          onSelected: () => unawaited(showThisComputerSetting.set(false)),
+        ),
+      ];
+    }
     final selected = _selectedProfileIds.contains(profile.id);
     return [
       ContextMenuEntry(
@@ -638,6 +735,75 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   /// nothing jumps under the finger while selection steps back from taking
   /// taps on them. A Ctrl-click on a desktop is the long press: it picks the
   /// card rather than opening it.
+  Widget _buildSessionRows(
+    SshProfile profile,
+    List<ActiveSessionView> tabs, {
+    bool selecting = false,
+  }) {
+    return IgnorePointer(
+      ignoring: selecting,
+      child: AnimatedOpacity(
+        opacity: selecting ? 0.4 : 1,
+        duration: AppTheme.interactiveDuration,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (var i = 0; i < tabs.length; i++)
+              _SessionRow(
+                session: tabs[i],
+                isLast: false,
+                onTap: () => _openSession(
+                  tabs[i].id,
+                  tabs[i].profile,
+                  scope: SiblingScope.none,
+                ),
+                onRename: tabs[i].muxName == null
+                    ? null
+                    : () => _renameSessionRow(tabs[i]),
+                onDetach: tabs[i].dropped || tabs[i].muxName == null
+                    ? null
+                    : () => _detachSessionRow(tabs[i]),
+                onEnd: tabs[i].muxName == null
+                    ? null
+                    : () => _endSessionRow(tabs[i]),
+              ),
+            NewSessionRow(
+              onTap: () =>
+                  _openSession(_uuid.v4(), profile, scope: SiblingScope.none),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLocalProfileItem(SshProfile profile, SshSessionManager manager) {
+    final tabs = manager.allTabsForProfile(profile.id);
+    final liveTabs = tabs.where((s) => !s.dropped).toList();
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppTheme.space16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ContextMenuRegion(
+            entries: () => _profileMenu(profile),
+            child: ProfileCard(
+              key: const ValueKey('thisComputerCard'),
+              profile: profile,
+              onTap: () => ref
+                  .read(terminalOverlayProvider.notifier)
+                  .openProfile(profile),
+              onHide: () => unawaited(showThisComputerSetting.set(false)),
+              isActive: liveTabs.isNotEmpty,
+              attachedBelow: true,
+            ),
+          ),
+          _buildSessionRows(profile, tabs),
+        ],
+      ),
+    );
+  }
+
   Widget _buildProfileItem(SshProfile profile, SshSessionManager manager) {
     final tabs = manager.allTabsForProfile(profile.id);
     final liveTabs = tabs.where((s) => !s.dropped).toList();
@@ -682,44 +848,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               attachedBelow: true,
             ),
           ),
-          IgnorePointer(
-            ignoring: selecting,
-            child: AnimatedOpacity(
-              opacity: selecting ? 0.4 : 1,
-              duration: AppTheme.interactiveDuration,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (var i = 0; i < tabs.length; i++)
-                    _SessionRow(
-                      session: tabs[i],
-                      isLast: false,
-                      onTap: () => _openSession(
-                        tabs[i].id,
-                        tabs[i].profile,
-                        scope: SiblingScope.none,
-                      ),
-                      onRename: tabs[i].muxName == null
-                          ? null
-                          : () => _renameSessionRow(tabs[i]),
-                      onDetach: tabs[i].dropped || tabs[i].muxName == null
-                          ? null
-                          : () => _detachSessionRow(tabs[i]),
-                      onEnd: tabs[i].muxName == null
-                          ? null
-                          : () => _endSessionRow(tabs[i]),
-                    ),
-                  NewSessionRow(
-                    onTap: () => _openSession(
-                      _uuid.v4(),
-                      profile,
-                      scope: SiblingScope.none,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          _buildSessionRows(profile, tabs, selecting: selecting),
         ],
       ),
     );
@@ -729,7 +858,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final profiles = ref.watch(profilesProvider);
     final groups = ref.watch(profileGroupsProvider);
+    final localSupported =
+        ref.watch(localSessionsSupportedProvider).value ?? false;
+    ref.listen(localSessionsSupportedProvider, (_, _) => _syncLocalPolling());
+    final showLocal =
+        platformHas(PlatformFeature.localSessions) &&
+        localSupported &&
+        showThisComputerSetting.value;
     final t = Translations.of(context);
+    final localProfile = showLocal
+        ? _localProfile(t.profiles.thisComputer)
+        : null;
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
@@ -850,6 +989,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               0,
                             ),
                             sliver: SliverToBoxAdapter(child: ProHintCard()),
+                          ),
+                        if (localProfile != null)
+                          SliverPadding(
+                            padding: const EdgeInsets.only(
+                              top: AppTheme.space12,
+                              bottom: AppTheme.space8,
+                            ),
+                            sliver: SliverToBoxAdapter(
+                              child: _buildLocalProfileItem(
+                                localProfile,
+                                manager,
+                              ),
+                            ),
                           ),
                         if (profiles.isEmpty)
                           SliverFillRemaining(

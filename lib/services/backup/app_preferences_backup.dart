@@ -122,6 +122,7 @@ Future<Map<String, dynamic>> exportAppPreferences({
     'tabBarPosition': (await tabBarPositionSetting.load()).name,
     'lockTimeout': (await lockTimeoutSetting.load()).name,
     'closeToTray': await closeToTraySetting.load(),
+    'showThisComputer': await showThisComputerSetting.load(),
     'editorWordWrap': await editorSettings.wordWrap.load(),
     'editorLineNumbers': await editorSettings.lineNumbers.load(),
     'editorTabWidth': await editorSettings.tabWidth.load(),
@@ -355,6 +356,11 @@ Future<void> importAppPreferences(
 
   final closeToTray = appPrefs['closeToTray'];
   if (closeToTray is bool) await closeToTraySetting.set(closeToTray);
+
+  final showThisComputer = appPrefs['showThisComputer'];
+  if (showThisComputer is bool) {
+    await showThisComputerSetting.set(showThisComputer);
+  }
 
   final editorWordWrap = appPrefs['editorWordWrap'];
   if (editorWordWrap is bool) {

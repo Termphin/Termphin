@@ -446,6 +446,12 @@ class Translations$profiles$en {
 
 	/// en: 'Type it the way you would after ssh, like user@server.'
 	String get quickAddInvalid => 'Type it the way you would after ssh, like user@server.';
+
+	/// en: 'This computer'
+	String get thisComputer => 'This computer';
+
+	/// en: 'Hide this computer'
+	String get hideThisComputer => 'Hide this computer';
 }
 
 // Path: profileForm
@@ -2030,6 +2036,12 @@ class Translations$settings$en {
 
 	/// en: 'This desktop has no tray to keep Termphin in'
 	String get closeToTrayUnavailable => 'This desktop has no tray to keep Termphin in';
+
+	/// en: 'Show This computer'
+	String get showThisComputer => 'Show This computer';
+
+	/// en: 'Pin local terminal sessions at the top of your machines list'
+	String get showThisComputerSubtitle => 'Pin local terminal sessions at the top of your machines list';
 
 	/// en: 'Notifications'
 	String get notificationsSection => 'Notifications';
@@ -5472,6 +5484,8 @@ extension on Translations {
 			'profiles.quickAddHint' => 'user@host',
 			'profiles.quickAddTooltip' => 'Add this machine',
 			'profiles.quickAddInvalid' => 'Type it the way you would after ssh, like user@server.',
+			'profiles.thisComputer' => 'This computer',
+			'profiles.hideThisComputer' => 'Hide this computer',
 			'profileForm.newTitle' => 'New Machine',
 			'profileForm.editTitle' => 'Edit Machine',
 			'profileForm.connection' => 'Connection',
@@ -5879,10 +5893,10 @@ extension on Translations {
 			'settings.pinLockEnabled' => 'Enabled - asked on launch and when you come back',
 			'settings.lockAfter' => 'Ask again',
 			'settings.lockAfterImmediately' => 'Right away',
-			'settings.lockAfter30s' => 'After 30 seconds',
-			'settings.lockAfter1m' => 'After 1 minute',
 			_ => null,
 		} ?? switch (path) {
+			'settings.lockAfter30s' => 'After 30 seconds',
+			'settings.lockAfter1m' => 'After 1 minute',
 			'settings.lockAfter5m' => 'After 5 minutes',
 			'settings.pinLockDisabled' => 'Disabled',
 			'settings.biometricUnlock' => 'Biometric unlock',
@@ -6038,6 +6052,8 @@ extension on Translations {
 			'settings.closeToTray' => 'Keep running in the tray',
 			'settings.closeToTraySubtitle' => 'Closing the window leaves your sessions connected',
 			'settings.closeToTrayUnavailable' => 'This desktop has no tray to keep Termphin in',
+			'settings.showThisComputer' => 'Show This computer',
+			'settings.showThisComputerSubtitle' => 'Pin local terminal sessions at the top of your machines list',
 			'settings.notificationsSection' => 'Notifications',
 			'settings.notifyWhenClosed' => 'Notify me anywhere',
 			'settings.seePro' => 'See Pro',
@@ -6391,12 +6407,12 @@ extension on Translations {
 			'toolbar.categorySymbols' => 'Symbols',
 			'toolbar.categoryCustom' => 'Custom',
 			'toolbar.customTextHint' => 'Text to send',
+			_ => null,
+		} ?? switch (path) {
 			'toolbar.goToPage' => ({required Object number}) => 'Go to page ${number}',
 			'toolbar.quickSettings' => 'Quick settings',
 			'toolbar.quickTabToolbar' => 'Toolbar',
 			'toolbar.quickTabAppearance' => 'Appearance',
-			_ => null,
-		} ?? switch (path) {
 			'toolbar.allTerminalSettings' => 'All terminal settings',
 			'toolbar.importTitle' => 'Add toolbar layout',
 			'toolbar.importUnnamed' => 'Shared layout',
@@ -6905,6 +6921,8 @@ extension on Translations {
 			'proHub.rowSubtitle' => 'Notifications, live status and sync in one place',
 			'proHub.notificationsSection' => 'Notifications',
 			'proHub.live' => 'Live status',
+			_ => null,
+		} ?? switch (path) {
 			'proHub.sync' => 'Sync',
 			'legalUpdate.title' => 'Our terms and privacy policy have changed',
 			'legalUpdate.gotIt' => 'Got it',

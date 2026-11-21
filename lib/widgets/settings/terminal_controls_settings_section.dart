@@ -1,6 +1,8 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../i18n/strings.g.dart';
+import '../../providers/profiles_provider.dart';
 import '../../screens/settings/action_dock_settings_screen.dart';
 import '../../screens/settings/toolbar_profiles_screen.dart';
 import '../../services/app/app_commands.dart';
@@ -33,7 +35,7 @@ import '../window/shortcuts_dialog.dart';
 /// in for a keyboard and a thumb - so the section is named for typing, the
 /// dock is the action bar over the terminal, and the shortcuts and the tray
 /// join it.
-class TerminalControlsSettingsSection extends StatelessWidget {
+class TerminalControlsSettingsSection extends ConsumerWidget {
   const TerminalControlsSettingsSection({super.key, required this.appVersion});
 
   /// Bare "1.9.0", for [NewBadge].
@@ -43,9 +45,11 @@ class TerminalControlsSettingsSection extends StatelessWidget {
   static const _newUntil = '1.11.0';
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final t = Translations.of(context);
     final touch = platformHas(PlatformFeature.touchControls);
+    final localSupported =
+        ref.watch(localSessionsSupportedProvider).value ?? false;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -182,6 +186,20 @@ class TerminalControlsSettingsSection extends StatelessWidget {
                   },
                 ),
               ),
+              if (platformHas(PlatformFeature.localSessions) &&
+                  localSupported) ...[
+                const AppDivider(),
+                ValueListenableBuilder<bool>(
+                  valueListenable: showThisComputerSetting,
+                  builder: (context, enabled, _) => SettingsSwitchTile(
+                    key: const ValueKey('showThisComputerSwitch'),
+                    title: t.settings.showThisComputer,
+                    subtitle: t.settings.showThisComputerSubtitle,
+                    value: enabled,
+                    onChanged: showThisComputerSetting.set,
+                  ),
+                ),
+              ],
             ],
           ],
         ),

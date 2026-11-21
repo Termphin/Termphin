@@ -52,6 +52,7 @@ List<Setting<Object?>> get _loaded => [
   tabBarPositionSetting,
   lockTimeoutSetting,
   closeToTraySetting,
+  showThisComputerSetting,
   profileFormMoreOptionsSetting,
 ];
 
@@ -273,5 +274,6 @@ final Map<Setting<Object?>, Object?> _alternatives = {
   tabBarPositionSetting: TabBarPosition.bottom,
   lockTimeoutSetting: LockTimeout.minutes5,
   closeToTraySetting: !closeToTraySetting.fallback,
+  showThisComputerSetting: !showThisComputerSetting.fallback,
   profileFormMoreOptionsSetting: !profileFormMoreOptionsSetting.fallback,
 };

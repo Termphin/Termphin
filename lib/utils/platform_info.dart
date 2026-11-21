@@ -95,6 +95,9 @@ enum PlatformFeature {
   /// The user keeps their own SSH keys in a `.ssh` folder the app can look
   /// in. A phone has no such folder to look in.
   localSshFolder,
+
+  /// Local persistent sessions backed by the bundled agent without SSH.
+  localSessions,
 }
 
 bool platformHas(PlatformFeature feature) => switch (feature) {
@@ -119,6 +122,7 @@ bool platformHas(PlatformFeature feature) => switch (feature) {
   PlatformFeature.customWindowChrome => isDesktopPlatform,
   PlatformFeature.nativeMenuBar => isMacOSPlatform,
   PlatformFeature.localSshFolder => isDesktopPlatform,
+  PlatformFeature.localSessions => isDesktopPlatform,
 };
 
 /// The narrowest window that gets the sidebar layout. A landscape window

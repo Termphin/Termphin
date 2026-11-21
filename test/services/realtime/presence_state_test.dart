@@ -176,4 +176,28 @@ void main() {
     expect(freshness.accept('a', now), isTrue);
     expect(freshness.accept('a', now - 1000), isFalse);
   });
+
+  test(
+    'the list from the agent itself reads as sessions with devices and activity',
+    () {
+      final sessions = parseAgentSessionLines(
+        'termphin_a\t1\t1795261040\t2\tpix;phone;UGl4ZWw,mac;desktop;TWFj\t'
+        'working;c2xlZXAgMQ\n'
+        'termphin_b\t1\t1795261000\t0\t\tidle\n'
+        'old\t1\t1795260000\t1\n'
+        'broken line\n',
+      );
+
+      expect(sessions.map((s) => s.name), ['termphin_a', 'termphin_b', 'old']);
+      final a = sessions.first;
+      expect(a.clients, 2);
+      expect(a.devices.map((d) => d.name), ['Pixel', 'Mac']);
+      expect(a.activity?.state, SessionActivityState.working);
+      expect(a.activity?.command, 'sleep 1');
+      expect(a.createdAt, DateTime.fromMillisecondsSinceEpoch(1795261040000));
+      expect(sessions[1].activity?.state, SessionActivityState.idle);
+      expect(sessions[1].devices, isEmpty);
+      expect(sessions[2].activity, isNull);
+    },
+  );
 }

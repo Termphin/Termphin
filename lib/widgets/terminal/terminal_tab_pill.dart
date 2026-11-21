@@ -19,6 +19,7 @@ const kTabLineHeight = kSessionTabLineHeight;
 
 /// Vertical padding inside a tab pill.
 const kTabPillPaddingY = kSessionTabPillPaddingY;
+
 /// One tab's pill: the avatar ringed in its connection status, the name, the
 /// view-mode badge and the overflow menu.
 ///
@@ -99,7 +100,7 @@ class TerminalTabPill<T> extends StatelessWidget {
       stretch: stretch,
       onTap: onTap,
       trailing: [
-        if (status == ConnectionStatus.connected)
+        if (status == ConnectionStatus.connected && !profile.isLocal)
           ViewModeBadge(
             key: ValueKey('viewModeBadge-$sessionId'),
             mode: mode,

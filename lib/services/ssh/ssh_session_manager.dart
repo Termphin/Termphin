@@ -16,13 +16,17 @@ import '../../models/session_control.dart';
 import '../../models/session_tab.dart';
 import '../../models/ssh_profile.dart';
 import '../realtime/presence_device.dart';
+import '../realtime/presence_state.dart';
 import '../settings/setting.dart';
 import '../settings/terminal_settings.dart';
 import '../sftp/cancel_token.dart';
 import '../storage/profile_storage.dart';
 import '../terminal/agent_probe_cache.dart';
+import '../terminal/local_agent_service.dart';
+import '../terminal/local_agent_transport.dart';
 import '../terminal/osc_markers.dart';
 import '../terminal/remote_mux_commands.dart';
+import '../terminal/session_transport.dart';
 import '../terminal/terminal_notification.dart';
 import 'remote_agent_service.dart';
 import 'ssh_prompts.dart';
@@ -60,15 +64,25 @@ class SshSessionManager extends ChangeNotifier {
   SshSessionManager._({
     RemoteAgentService? remoteAgentService,
     SshService Function()? serviceFactory,
+    LocalAgentService? localAgentService,
+    LocalAgentTransport Function()? localTransportFactory,
   }) : _remoteAgentService = remoteAgentService ?? const RemoteAgentService(),
-       _serviceFactory = serviceFactory ?? SshService.new;
+       _serviceFactory = serviceFactory ?? SshService.new,
+       _localAgentService = localAgentService ?? LocalAgentService(),
+       _localTransportFactory =
+           localTransportFactory ?? LocalAgentTransport.new;
 
   @visibleForTesting
   SshSessionManager.test({
     RemoteAgentService? remoteAgentService,
     SshService Function()? serviceFactory,
+    LocalAgentService? localAgentService,
+    LocalAgentTransport Function()? localTransportFactory,
   }) : _remoteAgentService = remoteAgentService ?? const RemoteAgentService(),
-       _serviceFactory = serviceFactory ?? SshService.new;
+       _serviceFactory = serviceFactory ?? SshService.new,
+       _localAgentService = localAgentService ?? LocalAgentService(),
+       _localTransportFactory =
+           localTransportFactory ?? LocalAgentTransport.new;
 
   static final instance = SshSessionManager._();
   static const _uuid = Uuid();
@@ -81,6 +95,13 @@ class SshSessionManager extends ChangeNotifier {
   final RemoteAgentService _remoteAgentService;
   late final RemoteMuxCommands _mux = RemoteMuxCommands(_remoteAgentService);
   final SshService Function() _serviceFactory;
+  final LocalAgentService _localAgentService;
+
+  /// The local sessions as the agent on this computer last listed them,
+  /// with what each is doing; null before the first listing.
+  ValueListenable<List<PresenceSession>?> get localPresence =>
+      _localAgentService.presence;
+  final LocalAgentTransport Function() _localTransportFactory;
   final Map<String, ActiveSessionView> _sessions = {};
   final List<String> _sessionOrder = [];
   final List<SavedSplit> _splits = [];
@@ -431,37 +452,42 @@ class SshSessionManager extends ChangeNotifier {
   /// connection of its own; an older one, never on Windows, with the keys.
   void takeControl(String sessionId) {
     final session = _sessions[sessionId];
-    final service = session?.sshService;
-    if (session == null || service == null || session.dropped) return;
+    final transport = session?.transport;
+    if (session == null || transport == null || session.dropped) return;
     if (session.control.value == null) return;
-    if (_deviceCommand(session, 'take') case final command?) {
-      unawaited(_runDeviceCommand(session, command));
+    if (_canUseDeviceCommands(session)) {
+      unawaited(_runDeviceCommand(session, 'take'));
       return;
     }
-    service.write(takeControlKeys);
+    transport.write(takeControlKeys);
   }
 
-  /// `take`, `away` or `back` for [session], when its master takes them
-  /// and this device is known; null otherwise.
-  String? _deviceCommand(ActiveSessionView session, String verb) {
-    final binary = session.agentBinary;
+  bool _canUseDeviceCommands(ActiveSessionView session) {
     final name = session.muxName;
     final deviceId = deviceDescription?.split(';').first;
-    if (binary == null || name == null || deviceId == null) return null;
-    if (!RemoteMuxCommands.agentTakesDeviceCommands(session.masterVersion)) {
-      return null;
-    }
-    return RemoteMuxCommands.deviceCommand(binary, verb, name, deviceId);
+    if (name == null || deviceId == null) return false;
+    if (session.profile.isLocal) return true;
+    return session.agentBinary != null &&
+        RemoteMuxCommands.agentTakesDeviceCommands(session.masterVersion);
   }
 
-  Future<void> _runDeviceCommand(
-    ActiveSessionView session,
-    String command,
-  ) async {
+  Future<void> _runDeviceCommand(ActiveSessionView session, String verb) async {
+    final name = session.muxName;
+    final deviceId = deviceDescription?.split(';').first;
+    if (name == null || deviceId == null) return;
+    if (session.profile.isLocal) {
+      try {
+        await _localAgentService.deviceCommand(verb, name, deviceId);
+      } catch (_) {}
+      return;
+    }
+    final binary = session.agentBinary;
     final client = session.sshService?.client;
-    if (client == null || client.isClosed) return;
+    if (binary == null || client == null || client.isClosed) return;
     try {
-      await client.run(command);
+      await client.run(
+        RemoteMuxCommands.deviceCommand(binary, verb, name, deviceId),
+      );
     } catch (_) {}
   }
 
@@ -483,16 +509,16 @@ class SshSessionManager extends ChangeNotifier {
   /// older one would pass it to the shell.
   void _announceDevice(ActiveSessionView session) {
     final announcement = deviceAnnouncement;
-    final service = session.sshService;
+    final transport = session.transport;
     if (announcement == null ||
-        service == null ||
+        transport == null ||
         session.multiplexer != Multiplexer.termphin ||
         AgentFeature.missingFor(
           session.masterVersion,
         ).contains(AgentFeature.deviceInfo)) {
       return;
     }
-    service.write(announcement);
+    transport.write(announcement);
   }
 
   /// How long notifications stay held after coming back if the marker never
@@ -502,7 +528,7 @@ class SshSessionManager extends ChangeNotifier {
   /// Whether [session]'s master can be told the phone went away.
   static bool _hearsPresence(ActiveSessionView session) =>
       !session.dropped &&
-      session.sshService != null &&
+      session.transport != null &&
       session.multiplexer == Multiplexer.termphin &&
       !AgentFeature.missingFor(
         session.masterVersion,
@@ -527,12 +553,12 @@ class SshSessionManager extends ChangeNotifier {
   void _tellPresence(ActiveSessionView session, {required bool away}) {
     final verb = away ? 'away' : 'back';
     if (session.agentBinary?.isWindows ?? false) {
-      if (_deviceCommand(session, verb) case final command?) {
-        unawaited(_runDeviceCommand(session, command));
+      if (_canUseDeviceCommands(session)) {
+        unawaited(_runDeviceCommand(session, verb));
       }
       return;
     }
-    session.sshService!.write(away ? presenceAway : presenceBack);
+    session.transport!.write(away ? presenceAway : presenceBack);
   }
 
   /// Tells the masters told [goAway] that the phone is back. Notifications
@@ -568,11 +594,11 @@ class SshSessionManager extends ChangeNotifier {
   /// dropping it here would cost a reconnect on every launch.
   void dropDeadSessions() {
     for (final session in _sessions.values.toList()) {
-      final service = session.sshService;
+      final transport = session.transport;
       if (!session.dropped &&
           !session.connecting &&
-          service != null &&
-          !service.isAlive) {
+          transport != null &&
+          !transport.isAlive) {
         markSessionDropped(session.id);
       }
     }
@@ -721,7 +747,9 @@ class SshSessionManager extends ChangeNotifier {
     final profilesById = {for (final profile in profiles) profile.id: profile};
     var changed = false;
     for (final tab in _tabs.values.toList()) {
-      final profile = profilesById[tab.profileId];
+      final profile = tab.profileId == kLocalProfileId
+          ? localComputerProfile(name: t.profiles.thisComputer)
+          : profilesById[tab.profileId];
       if (profile == null) {
         _tabs.remove(tab.tabId);
         changed = true;
@@ -841,7 +869,8 @@ class SshSessionManager extends ChangeNotifier {
     final resuming = resume && existing != null && canResume(id);
     if (!resuming) existing?.dispose();
 
-    final agentEnabled = remoteAgentSetting.value;
+    final isLocal = profile.isLocal;
+    final agentEnabled = isLocal || remoteAgentSetting.value;
     final tab = _registerTab(
       id,
       profile,
@@ -851,7 +880,11 @@ class SshSessionManager extends ChangeNotifier {
           : Multiplexer.none,
       isRun: isRun,
     );
-    final service = _serviceFactory();
+    final SshService? service = isLocal ? null : _serviceFactory();
+    final LocalAgentTransport? localTransport = isLocal
+        ? _localTransportFactory()
+        : null;
+    final SessionTransport transport = service ?? localTransport!;
     final resumeFrom = resuming ? existing.outputPosition : null;
     final ActiveSessionView session;
     if (resuming) {
@@ -860,6 +893,7 @@ class SshSessionManager extends ChangeNotifier {
       session
         ..profile = profile
         ..sshService = service
+        ..transport = transport
         ..dropped = false
         ..connecting = true
         ..resumedInPlace = false
@@ -872,6 +906,7 @@ class SshSessionManager extends ChangeNotifier {
         muxName: tab.muxName,
         multiplexer: tab.multiplexer,
         sshService: service,
+        transport: transport,
         isRun: isRun,
         connecting: true,
         columns: initialWidth,
@@ -883,87 +918,106 @@ class SshSessionManager extends ChangeNotifier {
     notifyListeners();
 
     try {
-      onConnectionLog?.call(
-        t.connectionLog.connectingTo(host: profile.host, port: profile.port),
-      );
-      await service.connect(
-        profile,
-        onAuthMessage: onConnectionLog,
-        onConnectionLog: onConnectionLog,
-        onHostKeyPrompt: hostKeyPrompt,
-        onKeyboardInteractive: keyboardInteractivePrompt,
-      );
-      onConnectionLog?.call(t.connectionLog.authSuccessful);
-      session.remoteShellType = await service.detectRemoteShell();
-
       var backend = tab.multiplexer;
       String? binary;
       String? agentOperatingSystem;
-      String? agentVersion;
-      if (tab.muxName.isEmpty) {
-        backend = Multiplexer.none;
-      } else if (backend == Multiplexer.termphin) {
-        var probeStatus = _agentProbes.get(profile.id);
-        if (probeStatus == null) {
-          onConnectionLog?.call(t.connectionLog.checkingAgent);
-          probeStatus = await _remoteAgentService.probe(service.client!);
-        }
-        if (!probeStatus.supported) {
+      String? attach;
+
+      if (isLocal) {
+        onConnectionLog?.call(t.connectionLog.checkingAgent);
+        binary = await _localAgentService.ensureInstalled();
+        final isWindows = _localAgentService.isWindows;
+        session.remoteShellType = isWindows
+            ? RemoteShellType.powershell
+            : RemoteShellType.unix;
+        backend = Multiplexer.termphin;
+        session
+          ..multiplexer = backend
+          ..muxName = tab.muxName
+          ..agentBinary = (path: binary, isWindows: isWindows);
+      } else {
+        final sshService = service!;
+        onConnectionLog?.call(
+          t.connectionLog.connectingTo(host: profile.host, port: profile.port),
+        );
+        await sshService.connect(
+          profile,
+          onAuthMessage: onConnectionLog,
+          onConnectionLog: onConnectionLog,
+          onHostKeyPrompt: hostKeyPrompt,
+          onKeyboardInteractive: keyboardInteractivePrompt,
+        );
+        onConnectionLog?.call(t.connectionLog.authSuccessful);
+        session.remoteShellType = await sshService.detectRemoteShell();
+
+        String? agentVersion;
+        if (tab.muxName.isEmpty) {
           backend = Multiplexer.none;
-        } else {
-          try {
-            session.agentInstalled = switch (probeStatus.publicStatus.state) {
-              RemoteAgentState.missing ||
-              RemoteAgentState.repair ||
-              RemoteAgentState.updateAvailable => true,
-              _ => false,
-            };
-            final agent = await _remoteAgentService.ensureForAttach(
-              service.client!,
-              probed: probeStatus,
-            );
-            binary = agent.binaryPath;
-            agentOperatingSystem = agent.publicStatus.operatingSystem;
-            agentVersion =
-                agent.publicStatus.remoteVersion ??
-                agent.publicStatus.bundledVersion;
-            _agentProbes.put(profile.id, agent);
-            await _recordAgentStatus(profile.id, agent.publicStatus);
-          } catch (error) {
-            _agentProbes.forget(profile.id);
-            onConnectionLog?.call(
-              t.connectionLog.agentUnavailable(error: error),
-            );
+        } else if (backend == Multiplexer.termphin) {
+          var probeStatus = _agentProbes.get(profile.id);
+          if (probeStatus == null) {
+            onConnectionLog?.call(t.connectionLog.checkingAgent);
+            probeStatus = await _remoteAgentService.probe(sshService.client!);
+          }
+          if (!probeStatus.supported) {
             backend = Multiplexer.none;
+          } else {
+            try {
+              session.agentInstalled = switch (probeStatus.publicStatus.state) {
+                RemoteAgentState.missing ||
+                RemoteAgentState.repair ||
+                RemoteAgentState.updateAvailable => true,
+                _ => false,
+              };
+              final agent = await _remoteAgentService.ensureForAttach(
+                sshService.client!,
+                probed: probeStatus,
+              );
+              binary = agent.binaryPath;
+              agentOperatingSystem = agent.publicStatus.operatingSystem;
+              agentVersion =
+                  agent.publicStatus.remoteVersion ??
+                  agent.publicStatus.bundledVersion;
+              _agentProbes.put(profile.id, agent);
+              await _recordAgentStatus(profile.id, agent.publicStatus);
+            } catch (error) {
+              _agentProbes.forget(profile.id);
+              onConnectionLog?.call(
+                t.connectionLog.agentUnavailable(error: error),
+              );
+              backend = Multiplexer.none;
+            }
           }
         }
-      }
 
-      final attach = backend == Multiplexer.none || binary == null
-          ? null
-          : _mux.attachCommand(
-              backend,
-              binary,
-              tab.muxName,
-              replayRemoteHistory,
-              operatingSystem: agentOperatingSystem,
-              resumeFrom: RemoteMuxCommands.agentCanResume(agentVersion)
-                  ? resumeFrom
-                  : null,
-              control:
-                  RemoteMuxCommands.agentCanControl(agentVersion) &&
-                  (agentOperatingSystem != 'Windows' ||
-                      RemoteMuxCommands.agentTakesDeviceCommands(agentVersion)),
-              device: RemoteMuxCommands.agentTakesDeviceCommands(agentVersion)
-                  ? deviceDescription
-                  : null,
-            );
-      session
-        ..multiplexer = backend
-        ..muxName = attach == null ? null : tab.muxName
-        ..agentBinary = attach == null || binary == null
+        attach = backend == Multiplexer.none || binary == null
             ? null
-            : (path: binary, isWindows: agentOperatingSystem == 'Windows');
+            : _mux.attachCommand(
+                backend,
+                binary,
+                tab.muxName,
+                replayRemoteHistory,
+                operatingSystem: agentOperatingSystem,
+                resumeFrom: RemoteMuxCommands.agentCanResume(agentVersion)
+                    ? resumeFrom
+                    : null,
+                control:
+                    RemoteMuxCommands.agentCanControl(agentVersion) &&
+                    (agentOperatingSystem != 'Windows' ||
+                        RemoteMuxCommands.agentTakesDeviceCommands(
+                          agentVersion,
+                        )),
+                device: RemoteMuxCommands.agentTakesDeviceCommands(agentVersion)
+                    ? deviceDescription
+                    : null,
+              );
+        session
+          ..multiplexer = backend
+          ..muxName = attach == null ? null : tab.muxName
+          ..agentBinary = attach == null || binary == null
+              ? null
+              : (path: binary, isWindows: agentOperatingSystem == 'Windows');
+      }
 
       session
         ..masterVersion = null
@@ -992,9 +1046,9 @@ class SshSessionManager extends ChangeNotifier {
         if (control != null) session.control.value = control;
         _handleCwdMarker(session, payload);
       });
-      session.serviceOutputSubscription = service.output.listen((bytes) {
+      session.serviceOutputSubscription = transport.output.listen((bytes) {
         replayWaiter.onOutput();
-        service.quality.heard();
+        service?.quality.heard();
         markerTracker.consume(bytes);
         if (!session.masterChecked && backend == Multiplexer.termphin) {
           session.masterChecked = true;
@@ -1009,17 +1063,34 @@ class SshSessionManager extends ChangeNotifier {
       }, onError: (_) => markSessionDropped(id));
 
       onConnectionLog?.call(t.connectionLog.openingSession);
-      final sshSession = await service.startShell(
-        width: initialWidth,
-        height: initialHeight,
-        command: attach,
-      );
-      session.sessionDoneSubscription = sshSession.done.asStream().listen(
-        (_) => markSessionDropped(id),
-        onError: (_) => markSessionDropped(id),
-      );
-      service.onConnectionLost = () => markSessionDropped(id);
-      service.startHealthCheck(
+      if (localTransport != null) {
+        await localTransport.start(
+          binary: binary!,
+          sessionName: tab.muxName,
+          columns: initialWidth,
+          rows: initialHeight,
+          replay: true,
+          control: true,
+          device: deviceDescription,
+          workingDirectory: _localAgentService.homeDirectoryPath,
+        );
+        session.sessionDoneSubscription = localTransport.done.asStream().listen(
+          (_) => markSessionDropped(id),
+          onError: (_) => markSessionDropped(id),
+        );
+      } else {
+        final sshSession = await service!.startShell(
+          width: initialWidth,
+          height: initialHeight,
+          command: attach,
+        );
+        session.sessionDoneSubscription = sshSession.done.asStream().listen(
+          (_) => markSessionDropped(id),
+          onError: (_) => markSessionDropped(id),
+        );
+      }
+      transport.onConnectionLost = () => markSessionDropped(id);
+      service?.startHealthCheck(
         foreground: _foreground,
         resumable: backend.isPersistent,
       );
@@ -1037,13 +1108,13 @@ class SshSessionManager extends ChangeNotifier {
         session.outputPosition = offsetCounter.position;
         staged.clear();
       }
-      service.measureLatency();
+      service?.measureLatency();
       if (session.remoteShellType == RemoteShellType.powershell) {
         final nudgedHeight = initialHeight > 1
             ? initialHeight - 1
             : initialHeight + 1;
-        service.resizeTerminal(initialWidth, nudgedHeight);
-        service.resizeTerminal(initialWidth, initialHeight);
+        transport.resizeTerminal(initialWidth, nudgedHeight);
+        transport.resizeTerminal(initialWidth, initialHeight);
       }
 
       _tabs[id] = tab.copyWith(
@@ -1068,7 +1139,7 @@ class SshSessionManager extends ChangeNotifier {
         _sessions.remove(id);
         session.dispose();
       }
-      await service.disconnect();
+      await transport.disconnect();
       notifyListeners();
       if (error is SshConnectException) rethrow;
       throw Exception(error.toString().replaceFirst('Exception: ', ''));
@@ -1117,18 +1188,19 @@ class SshSessionManager extends ChangeNotifier {
     session.serviceOutputSubscription = null;
     unawaited(session.sessionDoneSubscription?.cancel());
     session.sessionDoneSubscription = null;
-    final old = session.sshService;
+    final old = session.transport;
     if (old == null) return;
-    old
-      ..onConnectionLost = null
-      ..stopHealthCheck();
+    old.onConnectionLost = null;
+    if (old is SshService) {
+      old.stopHealthCheck();
+    }
     unawaited(old.disconnect());
   }
 
   Future<void> disconnectSession(String sessionId) async {
     final session = _sessions.remove(sessionId);
     session?.dispose();
-    await session?.sshService?.disconnect();
+    await session?.transport?.disconnect();
     notifyListeners();
   }
 
@@ -1170,6 +1242,7 @@ class SshSessionManager extends ChangeNotifier {
   /// Throws when the session could not be ended, after the tab is gone.
   Future<void> endSession(String sessionId) async {
     final session = _sessions[sessionId];
+    final transport = session?.transport;
     final service = session?.sshService;
     final name = session?.muxName;
     _tabs.remove(sessionId);
@@ -1181,10 +1254,14 @@ class SshSessionManager extends ChangeNotifier {
     );
     try {
       if (session != null && name != null) {
-        await _killEnded(session, name, service?.client);
+        if (session.profile.isLocal) {
+          await _localAgentService.kill(name);
+        } else {
+          await _killEnded(session, name, service?.client);
+        }
       }
     } finally {
-      await service?.disconnect();
+      await transport?.disconnect();
     }
   }
 
@@ -1256,7 +1333,7 @@ class SshSessionManager extends ChangeNotifier {
     }
     session?.dispose();
     try {
-      if (disconnect) await session?.sshService?.disconnect();
+      if (disconnect) await session?.transport?.disconnect();
     } finally {
       if (!preserveOrder) {
         _sessionOrder.remove(sessionId);
@@ -1280,6 +1357,15 @@ class SshSessionManager extends ChangeNotifier {
     SshProfile profile, {
     CancelToken? cancel,
   }) async {
+    if (profile.isLocal) {
+      cancel?.throwIfCancelled();
+      final sessions = await _race(cancel, _localAgentService.list());
+      if (_pruneMissingRemoteTabs(profile.id, sessions) > 0) {
+        unawaited(_saveSessionUiState());
+        notifyListeners();
+      }
+      return sessions;
+    }
     return _withClient(profile, idempotent: true, cancel: cancel, (
       client,
     ) async {
@@ -1372,6 +1458,10 @@ class SshSessionManager extends ChangeNotifier {
       unawaited(_saveSessionUiState());
       notifyListeners();
     }
+    if (profile.isLocal) {
+      await _localAgentService.kill(name);
+      return;
+    }
     await _withClient<void>(
       profile,
       (client) => _mux.kill(client, name, backend),
@@ -1381,12 +1471,22 @@ class SshSessionManager extends ChangeNotifier {
   Future<void> renameSession(String sessionId, String newName) async {
     _mux.validateMuxName(newName);
     final session = _sessions[sessionId];
-    final client = session?.sshService?.client;
     final current = session?.muxName;
-    if (session == null || client == null || current == null) {
+    if (session == null ||
+        current == null ||
+        session.transport == null ||
+        session.dropped) {
       throw Exception('Session not connected.');
     }
-    await _mux.rename(client, current, newName, session.multiplexer);
+    if (session.profile.isLocal) {
+      await _localAgentService.rename(current, newName);
+    } else {
+      final client = session.sshService?.client;
+      if (client == null) {
+        throw Exception('Session not connected.');
+      }
+      await _mux.rename(client, current, newName, session.multiplexer);
+    }
     session.muxName = newName;
     final tab = _tabs[sessionId];
     if (tab != null) _tabs[sessionId] = tab.copyWith(muxName: newName);
@@ -1403,10 +1503,14 @@ class SshSessionManager extends ChangeNotifier {
     _mux.validateMuxName(newName);
     final backend =
         multiplexer ?? _backendFor(profile.id, oldName) ?? Multiplexer.termphin;
-    await _withClient<void>(
-      profile,
-      (client) => _mux.rename(client, oldName, newName, backend),
-    );
+    if (profile.isLocal) {
+      await _localAgentService.rename(oldName, newName);
+    } else {
+      await _withClient<void>(
+        profile,
+        (client) => _mux.rename(client, oldName, newName, backend),
+      );
+    }
     var changed = false;
     for (final tab
         in _tabs.values
@@ -1513,14 +1617,17 @@ class SshSessionManager extends ChangeNotifier {
   /// it, and predictive echo would draw keys that never land.
   void sendInput(String sessionId, Uint8List data) {
     final session = _sessions[sessionId];
-    final service = session?.sshService;
-    if (session == null || service == null) return;
+    final transport = session?.transport;
+    if (session == null || transport == null) return;
     if (session.watching) return;
-    service.write(data);
+    transport.write(data);
     if (session.dropped) return;
     session.noteInput(data);
     if (terminalSettings.predictiveEcho.value) {
-      _confirmReceipt(session, service);
+      final service = session.sshService;
+      if (service != null) {
+        _confirmReceipt(session, service);
+      }
     }
   }
 
@@ -1556,7 +1663,7 @@ class SshSessionManager extends ChangeNotifier {
   /// rows and the remote shell dies on the next screenful of output. A
   /// terminal that small is unusable either way, so the floor costs nothing.
   void resize(String sessionId, int width, int height) {
-    _sessions[sessionId]?.sshService?.resizeTerminal(
+    _sessions[sessionId]?.transport?.resizeTerminal(
       math.max(1, width),
       math.max(1, height),
     );
@@ -1729,7 +1836,7 @@ class SshSessionManager extends ChangeNotifier {
   void dispose() {
     for (final session in _sessions.values) {
       session.dispose();
-      unawaited(session.sshService?.disconnect());
+      unawaited(session.transport?.disconnect());
     }
     _sessions.clear();
     _snippetRunListeners.clear();

@@ -83,6 +83,55 @@ class ServerPresence {
   final List<PresenceSession>? sessions;
 }
 
+/// The sessions in the agent's own `list` output, read the way its sealed
+/// reports are: one line per session, tab separated - name, windows,
+/// created (Unix seconds), clients attached, the attached devices (comma
+/// separated descriptions) and the activity (`state` or `state;<base64url
+/// command>`). For a computer whose agent is asked directly, with no report
+/// in between. Lines that do not parse are left out.
+List<PresenceSession> parseAgentSessionLines(String text) {
+  final sessions = <PresenceSession>[];
+  for (final line in const LineSplitter().convert(text)) {
+    final fields = line.split('\t');
+    if (fields.length < 4 || fields[0].isEmpty) continue;
+    final created = int.tryParse(fields[2]);
+    final clients = int.tryParse(fields[3]);
+    if (created == null || clients == null) continue;
+    final devices = fields.length > 4 ? fields[4] : '';
+    final activity = fields.length > 5
+        ? fields[5].split(';')
+        : const <String>[];
+    final state = activity.isEmpty
+        ? null
+        : SessionActivityState.fromName(activity.first);
+    String? command;
+    if (activity.length > 1 && activity[1].isNotEmpty) {
+      try {
+        command = utf8.decode(
+          base64Url.decode(base64Url.normalize(activity[1])),
+        );
+      } on FormatException {
+        command = null;
+      }
+    }
+    sessions.add(
+      PresenceSession(
+        name: fields[0],
+        createdAt: DateTime.fromMillisecondsSinceEpoch(created * 1000),
+        clients: clients,
+        devices: [
+          for (final device in devices.split(','))
+            if (device.isNotEmpty) ?PresenceDevice.parse(device),
+        ],
+        activity: state == null
+            ? null
+            : SessionActivity(state: state, command: command),
+      ),
+    );
+  }
+  return sessions;
+}
+
 /// What a sealed state is bound to, so the backend cannot pass one server's
 /// state off as another's. The agent seals with the same string.
 String presenceAad(String keyId) => 'termphin-presence:v1:$keyId';

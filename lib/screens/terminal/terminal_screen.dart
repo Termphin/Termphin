@@ -315,16 +315,18 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
     final state = ref.read(sshConnectionProvider(session));
     final connected = state.status == ConnectionStatus.connected;
     final persistent = state.multiplexer.isPersistent;
+    final isLocal = session.$2.isLocal;
     return {
       DockAction.insertSnippet: () => unawaited(
         showSnippetSpotlight(context, onSelect: _handleSnippetSelected),
       ),
-      DockAction.uploadFile: () {
-        final sessionState = _sessionKeys[session.$1]?.currentState;
-        if (sessionState != null) {
-          unawaited(sessionState.uploadFileToTerminal());
-        }
-      },
+      if (!isLocal)
+        DockAction.uploadFile: () {
+          final sessionState = _sessionKeys[session.$1]?.currentState;
+          if (sessionState != null) {
+            unawaited(sessionState.uploadFileToTerminal());
+          }
+        },
       DockAction.paste: () {
         final sessionState = _sessionKeys[session.$1]?.currentState;
         if (sessionState != null) {
@@ -337,10 +339,13 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
           unawaited(_sessionKeys[session.$1]?.currentState?.copyAllOutput()),
       DockAction.saveOutput: () =>
           unawaited(_sessionKeys[session.$1]?.currentState?.saveOutput()),
-      DockAction.copyPath: () =>
-          unawaited(_sessionKeys[session.$1]?.currentState?.copyCurrentPath()),
+      if (!isLocal)
+        DockAction.copyPath: () => unawaited(
+          _sessionKeys[session.$1]?.currentState?.copyCurrentPath(),
+        ),
       DockAction.newSession: () => unawaited(_showAddSessionSheet()),
-      if (connected) DockAction.tunnels: () => _showTunnelsSheet(session.$1),
+      if (connected && !isLocal)
+        DockAction.tunnels: () => _showTunnelsSheet(session.$1),
       if (persistent)
         DockAction.rename: () => unawaited(_renameSession(session, state)),
       DockAction.viewLog: () =>
@@ -2026,6 +2031,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
         ? AgentFeature.missingFor(view.masterVersion)
         : const <AgentFeature>[];
     final updateAvailable =
+        !profile.isLocal &&
         _manager.agentStatusFor(profile.id)?.updateAvailable == true;
     final updating = _updatingAgentProfiles.contains(profile.id);
     final activeTunnels = connected
@@ -2073,7 +2079,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
           PhosphorIconsRegular.squareSplitHorizontal,
           t.terminal.splitWith,
         ),
-      if (connected)
+      if (connected && !profile.isLocal)
         entry(
           _TabConnectionAction.manageTunnels,
           PhosphorIconsRegular.arrowsLeftRight,
@@ -2123,7 +2129,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
 
     return [
       header,
-      if (connected) modes,
+      if (connected && !profile.isLocal) modes,
       DropdownItem(
         key: ValueKey('tabMenuSection-${session.$1}'),
         height: 30,
@@ -2692,10 +2698,14 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
     _sessionKeys[_sessions[_activeIndex].$1]?.currentState?.openSearch();
   }
 
+  /// Whether the active tab is a local desktop session (no SSH/SFTP/tunnels).
+  bool get activeSessionIsLocal =>
+      _sessions.isNotEmpty && _sessions[_activeIndex].$2.isLocal;
+
   /// Picks a file and uploads it into the session on screen, as the dock's
   /// Fast upload does.
   void uploadToActiveSession() {
-    if (_sessions.isEmpty) return;
+    if (_sessions.isEmpty || activeSessionIsLocal) return;
     final session = _sessionKeys[_sessions[_activeIndex].$1]?.currentState;
     if (session != null) unawaited(session.uploadFileToTerminal());
   }
@@ -2815,7 +2825,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
 
   /// Flips the session on screen between its terminal and its files.
   void toggleActiveFiles() {
-    if (_sessions.isEmpty) return;
+    if (_sessions.isEmpty || activeSessionIsLocal) return;
     final id = _sessions[_activeIndex].$1;
     final files = _modeFor(id) == SessionViewMode.sftp;
     _setMode(id, files ? SessionViewMode.terminal : SessionViewMode.sftp);
@@ -2835,7 +2845,8 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
     if (_sessions.isEmpty) return const [];
     final session = _sessions[_activeIndex];
     final persistent = _isPersistent(session);
-    final files = _modeFor(session.$1) == SessionViewMode.sftp;
+    final isLocal = session.$2.isLocal;
+    final files = !isLocal && _modeFor(session.$1) == SessionViewMode.sftp;
     return [
       AppMenu(t.window.menuSession, [
         [
@@ -2844,13 +2855,14 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
             AppCommand.newSession,
             icon: PhosphorIconsRegular.plus,
           ),
-          AppMenuItem.command(
-            t,
-            AppCommand.toggleFiles,
-            icon: files
-                ? PhosphorIconsRegular.terminalWindow
-                : PhosphorIconsRegular.folders,
-          ),
+          if (!isLocal)
+            AppMenuItem.command(
+              t,
+              AppCommand.toggleFiles,
+              icon: files
+                  ? PhosphorIconsRegular.terminalWindow
+                  : PhosphorIconsRegular.folders,
+            ),
         ],
         [
           AppMenuItem.command(
@@ -2881,11 +2893,12 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
             icon: PhosphorIconsRegular.magnifyingGlass,
             enabled: !files,
           ),
-          AppMenuItem.command(
-            t,
-            AppCommand.uploadFile,
-            icon: PhosphorIconsRegular.uploadSimple,
-          ),
+          if (!isLocal)
+            AppMenuItem.command(
+              t,
+              AppCommand.uploadFile,
+              icon: PhosphorIconsRegular.uploadSimple,
+            ),
         ],
         [
           AppMenuItem.command(

@@ -1,10 +1,12 @@
 import 'dart:async';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
+import '../../providers/profiles_provider.dart';
 import '../../services/pro/pro_service.dart';
 import '../../theme/theme.dart';
 import '../../widgets/settings/account_settings_section.dart';
@@ -35,14 +37,14 @@ import 'settings_search.dart';
 ///
 /// The only thing this screen loads itself is the package info the About
 /// screen's version and the "New" badges need.
-class SettingsScreen extends StatefulWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _loading = true;
   String? _version;
 
@@ -158,10 +160,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _results(Translations t) {
+    final localSessions =
+        ref.watch(localSessionsSupportedProvider).value ?? false;
     final found = settingsSearchIndex(
       t,
       appVersion: _appVersion,
       version: _version,
+      localSessions: localSessions,
     ).where((entry) => entry.matches(_query)).toList();
     if (found.isEmpty) {
       return EmptyStatePanel(

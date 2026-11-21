@@ -94,10 +94,29 @@ class LivePresenceNotifier extends Notifier<Map<String, ServerPresence>> {
   @override
   Map<String, ServerPresence> build() {
     final source = ref.watch(livePresenceControllerProvider).presence.byProfile;
-    void update() => state = source.value;
+    final local = ref.watch(sshSessionManagerProvider).localPresence;
+    Map<String, ServerPresence> merged() {
+      final sessions = local.value;
+      if (sessions == null) return source.value;
+      return {
+        ...source.value,
+        kLocalProfileId: ServerPresence(
+          keyId: kLocalProfileId,
+          online: true,
+          at: DateTime.now(),
+          sessions: sessions,
+        ),
+      };
+    }
+
+    void update() => state = merged();
     source.addListener(update);
-    ref.onDispose(() => source.removeListener(update));
-    return source.value;
+    local.addListener(update);
+    ref.onDispose(() {
+      source.removeListener(update);
+      local.removeListener(update);
+    });
+    return merged();
   }
 }
 
