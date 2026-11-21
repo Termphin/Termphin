@@ -1,6 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
+  cancelStripeSubscriptions,
   proFromEvent,
   transferredAccounts,
   parseRelayKey,
@@ -170,5 +171,82 @@ test("a transfer is not read as a purchase", () => {
   assert.equal(
     proFromEvent({ type: "TRANSFER", app_user_id: "new-uid", transferred_to: ["new-uid"] }, now),
     null,
+  );
+});
+
+/** A Stripe that answers from [routes] and records every call. */
+function fakeStripe(routes) {
+  const calls = [];
+  const request = async (url, init) => {
+    calls.push({ url, method: init.method, auth: init.headers.Authorization });
+    const path = url.replace("https://api.stripe.com/v1/", "");
+    const key = `${init.method} ${path.split("?")[0]}`;
+    if (!(key in routes)) return { ok: false, status: 404, json: async () => ({}) };
+    const answer = routes[key];
+    if (typeof answer === "number") return { ok: false, status: answer, json: async () => ({}) };
+    return { ok: true, status: 200, json: async () => answer };
+  };
+  return { calls, request };
+}
+
+test("deleting an account cancels its web subscriptions that still bill, at once", async () => {
+  const stripe = fakeStripe({
+    "GET customers/search": { data: [{ id: "cus_1" }] },
+    "GET subscriptions": {
+      data: [
+        { id: "sub_active", status: "active" },
+        { id: "sub_trial", status: "trialing" },
+        { id: "sub_late", status: "past_due" },
+        { id: "sub_old", status: "canceled" },
+        { id: "sub_never", status: "incomplete_expired" },
+      ],
+    },
+    "DELETE subscriptions/sub_active": { id: "sub_active", status: "canceled" },
+    "DELETE subscriptions/sub_trial": { id: "sub_trial", status: "canceled" },
+    "DELETE subscriptions/sub_late": { id: "sub_late", status: "canceled" },
+  });
+
+  const cancelled = await cancelStripeSubscriptions("uid1", "rk_test_key", stripe.request);
+
+  assert.deepEqual(cancelled, ["sub_active", "sub_trial", "sub_late"]);
+  assert.ok(stripe.calls.every((call) => call.auth === "Bearer rk_test_key"));
+  const search = new URL(stripe.calls[0].url);
+  assert.equal(search.pathname, "/v1/customers/search");
+  assert.equal(search.searchParams.get("query"), "metadata['firebase_uid']:'uid1'");
+  assert.equal(new URL(stripe.calls[1].url).searchParams.get("customer"), "cus_1");
+  assert.deepEqual(
+    stripe.calls.filter((call) => call.method === "DELETE").map((call) => call.url.split("/").pop()),
+    ["sub_active", "sub_trial", "sub_late"],
+  );
+});
+
+test("an account that never bought on the web is left alone", async () => {
+  const stripe = fakeStripe({ "GET customers/search": { data: [] } });
+
+  assert.deepEqual(await cancelStripeSubscriptions("uid1", "key", stripe.request), []);
+  assert.equal(stripe.calls.length, 1);
+});
+
+test("a uid with a quote cannot widen the customer search", async () => {
+  const stripe = fakeStripe({ "GET customers/search": { data: [] } });
+
+  await cancelStripeSubscriptions("a'b\\c", "key", stripe.request);
+
+  assert.equal(
+    new URL(stripe.calls[0].url).searchParams.get("query"),
+    "metadata['firebase_uid']:'a\\'b\\\\c'",
+  );
+});
+
+test("a refused cancellation is reported, not swallowed", async () => {
+  const stripe = fakeStripe({
+    "GET customers/search": { data: [{ id: "cus_1" }] },
+    "GET subscriptions": { data: [{ id: "sub_active", status: "active" }] },
+    "DELETE subscriptions/sub_active": 403,
+  });
+
+  await assert.rejects(
+    cancelStripeSubscriptions("uid1", "key", stripe.request),
+    /Stripe answered 403 to DELETE subscriptions\/sub_active/,
   );
 });
