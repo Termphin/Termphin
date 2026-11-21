@@ -9,6 +9,7 @@ const { getAuth } = require("firebase-admin/auth");
 const { getFirestore, FieldValue, Timestamp } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
 const {
+  cancelStripeSubscriptions,
   syncSweepAction,
   proFromEvent,
   transferredAccounts,
@@ -29,6 +30,12 @@ const revenueCatAuth = defineSecret("REVENUECAT_WEBHOOK_AUTH");
 
 /** RevenueCat's secret API key, to forget a deleted account's customer. */
 const revenueCatKey = defineSecret("REVENUECAT_SECRET_KEY");
+
+/**
+ * A restricted Stripe key (customers read, subscriptions write) to cancel a
+ * deleted account's web subscriptions.
+ */
+const stripeKey = defineSecret("STRIPE_SECRET_KEY");
 
 /**
  * Resend's API key, for the one email the backend sends: the warning before
@@ -320,13 +327,32 @@ function timingSafeEqual(a, b) {
  * servers held, and its customer in RevenueCat. The stores keep their own
  * record of a purchase; that is theirs, not ours.
  *
+ * A subscription bought on the web is cancelled at once, without a refund:
+ * with the account gone, nobody could reach the billing portal to stop it.
+ * A store subscription is the store's to cancel, which the app says before
+ * the account is deleted. A cancellation Stripe refuses is logged as an
+ * error and the rest of the cleanup still runs.
+ *
  * A v1 trigger because Cloud Functions v2 has no event for a deleted user.
  */
 exports.cleanupUser = functionsV1
   .region("europe-central2")
-  .runWith({ secrets: [revenueCatKey] })
+  .runWith({ secrets: [revenueCatKey, stripeKey] })
   .auth.user()
   .onDelete(async (user) => {
+    const stripe = (stripeKey.value() || "").trim();
+    if (stripe) {
+      try {
+        const cancelled = await cancelStripeSubscriptions(user.uid, stripe);
+        if (cancelled.length > 0) {
+          console.log(`Cancelled web subscriptions of a deleted account: ${cancelled.join(", ")}`);
+        }
+      } catch (error) {
+        console.error(`Web subscriptions of deleted account ${user.uid} may still bill: ${error.message}`);
+      }
+    } else {
+      console.warn("STRIPE_SECRET_KEY is unset; web subscriptions were not checked");
+    }
     const db = getFirestore();
     await db.recursiveDelete(db.collection("users").doc(user.uid));
     const keys = await db.collection("relayKeys").where("uid", "==", user.uid).get();

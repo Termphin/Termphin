@@ -171,7 +171,53 @@ function relayText({ kind, body, plain }, prefs) {
   return { body };
 }
 
+/** Where a web purchase's Stripe customer keeps the account it belongs to. */
+const STRIPE_UID_KEY = "firebase_uid";
+
+/** Subscription states that still bill, or will once a payment goes through. */
+const BILLING_STATES = new Set(["active", "trialing", "past_due", "unpaid", "paused"]);
+
+/**
+ * Cancels, at once, every subscription the account [uid] bought on the web.
+ *
+ * The web dashboard creates one Stripe customer per account, tagged with the
+ * uid in its metadata; a deleted account must stop being charged, and once
+ * it is gone nobody can reach the billing portal to stop it by hand. Nothing
+ * is refunded, as when an account is deleted with a store subscription. The
+ * customer and its invoices stay: they are the record of what was sold.
+ *
+ * [request] is `fetch`, passed in so tests answer for Stripe. Returns the ids
+ * of the subscriptions cancelled; throws when Stripe refuses a call, so the
+ * caller can tell that a subscription may still be billing.
+ */
+async function cancelStripeSubscriptions(uid, key, request = fetch) {
+  const headers = { Authorization: `Bearer ${key}` };
+  const call = async (method, path) => {
+    const response = await request(`https://api.stripe.com/v1/${path}`, { method, headers });
+    if (!response.ok) {
+      throw new Error(`Stripe answered ${response.status} to ${method} ${path.split("?")[0]}`);
+    }
+    return response.json();
+  };
+  const query = `metadata['${STRIPE_UID_KEY}']:'${uid.replace(/[\\']/g, "\\$&")}'`;
+  const customers = await call("GET", `customers/search?limit=10&query=${encodeURIComponent(query)}`);
+  const cancelled = [];
+  for (const customer of customers.data || []) {
+    const subscriptions = await call(
+      "GET",
+      `subscriptions?status=all&limit=100&customer=${encodeURIComponent(customer.id)}`,
+    );
+    for (const subscription of subscriptions.data || []) {
+      if (!BILLING_STATES.has(subscription.status)) continue;
+      await call("DELETE", `subscriptions/${encodeURIComponent(subscription.id)}`);
+      cancelled.push(subscription.id);
+    }
+  }
+  return cancelled;
+}
+
 module.exports = {
+  cancelStripeSubscriptions,
   relayAndroid,
   relayText,
   syncSweepAction,
