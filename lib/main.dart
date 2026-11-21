@@ -208,7 +208,7 @@ Future<void> _bindDeviceAnnouncement() async {
     PresenceDeviceKind.tablet => isIOSPlatform ? 'iPad' : 'Android tablet',
     PresenceDeviceKind.phone => isIOSPlatform ? 'iPhone' : 'Android',
   };
-  SshSessionManager.instance.deviceAnnouncement = presenceDeviceAnnouncement(
+  SshSessionManager.instance.deviceDescription = presenceDeviceDescription(
     installId: await PushService.instance.installId(),
     kind: kind,
     name: name,

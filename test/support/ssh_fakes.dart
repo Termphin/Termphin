@@ -336,6 +336,7 @@ class FakeRemoteAgentService extends RemoteAgentService {
   String remoteSha256 = 'a' * 64;
   bool supported = true;
   String remoteVersion = '0.0.9';
+  String? operatingSystem;
 
   DartRemoteAgentStatus get status => DartRemoteAgentStatus(
     home: supported ? '/home/test' : null,
@@ -352,6 +353,7 @@ class FakeRemoteAgentService extends RemoteAgentService {
       remoteVersion: remoteVersion,
       remoteSha256: remoteSha256,
       remoteProtocol: 1,
+      operatingSystem: operatingSystem,
     ),
   );
 

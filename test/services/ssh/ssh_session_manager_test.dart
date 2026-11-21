@@ -252,15 +252,67 @@ void main() {
           utf8.decode(call.arguments['data'] as Uint8List),
     ];
 
-    Future<ActiveSessionView> open() async {
-      remoteAgentService.remoteVersion = '0.20.0';
+    Future<ActiveSessionView> open({
+      String version = '0.20.0',
+      String? operatingSystem,
+    }) async {
+      remoteAgentService
+        ..remoteVersion = version
+        ..operatingSystem = operatingSystem;
       backend
         ..markerWithoutReplay = true
-        ..masterVersion = '0.20.0';
+        ..masterVersion = version;
+      manager.deviceDescription = 'me1;phone;UGl4ZWw';
       await manager.startSession(profileFixture(), sessionId: 'shared');
       await Future<void>.delayed(Duration.zero);
       return manager.getSession('shared')!;
     }
+
+    String attachCommand() =>
+        (backend.calls.lastWhere((c) => c.method == 'startShell').arguments
+                as Map)['command']
+            as String;
+
+    test('a Windows agent before 0.20.1 is not asked to join control, '
+        'since its console swallows the keys that take it back', () async {
+      await open(operatingSystem: 'Windows');
+
+      final script = String.fromCharCodes(
+        _utf16(base64Decode(attachCommand().split(' ').last)),
+      );
+      expect(script, isNot(contains('--control')));
+    });
+
+    test('from 0.20.1 the device is named at attach and control is taken '
+        'by a command, on Windows too', () async {
+      final session = await open(version: '0.20.1', operatingSystem: 'Windows');
+      final script = String.fromCharCodes(
+        _utf16(base64Decode(attachCommand().split(' ').last)),
+      );
+      expect(script, contains('--control --device "me1;phone;UGl4ZWw"'));
+
+      backend.latestService.emit(
+        utf8.encode(
+          '\x1b]5384;termphin-master;0.20.1\x07'
+          '\x1b]5384;termphin-control;other;200;50;\x07',
+        ),
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      manager.takeControl('shared');
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      final take = backend.calls.lastWhere((c) => c.method == 'exec');
+      final takeScript = String.fromCharCodes(
+        _utf16(
+          base64Decode(
+            ((take.arguments as Map)['command'] as String).split(' ').last,
+          ),
+        ),
+      );
+      expect(takeScript, endsWith(' take "${session.muxName}" "me1"'));
+      expect(written(), isNot(contains('\x1b]5386;control;take\x07')));
+      expect(session.watching, isTrue);
+    });
 
     test('an agent that hands control around is asked to join it', () async {
       await open();
@@ -931,3 +983,7 @@ void main() {
     });
   });
 }
+
+List<int> _utf16(List<int> bytes) => [
+  for (var i = 0; i + 1 < bytes.length; i += 2) bytes[i] | (bytes[i + 1] << 8),
+];

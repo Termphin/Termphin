@@ -58,10 +58,12 @@ class PresenceDevice {
 /// agent keeps.
 const maxPresenceDeviceName = 40;
 
-/// What this app types to tell an agent master which device it is:
-/// `ESC ] 5386 ; device ; <id> ; <kind> ; <base64url name> BEL`. The master's
-/// attach client takes it out of the input, so the shell never sees it.
-Uint8List presenceDeviceAnnouncement({
+/// Which device this is, as an agent master keeps it:
+/// `<install id>;<kind>;<base64url name>`, the name cut to
+/// [maxPresenceDeviceName]. Passed with `attach --device` to an agent that
+/// takes it, and typed inside [presenceDeviceAnnouncement] to one that
+/// does not.
+String presenceDeviceDescription({
   required String installId,
   required PresenceDeviceKind kind,
   required String name,
@@ -71,7 +73,11 @@ Uint8List presenceDeviceAnnouncement({
       ? trimmed.substring(0, maxPresenceDeviceName)
       : trimmed;
   final encodedName = base64Url.encode(utf8.encode(short)).replaceAll('=', '');
-  return Uint8List.fromList(
-    utf8.encode('\x1b]5386;device;$installId;${kind.name};$encodedName\x07'),
-  );
+  return '$installId;${kind.name};$encodedName';
 }
+
+/// What this app types to tell an agent master which device it is:
+/// `ESC ] 5386 ; device ; <description> BEL`. The master's attach client
+/// takes it out of the input, so the shell never sees it.
+Uint8List presenceDeviceAnnouncement(String description) =>
+    Uint8List.fromList(utf8.encode('\x1b]5386;device;$description\x07'));

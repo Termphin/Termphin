@@ -7,18 +7,22 @@ import 'package:termphin/services/realtime/presence_device.dart';
 void main() {
   test('the announcement is the OSC the agent takes out of the input', () {
     final bytes = presenceDeviceAnnouncement(
-      installId: 'AbC-_123',
-      kind: PresenceDeviceKind.phone,
-      name: 'Pixel',
+      presenceDeviceDescription(
+        installId: 'AbC-_123',
+        kind: PresenceDeviceKind.phone,
+        name: 'Pixel',
+      ),
     );
     expect(utf8.decode(bytes), '\x1b]5386;device;AbC-_123;phone;UGl4ZWw\x07');
   });
 
   test('its description stays inside what the agent accepts', () {
     final bytes = presenceDeviceAnnouncement(
-      installId: 'x' * 22,
-      kind: PresenceDeviceKind.desktop,
-      name: 'ż' * 200,
+      presenceDeviceDescription(
+        installId: 'x' * 22,
+        kind: PresenceDeviceKind.desktop,
+        name: 'ż' * 200,
+      ),
     );
     final description = utf8
         .decode(bytes)
