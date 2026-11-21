@@ -70,6 +70,30 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
           rm -f "$RUNNER_TEMP/devid.p12"
 
+      # The agent the app installs on Macs travels gzipped among its assets,
+      # and notarization looks inside the archives: each macOS helper is
+      # unpacked, signed like the app, packed again, and its digest in the
+      # bundled manifest - what the app checks before installing it - is
+      # replaced with the signed helper's.
+      - name: Sign the bundled macOS agent
+        env:
+          IDENTITY: ${{ vars.MACOS_DEVID_IDENTITY }}
+        run: |
+          DIR=build/macos/Build/Products/Release/termphin.app/Contents/Frameworks/App.framework/Versions/A/Resources/flutter_assets/assets/termphin-agent
+          MANIFEST="$DIR/manifest.properties"
+          for KEY in macos_x86_64 macos_aarch64; do
+            FILE=$(sed -n "s/^$KEY\.file=//p" "$MANIFEST")
+            test -n "$FILE"
+            HELPER="$RUNNER_TEMP/${FILE%.gz}"
+            gunzip -c "$DIR/$FILE" > "$HELPER"
+            codesign --force --timestamp --options runtime --sign "$IDENTITY" "$HELPER"
+            gzip -9 -n -c "$HELPER" > "$DIR/$FILE"
+            SHA=$(shasum -a 256 "$HELPER" | cut -d' ' -f1)
+            sed -i '' "s/^$KEY\.sha256=.*/$KEY.sha256=$SHA/" "$MANIFEST"
+            rm -f "$HELPER"
+          done
+          grep '^macos_' "$MANIFEST"
+
       # Inside out: every nested binary and framework first, the app last
       # with its entitlements, so no signature is sealed over an older one.
       - name: Sign the app

@@ -112,7 +112,12 @@ it with the Developer ID Application identity (secrets
 `MACOS_DEVID_IDENTITY`), notarizes it with the same App Store Connect key the
 iOS build uploads with, and keeps the DMG as an artifact - or, with
 `preview`, publishes it as a pre-release tagged `desktop-<version>-preview.<run>`,
-which the store release workflow ignores.
+which the store release workflow ignores. Notarization also opens the
+gzipped agent helpers among the assets, so the workflow signs the two macOS
+ones the same way and rewrites their digests in the bundled manifest. Until
+the agent's own release signs its macOS binaries, a Mac reached by both this
+DMG and a phone build of the same agent version holds two digests for it, and
+each app reinstalls its own copy on connect.
 
 ## Android toolchain
 
