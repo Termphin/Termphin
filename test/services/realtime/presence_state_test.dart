@@ -166,4 +166,14 @@ void main() {
     freshness.clear();
     expect(freshness.accept('a', 9), isTrue);
   });
+
+  test('a server whose clock ran ahead is followed again once it is set '
+      'back', () {
+    final now = DateTime.utc(2026, 11, 21, 8).millisecondsSinceEpoch;
+    final freshness = PresenceFreshness(now: () => now);
+    const hours = 60 * 60 * 1000;
+    expect(freshness.accept('a', now + 8 * hours), isTrue);
+    expect(freshness.accept('a', now), isTrue);
+    expect(freshness.accept('a', now - 1000), isFalse);
+  });
 }
