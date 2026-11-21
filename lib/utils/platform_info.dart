@@ -95,6 +95,11 @@ enum PlatformFeature {
   /// The user keeps their own SSH keys in a `.ssh` folder the app can look
   /// in. A phone has no such folder to look in.
   localSshFolder,
+
+  /// Links out to the account on the web, whose plan page sells Pro. A
+  /// store's rules keep an app installed from it from pointing anywhere one
+  /// could pay other than the store; a desktop app is not under a store.
+  webAccountLinks,
 }
 
 bool platformHas(PlatformFeature feature) => switch (feature) {
@@ -119,6 +124,7 @@ bool platformHas(PlatformFeature feature) => switch (feature) {
   PlatformFeature.customWindowChrome => isDesktopPlatform,
   PlatformFeature.nativeMenuBar => isMacOSPlatform,
   PlatformFeature.localSshFolder => isDesktopPlatform,
+  PlatformFeature.webAccountLinks => isDesktopPlatform,
 };
 
 /// The narrowest window that gets the sidebar layout. A landscape window
