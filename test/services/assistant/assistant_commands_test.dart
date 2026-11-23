@@ -19,7 +19,6 @@ void main() {
       'du -sh /var/log 2>/dev/null | sort -h',
       'find /var/log -name "*.log" -size +100M',
       'curl -sI https://example.com',
-      'git -C /srv/app log --oneline -n 5',
       'ping -c 3 1.1.1.1',
       'top -b -n 1 | head -n 20',
       "awk '{print \$1}' /var/log/nginx/access.log | sort | uniq -c | sort -rn | head",
@@ -28,6 +27,13 @@ void main() {
       'ip -br addr',
       'crontab -l',
       'node --version',
+      'for d in ~/Projects/*/; do echo "== \$d"; ls -la "\$d"; done | head -n 80',
+      "sed -n '1,40p' /etc/nginx/nginx.conf",
+      "sed 's/#.*//' /etc/hosts",
+      "sed -n '/error/p' app.log",
+      "awk '\$3 > 100 {print \$1}' f",
+      'find /var/log -name "*.gz" -mtime +7',
+      'kubectl get secrets',
     ]) {
       test(command, () => expect(refuseInspect(command), isNull));
     }
@@ -35,6 +41,44 @@ void main() {
 
   group('refuseInspect refuses', () {
     for (final command in [
+      'git status -sb',
+      'git -C /srv/app log --oneline -n 5',
+      'git for-each-ref refs/heads',
+      'git branch new-feature',
+      "awk '{print>\"/tmp/x\"}' f",
+      "awk '{print | \"sh\"}' f",
+      "awk 'BEGIN{system (\"id\")}'",
+      "sed 's/a/b/e' f",
+      "sed '1e id' f",
+      "sed '1{e id}' f",
+      "sed -n '/x/w /tmp/out' f",
+      'sed -f script.sed f',
+      'find . -fprint0 /tmp/x',
+      'cat /proc/1/environ',
+      'strings /proc/self/environ',
+      'kubectl get secrets -o yaml',
+      'kubectl get secret/db -o jsonpath={.data}',
+      'git branch -D old',
+      'git branch -vd old',
+      'git branch --set-upstream-to=origin/main',
+      'git tag v9.9.9',
+      'git tag -a v1 -m release',
+      'git remote prune origin',
+      'git remote update',
+      'git remote set-head origin -a',
+      'git diff --output=/tmp/x',
+      'git log --output /tmp/x',
+      'git stash',
+      'git worktree add ../x',
+      'git config user.name x',
+      'git reflog expire --all',
+      'git checkout main',
+      'for f in ~/.ssh/*; do head -n 1 "\$f"; done',
+      'for f in /etc/*; do cat "\$f"; done',
+      'for x in a; do echo \$x',
+      'echo a; done',
+      'for 1x in a; do echo; done',
+      'for d in a b; do rm -rf "\$d"; done',
       'sudo systemctl status nginx',
       'systemctl restart nginx',
       'rm -rf /',
@@ -113,5 +157,22 @@ void main() {
     ]) {
       expect(mayHoldSecrets(path), isFalse, reason: path);
     }
+  });
+
+  group('refuseAsking', () {
+    test('lets through what the user can be asked about', () {
+      expect(refuseAsking('git branch new-feature'), isNull);
+      expect(refuseAsking(r'echo \$(whoami)'), isNull);
+    });
+
+    test('turns down what never ends or cannot be read', () {
+      expect(refuseAsking('tail -f /var/log/syslog'), isNotNull);
+      expect(
+        refuseAsking('for f in a; do journalctl -fu app; done'),
+        isNotNull,
+      );
+      expect(refuseAsking('ls\nrm -rf /'), isNotNull);
+      expect(refuseAsking('  '), isNotNull);
+    });
   });
 }

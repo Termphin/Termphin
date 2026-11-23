@@ -697,6 +697,7 @@ class _ProposalCard extends StatelessWidget {
     final t = Translations.of(context).assistant;
     final colors = context.colors;
     final secret = proposal.kind == AssistantProposalKind.readSecret;
+    final check = proposal.kind == AssistantProposalKind.check;
     return AppCard(
       elevated: true,
       padding: const EdgeInsets.all(AppTheme.space14),
@@ -707,7 +708,11 @@ class _ProposalCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  secret ? t.readSecretTitle : t.proposalTitle,
+                  secret
+                      ? t.readSecretTitle
+                      : check
+                      ? t.checkTitle
+                      : t.proposalTitle,
                   style: TextStyle(
                     fontSize: AppTheme.font15,
                     fontWeight: FontWeight.w600,
@@ -715,12 +720,20 @@ class _ProposalCard extends StatelessWidget {
                   ),
                 ),
               ),
-              if (!secret) AppBadge(t.changesServer, tone: BadgeTone.warning),
+              if (!secret && !check)
+                AppBadge(t.changesServer, tone: BadgeTone.warning),
             ],
           ),
           const SizedBox(height: AppTheme.space8),
           Text(
-            secret ? t.readSecretWhy(path: proposal.why) : proposal.why,
+            secret
+                ? t.readSecretWhy(path: proposal.why)
+                : check
+                ? t.checkWhy(
+                    purpose: proposal.why,
+                    reason: proposal.reason ?? '',
+                  )
+                : proposal.why,
             style: TextStyle(
               fontSize: AppTheme.font13,
               height: 1.45,

@@ -289,29 +289,73 @@ void main() {
     expect((steps.last as AssistantNote).text, 'nginx runs fine on web-01.');
   });
 
-  test(
-    'refuses a command that is not read-only and tells the model why',
-    () async {
-      final transport = FakeTransport([
-        reply([
-          tool('t1', 'inspect', {
-            'command': 'systemctl restart nginx',
-            'purpose': 'Restart',
-          }),
-        ]),
-        reply([
-          {'type': 'text', 'text': 'I will propose it instead.'},
-        ]),
-      ]);
-      await agent(transport).submit('fix it');
-      expect(shell.commands.where((c) => c.contains('restart')), isEmpty);
-      expect(transport.sent.last, contains('"is_error":true'));
-      expect(
-        (session.steps[1] as AssistantCheck).status,
-        AssistantStepStatus.failed,
-      );
-    },
-  );
+  test('a check the device cannot vouch for waits for the user', () async {
+    final transport = FakeTransport([
+      reply([
+        tool('t1', 'inspect', {
+          'command': 'git branch tmp',
+          'purpose': 'Make a branch',
+        }),
+      ]),
+      reply([
+        {'type': 'text', 'text': 'Done.'},
+      ]),
+    ]);
+    final a = agent(transport);
+    final done = a.submit('look');
+    await settle();
+    await settle();
+    final index = session.steps.indexWhere((s) => s is AssistantProposal);
+    final proposal = session.steps[index] as AssistantProposal;
+    expect(proposal.kind, AssistantProposalKind.check);
+    expect(proposal.reason, contains('git'));
+    expect(session.mood, AssistantMood.waiting);
+    expect(shell.commands.where((c) => c.contains('branch')), isEmpty);
+    a.approve(index);
+    await done;
+    expect(shell.commands, contains('git branch tmp'));
+    expect(transport.sent.last, contains('The user allowed it.'));
+  });
+
+  test('a check the user skips never runs, and the model hears so', () async {
+    final transport = FakeTransport([
+      reply([
+        tool('t1', 'inspect', {
+          'command': 'systemctl restart nginx',
+          'purpose': 'Restart',
+        }),
+      ]),
+      reply([
+        {'type': 'text', 'text': 'Fine.'},
+      ]),
+    ]);
+    final a = agent(transport);
+    final done = a.submit('fix it');
+    await settle();
+    await settle();
+    a.skip(session.steps.indexWhere((s) => s is AssistantProposal));
+    await done;
+    expect(shell.commands.where((c) => c.contains('restart')), isEmpty);
+    expect(transport.sent.last, contains('who did not run it'));
+  });
+
+  test('a command that never ends is refused without asking', () async {
+    final transport = FakeTransport([
+      reply([
+        tool('t1', 'inspect', {
+          'command': 'tail -f /var/log/syslog',
+          'purpose': 'Watch',
+        }),
+      ]),
+      reply([
+        {'type': 'text', 'text': 'OK.'},
+      ]),
+    ]);
+    await agent(transport).submit('watch');
+    expect(session.steps.whereType<AssistantProposal>(), isEmpty);
+    expect(shell.commands.where((c) => c.contains('tail')), isEmpty);
+    expect(transport.sent.last, contains('"is_error":true'));
+  });
 
   test('a proposal runs only once approved', () async {
     final transport = FakeTransport([

@@ -4766,6 +4766,12 @@ class Translations$assistant$en {
 	/// en: '{path} may hold passwords or keys. What it contains goes to the assistant, with anything that looks like a secret hidden first.'
 	String readSecretWhy({required Object path}) => '${path} may hold passwords or keys. What it contains goes to the assistant, with anything that looks like a secret hidden first.';
 
+	/// en: 'Run this check?'
+	String get checkTitle => 'Run this check?';
+
+	/// en: '{purpose} Phin could not tell that this only reads ({reason}), so it runs only if you allow it.'
+	String checkWhy({required Object purpose, required Object reason}) => '${purpose}\nPhin could not tell that this only reads (${reason}), so it runs only if you allow it.';
+
 	/// en: 'Sign in to use the assistant.'
 	String get failSignedOut => 'Sign in to use the assistant.';
 
@@ -7206,6 +7212,8 @@ extension on Translations {
 			'assistant.allow' => 'Allow',
 			'assistant.readSecretTitle' => 'Read a file that may hold secrets?',
 			'assistant.readSecretWhy' => ({required Object path}) => '${path} may hold passwords or keys. What it contains goes to the assistant, with anything that looks like a secret hidden first.',
+			'assistant.checkTitle' => 'Run this check?',
+			'assistant.checkWhy' => ({required Object purpose, required Object reason}) => '${purpose}\nPhin could not tell that this only reads (${reason}), so it runs only if you allow it.',
 			'assistant.failSignedOut' => 'Sign in to use the assistant.',
 			'assistant.failPro' => 'The assistant is part of Termphin Pro.',
 			'assistant.failNotAllowed' => 'The assistant is not open to this account yet.',

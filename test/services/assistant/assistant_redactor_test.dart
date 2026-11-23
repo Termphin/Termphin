@@ -40,7 +40,10 @@ void main() {
   test('hides secrets so they never leave, and puts them back to run', () {
     final r = redactor();
     final stripe = ['sk', 'live', '51HxAbCdEfGhIjKlMnOpQrSt'].join('_');
-    const token = 'abcd' '1234' 'efgh';
+    const token =
+        'abcd'
+        '1234'
+        'efgh';
     final env =
         'DATABASE_URL=postgres://shop:hunter2pass@db.internal:5432/shop\n'
         'STRIPE_SECRET_KEY=$stripe\n'

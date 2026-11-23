@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 /// Why a command the assistant wanted to run on its own was refused, or
 /// null when it may run.
 ///
@@ -26,14 +28,84 @@ String? refuseInspect(String command) {
   if (RegExp(r'(^|[^&])&($|[^&])').hasMatch(bare)) {
     return 'runs something in the background';
   }
-  for (final piece in _pieces(trimmed)) {
-    final words = _words(piece);
+  var loops = 0;
+  for (var piece in _pieces(trimmed)) {
+    var words = _words(piece);
     if (words.isEmpty) return 'empty piece';
+    if (words.first == 'for') {
+      final head = _refuseLoopHead(words);
+      if (head != null) return head;
+      loops++;
+      continue;
+    }
+    if (words.first == 'done') {
+      if (loops == 0 || words.length > 1) return 'a loop that does not close';
+      loops--;
+      continue;
+    }
+    if (words.first == 'do') {
+      if (loops == 0) return 'a loop that does not close';
+      piece = piece.substring(2).trim();
+      words = words.skip(1).toList();
+      if (words.isEmpty) return 'empty piece';
+    }
     final reason =
+        (loops > 0 ? _refuseLoopBody(words) : null) ??
         _refuseProgram(words) ??
         _refuseFollow(words) ??
         _refuseSecrets(piece, words);
     if (reason != null) return reason;
+  }
+  if (loops != 0) return 'a loop that does not close';
+  return null;
+}
+
+/// Why [command] is not even worth asking the user about - it is empty,
+/// unreadably long, spans lines or never ends - or null. Anything else
+/// [refuseInspect] turns down can still run once the user allows it.
+String? refuseAsking(String command) {
+  final trimmed = command.trim();
+  if (trimmed.isEmpty) return 'empty command';
+  if (trimmed.length > 2000) return 'command too long';
+  if (trimmed.contains('\n') || trimmed.contains('\r')) {
+    return 'more than one line';
+  }
+  for (final piece in _pieces(trimmed)) {
+    final words = _words(piece);
+    if (words.isEmpty) continue;
+    final endless = _refuseFollow(
+      words.first == 'do' ? words.skip(1).toList() : words,
+    );
+    if (endless != null) return endless;
+  }
+  return null;
+}
+
+/// `for NAME in WORDS`: a plain name, and nothing in the list that may hold
+/// a secret.
+String? _refuseLoopHead(List<String> words) {
+  if (words.length < 3 ||
+      !RegExp(r'^[A-Za-z_][A-Za-z0-9_]*$').hasMatch(words[1]) ||
+      words[2] != 'in') {
+    return 'a loop that is not for NAME in ...';
+  }
+  for (final word in words.skip(3)) {
+    final looksLikePath =
+        word.contains('/') || word.startsWith('.') || word.startsWith('~');
+    if (looksLikePath && mayHoldSecrets(word)) {
+      return '$word may hold secrets; read it with read_file';
+    }
+  }
+  return null;
+}
+
+/// Inside a loop a variable can name any file, which no check here can
+/// see, so programs that print what files hold may not be handed one.
+String? _refuseLoopBody(List<String> words) {
+  final program = words.first.split('/').last;
+  if (_contentReaders.contains(program) &&
+      words.skip(1).any((w) => w.contains(r'$'))) {
+    return '$program reads files a loop variable names';
   }
   return null;
 }
@@ -140,6 +212,7 @@ bool mayHoldSecrets(String path) {
     return true;
   }
   if (lower == '/etc/shadow' || lower == '/etc/gshadow') return true;
+  if (RegExp(r'^/proc/[^/]+/environ$').hasMatch(lower)) return true;
   if (name.startsWith('.env') || name.endsWith('.env')) return true;
   for (final ending in const ['.key', '.pem', '.p12', '.pfx', '.jks']) {
     if (name.endsWith(ending)) return true;
@@ -388,7 +461,7 @@ const _readers = {
 
 String? _refuseProgram(List<String> words) {
   var program = words.first;
-  var args = words.skip(1).toList();
+  final args = words.skip(1).toList();
   if (program.contains('/')) program = program.split('/').last;
   if (program == 'sudo' || program == 'su' || program == 'doas') {
     return 'uses $program';
@@ -403,17 +476,21 @@ String? _refuseProgram(List<String> words) {
       )) {
         return 'sed -i edits files';
       }
-      if (args.any((a) => RegExp(r'(^|[;}\s])w\s|/w\s|[;}]e\b').hasMatch(a))) {
+      if (args.any(
+        (a) => a == '-f' || a.startsWith('--file') || a.startsWith('-f'),
+      )) {
+        return 'sed reads its script from a file';
+      }
+      if (_sedScripts(args).any(_sedWritesOrRuns)) {
         return 'sed script writes or runs';
       }
       return null;
     case 'awk':
       if (args.any(
         (a) =>
-            a.contains('system(') ||
-            a.contains('print >') ||
-            a.contains('printf >') ||
-            a.contains('| getline') ||
+            RegExp(r'\bsystem\s*\(').hasMatch(a) ||
+            RegExp(r'\bprintf?\b[^;}]*[>|]').hasMatch(a) ||
+            RegExp(r'\|\s*getline').hasMatch(a) ||
             a.contains('|&'),
       )) {
         return 'awk program writes or runs';
@@ -427,6 +504,7 @@ String? _refuseProgram(List<String> words) {
         '-ok',
         '-okdir',
         '-fprint',
+        '-fprint0',
         '-fprintf',
         '-fls',
       ]) {
@@ -556,6 +634,12 @@ String? _refuseProgram(List<String> words) {
     case 'podman':
       return _container(program, args);
     case 'kubectl':
+      if (args.any((a) => RegExp(r'^secrets?($|/)').hasMatch(a)) &&
+          args.any(
+            (a) => a == '-o' || a.startsWith('-o') || a.startsWith('--output'),
+          )) {
+        return 'kubectl would print secret values';
+      }
       return args.isNotEmpty &&
               const {
                 'get',
@@ -570,41 +654,7 @@ String? _refuseProgram(List<String> words) {
           ? null
           : 'kubectl ${args.firstOrNull ?? ''} changes the cluster';
     case 'git':
-      while (args.length >= 2 &&
-          (args.first == '-C' ||
-              args.first == '--git-dir' ||
-              args.first == '--work-tree')) {
-        args = args.skip(2).toList();
-      }
-      return args.isNotEmpty &&
-              const {
-                'status',
-                'log',
-                'diff',
-                'show',
-                'branch',
-                'remote',
-                'rev-parse',
-                'describe',
-                'blame',
-                'ls-files',
-                'shortlog',
-                'tag',
-              }.contains(args.first) &&
-              !args.any(
-                (a) =>
-                    a == '-d' ||
-                    a == '-D' ||
-                    a == '-m' ||
-                    a == '-M' ||
-                    a == 'add' ||
-                    a == 'remove' ||
-                    a == 'rm' ||
-                    a == 'set-url' ||
-                    a == 'rename',
-              )
-          ? null
-          : 'git ${args.firstOrNull ?? ''} changes the repository';
+      return 'git can run programs named in the repository\'s own settings';
     case 'nginx':
       return args.length == 1 &&
               (args.first == '-t' ||
@@ -814,4 +864,62 @@ String? _curl(List<String> args) {
     }
   }
   return null;
+}
+
+/// The scripts a sed command runs: each `-e` or `--expression`, or else its
+/// first argument that is not an option.
+List<String> _sedScripts(List<String> args) {
+  final scripts = <String>[];
+  for (var i = 0; i < args.length; i++) {
+    final arg = args[i];
+    if (arg == '-e' || arg == '--expression') {
+      if (i + 1 < args.length) scripts.add(args[++i]);
+    } else if (arg.startsWith('--expression=')) {
+      scripts.add(arg.substring('--expression='.length));
+    } else if (arg.startsWith('-e') && arg.length > 2) {
+      scripts.add(arg.substring(2));
+    }
+  }
+  if (scripts.isNotEmpty) return scripts;
+  final first = args.where((a) => !a.startsWith('-')).firstOrNull;
+  return first == null ? const [] : [first];
+}
+
+/// Whether a sed [script] has a command that runs a program or writes a
+/// file: `e`, `w` or `W`, or an `s` command with the `e` or `w` flag.
+bool _sedWritesOrRuns(String script) {
+  final address = RegExp(
+    r'^\s*(?:(?:\d+|\$|/(?:[^/\\]|\\.)*/[IM]*)(?:~\d+)?'
+    r'(?:\s*,\s*(?:\d+|\$|/(?:[^/\\]|\\.)*/[IM]*|[+~]\d+))?)?\s*!?\s*',
+  );
+  for (var command in script.split(RegExp(r'[;\n]'))) {
+    command = command.trim();
+    while (true) {
+      command = command.replaceFirst(address, '');
+      if (command.startsWith('{')) {
+        command = command.substring(1);
+        continue;
+      }
+      break;
+    }
+    command = command.replaceAll(RegExp(r'}+\s*$'), '').trim();
+    if (command.isEmpty) continue;
+    final name = command[0];
+    if (name == 'e' || name == 'w' || name == 'W') return true;
+    if (name == 's' && command.length > 1) {
+      final delimiter = command[1];
+      var seen = 0;
+      var i = 2;
+      for (; i < command.length && seen < 2; i++) {
+        if (command[i] == '\\') {
+          i++;
+        } else if (command[i] == delimiter) {
+          seen++;
+        }
+      }
+      final flags = command.substring(math.min(i, command.length));
+      if (flags.contains('e') || flags.contains('w')) return true;
+    }
+  }
+  return false;
 }
