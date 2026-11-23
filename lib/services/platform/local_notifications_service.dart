@@ -6,6 +6,14 @@ import '../../i18n/strings.g.dart';
 import '../../utils/platform_info.dart';
 import 'desktop_window.dart';
 
+/// A notification's [title] with the name of the session it came from
+/// after it, `make deploy finished · api`, the way the relay titles a push.
+String titleWithSession(String title, String? session) {
+  if (session == null || session.isEmpty) return title;
+  if (title.isEmpty) return session;
+  return '$title · $session';
+}
+
 /// Local notifications on iOS and on a Linux or Windows desktop, and the
 /// notification permission that goes with them.
 ///
@@ -146,10 +154,9 @@ class LocalNotificationsService {
   }
 
   /// Posts what a program in [sessionId] asked the terminal to announce.
-  /// Tapping it opens that session. [source] - the machine and session, such
-  /// as `web-01 › api` - goes where the system names where a notification
-  /// came from: beside the app's name on Android, under the title on iOS
-  /// and macOS.
+  /// Tapping it opens that session. [source] - the session's name - follows
+  /// the title ([titleWithSession]), as in a push the system draws while the
+  /// app is closed, so both read the same.
   Future<void> showTerminalAlert({
     required String sessionId,
     required String title,
@@ -159,7 +166,7 @@ class LocalNotificationsService {
     if (!_postsAlerts) return;
     await _show(
       id: terminalAlertId(sessionId),
-      title: title,
+      title: titleWithSession(title, source),
       body: body,
       payload: '$_sessionPayloadPrefix$sessionId',
       details: NotificationDetails(
@@ -169,10 +176,9 @@ class LocalNotificationsService {
           channelDescription: t.notifications.terminalChannelDescription,
           importance: Importance.high,
           priority: Priority.high,
-          subText: source,
         ),
-        iOS: DarwinNotificationDetails(presentBadge: false, subtitle: source),
-        macOS: DarwinNotificationDetails(presentBadge: false, subtitle: source),
+        iOS: const DarwinNotificationDetails(presentBadge: false),
+        macOS: const DarwinNotificationDetails(presentBadge: false),
       ),
     );
   }

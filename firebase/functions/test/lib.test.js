@@ -126,7 +126,7 @@ test("a relayed push about a session names it and is tagged for it", () => {
   assert.equal(android.notification.tag, "relay:p1:api");
   assert.equal(relayTag("p1", "api"), "relay:p1:api");
   const apns = relayApns({ title: "make deploy finished", body: "done", session: "api" });
-  assert.deepEqual(apns.payload.aps.alert, { title: "make deploy finished", body: "done", subtitle: "api" });
+  assert.deepEqual(apns.payload.aps.alert, { title: "make deploy finished · api", body: "done" });
   assert.equal(apns.payload.aps.sound, "default");
 });
 
@@ -136,14 +136,14 @@ test("a session the app made is named without its prefix", () => {
   const android = relayAndroid({ title: "Done", session: "termphin_api", profileId: "p1" });
   assert.equal(android.notification.title, "Done · api");
   assert.equal(android.notification.tag, "relay:p1:termphin_api");
-  assert.equal(relayApns({ title: "Done", body: "", session: "termphin_api" }).payload.aps.alert.subtitle, "api");
+  assert.equal(relayApns({ title: "Done", body: "", session: "termphin_api" }).payload.aps.alert.title, "Done · api");
 });
 
 test("a relayed push without a session keeps its title and has no tag", () => {
   const android = relayAndroid({ title: "Backup", session: "", profileId: "p1" });
   assert.equal(android.notification.title, undefined);
   assert.equal(android.notification.tag, undefined);
-  assert.equal(relayApns({ title: "Backup", body: "ok", session: "" }).payload.aps.alert.subtitle, undefined);
+  assert.equal(relayApns({ title: "Backup", body: "ok", session: "" }).payload.aps.alert.title, "Backup");
 });
 
 test("a relayed push names the status bar icon, not the launcher icon", () => {

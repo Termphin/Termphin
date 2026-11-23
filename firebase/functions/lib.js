@@ -164,9 +164,8 @@ function relayTag(profileId, session) {
  * status bar icon is the one the app's own notifications use, and every
  * released build has it.
  *
- * A push about a session names it after the title - a push drawn by the
- * system has no place beside the app's name for it, as the app's own
- * notifications do - and is tagged for it ([relayTag]).
+ * A push about a session names it after the title, as the app's own
+ * notifications do, and is tagged for it ([relayTag]).
  */
 function relayAndroid({ title, session, profileId } = {}) {
   return {
@@ -182,15 +181,15 @@ function relayAndroid({ title, session, profileId } = {}) {
 }
 
 /**
- * The iPhone part of a relayed push: the session's name as the subtitle,
- * under the title, where the app's own notifications put it.
+ * The iPhone part of a relayed push: the session's name after the title, as
+ * on Android and in the app's own notifications.
  */
 function relayApns({ title, body, session } = {}) {
   return {
     payload: {
       aps: {
         sound: "default",
-        alert: { title, body, ...(session ? { subtitle: sessionLabel(session) } : {}) },
+        alert: { title: session && title ? `${title} · ${sessionLabel(session)}` : title, body },
       },
     },
   };
