@@ -15,7 +15,6 @@ import '../../theme/theme.dart';
 import '../../utils/platform_info.dart';
 import '../../widgets/account/account_avatar.dart';
 import '../../widgets/account/account_failure_text.dart';
-import '../../widgets/account/live_status_card.dart';
 import '../../widgets/account/pro_card.dart';
 import '../../widgets/account/sign_in_panel.dart';
 import '../../widgets/account/sync_card.dart';
@@ -277,8 +276,6 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
         const ProCard(),
         const SizedBox(height: AppTheme.space16),
         const SyncCard(),
-        const SizedBox(height: AppTheme.space16),
-        const LiveStatusCard(),
       ],
       const SizedBox(height: AppTheme.space24),
       AppCard(

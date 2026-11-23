@@ -29,3 +29,12 @@ Future<void> pumpTestApp(
         : UncontrolledProviderScope(container: container, child: app),
   );
 }
+
+/// Turns on reduced motion for this test, which holds endless animations -
+/// the glow at the top of the what's-new popup - still, so `pumpAndSettle`
+/// can settle.
+void reduceMotion(WidgetTester tester) {
+  tester.platformDispatcher.accessibilityFeaturesTestValue =
+      const FakeAccessibilityFeatures(disableAnimations: true);
+  addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+}

@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:termphin/i18n/strings.g.dart';
 import 'package:termphin/screens/pro/pro_features_screen.dart';
@@ -7,6 +8,7 @@ import 'package:termphin/services/settings/app_settings.dart';
 import 'package:termphin/services/settings/live_presence_setting.dart';
 import 'package:termphin/widgets/account/live_status_card.dart';
 import 'package:termphin/widgets/account/pro_card.dart';
+import 'package:termphin/widgets/account/pro_feature_sheet.dart';
 import 'package:termphin/widgets/account/sync_card.dart';
 import 'package:termphin/widgets/pro/feature_demos.dart';
 import 'package:termphin/widgets/settings/notifications_settings_section.dart';
@@ -57,7 +59,10 @@ void main() {
   testWidgets('how it works shows the live demo', (tester) async {
     await pump(tester);
 
-    await tester.tap(find.text(t.proFeature.howItWorks).last);
+    final live = find.byKey(const ValueKey('howItWorks-liveStatus'));
+    await tester.ensureVisible(live);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(live);
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
@@ -65,6 +70,12 @@ void main() {
       tester.widget<FeatureDemo>(find.byType(FeatureDemo)).kind,
       FeatureDemoKind.live,
     );
-    expect(find.text(t.proFeature.liveTitle), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(ProFeatureSheet),
+        matching: find.text(t.proFeature.liveTitle),
+      ),
+      findsOneWidget,
+    );
   });
 }

@@ -91,12 +91,7 @@ class _ActionDockSettingsScreenState extends State<ActionDockSettingsScreen> {
 
   void _place(DockAction action, int index) => unawaited(
     _apply(
-      placeDockAction(
-        _layout,
-        action,
-        index,
-        isAvailable: dockActionAvailable,
-      ),
+      placeDockAction(_layout, action, index, isAvailable: dockActionAvailable),
     ),
   );
 

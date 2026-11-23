@@ -4,6 +4,7 @@ import '../pro/pro_hints.dart';
 import '../ssh/ssh_session_manager.dart';
 import 'action_dock_settings.dart';
 import 'anonymize_setting.dart';
+import 'assistant_settings.dart';
 import 'desktop_settings.dart';
 import 'editor_settings.dart';
 import 'floating_dock_settings.dart';
@@ -49,6 +50,8 @@ Future<void> loadAppSettings() async {
     commandSuggestionsSetting.load(),
     proTipsSetting.load(),
     livePresenceSetting.load(),
+    phinEnabledSetting.load(),
+    phinMemorySetting.load(),
     sftpShowHiddenSetting.load(),
     sftpFollowTerminalSetting.load(),
     sftpSortFieldSetting.load(),

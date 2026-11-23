@@ -95,11 +95,14 @@ void main() {
       expect(await settings.mouseKeyboardGuard.load(), isTrue);
     });
 
-    test('keeps the guard on for a fresh install, also after onboarding', () async {
-      await pinLegacyMouseKeyboardGuard();
-      await OnboardingService.instance.markCompleted();
-      await pinLegacyMouseKeyboardGuard();
-      expect(await settings.mouseKeyboardGuard.load(), isTrue);
-    });
+    test(
+      'keeps the guard on for a fresh install, also after onboarding',
+      () async {
+        await pinLegacyMouseKeyboardGuard();
+        await OnboardingService.instance.markCompleted();
+        await pinLegacyMouseKeyboardGuard();
+        expect(await settings.mouseKeyboardGuard.load(), isTrue);
+      },
+    );
   });
 }

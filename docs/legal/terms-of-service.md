@@ -1,6 +1,6 @@
 # Terms of Service
 
-**Last updated: 14 November 2026**
+**Last updated: 23 November 2026**
 
 ## Summary
 
@@ -140,7 +140,19 @@ limits how often one server can send, and we may revoke a relay key, or
 suspend push for an account, that is used to send spam, to send anything
 unlawful, or in a way that harms the service for others.
 
-## 10. No warranty
+## 10. Phin
+
+Phin, the assistant in Termphin Pro, is in beta and uses an AI model. It can
+be wrong: it may misread what it sees, explain a problem wrongly or propose a
+command that does harm. **Read what Phin proposes before you tap Run** - a
+change runs on your server as you, and you are responsible for it as for any
+command you type (section 3). Phin's use is limited to a fair amount a week
+per account, shown under Settings, Phin AI; when it is used up, Phin is back
+when the week starts again. Do not use Phin to get around these terms or the
+law, or to probe servers that are not yours. We may change Phin, its limits or
+the model behind it, or end it, while it is in beta.
+
+## 11. No warranty
 
 Termphin is provided **"as is" and "as available", without any warranty of any
 kind**, whether express or implied, including any implied warranty of
@@ -154,7 +166,7 @@ judge.
 If you are a consumer, the statutory warranty rights you have under the law of
 your country of residence are not affected by this section.
 
-## 11. Limitation of liability
+## 12. Limitation of liability
 
 To the fullest extent permitted by law, we are not liable for any indirect,
 incidental, special, consequential or punitive damages, nor for any loss of
@@ -171,7 +183,7 @@ injury caused by negligence, for fraud or fraudulent misrepresentation, or for
 anything else that cannot be excluded or limited under applicable law. If you
 are a consumer, your mandatory statutory rights are unaffected.
 
-## 12. Availability and changes to the app
+## 13. Availability and changes to the app
 
 We may change, add or remove features, or stop publishing the app altogether,
 at any time. We are not obliged to maintain any particular free feature. Since
@@ -182,7 +194,7 @@ Termphin Pro depends on our servers. If we ever stop offering it, we will say
 so in the app at least 30 days before, stop renewing subscriptions, and
 refund the unused part of any period already paid where the store does not.
 
-## 13. Termination
+## 14. Termination
 
 You may stop using Termphin at any time by uninstalling it, and delete your
 account at any time in the app. We may terminate this licence, and close an
@@ -190,14 +202,14 @@ account, if you materially breach these terms, in particular sections 4 and 9.
 On termination you must stop using the app; the data on your device remains
 yours and is removed by uninstalling.
 
-## 14. Changes to these terms
+## 15. Changes to these terms
 
 If these terms change, the date at the top changes with it, and the current
 version is published at https://termphin.dev/terms. Continuing to use the app
 after a change means you accept the new terms. If a change materially reduces
 your rights, we will announce it in the app before it takes effect.
 
-## 15. Governing law and disputes
+## 16. Governing law and disputes
 
 These terms are governed by the law of Poland, excluding its conflict-of-law
 rules and the UN Convention on Contracts for the International Sale of Goods.
@@ -211,13 +223,13 @@ exclusive jurisdiction.
 Consumers in the EU may also use the European Commission's online dispute
 resolution platform, though we would rather you simply wrote to us first.
 
-## 16. International users
+## 17. International users
 
 Termphin is published from Poland and available worldwide. You are responsible
 for complying with the laws of your own country when you use it, including any
 laws on encryption software and any export controls that apply to you.
 
-## 17. General
+## 18. General
 
 If any provision of these terms is found unenforceable, the rest stays in
 force, and the unenforceable provision applies to the maximum extent
@@ -226,6 +238,6 @@ together with the Privacy Policy, are the entire agreement between us about
 the app. You may not assign them; we may assign them to a successor that takes
 over the app, on the same terms.
 
-## 18. Contact
+## 19. Contact
 
 **contact@termphin.dev**

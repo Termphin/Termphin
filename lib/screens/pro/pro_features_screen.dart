@@ -1,75 +1,261 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
+import '../../services/settings/assistant_settings.dart';
 import '../../theme/theme.dart';
 import '../../widgets/account/live_status_card.dart';
+import '../../widgets/account/pro_feature_sheet.dart';
 import '../../widgets/account/sync_card.dart';
+import '../../widgets/pro/ascii_glow.dart';
 import '../../widgets/settings/notifications_settings_section.dart';
+import '../../widgets/ui/app_badge.dart';
 import '../../widgets/ui/app_card.dart';
+import '../../widgets/ui/app_divider.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
-import '../../widgets/ui/section_header.dart';
+import '../../widgets/ui/settings_tile.dart';
+import '../settings/phin_settings_screen.dart';
 
-/// Everything Termphin Pro adds, in one place, for an account that has it:
-/// notifications with Termphin closed, live status and sync - only what Pro
-/// adds, so of notifications just the switch for when the app is closed,
-/// not the free ones, and not the subscription, which the account page
-/// keeps.
+/// Everything Termphin Pro adds, for an account that has it, dressed like
+/// the paywall that sold it: the same glow at the top, "Termphin Pro" and
+/// that it is active, then each feature the way the paywall described it -
+/// Phin, notifications with Termphin closed, live status and sync - with
+/// its controls right under it.
 ///
-/// Each still lives where it always did - notifications in Settings, live
-/// status and sync on the account page - and this screen shows the same
-/// controls, so whoever wants to see what Pro gives them finds it all here.
-/// Notifications and live status each carry a way to a short demo of how
-/// they work.
-class ProFeaturesScreen extends StatelessWidget {
+/// Live status lives only here. The others also live where they always
+/// did - notifications in Settings, sync on the account page, Phin in its
+/// own settings - and the controls here are the same ones, so this is where
+/// to see and tune all of Pro at once. Only what Pro adds: of notifications
+/// the switch for when the app is closed, and not the subscription, which
+/// the account page keeps.
+class ProFeaturesScreen extends StatefulWidget {
   const ProFeaturesScreen({super.key, this.appVersion});
 
   /// For the "New" badge on the notifications switch.
   final String? appVersion;
 
   @override
+  State<ProFeaturesScreen> createState() => _ProFeaturesScreenState();
+}
+
+class _ProFeaturesScreenState extends State<ProFeaturesScreen> {
+  final _glow = GlobalKey<AsciiGlowState>();
+
+  /// The headline sits at the foot of the glow, like the paywall's.
+  static const _headlineAt = Alignment(0, 0.55);
+
+  /// The column the paywall reads in, so the two look like one place.
+  static const _columnWidth = 480.0;
+
+  @override
   Widget build(BuildContext context) {
     final t = Translations.of(context);
+    final p = t.account.pro.paywall;
     final hub = t.proHub;
-    return LargeTitleScaffold(
-      title: hub.title,
-      bodyBuilder: (context, scrollController, gutter) => ListView(
-        controller: scrollController,
-        padding: const EdgeInsets.fromLTRB(
-          AppTheme.space16,
-          0,
-          AppTheme.space16,
-          AppTheme.space32,
-        ).add(gutter),
+    final colors = context.colors;
+    final text = Theme.of(context).textTheme;
+    return Scaffold(
+      backgroundColor: colors.backgroundPrimary,
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: colors.backgroundPrimary.invisible,
+        shape: const Border(),
+        scrolledUnderElevation: 0,
+      ),
+      body: SafeArea(
+        top: false,
+        child: ContentGutter(
+          maxWidth: _columnWidth,
+          onlyWide: false,
+          builder: (context, gutter) {
+            final sides = const EdgeInsets.symmetric(
+              horizontal: AppTheme.space16,
+            ).add(gutter);
+            return ListView(
+              padding: const EdgeInsets.only(bottom: AppTheme.space32),
+              children: [
+                Listener(
+                  onPointerDown: (event) =>
+                      _glow.currentState?.touch(event.localPosition),
+                  onPointerMove: (event) =>
+                      _glow.currentState?.touch(event.localPosition),
+                  child: SizedBox(
+                    height: AsciiGlow.headerHeight,
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            child: AsciiGlow(
+                              key: _glow,
+                              quietAround: _headlineAt,
+                            ),
+                          ),
+                        ),
+                        Align(
+                          alignment: Alignment.bottomCenter,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                hub.title,
+                                textAlign: TextAlign.center,
+                                style: text.displayLarge?.copyWith(
+                                  fontFamily: AppTheme.displayFamily,
+                                  fontSize: AppTheme.font40,
+                                  height: 1.1,
+                                  letterSpacing: -0.5,
+                                  color: colors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: AppTheme.space10),
+                              AppBadge(hub.active, tone: BadgeTone.pro),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppTheme.space24),
+                Padding(
+                  padding: sides,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _Section(
+                        icon: PhosphorIconsRegular.sparkle,
+                        title: p.phinTitle,
+                        badge: t.assistant.beta,
+                        body: p.phinBody,
+                        child: ListenableBuilder(
+                          listenable: phinEnabledSetting,
+                          builder: (context, _) => AppCard.fields(
+                            children: [
+                              SettingsSwitchTile(
+                                icon: PhosphorIconsRegular.sparkle,
+                                title: t.assistant.enable,
+                                subtitle: t.assistant.enableSubtitle,
+                                value: phinEnabledSetting.value,
+                                onChanged: (on) =>
+                                    unawaited(phinEnabledSetting.set(on)),
+                              ),
+                              const AppDivider(),
+                              SettingsTile(
+                                icon: PhosphorIconsRegular.slidersHorizontal,
+                                title: hub.phinSettings,
+                                subtitle: hub.phinSettingsSubtitle,
+                                destination: () => const PhinSettingsScreen(),
+                              ),
+                              const AppDivider(),
+                              const HowItWorksTile(feature: ProFeature.phin),
+                            ],
+                          ),
+                        ),
+                      ),
+                      _Section(
+                        icon: PhosphorIconsRegular.bellRinging,
+                        title: p.pushTitle,
+                        body: p.pushBody,
+                        child: AppCard.fields(
+                          children: [
+                            NotifyWhenClosedTiles(
+                              appVersion: widget.appVersion,
+                              divided: false,
+                              icon: PhosphorIconsRegular.bellRinging,
+                            ),
+                          ],
+                        ),
+                      ),
+                      _Section(
+                        icon: PhosphorIconsRegular.pulse,
+                        title: p.liveTitle,
+                        body: p.liveBody,
+                        child: const LiveStatusCard(),
+                      ),
+                      _Section(
+                        icon: PhosphorIconsRegular.arrowsClockwise,
+                        title: p.syncTitle,
+                        body: p.syncBody,
+                        child: const SyncCard(),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+/// One Pro feature: said the way the paywall says it - an icon, a title,
+/// two lines - with its controls underneath.
+class _Section extends StatelessWidget {
+  const _Section({
+    required this.icon,
+    required this.title,
+    required this.body,
+    required this.child,
+    this.badge,
+  });
+
+  final IconData icon;
+  final String title;
+  final String body;
+  final Widget child;
+
+  /// A word beside the title, such as "Beta".
+  final String? badge;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final colors = context.colors;
+    final badge = this.badge;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppTheme.space24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          LargeTitleHeader(
-            title: hub.title,
-            subtitle: hub.rowSubtitle,
-            padding: const EdgeInsets.only(
-              top: AppTheme.space24,
-              bottom: AppTheme.space8,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppTheme.space8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(icon, size: AppTheme.icon20, color: colors.gold),
+                const SizedBox(width: AppTheme.space12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(child: Text(title, style: text.titleSmall)),
+                          if (badge != null) ...[
+                            const SizedBox(width: AppTheme.space6),
+                            AppBadge(badge, tone: BadgeTone.highlight),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: AppTheme.space2),
+                      Text(
+                        body,
+                        style: text.bodySmall?.copyWith(
+                          color: colors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: AppTheme.space16),
-          SectionHeader(hub.notificationsSection),
-          const SizedBox(height: AppTheme.space8),
-          AppCard.fields(
-            children: [
-              NotifyWhenClosedTiles(
-                appVersion: appVersion,
-                divided: false,
-                icon: PhosphorIconsRegular.bellRinging,
-              ),
-            ],
-          ),
-          const SizedBox(height: AppTheme.space24),
-          SectionHeader(hub.live),
-          const SizedBox(height: AppTheme.space8),
-          const LiveStatusCard(),
-          const SizedBox(height: AppTheme.space24),
-          SectionHeader(hub.sync),
-          const SizedBox(height: AppTheme.space8),
-          const SyncCard(),
+          const SizedBox(height: AppTheme.space12),
+          child,
         ],
       ),
     );

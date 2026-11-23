@@ -8,6 +8,7 @@ import '../../models/pro_source.dart';
 import '../../screens/pro/pro_paywall_screen.dart';
 import '../../services/pro/pro_service.dart';
 import '../../theme/theme.dart';
+import '../assistant/phin_demo.dart';
 import '../pro/feature_demos.dart';
 import '../ui/app_badge.dart';
 import '../ui/app_sheet.dart';
@@ -17,7 +18,8 @@ import '../ui/settings_tile.dart';
 /// The features a row in Settings can point at as needing Pro.
 enum ProFeature {
   notifications(ProSource.settingsNotifications),
-  liveStatus(ProSource.liveStatus);
+  liveStatus(ProSource.liveStatus),
+  phin(ProSource.phin);
 
   const ProFeature(this.source);
 
@@ -96,12 +98,17 @@ class ProFeatureSheet extends StatelessWidget {
       ProFeature.notifications => (
         t.proFeature.notificationsTitle,
         t.proFeature.notificationsBody,
-        FeatureDemoKind.notifications,
+        const FeatureDemo(kind: FeatureDemoKind.notifications) as Widget,
       ),
       ProFeature.liveStatus => (
         t.proFeature.liveTitle,
         t.proFeature.liveBody,
-        FeatureDemoKind.live,
+        const FeatureDemo(kind: FeatureDemoKind.live) as Widget,
+      ),
+      ProFeature.phin => (
+        t.assistant.howTitle,
+        t.assistant.howBody,
+        const PhinDemo() as Widget,
       ),
     };
     return SafeArea(
@@ -116,7 +123,7 @@ class ProFeatureSheet extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(child: FeatureDemo(kind: demo)),
+            Center(child: demo),
             const SizedBox(height: AppTheme.space20),
             Text(title, style: text.titleMedium),
             const SizedBox(height: AppTheme.space12),

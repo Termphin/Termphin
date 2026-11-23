@@ -75,12 +75,15 @@ class SettingsTile extends StatelessWidget {
       contentPadding:
           contentPadding ??
           const EdgeInsets.symmetric(horizontal: AppTheme.space14),
-      leading:
-          leading ??
-          (icon == null
-              ? null
-              : Icon(icon, color: iconColor ?? context.colors.textSecondary)),
-      title: _title(title, titleTrailing, dense),
+      leading: leading,
+      title: _title(
+        context,
+        title,
+        titleTrailing,
+        dense,
+        icon: icon,
+        iconColor: iconColor,
+      ),
       subtitle: _subtitle(context, subtitle, dense),
       trailing:
           trailingWidget ??
@@ -143,10 +146,14 @@ class SettingsSwitchTile extends StatelessWidget {
       contentPadding:
           contentPadding ??
           const EdgeInsets.symmetric(horizontal: AppTheme.space14),
-      secondary: icon == null
-          ? null
-          : Icon(icon, color: iconColor ?? context.colors.textSecondary),
-      title: _title(title, titleTrailing, dense),
+      title: _title(
+        context,
+        title,
+        titleTrailing,
+        dense,
+        icon: icon,
+        iconColor: iconColor,
+      ),
       subtitle: below == null
           ? text
           : Column(
@@ -197,10 +204,7 @@ class SettingsCheckboxTile extends StatelessWidget {
       contentPadding:
           contentPadding ??
           const EdgeInsets.symmetric(horizontal: AppTheme.space14),
-      secondary: icon == null
-          ? null
-          : Icon(icon, color: context.colors.textSecondary),
-      title: _title(title, titleTrailing, dense),
+      title: _title(context, title, titleTrailing, dense, icon: icon),
       subtitle: _subtitle(context, subtitle, dense),
       value: value,
       activeColor: context.colors.primary,
@@ -210,19 +214,36 @@ class SettingsCheckboxTile extends StatelessWidget {
   }
 }
 
-Widget _title(String title, Widget? trailing, bool dense) {
+/// The row's title, with its [icon] small and in line before it, so the
+/// subtitle below runs the card's full width instead of hanging under an
+/// icon column.
+Widget _title(
+  BuildContext context,
+  String title,
+  Widget? trailing,
+  bool dense, {
+  IconData? icon,
+  Color? iconColor,
+}) {
   final text = Text(
     title,
     style: dense ? const TextStyle(fontSize: AppTheme.font14) : null,
   );
-  return trailing == null
-      ? text
-      : Row(
-          children: [
-            Flexible(child: text),
-            trailing,
-          ],
-        );
+  if (icon == null && trailing == null) return text;
+  return Row(
+    children: [
+      if (icon != null) ...[
+        Icon(
+          icon,
+          size: dense ? AppTheme.icon14 : AppTheme.icon16,
+          color: iconColor ?? context.colors.textSecondary,
+        ),
+        const SizedBox(width: AppTheme.space8),
+      ],
+      Flexible(child: text),
+      ?trailing,
+    ],
+  );
 }
 
 Widget? _subtitle(BuildContext context, String? subtitle, bool dense) =>

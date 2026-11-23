@@ -1,6 +1,7 @@
 import '../completion/command_completion.dart';
 import '../pro/pro_hints.dart';
 import '../settings/action_dock_settings.dart';
+import '../settings/assistant_settings.dart';
 import '../settings/desktop_settings.dart';
 import '../settings/editor_settings.dart';
 import '../settings/floating_dock_settings.dart';
@@ -119,6 +120,8 @@ Future<Map<String, dynamic>> exportAppPreferences({
     'commandSuggestions': await commandSuggestionsSetting.load(),
     'proTips': await proTipsSetting.load(),
     'livePresence': await livePresenceSetting.load(),
+    'phinEnabled': await phinEnabledSetting.load(),
+    'phinMemory': await phinMemorySetting.load(),
     'tabBarPosition': (await tabBarPositionSetting.load()).name,
     'lockTimeout': (await lockTimeoutSetting.load()).name,
     'closeToTray': await closeToTraySetting.load(),
@@ -346,6 +349,10 @@ Future<void> importAppPreferences(
 
   final livePresence = appPrefs['livePresence'];
   if (livePresence is bool) await livePresenceSetting.set(livePresence);
+  final phinEnabled = appPrefs['phinEnabled'];
+  if (phinEnabled is bool) await phinEnabledSetting.set(phinEnabled);
+  final phinMemory = appPrefs['phinMemory'];
+  if (phinMemory is bool) await phinMemorySetting.set(phinMemory);
 
   final tabBarPosition = _byName(
     TabBarPosition.values,

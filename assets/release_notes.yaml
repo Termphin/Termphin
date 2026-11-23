@@ -16,6 +16,14 @@
 # before anyone has decided what version ships it. Nothing renders it: the app
 # and the landing changelog both drop any entry whose version is not a dotted
 # number. Give it the real number at release time and it appears in both.
+- version: "Unreleased"
+  date: "2026-11-23"
+  added:
+    - "Phin (Pro, beta): an assistant over the terminal that looks into a problem on your server, explains what it found and runs a fix only once you approve it"
+  changed:
+    - "Termphin Pro is the first row in Settings, for everyone"
+    - "Settings rows show a small icon beside their title"
+    - "Live status moved from the account screen to the Termphin Pro screen"
 - version: "1.16.1"
   date: "2026-11-21"
   changed:
