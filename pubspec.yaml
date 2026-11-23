@@ -34,7 +34,7 @@ dependencies:
   quick_actions: ^1.1.0
   flutter_foreground_task: ^11.0.0
   intl: ^0.20.2
-  flutter_svg: ^2.3.2
+  flutter_svg: ^2.5.0
   re_editor: ^0.10.0
   re_highlight: ^0.0.3
   flutter_secure_storage: ^11.0.0
@@ -50,17 +50,17 @@ dependencies:
   screen_retriever: ^0.2.2
   desktop_drop: ^0.8.4
   tray_kit: ^0.1.0
-  material_ui: ^1.11.0
-  firebase_core: ^5.1.0
-  firebase_crashlytics: ^6.0.1
-  firebase_messaging: ^17.0.1
-  firebase_auth: ^7.0.1
-  cloud_firestore: ^7.1.0
-  firebase_analytics: ^13.0.1
+  material_ui: ^1.11.1
+  firebase_core: ^5.2.0
+  firebase_crashlytics: ^6.1.0
+  firebase_messaging: ^17.1.0
+  firebase_auth: ^7.1.0
+  cloud_firestore: ^7.2.0
+  firebase_analytics: ^13.1.0
   google_sign_in: ^7.2.0
   sign_in_with_apple: ^8.2.0
   crypto: ^3.0.8
-  purchases_flutter: ^11.0.2
+  purchases_flutter: ^11.0.4
 
 dev_dependencies:
   flutter_test:
