@@ -14,6 +14,7 @@ import 'services/app/app_commands.dart';
 import 'services/app/error_reports.dart';
 import 'services/app/font_licenses.dart';
 import 'services/app/identity_anonymizer.dart';
+import 'services/platform/app_updater.dart';
 import 'services/platform/desktop_window.dart';
 import 'services/platform/foreground_notification_service.dart';
 import 'services/platform/ios_background_task.dart';
@@ -74,6 +75,7 @@ Future<void> main() async {
 
   await DesktopWindow.instance.init();
   AppCommands.instance.install();
+  unawaited(AppUpdater.instance.start());
   if (isLinuxPlatform) unawaited(SecretCipher.instance.masterKey());
 
   await SshSessionManager.instance.init();

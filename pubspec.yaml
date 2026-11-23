@@ -61,6 +61,7 @@ dependencies:
   sign_in_with_apple: ^8.2.0
   crypto: ^3.0.8
   purchases_flutter: ^11.0.2
+  auto_updater: ^1.0.0
 
 dev_dependencies:
   flutter_test:

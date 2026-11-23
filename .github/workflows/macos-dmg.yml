@@ -9,6 +9,14 @@ name: macOS DMG
 # as a GitHub pre-release under a `desktop-<version>-preview.<run>` tag - not a
 # `v*` tag, so the store release workflow never sees it and the latest release
 # stays the phones' one.
+#
+# Every DMG comes with a Sparkle appcast (scripts/sparkle_appcast.py) signed
+# with the update key, so the installed app can find and verify it. With
+# `release_tag` both go into that release - the Release workflow passes the
+# `v*` tag, which makes them what `releases/latest/download/appcast.xml`, the
+# app's feed, serves - and a missing release is made a pre-release. To test
+# updates, build one DMG with `feed_url` pointing at a test release, then a
+# second with a higher `build_number` into that release.
 
 on:
   workflow_dispatch:
@@ -22,12 +30,36 @@ on:
         required: false
         type: boolean
         default: false
+      release_tag:
+        description: 'Put the DMG and its appcast into this release'
+        required: false
+        type: string
+        default: ''
+      build_number:
+        description: 'Build number to use instead of the one in pubspec.yaml'
+        required: false
+        type: string
+        default: ''
+      feed_url:
+        description: 'Appcast the app checks, instead of the latest release'
+        required: false
+        type: string
+        default: ''
+  workflow_call:
+    inputs:
+      ref:
+        required: true
+        type: string
+      release_tag:
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: write
 
 concurrency:
-  group: macos-dmg
+  group: macos-dmg-${{ inputs.release_tag || inputs.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -52,7 +84,16 @@ jobs:
 
       - run: flutter pub get
 
-      - run: flutter build macos --release
+      - name: Build
+        env:
+          WEB_API_KEY: ${{ vars.FIREBASE_WEB_API_KEY }}
+          BUILD_NUMBER: ${{ inputs.build_number }}
+          FEED_URL: ${{ inputs.feed_url }}
+        run: |
+          ARGS=(--release --dart-define=FIREBASE_WEB_API_KEY="$WEB_API_KEY")
+          if [ -n "$BUILD_NUMBER" ]; then ARGS+=(--build-number="$BUILD_NUMBER"); fi
+          if [ -n "$FEED_URL" ]; then ARGS+=(--dart-define=SPARKLE_FEED_URL="$FEED_URL"); fi
+          flutter build macos "${ARGS[@]}"
 
       - name: Import the Developer ID identity
         env:
@@ -104,6 +145,8 @@ jobs:
           sign() { codesign --force --timestamp --options runtime --sign "$IDENTITY" "$@"; }
           find "$APP/Contents/Frameworks" -type f \( -name '*.dylib' -o -perm -111 \) ! -path '*/_CodeSignature/*' -print0 \
             | while IFS= read -r -d '' f; do if file "$f" | grep -q Mach-O; then sign "$f"; fi; done
+          find "$APP/Contents/Frameworks" -depth \( -name '*.xpc' -o -name '*.app' \) -print0 \
+            | while IFS= read -r -d '' f; do sign --preserve-metadata=entitlements "$f"; done
           find "$APP/Contents/Frameworks" -maxdepth 1 -name '*.framework' -print0 \
             | while IFS= read -r -d '' f; do sign "$f"; done
           sign --entitlements macos/Runner/Release.entitlements "$APP"
@@ -138,21 +181,54 @@ jobs:
           xcrun stapler staple Termphin.dmg
           spctl -a -t open --context context:primary-signature -v Termphin.dmg
 
+      - name: Write the appcast
+        env:
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+          BUILD_NUMBER: ${{ inputs.build_number }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          VERSION=$(sed -n 's/^version: *\([0-9.]*\).*/\1/p' pubspec.yaml)
+          BUILD=${BUILD_NUMBER:-$(sed -n 's/^version: *[0-9.]*+\([0-9]*\).*/\1/p' pubspec.yaml)}
+          TAG=${RELEASE_TAG:-desktop-$VERSION-preview.$GITHUB_RUN_NUMBER}
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install --quiet cryptography
+          "$RUNNER_TEMP/venv/bin/python" scripts/sparkle_appcast.py --dmg Termphin.dmg \
+            --version "$VERSION" --build "$BUILD" \
+            --url "https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/Termphin.dmg" \
+            --out appcast.xml
+          cat appcast.xml
+
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: Termphin-macos-dmg
-          path: Termphin.dmg
+          path: |
+            Termphin.dmg
+            appcast.xml
           retention-days: 14
 
+      - name: Put it into the release
+        if: ${{ inputs.release_tag != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" Termphin.dmg appcast.xml --clobber
+          else
+            gh release create "$TAG" Termphin.dmg appcast.xml --target "$(git rev-parse HEAD)" \
+              --prerelease --latest=false --title "Termphin for Mac $TAG" \
+              --notes "A test build of the desktop app for macOS, signed and notarized. Not a release."
+          fi
+
       - name: Publish a pre-release
-        if: ${{ inputs.preview }}
+        if: ${{ inputs.preview && inputs.release_tag == '' }}
         env:
           GH_TOKEN: ${{ github.token }}
           REF: ${{ inputs.ref }}
         run: |
           VERSION=$(sed -n 's/^version: *\([0-9.]*\).*/\1/p' pubspec.yaml)
           TAG="desktop-$VERSION-preview.$GITHUB_RUN_NUMBER"
-          gh release create "$TAG" Termphin.dmg --target "$(git rev-parse HEAD)" --prerelease --latest=false \
+          gh release create "$TAG" Termphin.dmg appcast.xml --target "$(git rev-parse HEAD)" --prerelease --latest=false \
             --title "Termphin for Mac $VERSION preview $GITHUB_RUN_NUMBER" \
             --notes "A test build of the desktop app for macOS from \`$REF\`, signed and notarized. Not a release."
 
