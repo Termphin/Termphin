@@ -16,6 +16,7 @@ import '../ui/bar_icon_button.dart';
 /// across repeated enters. Esc closes the search and hands the keys back to
 /// the terminal.
 const double kTerminalSearchBarHeight = 36;
+
 class TerminalSearchBar extends StatelessWidget {
   const TerminalSearchBar({
     super.key,

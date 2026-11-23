@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:dartssh2/dartssh2.dart';
 import 'package:flutter/foundation.dart';
@@ -1559,6 +1560,71 @@ class SshSessionManager extends ChangeNotifier {
     _sessions[sessionId]?.sshService?.resizeTerminal(
       math.max(1, width),
       math.max(1, height),
+    );
+  }
+
+  /// Runs [command] on [sessionId]'s server in a channel of its own, beside
+  /// the terminal, and returns what it printed - standard output and error
+  /// together, the last [maxBytes] of it - with its exit code. A command
+  /// still running after [timeout] is closed and reported as timed out.
+  Future<({String output, int? exitCode, bool timedOut})> runCommand(
+    String sessionId,
+    String command, {
+    required Duration timeout,
+    int maxBytes = 256 << 10,
+  }) async {
+    final client = _sessions[sessionId]?.sshService?.client;
+    if (client == null || client.isClosed) {
+      throw Exception('Session not connected.');
+    }
+    final session = await client.execute(command);
+    final chunks = <Uint8List>[];
+    var size = 0;
+    void keep(Uint8List chunk) {
+      chunks.add(chunk);
+      size += chunk.length;
+      while (size > maxBytes && chunks.length > 1) {
+        size -= chunks.removeAt(0).length;
+      }
+    }
+
+    final streams = Future.wait([
+      session.stdout.forEach(keep),
+      session.stderr.forEach(keep),
+    ]);
+    var timedOut = false;
+    try {
+      await streams.timeout(timeout);
+      await session.done.timeout(const Duration(seconds: 2));
+    } on TimeoutException {
+      timedOut = true;
+      session.close();
+    }
+    final bytes = BytesBuilder(copy: false);
+    chunks.forEach(bytes.add);
+    return (
+      output: utf8.decode(bytes.takeBytes(), allowMalformed: true),
+      exitCode: session.exitCode,
+      timedOut: timedOut,
+    );
+  }
+
+  /// Starts [command] on [sessionId]'s server in a channel of its own with
+  /// a terminal of [columns] by [rows], for a command the user may have to
+  /// answer - a confirmation, a password.
+  Future<SSHSession> openPty(
+    String sessionId,
+    String command, {
+    required int columns,
+    required int rows,
+  }) async {
+    final client = _sessions[sessionId]?.sshService?.client;
+    if (client == null || client.isClosed) {
+      throw Exception('Session not connected.');
+    }
+    return client.execute(
+      command,
+      pty: SSHPtyConfig(type: 'xterm-256color', width: columns, height: rows),
     );
   }
 

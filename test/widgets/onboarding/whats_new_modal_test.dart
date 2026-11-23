@@ -6,8 +6,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:termphin/i18n/strings.g.dart';
 import 'package:termphin/services/app/whats_new_service.dart';
 import 'package:termphin/services/completion/command_completion.dart';
+import 'package:termphin/services/pro/pro_service.dart';
+import 'package:termphin/services/settings/assistant_settings.dart';
 import 'package:termphin/services/settings/upload_settings.dart';
 import 'package:termphin/widgets/onboarding/whats_new_modal.dart';
+import 'package:termphin/widgets/ui/legal_links.dart';
 import 'package:yaml/yaml.dart';
 
 import '../../support/test_app.dart';
@@ -47,6 +50,7 @@ void main() {
       find.descendant(of: find.byType(PageView), matching: find.text(text));
 
   Future<void> open(WidgetTester tester, List<ReleaseHighlight> highlights) {
+    reduceMotion(tester);
     return pumpTestApp(
       tester,
       Builder(
@@ -256,6 +260,7 @@ void main() {
   testWidgets('landscape drops the illustration to keep the words', (
     tester,
   ) async {
+    reduceMotion(tester);
     tester.view.physicalSize = const Size(1000, 420);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -374,6 +379,68 @@ void main() {
     }
   });
 
+  test('every demo named in whats_new.yaml has one to play', () {
+    final doc = loadYaml(File('assets/whats_new.yaml').readAsStringSync());
+    final names = [
+      for (final entry in doc as YamlList)
+        for (final highlight in (entry['highlights'] as YamlList? ?? []))
+          if (highlight['demo'] case final String name) name,
+    ];
+
+    expect(names, isNotEmpty);
+    for (final name in names) {
+      expect(whatsNewDemos, contains(name), reason: name);
+    }
+  });
+
+  group('a Pro feature', () {
+    final phin = [
+      ReleaseHighlight(
+        id: 'phin-test',
+        version: '1.0.0',
+        title: 'Pro feature',
+        body: 'Body',
+        setting: phinEnabledSetting.key,
+        pro: true,
+        legal: true,
+      ),
+    ];
+
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      await phinEnabledSetting.load();
+    });
+
+    tearDown(() => ProService.instance.active.value = false);
+
+    testWidgets('without Pro offers Pro instead of its switch', (tester) async {
+      ProService.instance.active.value = false;
+      await open(tester, phin);
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('whatsNewSeePro-phin-test')), findsOne);
+      expect(find.byType(Switch), findsNothing);
+      expect(find.byType(LegalLinks), findsOneWidget);
+    });
+
+    testWidgets('with Pro has its switch, which turns it off', (tester) async {
+      ProService.instance.active.value = true;
+      await open(tester, phin);
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('whatsNewSeePro-phin-test')),
+        findsNothing,
+      );
+      expect(find.byType(LegalLinks), findsOneWidget);
+      await tester.tap(find.byType(Switch));
+      await tester.pumpAndSettle();
+      expect(phinEnabledSetting.value, isFalse);
+    });
+  });
+
   group('as an explainer beside a setting', () {
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
@@ -392,6 +459,7 @@ void main() {
     tearDown(() => WhatsNewService.instance.debugSetHighlights(null));
 
     testWidgets('has no announcement label and no switch', (tester) async {
+      reduceMotion(tester);
       await pumpTestApp(
         tester,
         Builder(

@@ -5,6 +5,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../theme/theme.dart';
+import '../ui/ascii_art.dart';
 
 /// The paywall's header art: a glow drawn in ASCII. A band of light drifts
 /// and swells with noise, and each cell shows a character as dense as the
@@ -32,7 +33,7 @@ class AsciiGlow extends StatefulWidget {
   static const double headerHeight = 196;
 
   /// The characters from sparse to dense.
-  static const ramp = ' .=+xX0S8#@';
+  static const ramp = asciiRamp;
 
   @override
   State<AsciiGlow> createState() => AsciiGlowState();
@@ -46,7 +47,6 @@ class AsciiGlowState extends State<AsciiGlow>
   final _trail = <_TrailPoint>[];
   ui.Image? _atlas;
   double _atlasScale = 0;
-  double _monoFontSize = 0;
 
   /// Whether the glyph atlas has been drawn.
   @visibleForTesting
@@ -64,7 +64,6 @@ class AsciiGlowState extends State<AsciiGlow>
     final scale = MediaQuery.devicePixelRatioOf(context).clamp(1.0, 3.0);
     if (scale != _atlasScale) {
       _atlasScale = scale;
-      _monoFontSize = widget.cellSize * 0.95;
       _buildAtlas(scale);
     }
     if (MediaQuery.disableAnimationsOf(context)) {
@@ -75,37 +74,7 @@ class AsciiGlowState extends State<AsciiGlow>
   }
 
   Future<void> _buildAtlas(double scale) async {
-    final cell = widget.cellSize * scale;
-    final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder);
-    for (var i = 0; i < AsciiGlow.ramp.length; i++) {
-      final painter = TextPainter(
-        text: TextSpan(
-          text: AsciiGlow.ramp[i],
-          style: TextStyle(
-            fontFamily: AppTheme.monoFamily,
-            fontSize: _monoFontSize * scale,
-            color: const Color(0xFFFFFFFF),
-            height: 1,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      painter.paint(
-        canvas,
-        Offset(
-          i * cell + (cell - painter.width) / 2,
-          (cell - painter.height) / 2,
-        ),
-      );
-      painter.dispose();
-    }
-    final picture = recorder.endRecording();
-    final image = await picture.toImage(
-      (cell * AsciiGlow.ramp.length).ceil(),
-      cell.ceil(),
-    );
-    picture.dispose();
+    final image = await buildAsciiAtlas(widget.cellSize, scale);
     if (!mounted || scale != _atlasScale) {
       image.dispose();
       return;
@@ -210,7 +179,7 @@ class _AsciiPainter extends CustomPainter {
       final v = row / rows;
       for (var column = 0; column < columns; column++) {
         final u = column / columns;
-        final seed = _hash(column * 0.137, row * 0.731);
+        final seed = asciiHash(column * 0.137, row * 0.731);
         if (seed > _density) continue;
         var tone = _field(u, v, t, size.aspectRatio);
         final flicker = 0.15 * sin(t * 2.2 + seed * 40);
@@ -262,8 +231,8 @@ class _AsciiPainter extends CustomPainter {
   /// with a brighter core wandering along it. Runs up to the top edge,
   /// which is the screen's, and fades out before the bottom one.
   double _field(double u, double v, double t, double aspect) {
-    final warpX = _noise(u * 2.4 + t * 0.06, v * 2.4) - 0.5;
-    final warpY = _noise(u * 2.4 + 17.3, v * 2.4 - t * 0.05) - 0.5;
+    final warpX = asciiNoise(u * 2.4 + t * 0.06, v * 2.4) - 0.5;
+    final warpY = asciiNoise(u * 2.4 + 17.3, v * 2.4 - t * 0.05) - 0.5;
     final x = u + warpX * 0.3;
     final y = v + warpY * 0.22;
     final horizon = 0.4 + 0.05 * sin(t * 0.35 + x * 4.0);
@@ -276,8 +245,8 @@ class _AsciiPainter extends CustomPainter {
               pow((y - horizon + curve) * 4.0, 2))
           .toDouble(),
     );
-    final top = _smooth(-0.15, 0.1, v);
-    final bottom = 1 - _smooth(0.8, 1.04, v);
+    final top = asciiSmooth(-0.15, 0.1, v);
+    final bottom = 1 - asciiSmooth(0.8, 1.04, v);
     return ((band * 0.7 + core * 0.55) * top * bottom).clamp(0.0, 1.0);
   }
 
@@ -290,11 +259,6 @@ class _AsciiPainter extends CustomPainter {
     final dx = (u - 0.5 - quiet.x / 2) / 0.56;
     final dy = (v - 0.5 - quiet.y / 2) / 0.3;
     return 1 - 0.8 * exp(-(dx * dx + dy * dy) * 2);
-  }
-
-  static double _smooth(double from, double to, double x) {
-    final k = ((x - from) / (to - from)).clamp(0.0, 1.0);
-    return k * k * (3 - 2 * k);
   }
 
   double _scramble(Offset cell, double t) {
@@ -313,25 +277,6 @@ class _AsciiPainter extends CustomPainter {
     final scaled = tone * (palette.length - 1);
     final i = scaled.floor().clamp(0, palette.length - 2);
     return Color.lerp(palette[i], palette[i + 1], scaled - i)!;
-  }
-
-  static double _hash(double x, double y) {
-    final value = sin(x * 127.1 + y * 311.7) * 43758.5453;
-    return value - value.floorToDouble();
-  }
-
-  static double _noise(double x, double y) {
-    final ix = x.floorToDouble();
-    final iy = y.floorToDouble();
-    final fx = x - ix;
-    final fy = y - iy;
-    final ux = fx * fx * (3 - 2 * fx);
-    final uy = fy * fy * (3 - 2 * fy);
-    final a = _hash(ix, iy);
-    final b = _hash(ix + 1, iy);
-    final c = _hash(ix, iy + 1);
-    final d = _hash(ix + 1, iy + 1);
-    return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
   }
 
   @override

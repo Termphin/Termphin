@@ -6,7 +6,10 @@ enum ProSource {
   settingsNotifications('settings_notifications'),
   syncCard('sync_card'),
   liveStatus('live_status'),
-  longCommandHint('long_command_hint');
+  longCommandHint('long_command_hint'),
+  phin('phin'),
+  settings('settings'),
+  whatsNew('whats_new');
 
   const ProSource(this.id);
 

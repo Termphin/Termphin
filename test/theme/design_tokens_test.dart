@@ -117,7 +117,7 @@ void main() {
   test('colours come from the palette', () {
     const allowed = {
       'lib/screens/sftp/sftp_image_preview_screen.dart': {'Colors.black'},
-      'lib/widgets/pro/ascii_glow.dart': {'Color(0xFFFFFFFF)'},
+      'lib/widgets/ui/ascii_art.dart': {'Color(0xFFFFFFFF)'},
     };
     final pattern = RegExp(r'\bColors\.\w+|\bColor\(0x[0-9A-Fa-f]+\)');
     final offenders = <String>[];

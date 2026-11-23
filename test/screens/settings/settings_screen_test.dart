@@ -21,7 +21,6 @@ import 'package:termphin/services/settings/theme_settings.dart';
 import 'package:termphin/services/settings/toolbar_layout.dart';
 import 'package:termphin/services/settings/upload_settings.dart';
 import 'package:termphin/services/ssh/ssh_session_manager.dart';
-import 'package:termphin/widgets/settings/appearance_settings_section.dart';
 import 'package:termphin/widgets/ui/section_header.dart';
 
 import '../../support/secure_storage_channel.dart';
@@ -557,6 +556,7 @@ void main() {
   testWidgets('the info beside Autocomplete explains it without toggling', (
     tester,
   ) async {
+    reduceMotion(tester);
     WhatsNewService.instance.debugSetHighlights(const [
       ReleaseHighlight(
         id: kAutocompleteExplainerId,
@@ -600,6 +600,7 @@ void main() {
   testWidgets('the info beside Fast upload explains it, sitting by its title', (
     tester,
   ) async {
+    reduceMotion(tester);
     WhatsNewService.instance.debugSetHighlights(const [
       ReleaseHighlight(
         id: kFastUploadExplainerId,
@@ -630,26 +631,29 @@ void main() {
     expect(find.text('Upload explained'), findsOneWidget);
   });
 
-  testWidgets('without Pro there is no Pro screen at the top', (tester) async {
+  testWidgets('Termphin Pro leads every account in the main card', (
+    tester,
+  ) async {
     ProService.instance.active.value = false;
     await pump(tester);
 
-    expect(find.byKey(const ValueKey('settingsProHub')), findsNothing);
+    final row = find.byKey(const ValueKey('settingsProHub'));
+    expect(row, findsOneWidget);
+    expect(find.text(t.proHub.rowSubtitle), findsOneWidget);
+    expect(find.text(t.proHub.active), findsNothing);
+    final notifications = find.text(t.settings.notificationsSection).first;
+    expect(
+      tester.getTopLeft(row).dy,
+      lessThan(tester.getTopLeft(notifications).dy),
+    );
   });
 
-  testWidgets('with Pro the top of Settings leads to everything Pro adds', (
-    tester,
-  ) async {
+  testWidgets('with Pro the row says it is active', (tester) async {
     ProService.instance.active.value = true;
     addTearDown(() => ProService.instance.active.value = false);
     await pump(tester);
 
     expect(find.byKey(const ValueKey('settingsProHub')), findsOneWidget);
-    expect(find.text(t.proHub.rowSubtitle), findsOneWidget);
-    final hub = tester.getTopLeft(find.byKey(const ValueKey('settingsProHub')));
-    final appearance = tester.getTopLeft(
-      find.byType(AppearanceSettingsSection),
-    );
-    expect(hub.dy, lessThan(appearance.dy));
+    expect(find.text(t.proHub.active), findsOneWidget);
   });
 }

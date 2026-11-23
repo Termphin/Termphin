@@ -42,6 +42,7 @@ class TerminalAlerts {
   final bool Function(TerminalNotification notification) allows;
   final bool Function() quoteLines;
   final bool Function() isForeground;
+
   /// The sessions whose output is on screen: the tab in front, and every
   /// pane beside it in a split.
   final Set<String> Function() sessionsOnScreen;

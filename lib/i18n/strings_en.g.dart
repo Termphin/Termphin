@@ -89,6 +89,7 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 	late final Translations$proDemo$en proDemo = Translations$proDemo$en.internal(_root);
 	late final Translations$proHub$en proHub = Translations$proHub$en.internal(_root);
 	late final Translations$legalUpdate$en legalUpdate = Translations$legalUpdate$en.internal(_root);
+	late final Translations$assistant$en assistant = Translations$assistant$en.internal(_root);
 }
 
 // Path: nav
@@ -4621,8 +4622,8 @@ class Translations$proHub$en {
 	/// en: 'Termphin Pro'
 	String get row => 'Termphin Pro';
 
-	/// en: 'Notifications, live status and sync in one place'
-	String get rowSubtitle => 'Notifications, live status and sync in one place';
+	/// en: 'Phin AI, notifications, live status and sync'
+	String get rowSubtitle => 'Phin AI, notifications, live status and sync';
 
 	/// en: 'Notifications'
 	String get notificationsSection => 'Notifications';
@@ -4632,6 +4633,15 @@ class Translations$proHub$en {
 
 	/// en: 'Sync'
 	String get sync => 'Sync';
+
+	/// en: 'Active'
+	String get active => 'Active';
+
+	/// en: 'Phin settings'
+	String get phinSettings => 'Phin settings';
+
+	/// en: 'Memory and what Phin knows about your servers'
+	String get phinSettingsSubtitle => 'Memory and what Phin knows about your servers';
 }
 
 // Path: legalUpdate
@@ -4647,6 +4657,240 @@ class Translations$legalUpdate$en {
 
 	/// en: 'Got it'
 	String get gotIt => 'Got it';
+}
+
+// Path: assistant
+class Translations$assistant$en {
+	Translations$assistant$en.internal(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'Phin'
+	String get title => 'Phin';
+
+	/// en: 'Hi, I'm Phin. Tell me what is wrong or what you need on this server - I look around and suggest a fix, and nothing changes without your OK.'
+	String get intro => 'Hi, I\'m Phin. Tell me what is wrong or what you need on this server - I look around and suggest a fix, and nothing changes without your OK.';
+
+	/// en: 'Ask Phin…'
+	String get placeholder => 'Ask Phin…';
+
+	/// en: 'Ask a follow-up'
+	String get followUp => 'Ask a follow-up';
+
+	/// en: 'Why is my site down?'
+	String get suggestDown => 'Why is my site down?';
+
+	/// en: 'What is filling the disk?'
+	String get suggestDisk => 'What is filling the disk?';
+
+	/// en: 'Is everything healthy?'
+	String get suggestHealth => 'Is everything healthy?';
+
+	/// en: 'Send'
+	String get send => 'Send';
+
+	/// en: 'Stop'
+	String get stop => 'Stop';
+
+	/// en: 'New task'
+	String get newTask => 'New task';
+
+	/// en: 'Ready'
+	String get statusIdle => 'Ready';
+
+	/// en: 'Thinking'
+	String get statusThinking => 'Thinking';
+
+	/// en: 'Looking around'
+	String get statusWorking => 'Looking around';
+
+	/// en: 'Needs your OK'
+	String get statusWaiting => 'Needs your OK';
+
+	/// en: 'Done'
+	String get statusDone => 'Done';
+
+	/// en: 'Stopped'
+	String get statusFailed => 'Stopped';
+
+	/// en: 'Proposed fix'
+	String get proposalTitle => 'Proposed fix';
+
+	/// en: 'Changes the server'
+	String get changesServer => 'Changes the server';
+
+	/// en: 'Run'
+	String get run => 'Run';
+
+	/// en: 'Skip'
+	String get skip => 'Skip';
+
+	/// en: 'Edit'
+	String get edit => 'Edit';
+
+	/// en: 'Running'
+	String get proposalRunning => 'Running';
+
+	/// en: 'Ran'
+	String get proposalDone => 'Ran';
+
+	/// en: 'Failed'
+	String get proposalFailed => 'Failed';
+
+	/// en: 'Skipped'
+	String get proposalSkipped => 'Skipped';
+
+	/// en: 'Solved'
+	String get solved => 'Solved';
+
+	/// en: 'Not solved'
+	String get unsolved => 'Not solved';
+
+	/// en: 'Ask Phin'
+	String get open => 'Ask Phin';
+
+	/// en: 'Minimize'
+	String get minimize => 'Minimize';
+
+	/// en: 'New chat'
+	String get newChat => 'New chat';
+
+	/// en: 'Allow'
+	String get allow => 'Allow';
+
+	/// en: 'Read a file that may hold secrets?'
+	String get readSecretTitle => 'Read a file that may hold secrets?';
+
+	/// en: '{path} may hold passwords or keys. What it contains goes to the assistant, with anything that looks like a secret hidden first.'
+	String readSecretWhy({required Object path}) => '${path} may hold passwords or keys. What it contains goes to the assistant, with anything that looks like a secret hidden first.';
+
+	/// en: 'Sign in to use the assistant.'
+	String get failSignedOut => 'Sign in to use the assistant.';
+
+	/// en: 'The assistant is part of Termphin Pro.'
+	String get failPro => 'The assistant is part of Termphin Pro.';
+
+	/// en: 'The assistant is not open to this account yet.'
+	String get failNotAllowed => 'The assistant is not open to this account yet.';
+
+	/// en: 'Too many requests at once. Try again in a moment.'
+	String get failRate => 'Too many requests at once. Try again in a moment.';
+
+	/// en: 'You have used this week's Phin allowance. It renews on Monday.'
+	String get failBudget => 'You have used this week\'s Phin allowance. It renews on Monday.';
+
+	/// en: 'Could not reach the assistant. Check the connection and try again.'
+	String get failNetwork => 'Could not reach the assistant. Check the connection and try again.';
+
+	/// en: 'The assistant could not answer. Try again.'
+	String get failProvider => 'The assistant could not answer. Try again.';
+
+	/// en: 'Connect to a server first - the assistant works on the session that is open.'
+	String get failNoConnection => 'Connect to a server first - the assistant works on the session that is open.';
+
+	/// en: 'This took too many steps, so I stopped. Tell me how to go on.'
+	String get failTooManySteps => 'This took too many steps, so I stopped. Tell me how to go on.';
+
+	/// en: 'Ask Phin'
+	String get askPhin => 'Ask Phin';
+
+	/// en: 'Read the terminal screen'
+	String get readScreen => 'Read the terminal screen';
+
+	/// en: 'Remembered'
+	String get remembered => 'Remembered';
+
+	/// en: 'Phin AI'
+	String get settingsTitle => 'Phin AI';
+
+	/// en: 'The assistant in the terminal, and what it remembers'
+	String get settingsSubtitle => 'The assistant in the terminal, and what it remembers';
+
+	/// en: 'Phin'
+	String get enable => 'Phin';
+
+	/// en: 'The assistant over the terminal. Off hides it everywhere and sends nothing.'
+	String get enableSubtitle => 'The assistant over the terminal. Off hides it everywhere and sends nothing.';
+
+	/// en: 'Memory'
+	String get memory => 'Memory';
+
+	/// en: 'Phin keeps short notes about each server, such as which service runs your app, so it does not look them up again. Stored only on this device.'
+	String get memorySubtitle => 'Phin keeps short notes about each server, such as which service runs your app, so it does not look them up again. Stored only on this device.';
+
+	/// en: 'What Phin knows'
+	String get knowsTitle => 'What Phin knows';
+
+	/// en: 'Nothing yet. Phin saves notes as it learns about your servers.'
+	String get knowsEmpty => 'Nothing yet. Phin saves notes as it learns about your servers.';
+
+	/// en: '{n} notes'
+	String knowsNotes({required Object n}) => '${n} notes';
+
+	/// en: 'Forget this server'
+	String get forgetServer => 'Forget this server';
+
+	/// en: 'Forget everything Phin noted about {name}?'
+	String forgetServerConfirm({required Object name}) => 'Forget everything Phin noted about ${name}?';
+
+	/// en: 'Forget everything'
+	String get forgetAll => 'Forget everything';
+
+	/// en: 'Forget every note Phin saved about every server?'
+	String get forgetAllConfirm => 'Forget every note Phin saved about every server?';
+
+	/// en: 'Forget'
+	String get forget => 'Forget';
+
+	/// en: 'Remove note'
+	String get removeNote => 'Remove note';
+
+	/// en: 'Removed server'
+	String get unknownServer => 'Removed server';
+
+	/// en: 'How it works'
+	String get howItWorks => 'How it works';
+
+	/// en: 'Phin looks around your server and fixes it with you'
+	String get howTitle => 'Phin looks around your server and fixes it with you';
+
+	/// en: 'Tell Phin what is wrong. It checks the server with read-only commands, explains what it found and proposes a fix - nothing changes until you tap Run. Names, addresses and secrets are hidden before anything reaches the AI.'
+	String get howBody => 'Tell Phin what is wrong. It checks the server with read-only commands, explains what it found and proposes a fix - nothing changes until you tap Run. Names, addresses and secrets are hidden before anything reaches the AI.';
+
+	/// en: 'Why is my site down?'
+	String get demoAsk => 'Why is my site down?';
+
+	/// en: 'Check nginx'
+	String get demoCheckNginx => 'Check nginx';
+
+	/// en: 'Read the nginx error log'
+	String get demoCheckLog => 'Read the nginx error log';
+
+	/// en: 'The app behind nginx crashed: its .env lost DATABASE_URL in the last deploy.'
+	String get demoFound => 'The app behind nginx crashed: its .env lost DATABASE_URL in the last deploy.';
+
+	/// en: 'Restore yesterday's .env and restart the app.'
+	String get demoWhy => 'Restore yesterday\'s .env and restart the app.';
+
+	/// en: 'Fixed - the site answers again.'
+	String get demoDone => 'Fixed - the site answers again.';
+
+	/// en: 'You have used {percent}% of this week's Phin allowance. It renews on {date}.'
+	String usageNotice({required Object percent, required Object date}) => 'You have used ${percent}% of this week\'s Phin allowance. It renews on ${date}.';
+
+	/// en: 'This week'
+	String get usageTitle => 'This week';
+
+	/// en: '{percent}% of the allowance used'
+	String usageUsed({required Object percent}) => '${percent}% of the allowance used';
+
+	/// en: 'Renews on {date}'
+	String usageRenews({required Object date}) => 'Renews on ${date}';
+
+	/// en: 'Beta'
+	String get beta => 'Beta';
 }
 
 // Path: terminal.control
@@ -5236,6 +5480,12 @@ class Translations$account$pro$paywall$en {
 
 	/// en: 'More from your servers'
 	String get tagline => 'More from your servers';
+
+	/// en: 'Phin, your AI assistant'
+	String get phinTitle => 'Phin, your AI assistant';
+
+	/// en: 'Tell it what is wrong; it looks around the server and fixes it with you. Nothing changes without your OK.'
+	String get phinBody => 'Tell it what is wrong; it looks around the server and fixes it with you. Nothing changes without your OK.';
 
 	/// en: 'Notifications from your servers'
 	String get pushTitle => 'Notifications from your servers';
@@ -6784,6 +7034,8 @@ extension on Translations {
 			'account.pro.tips' => 'Pro tips',
 			'account.pro.tipsSubtitle' => 'A rare note about what Pro would do, where it would have helped',
 			'account.pro.paywall.tagline' => 'More from your servers',
+			'account.pro.paywall.phinTitle' => 'Phin, your AI assistant',
+			'account.pro.paywall.phinBody' => 'Tell it what is wrong; it looks around the server and fixes it with you. Nothing changes without your OK.',
 			'account.pro.paywall.pushTitle' => 'Notifications from your servers',
 			'account.pro.paywall.pushBody' => 'A long job finished or an agent needs you: it reaches you even with Termphin closed.',
 			'account.pro.paywall.liveTitle' => 'Your machines, live',
@@ -6910,14 +7162,92 @@ extension on Translations {
 			'proDemo.liveScreenshot' => 'Termphin\'s home screen: machines online, with their sessions working and waiting',
 			'proHub.title' => 'Termphin Pro',
 			'proHub.row' => 'Termphin Pro',
-			'proHub.rowSubtitle' => 'Notifications, live status and sync in one place',
+			'proHub.rowSubtitle' => 'Phin AI, notifications, live status and sync',
 			'proHub.notificationsSection' => 'Notifications',
 			'proHub.live' => 'Live status',
-			'proHub.sync' => 'Sync',
-			'legalUpdate.title' => 'Our terms and privacy policy have changed',
 			_ => null,
 		} ?? switch (path) {
+			'proHub.sync' => 'Sync',
+			'proHub.active' => 'Active',
+			'proHub.phinSettings' => 'Phin settings',
+			'proHub.phinSettingsSubtitle' => 'Memory and what Phin knows about your servers',
+			'legalUpdate.title' => 'Our terms and privacy policy have changed',
 			'legalUpdate.gotIt' => 'Got it',
+			'assistant.title' => 'Phin',
+			'assistant.intro' => 'Hi, I\'m Phin. Tell me what is wrong or what you need on this server - I look around and suggest a fix, and nothing changes without your OK.',
+			'assistant.placeholder' => 'Ask Phin…',
+			'assistant.followUp' => 'Ask a follow-up',
+			'assistant.suggestDown' => 'Why is my site down?',
+			'assistant.suggestDisk' => 'What is filling the disk?',
+			'assistant.suggestHealth' => 'Is everything healthy?',
+			'assistant.send' => 'Send',
+			'assistant.stop' => 'Stop',
+			'assistant.newTask' => 'New task',
+			'assistant.statusIdle' => 'Ready',
+			'assistant.statusThinking' => 'Thinking',
+			'assistant.statusWorking' => 'Looking around',
+			'assistant.statusWaiting' => 'Needs your OK',
+			'assistant.statusDone' => 'Done',
+			'assistant.statusFailed' => 'Stopped',
+			'assistant.proposalTitle' => 'Proposed fix',
+			'assistant.changesServer' => 'Changes the server',
+			'assistant.run' => 'Run',
+			'assistant.skip' => 'Skip',
+			'assistant.edit' => 'Edit',
+			'assistant.proposalRunning' => 'Running',
+			'assistant.proposalDone' => 'Ran',
+			'assistant.proposalFailed' => 'Failed',
+			'assistant.proposalSkipped' => 'Skipped',
+			'assistant.solved' => 'Solved',
+			'assistant.unsolved' => 'Not solved',
+			'assistant.open' => 'Ask Phin',
+			'assistant.minimize' => 'Minimize',
+			'assistant.newChat' => 'New chat',
+			'assistant.allow' => 'Allow',
+			'assistant.readSecretTitle' => 'Read a file that may hold secrets?',
+			'assistant.readSecretWhy' => ({required Object path}) => '${path} may hold passwords or keys. What it contains goes to the assistant, with anything that looks like a secret hidden first.',
+			'assistant.failSignedOut' => 'Sign in to use the assistant.',
+			'assistant.failPro' => 'The assistant is part of Termphin Pro.',
+			'assistant.failNotAllowed' => 'The assistant is not open to this account yet.',
+			'assistant.failRate' => 'Too many requests at once. Try again in a moment.',
+			'assistant.failBudget' => 'You have used this week\'s Phin allowance. It renews on Monday.',
+			'assistant.failNetwork' => 'Could not reach the assistant. Check the connection and try again.',
+			'assistant.failProvider' => 'The assistant could not answer. Try again.',
+			'assistant.failNoConnection' => 'Connect to a server first - the assistant works on the session that is open.',
+			'assistant.failTooManySteps' => 'This took too many steps, so I stopped. Tell me how to go on.',
+			'assistant.askPhin' => 'Ask Phin',
+			'assistant.readScreen' => 'Read the terminal screen',
+			'assistant.remembered' => 'Remembered',
+			'assistant.settingsTitle' => 'Phin AI',
+			'assistant.settingsSubtitle' => 'The assistant in the terminal, and what it remembers',
+			'assistant.enable' => 'Phin',
+			'assistant.enableSubtitle' => 'The assistant over the terminal. Off hides it everywhere and sends nothing.',
+			'assistant.memory' => 'Memory',
+			'assistant.memorySubtitle' => 'Phin keeps short notes about each server, such as which service runs your app, so it does not look them up again. Stored only on this device.',
+			'assistant.knowsTitle' => 'What Phin knows',
+			'assistant.knowsEmpty' => 'Nothing yet. Phin saves notes as it learns about your servers.',
+			'assistant.knowsNotes' => ({required Object n}) => '${n} notes',
+			'assistant.forgetServer' => 'Forget this server',
+			'assistant.forgetServerConfirm' => ({required Object name}) => 'Forget everything Phin noted about ${name}?',
+			'assistant.forgetAll' => 'Forget everything',
+			'assistant.forgetAllConfirm' => 'Forget every note Phin saved about every server?',
+			'assistant.forget' => 'Forget',
+			'assistant.removeNote' => 'Remove note',
+			'assistant.unknownServer' => 'Removed server',
+			'assistant.howItWorks' => 'How it works',
+			'assistant.howTitle' => 'Phin looks around your server and fixes it with you',
+			'assistant.howBody' => 'Tell Phin what is wrong. It checks the server with read-only commands, explains what it found and proposes a fix - nothing changes until you tap Run. Names, addresses and secrets are hidden before anything reaches the AI.',
+			'assistant.demoAsk' => 'Why is my site down?',
+			'assistant.demoCheckNginx' => 'Check nginx',
+			'assistant.demoCheckLog' => 'Read the nginx error log',
+			'assistant.demoFound' => 'The app behind nginx crashed: its .env lost DATABASE_URL in the last deploy.',
+			'assistant.demoWhy' => 'Restore yesterday\'s .env and restart the app.',
+			'assistant.demoDone' => 'Fixed - the site answers again.',
+			'assistant.usageNotice' => ({required Object percent, required Object date}) => 'You have used ${percent}% of this week\'s Phin allowance. It renews on ${date}.',
+			'assistant.usageTitle' => 'This week',
+			'assistant.usageUsed' => ({required Object percent}) => '${percent}% of the allowance used',
+			'assistant.usageRenews' => ({required Object date}) => 'Renews on ${date}',
+			'assistant.beta' => 'Beta',
 			_ => null,
 		};
 	}

@@ -334,6 +334,12 @@ class _ProPaywallScreenState extends ConsumerState<ProPaywallScreen> {
                         child: Column(
                           children: [
                             _Feature(
+                              icon: PhosphorIconsRegular.sparkle,
+                              title: p.phinTitle,
+                              body: p.phinBody,
+                              demo: ProFeature.phin,
+                            ),
+                            _Feature(
                               icon: PhosphorIconsRegular.bellRinging,
                               title: p.pushTitle,
                               body: p.pushBody,

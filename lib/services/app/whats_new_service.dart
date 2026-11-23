@@ -21,6 +21,9 @@ class ReleaseHighlight {
     this.imageAspect,
     this.setting,
     this.announce = true,
+    this.demo,
+    this.pro = false,
+    this.legal = false,
   });
 
   /// Stable, unique, and never reused. This - not the version - is what
@@ -51,6 +54,18 @@ class ReleaseHighlight {
   /// False for a page that only explains a feature from beside its setting:
   /// one that has been around too long to be announced as new.
   final bool announce;
+
+  /// Name of a live demo drawn instead of [image] - the feature itself,
+  /// playing - from the closed set in `whatsNewDemos`.
+  final String? demo;
+
+  /// A Pro feature: an account without Pro is offered the way to the
+  /// paywall in place of the page's switch.
+  final bool pro;
+
+  /// Whether the page links the terms and the privacy policy, for a feature
+  /// that sends something new somewhere.
+  final bool legal;
 }
 
 /// `"9:16"` as 0.5625; null for anything else.
@@ -119,6 +134,9 @@ class WhatsNewService {
             imageAspect: parseAspect(highlight['aspect']),
             setting: highlight['setting'] as String?,
             announce: highlight['announce'] as bool? ?? true,
+            demo: highlight['demo'] as String?,
+            pro: highlight['pro'] as bool? ?? false,
+            legal: highlight['legal'] as bool? ?? false,
           ),
     ];
     _cache = highlights;

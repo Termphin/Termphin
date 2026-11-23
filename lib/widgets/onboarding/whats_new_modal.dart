@@ -1,13 +1,21 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
+import '../../models/pro_source.dart';
+import '../../screens/pro/pro_paywall_screen.dart';
 import '../../services/app/whats_new_service.dart';
 import '../../services/completion/command_completion.dart';
+import '../../services/pro/pro_service.dart';
+import '../../services/settings/assistant_settings.dart';
 import '../../services/settings/setting.dart';
 import '../../theme/theme.dart';
+import '../assistant/phin_demo.dart';
+import '../pro/ascii_glow.dart';
+import '../ui/legal_links.dart';
 import '../ui/modal_actions.dart';
 import '../ui/motion_page.dart';
 import '../ui/section_header.dart';
@@ -26,7 +34,26 @@ whatsNewToggles = {
     setting: commandSuggestionsSetting,
     label: (t) => t.settings.commandSuggestions,
   ),
+  phinEnabledSetting.key: (
+    setting: phinEnabledSetting,
+    label: (t) => t.assistant.enable,
+  ),
 };
+
+/// The live demos a highlight may play in place of an image, by name.
+///
+/// Closed like [whatsNewToggles]: the yaml names one, and only one listed
+/// here draws anything - `whats_new_test.dart` fails on any other.
+final Map<String, Widget Function()> whatsNewDemos = {
+  'phin': () => const PhinDemo(height: _kDemoHeight),
+};
+
+/// How tall a live demo stands on its page.
+const _kDemoHeight = 200.0;
+
+/// The glow above a page with nothing to show in it: enough to carry the
+/// look, not enough to push the words down.
+const _kBareStageHeight = AppTheme.space48;
 
 /// The tallest an illustration is drawn; a portrait recording is narrowed to
 /// fit rather than pushing the words off the page. Tall enough for a screen
@@ -48,11 +75,15 @@ const _kImageMinHeight = 440.0;
 /// the dialog.
 const _kMaxPageHeightWithImage = 420.0;
 const _kMaxPageHeightTextOnly = 260.0;
+const _kMaxPageHeightWithDemo = 640.0;
 
 /// Dots and button below the pages, plus the padding around them - taken off
 /// the window before a page height is chosen so the card cannot outgrow the
 /// screen on a short one.
 const _kChromeHeight = 132.0;
+
+/// The terms and privacy links under the button, on a page that has them.
+const _kLegalHeight = 48.0;
 
 /// Shows the what's-new popup for [highlights] and completes once dismissed.
 ///
@@ -224,11 +255,22 @@ class _WhatsNewModalState extends State<WhatsNewModal> {
     final media = MediaQuery.of(context);
     final available = media.size.height - 80;
     final showImages = available >= _kImageMinHeight;
+    final withDemos =
+        showImages && widget.highlights.any((h) => h.demo != null);
     final withImages =
         showImages && widget.highlights.any((h) => h.image != null);
     final maxPageHeight = math.min(
-      withImages ? _kMaxPageHeightWithImage : _kMaxPageHeightTextOnly,
-      math.max(available - _kChromeHeight, 120.0),
+      withDemos
+          ? _kMaxPageHeightWithDemo
+          : withImages
+          ? _kMaxPageHeightWithImage
+          : _kMaxPageHeightTextOnly + _kBareStageHeight,
+      math.max(
+        available -
+            _kChromeHeight -
+            (widget.highlights.any((h) => h.legal) ? _kLegalHeight : 0),
+        120.0,
+      ),
     );
 
     return Dialog(
@@ -237,6 +279,7 @@ class _WhatsNewModalState extends State<WhatsNewModal> {
         horizontal: AppTheme.space24,
         vertical: AppTheme.space40,
       ),
+      clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.zero,
         side: BorderSide(color: colors.surfaceBorderStrong),
@@ -268,11 +311,17 @@ class _WhatsNewModalState extends State<WhatsNewModal> {
                 AppTheme.space20,
                 AppTheme.space20,
               ),
-              child: ModalActions(
-                primary: FilledButton(
-                  onPressed: _advance,
-                  child: Text(_isLast ? t.whatsNew.gotIt : t.whatsNew.next),
-                ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ModalActions(
+                    primary: FilledButton(
+                      onPressed: _advance,
+                      child: Text(_isLast ? t.whatsNew.gotIt : t.whatsNew.next),
+                    ),
+                  ),
+                  if (widget.highlights[_page].legal) const LegalLinks(),
+                ],
               ),
             ),
           ],
@@ -284,6 +333,9 @@ class _WhatsNewModalState extends State<WhatsNewModal> {
 
 /// A highlight that outlives its screenshot reads as a text page, not as a
 /// broken release.
+///
+/// The top of every page is the glow the paywall opens with, the image or
+/// live demo standing in it; a page with neither keeps a thin band of it.
 class _HighlightPage extends StatelessWidget {
   const _HighlightPage({
     required this.highlight,
@@ -295,74 +347,138 @@ class _HighlightPage extends StatelessWidget {
   final bool showImage;
   final bool announce;
 
+  Widget? _media() {
+    if (!showImage) return null;
+    if (whatsNewDemos[highlight.demo] case final demo?) return demo();
+    final image = highlight.image;
+    if (image == null) return null;
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxHeight: _kMaxImageHeight),
+      child: AspectRatio(
+        aspectRatio: highlight.imageAspect ?? 16 / 7,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+          child: Image.asset(
+            image,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => const SizedBox.shrink(),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = Translations.of(context);
     final colors = context.colors;
     final textTheme = Theme.of(context).textTheme;
-    final image = highlight.image;
+    final media = _media();
+    final offerPro =
+        announce && highlight.pro && !ProService.instance.active.value;
+    final toggle = announce && !offerPro
+        ? whatsNewToggles[highlight.setting]
+        : null;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(
-        AppTheme.space20,
-        AppTheme.space24,
-        AppTheme.space20,
-        AppTheme.space8,
-      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (image != null && showImage) ...[
-            Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: _kMaxImageHeight),
-                child: AspectRatio(
-                  aspectRatio: highlight.imageAspect ?? 16 / 7,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                    child: Image.asset(
-                      image,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => const SizedBox.shrink(),
-                    ),
+          _Stage(child: media),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppTheme.space20,
+              AppTheme.space16,
+              AppTheme.space20,
+              AppTheme.space8,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (announce) ...[
+                  SectionHeader(t.whatsNew.nowAvailable, color: colors.primary),
+                  const SizedBox(height: AppTheme.space8),
+                ],
+                Text(
+                  highlight.title,
+                  style: textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(height: AppTheme.space16),
-          ],
-          if (announce) ...[
-            SectionHeader(t.whatsNew.nowAvailable, color: colors.primary),
-            const SizedBox(height: AppTheme.space8),
-          ],
-          Text(
-            highlight.title,
-            style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: AppTheme.space10),
-          Text(
-            highlight.body,
-            style: textTheme.bodyMedium?.copyWith(
-              color: colors.textSecondary,
-              height: 1.45,
-            ),
-          ),
-          if (announce)
-            if (whatsNewToggles[highlight.setting] case final toggle?) ...[
-              const SizedBox(height: AppTheme.space12),
-              ValueListenableBuilder<bool>(
-                valueListenable: toggle.setting,
-                builder: (context, enabled, _) => SettingsSwitchTile(
-                  key: ValueKey('whatsNewToggle-${highlight.setting}'),
-                  contentPadding: EdgeInsets.zero,
-                  title: toggle.label(t),
-                  value: enabled,
-                  onChanged: toggle.setting.set,
+                const SizedBox(height: AppTheme.space10),
+                Text(
+                  highlight.body,
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: colors.textSecondary,
+                    height: 1.45,
+                  ),
                 ),
-              ),
-            ],
+                if (toggle != null) ...[
+                  const SizedBox(height: AppTheme.space12),
+                  ValueListenableBuilder<bool>(
+                    valueListenable: toggle.setting,
+                    builder: (context, enabled, _) => SettingsSwitchTile(
+                      key: ValueKey('whatsNewToggle-${highlight.setting}'),
+                      contentPadding: EdgeInsets.zero,
+                      title: toggle.label(t),
+                      value: enabled,
+                      onChanged: toggle.setting.set,
+                    ),
+                  ),
+                ],
+                if (offerPro) ...[
+                  const SizedBox(height: AppTheme.space16),
+                  OutlinedButton(
+                    key: ValueKey('whatsNewSeePro-${highlight.id}'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(AppTheme.space40),
+                    ),
+                    onPressed: () {
+                      final navigator = Navigator.of(context);
+                      final host = navigator.context;
+                      navigator.pop();
+                      unawaited(
+                        ProPaywallScreen.show(host, source: ProSource.whatsNew),
+                      );
+                    },
+                    child: Text(t.proFeature.seePro),
+                  ),
+                ],
+              ],
+            ),
+          ),
         ],
       ),
+    );
+  }
+}
+
+/// The glow across the top of a page, with [child] standing in the middle
+/// of it, or a thin band of it alone.
+class _Stage extends StatelessWidget {
+  const _Stage({this.child});
+
+  final Widget? child;
+
+  @override
+  Widget build(BuildContext context) {
+    final child = this.child;
+    return Stack(
+      children: [
+        const Positioned.fill(child: IgnorePointer(child: AsciiGlow())),
+        if (child == null)
+          const SizedBox(height: _kBareStageHeight)
+        else
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppTheme.space20,
+              AppTheme.space24,
+              AppTheme.space20,
+              AppTheme.space16,
+            ),
+            child: Center(child: child),
+          ),
+      ],
     );
   }
 }

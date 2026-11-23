@@ -34,6 +34,19 @@
 #            announced as new. Its version then means nothing.
 #
 # Newest version first.
+- version: "1.17.0"
+  highlights:
+    - id: "phin"
+      title: "Meet Phin"
+      demo: "phin"
+      setting: "phin_enabled"
+      pro: true
+      legal: true
+      body: "Tell Phin what is wrong: it checks the server with read-only
+        commands, explains what it found and proposes a fix that runs only
+        when you tap Run. Names, addresses and secrets are hidden from the
+        AI. Termphin Pro, in beta."
+
 - version: "1.16.0"
   highlights:
     - id: "live-status"
