@@ -10,8 +10,10 @@ import '../../models/pro_source.dart';
 import '../../providers/account_provider.dart';
 import '../../services/analytics/analytics_service.dart';
 import '../../services/app/legal_urls.dart';
+import '../../services/app/project_urls.dart';
 import '../../services/pro/pro_service.dart';
 import '../../theme/theme.dart';
+import '../../utils/platform_info.dart';
 import '../../widgets/account/pro_feature_sheet.dart';
 import '../../widgets/pro/ascii_glow.dart';
 import '../../widgets/ui/app_notifications.dart';
@@ -398,6 +400,25 @@ class _ProPaywallScreenState extends ConsumerState<ProPaywallScreen> {
   }) {
     final p = t.account.pro.paywall;
     final text = Theme.of(context).textTheme;
+    if (!_canSell && platformHas(PlatformFeature.webAccountLinks)) {
+      return [
+        Text(
+          t.account.pro.buyOnWebBody,
+          style: text.bodyMedium?.copyWith(color: context.colors.textSecondary),
+        ),
+        const SizedBox(height: AppTheme.space16),
+        FilledButton(
+          key: const ValueKey('paywallBuyOnWeb'),
+          onPressed: () => unawaited(
+            openExternalUrl(
+              context,
+              Uri.parse('${ProjectUrls.accountPage}/#/plan'),
+            ),
+          ),
+          child: Text(t.account.pro.buyOnWeb),
+        ),
+      ];
+    }
     if (!_canSell) {
       return [Text(t.account.pro.unavailable, style: text.bodyMedium)];
     }

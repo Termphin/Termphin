@@ -10,6 +10,10 @@ const {
   relayApns,
   relayTag,
   sessionLabel,
+  makeLinkCode,
+  normalizeLinkCode,
+  linkState,
+  linkDevice,
   relayText,
 } = require("../lib");
 
@@ -278,4 +282,28 @@ test("a refused cancellation is reported, not swallowed", async () => {
     cancelStripeSubscriptions("uid1", "key", stripe.request),
     /Stripe answered 403 to DELETE subscriptions\/sub_active/,
   );
+});
+
+test("a sign-in code is eight unambiguous characters in two groups", () => {
+  assert.equal(makeLinkCode([0, 1, 2, 3, 4, 5, 6, 31]), "2345-678Z");
+  assert.equal(normalizeLinkCode(" abcd efgh "), "ABCD-EFGH");
+  assert.equal(normalizeLinkCode("ABCD-EFG0"), null);
+  assert.equal(normalizeLinkCode("ABC"), null);
+  assert.equal(normalizeLinkCode(7), null);
+});
+
+test("a computer learns where its link stands only with its own secret", () => {
+  const now = 1000;
+  const link = { secretHash: "a".repeat(64), expiresAt: 2000 };
+  assert.deepEqual(linkState(link, "b".repeat(64), now), { state: "unknown" });
+  assert.deepEqual(linkState(undefined, "a".repeat(64), now), { state: "unknown" });
+  assert.deepEqual(linkState(link, "a".repeat(64), now), { state: "pending" });
+  assert.deepEqual(linkState({ ...link, uid: "u1" }, "a".repeat(64), now), { state: "confirmed", uid: "u1" });
+  assert.deepEqual(linkState({ ...link, uid: "u1" }, "a".repeat(64), 3000), { state: "expired" });
+});
+
+test("a computer's label is short and on one line", () => {
+  assert.equal(linkDevice("Termphin on\nLinux"), "Termphin onLinux");
+  assert.equal(linkDevice("x".repeat(100)).length, 60);
+  assert.equal(linkDevice(null), "");
 });

@@ -9,6 +9,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../i18n/strings.g.dart';
 import '../../services/assistant/assistant_session.dart';
 import '../../theme/theme.dart';
+import '../../utils/platform_info.dart';
 import 'assistant_orb.dart';
 import 'assistant_panel.dart';
 
@@ -34,6 +35,7 @@ class AssistantOverlay extends StatefulWidget {
     this.bubbleClearance,
     this.hintKey,
     this.makeRoom,
+    this.onFolded,
   });
 
   final AssistantSession session;
@@ -53,6 +55,10 @@ class AssistantOverlay extends StatefulWidget {
   /// something else needs its corner, such as the terminal's
   /// scroll-to-bottom button. An open window stays.
   final ValueListenable<bool>? makeRoom;
+
+  /// Told when the window folds away from under the keyboard, so the
+  /// holder can hand the keys back - to the terminal, typically.
+  final VoidCallback? onFolded;
 
   @override
   State<AssistantOverlay> createState() => AssistantOverlayState();
@@ -112,6 +118,7 @@ class AssistantOverlayState extends State<AssistantOverlay> {
   void dispose() {
     widget.session.removeListener(_onSession);
     _tuck?.cancel();
+    _composerFocus.dispose();
     super.dispose();
   }
 
@@ -141,19 +148,38 @@ class AssistantOverlayState extends State<AssistantOverlay> {
     });
   }
 
+  /// The composer's focus: given to it when the window opens with a
+  /// keyboard at hand, so a key that opened it can be followed by typing,
+  /// and taken back when it folds. A phone opens it without raising the
+  /// on-screen keyboard over the conversation.
+  final _composerFocus = FocusNode(debugLabel: 'phinComposer');
+
   void open() {
     _tuck?.cancel();
     setState(() {
       _open = true;
       _hint = false;
     });
+    if (platformHas(PlatformFeature.touchControls)) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _open) _composerFocus.requestFocus();
+    });
   }
 
+  /// Opens the window, or folds it back when it is open: what the keyboard
+  /// shortcut does.
+  void toggle() => _open ? minimize() : open();
+
   void minimize() {
+    final hadFocus = _composerFocus.hasFocus;
+    _composerFocus.unfocus();
     setState(() {
       _open = false;
       _shown = true;
     });
+    if (hadFocus && !platformHas(PlatformFeature.touchControls)) {
+      widget.onFolded?.call();
+    }
     if (!_working) _tuckLater();
   }
 
@@ -274,6 +300,7 @@ class AssistantOverlayState extends State<AssistantOverlay> {
                             child: AssistantPanel(
                               session: session,
                               actions: widget.actions,
+                              composerFocus: _composerFocus,
                               controls: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [

@@ -1,14 +1,12 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 
 import '../../utils/platform_info.dart';
 import '../account/account_service.dart';
-import '../firebase/firebase_service.dart';
 
 /// RevenueCat's public SDK keys, one per store, given at build time like the
 /// Firebase config. A build without them sells nothing.
@@ -295,12 +293,11 @@ class ProService {
       _confirming ??= _confirm().whenComplete(() => _confirming = null);
 
   Future<bool?> _confirm() async {
-    if (!FirebaseService.instance.ready) return null;
     final uid = AccountService.instance.user?.uid;
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return null;
+    if (uid == null) return null;
     try {
-      final token = await user.getIdToken();
+      final token = (await AccountService.instance.idToken())?.token;
+      if (token == null) return null;
       final client = HttpClient()
         ..connectionTimeout = const Duration(seconds: 10);
       try {
@@ -330,11 +327,10 @@ class ProService {
   /// carries, as the security rules read it. Null when the token could not
   /// be read.
   Future<bool?> _claim({required bool fresh}) async {
-    if (!FirebaseService.instance.ready) return false;
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return false;
+    if (AccountService.instance.user == null) return false;
     try {
-      final token = await user.getIdTokenResult(fresh);
+      final token = await AccountService.instance.idToken(force: fresh);
+      if (token == null) return false;
       return claimSaysPro(token.claims, DateTime.now());
     } catch (_) {
       return null;

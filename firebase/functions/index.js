@@ -21,6 +21,11 @@ const {
   relayApns,
   relayText,
   REVENUECAT_PROJECT,
+  makeLinkCode,
+  normalizeLinkCode,
+  linkState,
+  linkDevice,
+  LINK_TTL_MS,
 } = require("./lib");
 
 initializeApp();
@@ -403,6 +408,143 @@ async function deleteSyncCopy(uid) {
  * is never something you pay for. The devices notice on their next sync
  * and forget their key; their own data stays.
  */
+/**
+ * Signing in on a computer, where the providers' own sign-in does not run:
+ * the computer asks for a code here, shows it and opens the account page,
+ * where the user - signed in there with any provider - confirms it
+ * ([linkConfirm]); the computer, polling [linkFinish] with the secret only
+ * it holds, then gets a custom token to sign in with. Links live in
+ * `deviceLinks`, which no client may read, for ten minutes.
+ *
+ * `POST {secretHash, device}`: `secretHash` is the hex SHA-256 of a random
+ * secret the computer keeps; `device` a short label such as "Termphin on
+ * Linux" shown on the confirm page. Answers `{linkId, code, expiresIn}`.
+ */
+exports.linkStart = onRequest(guarded(async (request, response) => {
+  if (request.method !== "POST") {
+    response.status(405).end();
+    return;
+  }
+  const secretHash = request.body && request.body.secretHash;
+  if (typeof secretHash !== "string" || !/^[0-9a-f]{64}$/.test(secretHash)) {
+    response.status(400).json({ error: "link/bad-request" });
+    return;
+  }
+  const links = getFirestore().collection("deviceLinks");
+  const now = Date.now();
+  const stale = await links.where("expiresAt", "<", now).limit(50).get();
+  if (!stale.empty) {
+    const batch = getFirestore().batch();
+    stale.docs.forEach((doc) => batch.delete(doc.ref));
+    await batch.commit();
+  }
+  let code = null;
+  for (let i = 0; i < 5 && !code; i++) {
+    const candidate = makeLinkCode(crypto.randomBytes(8));
+    const taken = await links.where("code", "==", candidate).limit(1).get();
+    if (taken.empty) code = candidate;
+  }
+  if (!code) {
+    response.status(503).end();
+    return;
+  }
+  const ref = links.doc();
+  await ref.set({
+    code,
+    secretHash,
+    device: linkDevice(request.body.device),
+    createdAt: now,
+    expiresAt: now + LINK_TTL_MS,
+  });
+  response.status(200).json({ linkId: ref.id, code, expiresIn: LINK_TTL_MS / 1000 });
+}));
+
+/**
+ * The account page confirming a computer's code for the signed-in user,
+ * named by the Firebase ID token in `Authorization`: `POST {code, confirm}`.
+ * Without `confirm` it only answers which computer asked (`{device,
+ * createdAt}`), for the page to show before the user agrees; with it, the
+ * link is bound to the account. A code that is unknown or expired answers
+ * 404, one another account already confirmed 409.
+ */
+exports.linkConfirm = onRequest(guarded(async (request, response) => {
+  if (request.method !== "POST") {
+    response.status(405).end();
+    return;
+  }
+  let uid;
+  try {
+    const header = request.get("authorization") || "";
+    uid = (await getAuth().verifyIdToken(header.replace(/^Bearer /, ""))).uid;
+  } catch (_) {
+    response.status(401).json({ error: "link/signed-out" });
+    return;
+  }
+  const code = normalizeLinkCode(request.body && request.body.code);
+  if (!code) {
+    response.status(404).json({ error: "link/not-found" });
+    return;
+  }
+  const db = getFirestore();
+  const found = await db.collection("deviceLinks").where("code", "==", code).limit(1).get();
+  if (found.empty) {
+    response.status(404).json({ error: "link/not-found" });
+    return;
+  }
+  const ref = found.docs[0].ref;
+  const answer = await db.runTransaction(async (tx) => {
+    const snapshot = await tx.get(ref);
+    const link = snapshot.data();
+    if (!link || link.expiresAt <= Date.now()) return { status: 404, body: { error: "link/not-found" } };
+    if (link.uid && link.uid !== uid) return { status: 409, body: { error: "link/taken" } };
+    if (request.body.confirm === true && !link.uid) {
+      tx.update(ref, { uid, confirmedAt: Date.now() });
+    }
+    return { status: 200, body: { device: link.device || "", createdAt: link.createdAt } };
+  });
+  response.status(answer.status).json(answer.body);
+}));
+
+/**
+ * The computer asking whether its code was confirmed: `POST {linkId,
+ * secret}`. Answers 202 while it waits, 410 once the code expired, 404 for
+ * a link it cannot prove is its own, and once confirmed `{customToken}` -
+ * a single answer: the link is deleted with it.
+ */
+exports.linkFinish = onRequest(guarded(async (request, response) => {
+  if (request.method !== "POST") {
+    response.status(405).end();
+    return;
+  }
+  const linkId = request.body && request.body.linkId;
+  const secret = request.body && request.body.secret;
+  if (typeof linkId !== "string" || !/^[A-Za-z0-9]{10,40}$/.test(linkId) || typeof secret !== "string") {
+    response.status(404).end();
+    return;
+  }
+  const ref = getFirestore().collection("deviceLinks").doc(linkId);
+  const secretHash = crypto.createHash("sha256").update(secret).digest("hex");
+  const decision = await getFirestore().runTransaction(async (tx) => {
+    const snapshot = await tx.get(ref);
+    const state = linkState(snapshot.data(), secretHash, Date.now());
+    if (state.state === "expired" || state.state === "confirmed") tx.delete(ref);
+    return state;
+  });
+  switch (decision.state) {
+    case "pending":
+      response.status(202).json({ pending: true });
+      return;
+    case "expired":
+      response.status(410).end();
+      return;
+    case "confirmed":
+      response.status(200).json({ customToken: await getAuth().createCustomToken(decision.uid) });
+      return;
+    default:
+      response.status(404).end();
+  }
+}));
+
 exports.deleteSyncData = onRequest(guarded(async (request, response) => {
   if (request.method !== "POST") {
     response.status(405).end();

@@ -34,7 +34,10 @@ void main() {
           body: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [section, const SizedBox(key: Key('below'))],
+              children: [
+                section,
+                const SizedBox(key: Key('below')),
+              ],
             ),
           ),
         ),

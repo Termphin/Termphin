@@ -10,6 +10,7 @@ import '../../i18n/strings.g.dart';
 import '../../models/active_session.dart';
 import '../../models/agent_feature.dart';
 import '../../models/port_forwarding_rule.dart';
+import '../../models/pro_source.dart';
 import '../../models/remote_shell.dart';
 import '../../models/session_tab.dart';
 import '../../models/snippet.dart';
@@ -77,6 +78,7 @@ import '../../widgets/ui/section_header.dart';
 import '../../widgets/ui/section_navigator.dart';
 import '../../widgets/ui/shortcut_hint.dart';
 import '../../widgets/window/app_menu.dart';
+import '../pro/pro_paywall_screen.dart';
 import '../settings/terminal_appearance_screen.dart';
 import '../settings/toolbar_profiles_screen.dart';
 import 'state/session_swipe.dart';
@@ -250,6 +252,30 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
   /// each layout so the minimised assistant rests above them.
   final _bottomChromeKey = GlobalKey();
   final _bottomChrome = ValueNotifier<double>(0);
+
+  final _assistantOverlay = GlobalKey<AssistantOverlayState>();
+  VoidCallback? _assistantEscape;
+
+  /// Opens Phin's window, or folds it away when open: the desktop
+  /// shortcut. Without Pro it shows what Pro adds, Phin first.
+  void toggleAssistant() {
+    final overlay = _assistantOverlay.currentState;
+    if (overlay != null) {
+      overlay.toggle();
+      return;
+    }
+    if (!ProService.instance.active.value) {
+      unawaited(ProPaywallScreen.show(context, source: ProSource.phin));
+    }
+  }
+
+  /// Esc folds Phin's window away while it has the keyboard.
+  bool _minimizeAssistant() {
+    final overlay = _assistantOverlay.currentState;
+    if (overlay == null || !overlay.isOpen) return false;
+    overlay.minimize();
+    return true;
+  }
 
   /// What the assistant keeps clear at the bottom: the toolbar and tab bar,
   /// and the strip of a session another device holds.
@@ -754,6 +780,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
   void dispose() {
     _assistantAgent.stop();
     _assistant.dispose();
+    _assistantEscape?.call();
     _bottomChrome.removeListener(_updateAssistantClearance);
     controlBarHeight.removeListener(_updateAssistantClearance);
     _assistantClearance.dispose();
@@ -797,6 +824,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
   void initState() {
     super.initState();
     _bottomChrome.addListener(_updateAssistantClearance);
+    _assistantEscape = AppCommands.instance.registerEscape(_minimizeAssistant);
     controlBarHeight.addListener(_updateAssistantClearance);
     _swipe =
         SessionSwipeController(
@@ -2640,6 +2668,8 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
               builder: (context, _) =>
                   phinEnabledSetting.value && ProService.instance.active.value
                   ? AssistantOverlay(
+                      key: _assistantOverlay,
+                      onFolded: focusActiveTerminal,
                       session: _assistant,
                       bubbleClearance: _assistantClearance,
                       hintKey: _assistantHintKey(),
@@ -3010,6 +3040,12 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
             icon: PhosphorIconsRegular.magnifyingGlass,
             enabled: !files,
           ),
+          if (phinEnabledSetting.value)
+            AppMenuItem.command(
+              t,
+              AppCommand.askPhin,
+              icon: PhosphorIconsRegular.sparkle,
+            ),
           AppMenuItem.command(
             t,
             AppCommand.uploadFile,

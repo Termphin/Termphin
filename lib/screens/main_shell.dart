@@ -303,6 +303,7 @@ class _MainShellState extends ConsumerState<MainShell>
       AppCommand.findInTerminal,
       (_) => terminal((s) => s.findInActiveSession()),
     );
+    on(AppCommand.askPhin, (_) => terminal((s) => s.toggleAssistant()));
     on(
       AppCommand.uploadFile,
       (_) => terminal((s) => s.uploadToActiveSession()),

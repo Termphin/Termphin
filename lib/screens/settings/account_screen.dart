@@ -126,6 +126,13 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   }
 
   Future<void> _delete(AccountUser user) async {
+    if (AccountService.instance.signsInThroughBrowser) {
+      await openExternalUrl(
+        context,
+        Uri.parse('${ProjectUrls.accountPage}/#/account'),
+      );
+      return;
+    }
     if (!await _passRenewingPro() || !mounted) return;
     final t = Translations.of(context);
     final confirmed = await showConfirmDialog(

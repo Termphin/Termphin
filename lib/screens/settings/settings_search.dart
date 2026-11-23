@@ -111,7 +111,11 @@ List<SettingsSearchEntry> settingsSearchIndex(
         keywords: k.notificationsPermission,
       ),
     if (AccountService.instance.available)
-      notification(t.settings.notifyWhenClosed),
+      notification(
+        platformHas(PlatformFeature.receivesPush)
+            ? t.settings.notifyWhenClosed
+            : t.settings.notifyOnPhone,
+      ),
     category(SettingsCategory.terminal),
     inCategory(
       SettingsCategory.terminal,

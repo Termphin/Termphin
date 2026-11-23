@@ -170,6 +170,30 @@ class FirebaseAccountBackend implements AccountBackend {
   /// Google and Apple, GitHub's page for GitHub, [password] for a password
   /// account.
   @override
+  Future<AccountToken?> idToken({bool force = false}) async {
+    final user = _auth.currentUser;
+    if (user == null) return null;
+    final result = await user.getIdTokenResult(force);
+    final token = result.token;
+    final expires = result.expirationTime;
+    if (token == null || expires == null) return null;
+    return (
+      token: token,
+      expires: expires,
+      claims: Map<String, Object?>.from(result.claims ?? const {}),
+    );
+  }
+
+  @override
+  bool get signsInThroughBrowser => false;
+
+  @override
+  Future<void> signInThroughBrowser(
+    void Function(BrowserSignIn link) show, {
+    required bool Function() cancelled,
+  }) => Future.error(const AccountException(AccountFailure.unavailable));
+
+  @override
   Future<void> deleteAccount({String? password}) => _guard(() async {
     final user = _auth.currentUser;
     if (user == null) return;

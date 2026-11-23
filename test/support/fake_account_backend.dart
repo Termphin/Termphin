@@ -115,4 +115,44 @@ class FakeAccountBackend implements AccountBackend {
   @override
   Future<void> deleteAccount({String? password}) =>
       _call('delete:${password ?? ''}', () => _set(null));
+
+  /// The token [idToken] hands out; claims a test sets, such as Pro.
+  Map<String, Object?> claims = const {};
+
+  @override
+  Future<AccountToken?> idToken({bool force = false}) async {
+    calls.add('idToken:$force');
+    if (_user == null) return null;
+    return (
+      token: 'token-${_user!.uid}',
+      expires: DateTime.now().add(const Duration(hours: 1)),
+      claims: claims,
+    );
+  }
+
+  /// Whether this fake signs in like a computer does.
+  bool browser = false;
+
+  /// The account a browser sign-in ends with.
+  AccountUser browserUser = const AccountUser(
+    uid: 'desk',
+    provider: AccountProvider.google,
+    email: 'desk@example.com',
+  );
+
+  @override
+  bool get signsInThroughBrowser => browser;
+
+  @override
+  Future<void> signInThroughBrowser(
+    void Function(BrowserSignIn link) show, {
+    required bool Function() cancelled,
+  }) => _call('browser', () {
+    show((
+      code: 'ABCD-EFGH',
+      page: Uri.parse('https://app.termphin.dev/link?code=ABCD-EFGH'),
+    ));
+    if (cancelled()) throw const AccountException(AccountFailure.cancelled);
+    _set(browserUser);
+  });
 }

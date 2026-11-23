@@ -10,6 +10,7 @@ import '../../services/app/project_urls.dart';
 import '../../services/platform/desktop_window.dart';
 import '../../theme/theme.dart';
 import '../../utils/platform_info.dart';
+import '../account/account_avatar_button.dart';
 import '../ui/app_sheet.dart';
 import '../ui/section_navigator.dart';
 import 'app_menu.dart';
@@ -70,6 +71,8 @@ class DesktopTitleBar extends StatelessWidget {
               const Expanded(child: _DragArea(child: _Breadcrumb())),
               const _PageActions(),
               const _SearchButton(),
+              const SizedBox(width: AppTheme.space6),
+              TitleBarAccountButton(navigatorContext: navigatorContext),
               const SizedBox(width: AppTheme.space8),
               if (!mac)
                 const WindowButtons()
