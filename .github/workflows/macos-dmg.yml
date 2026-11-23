@@ -2,7 +2,8 @@ name: macOS DMG
 
 # A signed, notarized macOS DMG of any branch or tag, started by hand. The
 # app is signed with the Developer ID Application identity (hardened
-# runtime, timestamp), packed into a DMG with an Applications link, notarized
+# runtime, timestamp), packed into a DMG with an Applications link on a
+# drawn background (dmgbuild, macos/packaging/dmg_settings.py), notarized
 # with the App Store Connect key the iOS builds upload with, and stapled.
 #
 # The DMG is kept as a workflow artifact. With `preview` it is also published
@@ -158,8 +159,13 @@ jobs:
         run: |
           mkdir -p dmg
           cp -R build/macos/Build/Products/Release/termphin.app dmg/Termphin.app
-          ln -s /Applications dmg/Applications
-          hdiutil create -volname Termphin -srcfolder dmg -ov -format UDZO Termphin.dmg
+          tiffutil -cathidpicheck macos/packaging/dmg-background.png \
+            macos/packaging/dmg-background@2x.png -out "$RUNNER_TEMP/background.tiff"
+          python3 -m venv "$RUNNER_TEMP/dmgbuild"
+          "$RUNNER_TEMP/dmgbuild/bin/pip" install --quiet dmgbuild
+          "$RUNNER_TEMP/dmgbuild/bin/dmgbuild" -s macos/packaging/dmg_settings.py \
+            -D app=dmg/Termphin.app -D background="$RUNNER_TEMP/background.tiff" \
+            Termphin Termphin.dmg
           codesign --force --timestamp --sign "$IDENTITY" Termphin.dmg
 
       - name: Notarize and staple
