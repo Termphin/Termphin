@@ -547,8 +547,17 @@ class AppTheme {
   static Duration get motionSlow => _motion(200);
   static Duration get motionPage => _motion(320);
 
-  /// The assistant growing from its orb into its window, and back.
-  static Duration get assistantMorph => _motion(420);
+  /// The assistant growing from its orb into its window, and back. Phin
+  /// moves on a desktop too, unlike the transitions around it: the motion is
+  /// how it shows where it lives and what it is doing, not a page changing.
+  static const Duration assistantMorph = Duration(milliseconds: 420);
+
+  /// The assistant's smaller movements - a step appearing, a card
+  /// settling - kept on a desktop for the same reason as [assistantMorph].
+  static const Duration assistantMotion = Duration(milliseconds: 250);
+
+  /// The assistant's scroll and fade between steps, kept on a desktop.
+  static const Duration assistantMotionSlow = Duration(milliseconds: 320);
   static Duration get motionPageReverse => _motion(220);
 
   /// The wrong-PIN shake: long enough to read as a shake, not a flinch.

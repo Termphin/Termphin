@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../firebase/firebase_service.dart';
 import 'account_photos.dart';
 import 'firebase_account_backend.dart';
+import 'rest_account_backend.dart';
 
 /// Remembers that this device has an account signed in, so Firebase is
 /// started at launch only for those who have one.
@@ -79,6 +80,18 @@ class AccountException implements Exception {
   String toString() => 'AccountException(${failure.name})';
 }
 
+/// The account's Firebase ID token: what backends are shown to prove who is
+/// asking, until [expires], and the [claims] it carries, such as Pro.
+typedef AccountToken = ({
+  String token,
+  DateTime expires,
+  Map<String, Object?> claims,
+});
+
+/// What signing in through the browser shows the user: the [code] the
+/// account page asks for, and the [page] to confirm it on.
+typedef BrowserSignIn = ({String code, Uri page});
+
 /// What an account is made of: Firebase Auth in the app, a fake in tests.
 abstract interface class AccountBackend {
   Stream<AccountUser?> userChanges();
@@ -113,6 +126,24 @@ abstract interface class AccountBackend {
   /// account is a password one and the sign-in is too old for the backend
   /// to accept a deletion on its own.
   Future<void> deleteAccount({String? password});
+
+  /// The signed-in account's ID token, a new one with [force]; null when
+  /// nobody is signed in. Throws when it could not be had.
+  Future<AccountToken?> idToken({bool force = false});
+
+  /// Whether signing in here goes through the account page in a browser
+  /// ([signInThroughBrowser]) rather than a provider's own sign-in: on a
+  /// computer.
+  bool get signsInThroughBrowser;
+
+  /// Signs in by a code the user confirms on the account page: [show] is
+  /// told the code and the page once there is one; [cancelled] is asked
+  /// while waiting. Throws [AccountFailure.cancelled] when the user gave up
+  /// or the code expired.
+  Future<void> signInThroughBrowser(
+    void Function(BrowserSignIn link) show, {
+    required bool Function() cancelled,
+  });
 }
 
 /// The account on this device, if any, and the ways to get or lose one.
@@ -145,13 +176,52 @@ class AccountService {
   /// Whether this build can have accounts at all. A fork or a desktop build
   /// without a Firebase project cannot.
   bool get available =>
-      backendOverride != null || FirebaseService.instance.available;
+      backendOverride != null ||
+      FirebaseService.instance.available ||
+      RestAccountBackend.configured;
+
+  RestAccountBackend? _rest;
 
   Future<AccountBackend?> _backend() async {
     final override = backendOverride;
     if (override != null) return _attach(override());
-    if (!await FirebaseService.instance.start()) return null;
-    return _attach(_firebase ??= FirebaseAccountBackend());
+    if (FirebaseService.instance.available) {
+      if (!await FirebaseService.instance.start()) return null;
+      return _attach(_firebase ??= FirebaseAccountBackend());
+    }
+    if (!RestAccountBackend.configured) return null;
+    var rest = _rest;
+    if (rest == null) {
+      rest = RestAccountBackend(apiKey: kFirebaseWebApiKey);
+      await rest.restore();
+      _rest = rest;
+    }
+    return _attach(rest);
+  }
+
+  /// Whether signing in goes through the account page in a browser: on a
+  /// computer, where the providers' own sign-in does not run.
+  bool get signsInThroughBrowser {
+    final override = backendOverride;
+    if (override != null) return override()?.signsInThroughBrowser ?? false;
+    return !FirebaseService.instance.available && RestAccountBackend.configured;
+  }
+
+  /// Signs in by a code confirmed on the account page; see
+  /// [AccountBackend.signInThroughBrowser].
+  Future<void> signInThroughBrowser(
+    void Function(BrowserSignIn link) show, {
+    required bool Function() cancelled,
+  }) => _run((b) => b.signInThroughBrowser(show, cancelled: cancelled));
+
+  /// The signed-in account's ID token, a new one with [force]: what the
+  /// app's backends are shown, and where the Pro claim is read. Null when
+  /// nobody is signed in or no backend is running; throws when it could
+  /// not be had.
+  Future<AccountToken?> idToken({bool force = false}) async {
+    final backend = _attached;
+    if (backend == null || _user == null) return null;
+    return backend.idToken(force: force);
   }
 
   AccountBackend? _attached;

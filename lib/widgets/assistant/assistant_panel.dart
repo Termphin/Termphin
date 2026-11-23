@@ -7,6 +7,7 @@ import '../../i18n/strings.g.dart';
 import '../../services/assistant/assistant_session.dart';
 import '../../services/settings/terminal_settings.dart';
 import '../../theme/theme.dart';
+import '../../utils/platform_info.dart';
 import '../ui/app_badge.dart';
 import '../ui/app_card.dart';
 import '../ui/app_divider.dart';
@@ -55,10 +56,15 @@ class AssistantPanel extends StatefulWidget {
     required this.session,
     required this.actions,
     this.controls,
+    this.composerFocus,
   });
 
   final AssistantSession session;
   final AssistantActions actions;
+
+  /// The composer's focus, held by whoever opens and folds the panel, so
+  /// opening it puts the cursor there and folding it takes it away.
+  final FocusNode? composerFocus;
 
   /// The holder's own buttons - minimise, close - at the top right.
   final Widget? controls;
@@ -107,11 +113,11 @@ class _AssistantPanelState extends State<AssistantPanel> {
     if (!mounted || !_scroll.hasClients) return;
     await _scroll.animateTo(
       _scroll.position.maxScrollExtent,
-      duration: AppTheme.motionMedium,
+      duration: AppTheme.assistantMotion,
       curve: Curves.easeOutCubic,
     );
     if (!mounted || !_scroll.hasClients || tries <= 1) return;
-    await Future<void>.delayed(AppTheme.motionPage);
+    await Future<void>.delayed(AppTheme.assistantMotionSlow);
     if (!mounted || !_scroll.hasClients) return;
     if (_scroll.position.pixels < _scroll.position.maxScrollExtent - 1) {
       await _toEnd(tries - 1);
@@ -128,7 +134,7 @@ class _AssistantPanelState extends State<AssistantPanel> {
           children: [
             Expanded(
               child: AnimatedSwitcher(
-                duration: AppTheme.motionPage,
+                duration: AppTheme.assistantMotionSlow,
                 switchInCurve: Curves.easeOutCubic,
                 switchOutCurve: Curves.easeInCubic,
                 transitionBuilder: (child, animation) => FadeTransition(
@@ -154,6 +160,7 @@ class _AssistantPanelState extends State<AssistantPanel> {
               ),
             ),
             _Composer(
+              focus: widget.composerFocus,
               started: !session.isEmpty,
               busy: session.busy,
               onSubmit: widget.actions.onSubmit,
@@ -303,7 +310,7 @@ class _Task extends StatelessWidget {
                     ),
                     const SizedBox(height: AppTheme.space2),
                     AnimatedSwitcher(
-                      duration: AppTheme.motionPage,
+                      duration: AppTheme.assistantMotionSlow,
                       switchInCurve: _secondHalf,
                       switchOutCurve: _secondHalf,
                       layoutBuilder: (current, previous) => Stack(
@@ -427,7 +434,7 @@ class _Appear extends StatelessWidget {
   Widget build(BuildContext context) {
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
-      duration: AppTheme.motionPage,
+      duration: AppTheme.assistantMotionSlow,
       curve: Curves.easeOutCubic,
       builder: (context, value, child) => Opacity(
         opacity: value,
@@ -473,7 +480,7 @@ class _ToolCallState extends State<_ToolCall> {
         child: InkWell(
           onTap: () => setState(() => _open = !_open),
           child: AnimatedSize(
-            duration: AppTheme.motionMedium,
+            duration: AppTheme.assistantMotion,
             curve: Curves.easeOutCubic,
             alignment: Alignment.topCenter,
             child: Padding(
@@ -505,7 +512,7 @@ class _ToolCallState extends State<_ToolCall> {
                       const SizedBox(width: AppTheme.space8),
                       AnimatedRotation(
                         turns: _open ? 0.5 : 0,
-                        duration: AppTheme.motionMedium,
+                        duration: AppTheme.assistantMotion,
                         child: Icon(
                           PhosphorIconsRegular.caretDown,
                           size: AppTheme.icon14,
@@ -558,7 +565,7 @@ class _StepState extends StatelessWidget {
     return SizedBox.square(
       dimension: AppTheme.icon16,
       child: AnimatedSwitcher(
-        duration: AppTheme.motionMedium,
+        duration: AppTheme.assistantMotion,
         child: switch (status) {
           AssistantStepStatus.running => Padding(
             key: const ValueKey('running'),
@@ -753,7 +760,7 @@ class _ProposalCard extends StatelessWidget {
             ),
           const SizedBox(height: AppTheme.space12),
           AnimatedSwitcher(
-            duration: AppTheme.motionPage,
+            duration: AppTheme.assistantMotionSlow,
             switchInCurve: _secondHalf,
             switchOutCurve: _secondHalf,
             layoutBuilder: (current, previous) => Stack(
@@ -1069,12 +1076,14 @@ class _Failure extends StatelessWidget {
 /// a stop button, where the thumb already is.
 class _Composer extends StatefulWidget {
   const _Composer({
+    this.focus,
     required this.started,
     required this.busy,
     required this.onSubmit,
     required this.onStop,
   });
 
+  final FocusNode? focus;
   final bool started;
   final bool busy;
   final ValueChanged<String> onSubmit;
@@ -1122,6 +1131,8 @@ class _ComposerState extends State<_Composer> {
             Expanded(
               child: TextField(
                 controller: _controller,
+                focusNode: widget.focus,
+                autofocus: !platformHas(PlatformFeature.touchControls),
                 enabled: !widget.busy,
                 minLines: 1,
                 maxLines: 4,
@@ -1152,7 +1163,7 @@ class _ComposerState extends State<_Composer> {
               ),
             ),
             AnimatedSwitcher(
-              duration: AppTheme.motionMedium,
+              duration: AppTheme.assistantMotion,
               child: widget.busy
                   ? IconButton.filled(
                       key: const ValueKey('stop'),

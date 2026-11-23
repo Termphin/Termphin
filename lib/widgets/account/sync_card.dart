@@ -238,7 +238,50 @@ class _SyncCardState extends ConsumerState<SyncCard> {
       obscure: true,
     );
     if (passphrase == null || !mounted) return;
-    await _begin(() => _sync.unlock(passphrase));
+    var replace = false;
+    if (await _sync.hasLocalData()) {
+      if (!mounted) return;
+      final choice = await _askReplace();
+      if (choice == null || !mounted) return;
+      replace = choice;
+    }
+    await _begin(() => _sync.unlock(passphrase, replaceLocal: replace));
+  }
+
+  /// Whether to replace what this device holds with the account's copy
+  /// (true), merge the two (false), or not join after all (null - also what
+  /// Esc gives).
+  Future<bool?> _askReplace() {
+    final s = Translations.of(context).account.sync;
+    final t = Translations.of(context);
+    return showDialog<bool>(
+      context: context,
+      animationStyle: AppTheme.popUpAnimation,
+      builder: (dialog) => AlertDialog(
+        title: Text(s.replaceTitle),
+        content: Text(s.replaceBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialog),
+            child: Text(t.common.cancel),
+          ),
+          TextButton(
+            key: const ValueKey('syncKeepBoth'),
+            autofocus: true,
+            onPressed: () => Navigator.pop(dialog, false),
+            child: Text(s.keepBoth),
+          ),
+          TextButton(
+            key: const ValueKey('syncReplace'),
+            onPressed: () => Navigator.pop(dialog, true),
+            child: Text(
+              s.replace,
+              style: TextStyle(color: dialog.colors.error),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _syncNow() async {

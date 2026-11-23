@@ -119,6 +119,28 @@ void main() {
     expect(find.byType(ProPaywallScreen), findsOneWidget);
   });
 
+  testWidgets('on a computer there is no switch, only where notifications go', (
+    tester,
+  ) async {
+    AccountService.backendOverride = () => FakeAccountBackend();
+    AccountService.instance.resetForTest();
+    addTearDown(() {
+      AccountService.backendOverride = null;
+      AccountService.instance.resetForTest();
+    });
+    await pumpTestApp(
+      tester,
+      const Scaffold(
+        body: SingleChildScrollView(child: NotificationsSettingsList()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('notifyOnPhoneNote')), findsOneWidget);
+    expect(find.text(t.settings.notifyWhenClosed), findsNothing);
+    expect(find.text(t.settings.seePro), findsNothing);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.linux));
+
   testWidgets('how it works sits under the closed-app setting and shows the '
       'demo', (tester) async {
     AccountService.backendOverride = () => FakeAccountBackend();

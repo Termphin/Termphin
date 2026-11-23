@@ -259,7 +259,59 @@ async function cancelStripeSubscriptions(uid, key, request = fetch) {
   return cancelled;
 }
 
+/** Letters and digits a sign-in code is made of: no 0/O or 1/I, which read alike. */
+const LINK_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+
+/** How long a code shown on a computer waits to be confirmed. */
+const LINK_TTL_MS = 10 * 60 * 1000;
+
+/**
+ * A fresh sign-in code for a computer, `ABCD-EFGH`: eight characters of 32,
+ * forty bits, from [bytes] - eight random bytes.
+ */
+function makeLinkCode(bytes) {
+  let code = "";
+  for (let i = 0; i < 8; i++) code += LINK_ALPHABET[bytes[i] % LINK_ALPHABET.length];
+  return `${code.slice(0, 4)}-${code.slice(4)}`;
+}
+
+/** [text] as codes are stored, `ABCD-EFGH`, or null when it is not one. */
+function normalizeLinkCode(text) {
+  if (typeof text !== "string") return null;
+  const plain = text.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (plain.length !== 8 || [...plain].some((c) => !LINK_ALPHABET.includes(c))) return null;
+  return `${plain.slice(0, 4)}-${plain.slice(4)}`;
+}
+
+/**
+ * Where a sign-in link stands for the computer asking with [secretHash] at
+ * [now]: `unknown` (no such link or the wrong secret), `expired`, `pending`
+ * (not confirmed yet) or `confirmed` (with the account's uid).
+ */
+function linkState(link, secretHash, now) {
+  if (!link || typeof link.secretHash !== "string") return { state: "unknown" };
+  const a = Buffer.from(link.secretHash);
+  const b = Buffer.from(String(secretHash || ""));
+  if (a.length !== b.length || !require("crypto").timingSafeEqual(a, b)) {
+    return { state: "unknown" };
+  }
+  if (typeof link.expiresAt !== "number" || link.expiresAt <= now) return { state: "expired" };
+  if (typeof link.uid === "string" && link.uid) return { state: "confirmed", uid: link.uid };
+  return { state: "pending" };
+}
+
+/** What a computer says about itself when asking to sign in, trimmed to a short label. */
+function linkDevice(text) {
+  if (typeof text !== "string") return "";
+  return text.replace(/[\u0000-\u001f\u007f]/g, "").trim().slice(0, 60);
+}
+
 module.exports = {
+  makeLinkCode,
+  normalizeLinkCode,
+  linkState,
+  linkDevice,
+  LINK_TTL_MS,
   cancelStripeSubscriptions,
   relayAndroid,
   relayApns,

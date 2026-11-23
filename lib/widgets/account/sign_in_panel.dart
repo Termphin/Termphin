@@ -10,6 +10,7 @@ import '../../services/account/account_service.dart';
 import '../../theme/theme.dart';
 import '../ui/app_form_field.dart';
 import '../ui/app_notifications.dart';
+import '../ui/clipboard_and_links.dart';
 import '../ui/legal_links.dart';
 import '../ui/section_navigator.dart';
 import 'account_failure_text.dart';
@@ -89,6 +90,9 @@ class _SignInPanelState extends State<SignInPanel> {
   @override
   Widget build(BuildContext context) {
     final t = Translations.of(context);
+    if (AccountService.instance.signsInThroughBrowser) {
+      return const BrowserSignInPanel();
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -190,6 +194,143 @@ class _SignInPanelState extends State<SignInPanel> {
           style: Theme.of(
             context,
           ).textTheme.bodySmall?.copyWith(color: context.colors.textTertiary),
+        ),
+        const LegalLinks(),
+      ],
+    );
+  }
+}
+
+/// Signing in on a computer, where the providers' own sign-in does not run:
+/// one button that opens the account page in the browser and shows the code
+/// to confirm there, then waits until it is confirmed, the user cancels, or
+/// the code runs out.
+class BrowserSignInPanel extends StatefulWidget {
+  const BrowserSignInPanel({super.key});
+
+  @override
+  State<BrowserSignInPanel> createState() => _BrowserSignInPanelState();
+}
+
+class _BrowserSignInPanelState extends State<BrowserSignInPanel> {
+  BrowserSignIn? _link;
+  bool _busy = false;
+  bool _cancelled = false;
+
+  @override
+  void dispose() {
+    _cancelled = true;
+    super.dispose();
+  }
+
+  Future<void> _start() async {
+    setState(() {
+      _busy = true;
+      _cancelled = false;
+      _link = null;
+    });
+    try {
+      await AccountService.instance.signInThroughBrowser((link) {
+        if (!mounted) return;
+        setState(() => _link = link);
+        unawaited(openExternalUrl(context, link.page));
+      }, cancelled: () => _cancelled || !mounted);
+    } on AccountException catch (error) {
+      if (mounted && error.failure != AccountFailure.cancelled) {
+        AppNotifications.error(
+          context,
+          accountFailureText(Translations.of(context), error.failure),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        AppNotifications.error(
+          context,
+          accountFailureText(Translations.of(context), AccountFailure.unknown),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _link = null;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Translations.of(context);
+    final colors = context.colors;
+    final text = Theme.of(context).textTheme;
+    final link = _link;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          t.account.browser.intro,
+          style: text.bodyMedium?.copyWith(color: colors.textSecondary),
+        ),
+        const SizedBox(height: AppTheme.space16),
+        if (link == null)
+          FilledButton.icon(
+            key: const ValueKey('browserSignIn'),
+            onPressed: _busy ? null : _start,
+            icon: const Icon(PhosphorIconsRegular.globe),
+            label: Text(t.account.browser.start),
+          )
+        else ...[
+          Text(
+            t.account.browser.code,
+            style: text.labelMedium?.copyWith(color: colors.textSecondary),
+          ),
+          const SizedBox(height: AppTheme.space6),
+          SelectableText(
+            link.code,
+            key: const ValueKey('browserSignInCode'),
+            style: colors.monoStyle.copyWith(
+              fontSize: AppTheme.font26,
+              fontWeight: FontWeight.w600,
+              color: colors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: AppTheme.space12),
+          Row(
+            children: [
+              const SizedBox.square(
+                dimension: AppTheme.icon16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              const SizedBox(width: AppTheme.space10),
+              Expanded(
+                child: Text(
+                  t.account.browser.waiting,
+                  style: text.bodySmall?.copyWith(color: colors.textSecondary),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppTheme.space12),
+          Row(
+            children: [
+              OutlinedButton(
+                onPressed: () => unawaited(openExternalUrl(context, link.page)),
+                child: Text(t.account.browser.openAgain),
+              ),
+              const SizedBox(width: AppTheme.space8),
+              TextButton(
+                onPressed: () => setState(() => _cancelled = true),
+                child: Text(t.common.cancel),
+              ),
+            ],
+          ),
+        ],
+        const SizedBox(height: AppTheme.space16),
+        Text(
+          t.account.agreeNotice,
+          textAlign: TextAlign.center,
+          style: text.bodySmall?.copyWith(color: colors.textTertiary),
         ),
         const LegalLinks(),
       ],

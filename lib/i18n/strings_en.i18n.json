@@ -717,6 +717,8 @@
     "seePro": "See Pro",
     "notifyWhenClosedSubtitle": "Wherever you are, even with Termphin closed: your servers reach this phone through Termphin’s relay.",
     "notifyWhenClosedSubtitleIos": "Wherever you are, even with Termphin closed. On iPhone, the only way to hear from your servers in the background.",
+    "notifyOnPhone": "Notifications on your phone",
+    "notifyOnPhoneSubtitle": "Servers you use here notify your phone, even with Termphin closed. Turn it on in Termphin on your phone.",
     "notifyServers": "Servers",
     "notifyDenied": "Notifications are turned off for Termphin in the system settings.",
     "notifyFailed": "That did not work. Try again.",
@@ -1421,6 +1423,7 @@
     "previousTab": "Previous tab",
     "selectTab": "Go to tab 1–9",
     "findInTerminal": "Find in terminal",
+    "askPhin": "Ask Phin",
     "uploadFile": "Fast upload",
     "zoomIn": "Larger text",
     "zoomOut": "Smaller text",
@@ -1531,6 +1534,13 @@
     "continueWithApple": "Continue with Apple",
     "continueWithGitHub": "Continue with GitHub",
     "agreeNotice": "By signing in or creating an account you agree to the terms of service and the privacy policy.",
+    "browser": {
+      "intro": "Sign in on your account page in the browser, with Google, GitHub, Apple or email, and confirm the code shown here.",
+      "start": "Sign in with your browser",
+      "code": "Your code",
+      "waiting": "Waiting for you to confirm it in the browser...",
+      "openAgain": "Open the page again"
+    },
     "orEmail": "Or with an email address",
     "email": "Email",
     "password": "Password",
@@ -1624,7 +1634,9 @@
         "trialTerms": "Free for {days} days, then {price}. Cancel before it ends and you pay nothing.",
         "nothingToRestore": "No purchase to restore on this account"
       },
-      "already": "You already have Pro."
+      "already": "You already have Pro.",
+      "buyOnWeb": "Get Pro on the web",
+      "buyOnWebBody": "Buy Pro on your account page. It works here as soon as you are signed in with the same account."
     },
     "sync": {
       "title": "Sync",
@@ -1671,7 +1683,11 @@
       "deleted": "Sync is off everywhere, and the synced copy is deleted.",
       "turnedOffElsewhere": "Sync was turned off from another device. Turn it on again to sync this one.",
       "rekeyedElsewhere": "Sync was started again with a new passphrase on another device. Enter it to bring this device in.",
-      "forgot": "Forgot the passphrase? Start over"
+      "forgot": "Forgot the passphrase? Start over",
+      "replaceTitle": "This device already has machines",
+      "replaceBody": "Replace them with the ones synced to this account, or keep both? Replacing deletes the machines, keys and snippets that are only on this device.",
+      "replace": "Replace",
+      "keepBoth": "Keep both"
     },
     "failure": {
       "invalidEmail": "That is not an email address.",

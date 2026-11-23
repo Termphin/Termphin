@@ -8,10 +8,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../utils/platform_info.dart';
 import '../account/account_service.dart';
+import '../account/rest_account_backend.dart';
 import '../analytics/analytics_service.dart';
+import '../firebase/firebase_service.dart';
 import '../security/aead.dart';
 import '../security/secret_cipher.dart';
+import 'rest_sync_cloud.dart';
 import 'settings_sync.dart';
 import 'storage_sync_local.dart';
 import 'sync_crypto.dart';
@@ -119,8 +123,14 @@ class SyncService {
     SyncKeyVault? vault,
     SyncLocal? local,
     String? Function()? uid,
-  }) : _cloud = cloud ?? FirestoreSyncCloud(),
-       _vault = vault ?? KeystoreSyncKeyVault(),
+  }) : _cloud =
+           cloud ??
+           (!FirebaseService.instance.available && RestAccountBackend.configured
+               ? RestSyncCloud()
+               : FirestoreSyncCloud()),
+       _vault =
+           vault ??
+           (isLinuxPlatform ? SealedSyncKeyVault() : KeystoreSyncKeyVault()),
        _local = local ?? StorageSyncLocal(),
        _uid = uid ?? (() => AccountService.instance.user?.uid);
 
@@ -174,9 +184,31 @@ class SyncService {
     return syncNow();
   }
 
+  /// The kinds of record that are this device's own data, as opposed to
+  /// its settings: what [hasLocalData] looks for and [unlock] can replace.
+  static const _dataKinds = {
+    'profile',
+    'key',
+    'snippet',
+    'groups',
+    'knownHost',
+  };
+
+  /// Whether this device holds machines, keys or snippets already - which
+  /// joining an account's sync would merge into that account's copy.
+  Future<bool> hasLocalData() async => (await _local.readAll()).any(
+    (record) => const {'profile', 'key', 'snippet'}.contains(record.kind),
+  );
+
   /// Gives this device the passphrase of an account that already syncs,
-  /// and syncs.
-  Future<SyncReport> unlock(String passphrase) async {
+  /// and syncs. With [replaceLocal], what the device held before - another
+  /// account's machines, say - is deleted first and the account's copy
+  /// taken as it is, instead of the two being merged; only once the copy
+  /// has been read, so a network failure deletes nothing.
+  Future<SyncReport> unlock(
+    String passphrase, {
+    bool replaceLocal = false,
+  }) async {
     final uid = _requireUid();
     final meta = await _guard(() => _cloud.readMeta(uid));
     if (meta == null) throw const SyncException(SyncFailure.unknown);
@@ -189,8 +221,19 @@ class SyncService {
       throw const SyncException(SyncFailure.wrongPassphrase);
     }
     await _vault.write(uid, key.bytes);
+    if (replaceLocal) await _replaceLocal(uid);
     _noteEnabled('joined');
     return syncNow();
+  }
+
+  Future<void> _replaceLocal(String uid) async {
+    await _guard(() => _cloud.records(uid).fetchAll());
+    for (final record in await _local.readAll()) {
+      if (_dataKinds.contains(record.kind)) {
+        await _local.delete(record.kind, record.id);
+      }
+    }
+    await PreferencesSyncBase(uid).write(const {});
   }
 
   /// Records sync coming on for this device: [outcome] is `new` for an
@@ -325,6 +368,41 @@ class KeystoreSyncKeyVault implements SyncKeyVault {
   Future<void> delete(String uid) => _storage.delete(key: _entry(uid));
 }
 
+/// The sync key sealed with the app's master key in shared preferences,
+/// for Linux: a desktop session may have no keyring, and the master key
+/// already falls back to a private file there ([SecretCipher]), where the
+/// keyring alone would leave sync unable to remember its key.
+class SealedSyncKeyVault implements SyncKeyVault {
+  SealedSyncKeyVault({SecretCipher? cipher})
+    : _cipher = cipher ?? SecretCipher.instance;
+
+  final SecretCipher _cipher;
+
+  String _entry(String uid) => 'sync_key_sealed_$uid';
+
+  @override
+  Future<Uint8List?> read(String uid) async {
+    final stored = (await SharedPreferences.getInstance()).getString(
+      _entry(uid),
+    );
+    if (stored == null) return null;
+    final opened = await _cipher.open(stored, aad: _entry(uid));
+    return opened == null ? null : base64Decode(opened);
+  }
+
+  @override
+  Future<void> write(String uid, Uint8List key) async {
+    await (await SharedPreferences.getInstance()).setString(
+      _entry(uid),
+      await _cipher.seal(base64Encode(key), aad: _entry(uid)),
+    );
+  }
+
+  @override
+  Future<void> delete(String uid) async =>
+      (await SharedPreferences.getInstance()).remove(_entry(uid));
+}
+
 /// `users/{uid}/syncMeta/key` and `users/{uid}/records/*` in Firestore.
 class FirestoreSyncCloud implements SyncCloud {
   FirebaseFirestore get _db => FirebaseFirestore.instance;
@@ -426,7 +504,6 @@ class FirestoreSyncCloud implements SyncCloud {
 /// the record changes once more - from the local estimate to the server's
 /// value - and arrives as a change like any other. Taken for another
 /// device's write, it would start a whole sync to find nothing new.
-@visibleForTesting
 bool ownWritesOnly(
   Iterable<(String, Map<String, dynamic>?)> changes,
   Map<String, String> written,

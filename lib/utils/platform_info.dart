@@ -100,6 +100,10 @@ enum PlatformFeature {
   /// store's rules keep an app installed from it from pointing anywhere one
   /// could pay other than the store; a desktop app is not under a store.
   webAccountLinks,
+
+  /// Push notifications reach this device itself. A computer has none of its
+  /// own; turning notifications on there sends its servers' to the phone.
+  receivesPush,
 }
 
 bool platformHas(PlatformFeature feature) => switch (feature) {
@@ -125,6 +129,7 @@ bool platformHas(PlatformFeature feature) => switch (feature) {
   PlatformFeature.nativeMenuBar => isMacOSPlatform,
   PlatformFeature.localSshFolder => isDesktopPlatform,
   PlatformFeature.webAccountLinks => isDesktopPlatform,
+  PlatformFeature.receivesPush => isAndroidPlatform || isIOSPlatform,
 };
 
 /// The narrowest window that gets the sidebar layout. A landscape window

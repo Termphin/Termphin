@@ -111,6 +111,50 @@ void main() {
     expect(await tablet.state(), SyncState.ready);
   });
 
+  SyncRecord snippet(String id, String name) => SyncRecord(
+    kind: 'snippet',
+    id: id,
+    data: {'name': name},
+    updatedAt: DateTime.utc(2026),
+  );
+
+  test('joining with data already here merges by default', () async {
+    await device(
+      _Vault(),
+      _Local()..records['a'] = snippet('a', 'theirs'),
+    ).setUp('correct horse');
+    SharedPreferences.setMockInitialValues({});
+    final local = _Local()..records['b'] = snippet('b', 'mine');
+    final laptop = device(_Vault(), local);
+
+    expect(await laptop.hasLocalData(), isTrue);
+    await laptop.unlock('correct horse');
+
+    expect(local.records.keys, containsAll(['a', 'b']));
+    expect(cloud.docs, hasLength(2));
+  });
+
+  test('joining with replace takes the account copy alone', () async {
+    await device(
+      _Vault(),
+      _Local()..records['a'] = snippet('a', 'theirs'),
+    ).setUp('correct horse');
+    final local = _Local()..records['b'] = snippet('b', 'mine');
+    final laptop = device(_Vault(), local);
+
+    await laptop.unlock('correct horse', replaceLocal: true);
+
+    expect(local.records.keys, ['a']);
+    expect(cloud.docs, hasLength(1));
+  });
+
+  test(
+    'a device with no machines, keys or snippets has nothing to replace',
+    () async {
+      expect(await device(_Vault(), _Local()).hasLocalData(), isFalse);
+    },
+  );
+
   test('a wrong passphrase is refused before anything is touched', () async {
     await device(_Vault(), _Local()).setUp('correct horse');
     final local = _Local();

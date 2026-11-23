@@ -301,6 +301,21 @@ class _NotifyWhenClosedTilesState extends ConsumerState<NotifyWhenClosedTiles> {
         final pro = ProService.instance.active.value;
         final enabled = PushService.instance.enabledNotifier.value;
         final paused = enabled && signedIn && !pro;
+        if (!platformHas(PlatformFeature.receivesPush)) {
+          return Column(
+            children: [
+              if (widget.divided) const AppDivider(),
+              SettingsTile(
+                key: const ValueKey('notifyOnPhoneNote'),
+                icon: widget.icon,
+                title: t.settings.notifyOnPhone,
+                subtitle: t.settings.notifyOnPhoneSubtitle,
+                trailing: SettingsTileTrailing.none,
+              ),
+            ],
+          );
+        }
+        final title = t.settings.notifyWhenClosed;
         final subtitle = isIOSPlatform
             ? t.settings.notifyWhenClosedSubtitleIos
             : t.settings.notifyWhenClosedSubtitle;
@@ -314,7 +329,7 @@ class _NotifyWhenClosedTilesState extends ConsumerState<NotifyWhenClosedTiles> {
               if (widget.divided) const AppDivider(),
               SettingsTile(
                 icon: widget.icon,
-                title: t.settings.notifyWhenClosed,
+                title: title,
                 subtitle: subtitle,
                 trailingWidget: const _SeePro(),
                 onTap: paywall,
@@ -329,7 +344,7 @@ class _NotifyWhenClosedTilesState extends ConsumerState<NotifyWhenClosedTiles> {
             if (widget.divided) const AppDivider(),
             SettingsSwitchTile(
               icon: widget.icon,
-              title: t.settings.notifyWhenClosed,
+              title: title,
               subtitle: paused ? t.settings.notifyPaused : subtitle,
               titleTrailing: Padding(
                 padding: const EdgeInsets.only(left: AppTheme.space8),

@@ -27,6 +27,7 @@ import '../services/ssh/ssh_session_manager.dart';
 import '../services/storage/group_storage.dart';
 import '../theme/theme.dart';
 import '../utils/group_match.dart';
+import '../utils/platform_info.dart';
 import '../utils/profile_sort.dart';
 import '../widgets/account/account_avatar_button.dart';
 import '../widgets/account/pro_hint_card.dart';
@@ -737,7 +738,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       child: LargeTitleScaffold(
         resizeToAvoidBottomInset: false,
         title: t.profiles.machinesHeading,
-        actions: const [AccountAvatarButton()],
+        actions: platformHas(PlatformFeature.customWindowChrome)
+            ? const []
+            : const [AccountAvatarButton()],
         bodyBuilder: (context, scrollController, gutter) => ListenableBuilder(
           listenable: _manager,
           builder: (context, _) {

@@ -13,6 +13,7 @@ import '../../models/session_tab.dart';
 import '../../models/ssh_profile.dart';
 import '../../utils/platform_info.dart';
 import '../account/account_service.dart';
+import '../account/rest_account_backend.dart';
 import '../analytics/analytics_service.dart';
 import '../firebase/firebase_service.dart';
 import '../platform/local_notifications_service.dart';
@@ -25,6 +26,9 @@ import '../ssh/remote_agent_service.dart'
     show powerShellCommandLine, shellQuote;
 import '../ssh/ssh_session_manager.dart';
 import '../terminal/in_app_alerts.dart';
+import 'relay_key_store.dart';
+
+export 'relay_key_store.dart' show RelayServer;
 
 /// Where a server sends what it wants to announce while no phone is
 /// connected: the `relay` function.
@@ -41,23 +45,6 @@ const _serverKeysPrefsKey = 'push_server_keys';
 /// The payload prefix of a push shown while the app is open: what follows
 /// is `<profileId>:<session>`.
 const kRelayPayloadPrefix = 'relay:';
-
-/// A server that holds a relay key, as the account lists them.
-class RelayServer {
-  const RelayServer({
-    required this.keyId,
-    required this.label,
-    this.profileId,
-    this.createdAt,
-    this.lastSentAt,
-  });
-
-  final String keyId;
-  final String label;
-  final String? profileId;
-  final DateTime? createdAt;
-  final DateTime? lastSentAt;
-}
 
 /// Push notifications from servers, a Pro feature.
 ///
@@ -107,6 +94,20 @@ class PushService {
   final enabledNotifier = ValueNotifier<bool>(false);
 
   FirebaseFirestore get _db => FirebaseFirestore.instance;
+
+  /// Whether this device reaches the account's documents through
+  /// Firestore's REST API rather than the plugin: a computer.
+  bool get _usesRest =>
+      !FirebaseService.instance.available && RestAccountBackend.configured;
+
+  late final RelayKeyStore _keys = _usesRest
+      ? RestRelayKeyStore()
+      : FirestoreRelayKeyStore();
+
+  /// Whether the account's documents can be reached: the REST API needs
+  /// nothing started, the plugin needs Firebase up.
+  Future<bool> _accountReady() async =>
+      _usesRest || await FirebaseService.instance.start();
 
   Future<bool> get enabled async =>
       (await SharedPreferences.getInstance()).getBool(_enabledPrefsKey) ??
@@ -311,12 +312,13 @@ class PushService {
     if (!_checks.start(profile.id)) return;
     var outcome = MachineCheck.notReady;
     try {
-      final pushEnabled = await enabled;
+      final pushEnabled =
+          !platformHas(PlatformFeature.receivesPush) || await enabled;
       final live = livePresenceSetting.value;
       if (!pushEnabled && !live) return;
       final push = pushEnabled && profile.serverNotifications;
       final uid = AccountService.instance.user?.uid;
-      if (uid == null || !await FirebaseService.instance.start()) return;
+      if (uid == null || !await _accountReady()) return;
       if (!ProService.instance.confirmed.value && !_proRefreshed) {
         _proRefreshed = true;
         await ProService.instance.refresh();
@@ -353,6 +355,22 @@ class PushService {
                 ? relayQuietCommandWindows(quiet: !push)
                 : relayQuietCommand(quiet: !push),
           );
+          await _syncPresence(manager, sessionId, profile.id, live: live);
+          outcome = MachineCheck.settled;
+          return;
+        }
+      }
+      if (given == null) {
+        final adopted = await _adoptServerKey(manager, sessionId, uid);
+        if (adopted != null) {
+          final windows = await _onWindows(manager, sessionId);
+          await manager.exec(
+            sessionId,
+            windows
+                ? relayQuietCommandWindows(quiet: !push)
+                : relayQuietCommand(quiet: !push),
+          );
+          await _rememberKey(profile.id, adopted);
           await _syncPresence(manager, sessionId, profile.id, live: live);
           outcome = MachineCheck.settled;
           return;
@@ -457,7 +475,7 @@ class PushService {
     bool quiet = false,
   }) async {
     final uid = AccountService.instance.user?.uid;
-    if (uid == null || !await FirebaseService.instance.start()) {
+    if (uid == null || !await _accountReady()) {
       throw StateError('Not signed in.');
     }
     final key = newRelayKey();
@@ -478,13 +496,13 @@ class PushService {
     if (!keyIdAnswered(written, key.id)) {
       throw StateError('The relay key did not reach the server.');
     }
-    await _db.collection('relayKeys').doc(key.id).set({
-      'uid': uid,
-      'secretHash': key.secretHash,
-      'label': label.length > 100 ? label.substring(0, 100) : label,
-      'profileId': ?profileId,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+    await _keys.create(
+      key.id,
+      uid: uid,
+      secretHash: key.secretHash,
+      label: label.length > 100 ? label.substring(0, 100) : label,
+      profileId: profileId,
+    );
     return key.id;
   }
 
@@ -510,33 +528,40 @@ class PushService {
   /// The servers holding a key to this account, newest first.
   Stream<List<RelayServer>> servers() {
     final uid = AccountService.instance.user?.uid;
-    if (uid == null || !FirebaseService.instance.ready) {
+    if (uid == null || !(_usesRest || FirebaseService.instance.ready)) {
       return Stream.value(const []);
     }
-    return _db
-        .collection('relayKeys')
-        .where('uid', isEqualTo: uid)
-        .snapshots()
-        .map((snapshot) {
-          final servers = [
-            for (final document in snapshot.docs)
-              RelayServer(
-                keyId: document.id,
-                label: document.data()['label'] as String? ?? '',
-                profileId: document.data()['profileId'] as String?,
-                createdAt: (document.data()['createdAt'] as Timestamp?)
-                    ?.toDate(),
-                lastSentAt: (document.data()['lastSentAt'] as Timestamp?)
-                    ?.toDate(),
-              ),
-          ];
-          servers.sort(
-            (a, b) => (b.createdAt ?? DateTime(0)).compareTo(
-              a.createdAt ?? DateTime(0),
-            ),
-          );
-          return servers;
-        });
+    return _keys.list(uid);
+  }
+
+  /// The key already on the server behind [sessionId], when it is one of
+  /// [uid]'s own - set up by another of the account's devices - so this
+  /// device keeps it rather than writing a new one over it, which would
+  /// leave the other device's key stale and the two replacing each other's
+  /// on every connect. Null when the server has none or someone else's.
+  Future<String?> _adoptServerKey(
+    SshSessionManager manager,
+    String sessionId,
+    String uid,
+  ) async {
+    try {
+      final windows = await _onWindows(manager, sessionId);
+      final onServer = utf8.decode(
+        await manager.exec(
+          sessionId,
+          windows ? relayKeyIdCommandWindows() : relayKeyIdCommand,
+        ),
+        allowMalformed: true,
+      );
+      final mine = await _keys
+          .list(uid)
+          .first
+          .timeout(const Duration(seconds: 20));
+      for (final server in mine) {
+        if (keyIdAnswered(onServer, server.keyId)) return server.keyId;
+      }
+    } catch (_) {}
+    return null;
   }
 
   /// Takes [server]'s key away: the relay refuses it from now on. The file
@@ -560,7 +585,7 @@ class PushService {
 
   Future<void> _deleteKey(String keyId) async {
     try {
-      await _db.collection('relayKeys').doc(keyId).delete();
+      await _keys.delete(keyId);
     } catch (_) {}
   }
 

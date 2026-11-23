@@ -2047,6 +2047,12 @@ class Translations$settings$en {
 	/// en: 'Wherever you are, even with Termphin closed. On iPhone, the only way to hear from your servers in the background.'
 	String get notifyWhenClosedSubtitleIos => 'Wherever you are, even with Termphin closed. On iPhone, the only way to hear from your servers in the background.';
 
+	/// en: 'Notifications on your phone'
+	String get notifyOnPhone => 'Notifications on your phone';
+
+	/// en: 'Servers you use here notify your phone, even with Termphin closed. Turn it on in Termphin on your phone.'
+	String get notifyOnPhoneSubtitle => 'Servers you use here notify your phone, even with Termphin closed. Turn it on in Termphin on your phone.';
+
 	/// en: 'Servers'
 	String get notifyServers => 'Servers';
 
@@ -4048,6 +4054,9 @@ class Translations$commands$en {
 	/// en: 'Find in terminal'
 	String get findInTerminal => 'Find in terminal';
 
+	/// en: 'Ask Phin'
+	String get askPhin => 'Ask Phin';
+
 	/// en: 'Fast upload'
 	String get uploadFile => 'Fast upload';
 
@@ -4361,6 +4370,8 @@ class Translations$account$en {
 
 	/// en: 'By signing in or creating an account you agree to the terms of service and the privacy policy.'
 	String get agreeNotice => 'By signing in or creating an account you agree to the terms of service and the privacy policy.';
+
+	late final Translations$account$browser$en browser = Translations$account$browser$en.internal(_root);
 
 	/// en: 'Or with an email address'
 	String get orEmail => 'Or with an email address';
@@ -5217,6 +5228,30 @@ class Translations$account$live$en {
 	String get proHint => 'Online machines and live sessions, without connecting';
 }
 
+// Path: account.browser
+class Translations$account$browser$en {
+	Translations$account$browser$en.internal(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'Sign in on your account page in the browser, with Google, GitHub, Apple or email, and confirm the code shown here.'
+	String get intro => 'Sign in on your account page in the browser, with Google, GitHub, Apple or email, and confirm the code shown here.';
+
+	/// en: 'Sign in with your browser'
+	String get start => 'Sign in with your browser';
+
+	/// en: 'Your code'
+	String get code => 'Your code';
+
+	/// en: 'Waiting for you to confirm it in the browser...'
+	String get waiting => 'Waiting for you to confirm it in the browser...';
+
+	/// en: 'Open the page again'
+	String get openAgain => 'Open the page again';
+}
+
 // Path: account.pro
 class Translations$account$pro$en {
 	Translations$account$pro$en.internal(this._root);
@@ -5289,6 +5324,12 @@ class Translations$account$pro$en {
 
 	/// en: 'You already have Pro.'
 	String get already => 'You already have Pro.';
+
+	/// en: 'Get Pro on the web'
+	String get buyOnWeb => 'Get Pro on the web';
+
+	/// en: 'Buy Pro on your account page. It works here as soon as you are signed in with the same account.'
+	String get buyOnWebBody => 'Buy Pro on your account page. It works here as soon as you are signed in with the same account.';
 }
 
 // Path: account.sync
@@ -5408,6 +5449,18 @@ class Translations$account$sync$en {
 
 	/// en: 'Forgot the passphrase? Start over'
 	String get forgot => 'Forgot the passphrase? Start over';
+
+	/// en: 'This device already has machines'
+	String get replaceTitle => 'This device already has machines';
+
+	/// en: 'Replace them with the ones synced to this account, or keep both? Replacing deletes the machines, keys and snippets that are only on this device.'
+	String get replaceBody => 'Replace them with the ones synced to this account, or keep both? Replacing deletes the machines, keys and snippets that are only on this device.';
+
+	/// en: 'Replace'
+	String get replace => 'Replace';
+
+	/// en: 'Keep both'
+	String get keepBoth => 'Keep both';
 }
 
 // Path: account.failure
@@ -6305,6 +6358,8 @@ extension on Translations {
 			'settings.seePro' => 'See Pro',
 			'settings.notifyWhenClosedSubtitle' => 'Wherever you are, even with Termphin closed: your servers reach this phone through Termphin’s relay.',
 			'settings.notifyWhenClosedSubtitleIos' => 'Wherever you are, even with Termphin closed. On iPhone, the only way to hear from your servers in the background.',
+			'settings.notifyOnPhone' => 'Notifications on your phone',
+			'settings.notifyOnPhoneSubtitle' => 'Servers you use here notify your phone, even with Termphin closed. Turn it on in Termphin on your phone.',
 			'settings.notifyServers' => 'Servers',
 			'settings.notifyDenied' => 'Notifications are turned off for Termphin in the system settings.',
 			'settings.notifyFailed' => 'That did not work. Try again.',
@@ -6655,10 +6710,10 @@ extension on Translations {
 			'toolbar.customTextHint' => 'Text to send',
 			'toolbar.goToPage' => ({required Object number}) => 'Go to page ${number}',
 			'toolbar.quickSettings' => 'Quick settings',
-			'toolbar.quickTabToolbar' => 'Toolbar',
-			'toolbar.quickTabAppearance' => 'Appearance',
 			_ => null,
 		} ?? switch (path) {
+			'toolbar.quickTabToolbar' => 'Toolbar',
+			'toolbar.quickTabAppearance' => 'Appearance',
 			'toolbar.allTerminalSettings' => 'All terminal settings',
 			'toolbar.importTitle' => 'Add toolbar layout',
 			'toolbar.importUnnamed' => 'Shared layout',
@@ -6892,6 +6947,7 @@ extension on Translations {
 			'commands.previousTab' => 'Previous tab',
 			'commands.selectTab' => 'Go to tab 1–9',
 			'commands.findInTerminal' => 'Find in terminal',
+			'commands.askPhin' => 'Ask Phin',
 			'commands.uploadFile' => 'Fast upload',
 			'commands.zoomIn' => 'Larger text',
 			'commands.zoomOut' => 'Smaller text',
@@ -6985,6 +7041,11 @@ extension on Translations {
 			'account.continueWithApple' => 'Continue with Apple',
 			'account.continueWithGitHub' => 'Continue with GitHub',
 			'account.agreeNotice' => 'By signing in or creating an account you agree to the terms of service and the privacy policy.',
+			'account.browser.intro' => 'Sign in on your account page in the browser, with Google, GitHub, Apple or email, and confirm the code shown here.',
+			'account.browser.start' => 'Sign in with your browser',
+			'account.browser.code' => 'Your code',
+			'account.browser.waiting' => 'Waiting for you to confirm it in the browser...',
+			'account.browser.openAgain' => 'Open the page again',
 			'account.orEmail' => 'Or with an email address',
 			'account.email' => 'Email',
 			'account.password' => 'Password',
@@ -7076,6 +7137,8 @@ extension on Translations {
 			'account.pro.paywall.trialTerms' => ({required Object days, required Object price}) => 'Free for ${days} days, then ${price}. Cancel before it ends and you pay nothing.',
 			'account.pro.paywall.nothingToRestore' => 'No purchase to restore on this account',
 			'account.pro.already' => 'You already have Pro.',
+			'account.pro.buyOnWeb' => 'Get Pro on the web',
+			'account.pro.buyOnWebBody' => 'Buy Pro on your account page. It works here as soon as you are signed in with the same account.',
 			'account.sync.title' => 'Sync',
 			'account.sync.off' => 'Keep machines, keys, snippets and groups the same on every device. End-to-end encrypted with a passphrase only you know.',
 			'account.sync.turnOn' => 'Turn on sync',
@@ -7119,6 +7182,10 @@ extension on Translations {
 			'account.sync.turnedOffElsewhere' => 'Sync was turned off from another device. Turn it on again to sync this one.',
 			'account.sync.rekeyedElsewhere' => 'Sync was started again with a new passphrase on another device. Enter it to bring this device in.',
 			'account.sync.forgot' => 'Forgot the passphrase? Start over',
+			'account.sync.replaceTitle' => 'This device already has machines',
+			'account.sync.replaceBody' => 'Replace them with the ones synced to this account, or keep both? Replacing deletes the machines, keys and snippets that are only on this device.',
+			'account.sync.replace' => 'Replace',
+			'account.sync.keepBoth' => 'Keep both',
 			'account.failure.invalidEmail' => 'That is not an email address.',
 			'account.failure.wrongCredentials' => 'Wrong email or password.',
 			'account.failure.emailInUse' => 'There is already an account with this email. Sign in the way you did before.',
@@ -7157,6 +7224,8 @@ extension on Translations {
 			'agentFeatures.newSession' => 'Open a new session',
 			'proHints.longCommand' => 'Know when a command finishes, even with Termphin closed',
 			'proHints.action' => 'See Pro',
+			_ => null,
+		} ?? switch (path) {
 			'proHints.dismiss' => 'Not now',
 			'proFeature.notificationsTitle' => 'Notifications with Termphin closed',
 			'proFeature.notificationsBody' => 'Termphin tells you when a command finishes or a program needs you. With Pro this reaches you even when the app is closed, through a relay that keeps nothing.',
@@ -7171,8 +7240,6 @@ extension on Translations {
 			'proHub.rowSubtitle' => 'Phin AI, notifications, live status and sync',
 			'proHub.notificationsSection' => 'Notifications',
 			'proHub.live' => 'Live status',
-			_ => null,
-		} ?? switch (path) {
 			'proHub.sync' => 'Sync',
 			'proHub.active' => 'Active',
 			'proHub.phinSettings' => 'Phin settings',
