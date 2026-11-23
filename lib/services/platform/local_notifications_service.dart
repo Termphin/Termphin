@@ -146,11 +146,15 @@ class LocalNotificationsService {
   }
 
   /// Posts what a program in [sessionId] asked the terminal to announce.
-  /// Tapping it opens that session.
+  /// Tapping it opens that session. [source] - the machine and session, such
+  /// as `web-01 › api` - goes where the system names where a notification
+  /// came from: beside the app's name on Android, under the title on iOS
+  /// and macOS.
   Future<void> showTerminalAlert({
     required String sessionId,
     required String title,
     required String body,
+    String? source,
   }) async {
     if (!_postsAlerts) return;
     await _show(
@@ -165,11 +169,27 @@ class LocalNotificationsService {
           channelDescription: t.notifications.terminalChannelDescription,
           importance: Importance.high,
           priority: Priority.high,
+          subText: source,
         ),
-        iOS: const DarwinNotificationDetails(presentBadge: false),
-        macOS: const DarwinNotificationDetails(presentBadge: false),
+        iOS: DarwinNotificationDetails(presentBadge: false, subtitle: source),
+        macOS: DarwinNotificationDetails(presentBadge: false, subtitle: source),
       ),
     );
+  }
+
+  /// Takes away what was posted about [sessionId], now that it is on
+  /// screen.
+  Future<void> cancelTerminalAlert(String sessionId) async {
+    if (!_postsAlerts) return;
+    await _plugin.cancel(id: terminalAlertId(sessionId));
+  }
+
+  /// Takes away a notification the system drew from a push tagged [tag],
+  /// which it posts with id 0 under that tag. Android only: elsewhere a
+  /// push is not addressed by a tag.
+  Future<void> cancelTagged(String tag) async {
+    if (_android == null) return;
+    await _plugin.cancel(id: 0, tag: tag);
   }
 
   /// The notification id of [sessionId]'s alerts: the same id every time,

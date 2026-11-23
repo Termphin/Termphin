@@ -160,6 +160,13 @@ void main() {
     });
   });
 
+  test(
+    'tags a session the way the relay does, so its push can be taken away',
+    () {
+      expect(relayTag('p1', 'api'), 'relay:p1:api');
+    },
+  );
+
   group('relayTarget', () {
     test('names the machine and the session a push came from', () {
       expect(relayTarget({'profileId': 'p1', 'session': 'termphin_6d79be'}), (

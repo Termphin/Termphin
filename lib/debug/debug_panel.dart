@@ -161,6 +161,36 @@ class _DebugSheet extends StatelessWidget {
             ),
             const SectionHeader('System notifications'),
             SettingsTile(
+              title: 'Finished, with its session',
+              subtitle: 'In 5 s, so the app can be left first',
+              onTap: () => unawaited(
+                Future<void>.delayed(
+                  const Duration(seconds: 5),
+                  () => notifications.showTerminalAlert(
+                    sessionId: 'debug-source-deploy',
+                    title: 'make deploy finished',
+                    body: 'Deployed v2.4.1 after 1m 52s',
+                    source: 'api',
+                  ),
+                ),
+              ),
+            ),
+            SettingsTile(
+              title: 'Waiting for you, with its session',
+              subtitle: 'In 5 s, so the app can be left first',
+              onTap: () => unawaited(
+                Future<void>.delayed(
+                  const Duration(seconds: 5),
+                  () => notifications.showTerminalAlert(
+                    sessionId: 'debug-source-claude',
+                    title: 'Claude Code is waiting for you',
+                    body: 'The checkout test is fixed. Review the change?',
+                    source: 'claude',
+                  ),
+                ),
+              ),
+            ),
+            SettingsTile(
               title: 'A long command finished',
               onTap: () => unawaited(
                 notifications.showTerminalAlert(

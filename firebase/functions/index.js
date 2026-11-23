@@ -18,6 +18,7 @@ const {
   cleanText,
   cleanSession,
   relayAndroid,
+  relayApns,
   relayText,
   REVENUECAT_PROJECT,
 } = require("./lib");
@@ -179,6 +180,7 @@ exports.relay = onRequest(guarded(async (request, response) => {
   }
   const title = cleanText(request.body.title) || allowed.label || "Termphin";
   const body = allowed.body;
+  const session = cleanSession(request.body.session);
   const result = await getMessaging().sendEachForMulticast({
     tokens,
     notification: { title, body },
@@ -186,10 +188,11 @@ exports.relay = onRequest(guarded(async (request, response) => {
       kind: "relay",
       label: allowed.label || "",
       profileId: allowed.profileId,
-      session: cleanSession(request.body.session),
+      session,
+      title,
     },
-    android: relayAndroid(),
-    apns: { payload: { aps: { sound: "default" } } },
+    android: relayAndroid({ title, session, profileId: allowed.profileId }),
+    apns: relayApns({ title, body, session }),
   });
   const stale = [];
   result.responses.forEach((sent, index) => {

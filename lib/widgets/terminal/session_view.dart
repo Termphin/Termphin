@@ -1516,10 +1516,13 @@ class SessionViewState extends ConsumerState<SessionView> {
           ValueListenableBuilder(
             valueListenable: session.control,
             builder: (context, control, _) => control == null || control.holds
-                ? const SizedBox.shrink()
-                : ControlBar(
-                    control: control,
-                    onTake: () => _manager.takeControl(session.id),
+                ? ControlBarHeightReporter(active: widget.isActive, child: null)
+                : ControlBarHeightReporter(
+                    active: widget.isActive,
+                    child: ControlBar(
+                      control: control,
+                      onTake: () => _manager.takeControl(session.id),
+                    ),
                   ),
           ),
       ],

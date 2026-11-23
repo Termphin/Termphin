@@ -13,9 +13,11 @@ void main() {
   late Set<String> beside;
   late DateTime now;
   late TerminalAlerts alerts;
+  late List<String> cleared;
 
   setUp(() {
     posted = [];
+    cleared = [];
     enabled = true;
     quiet = true;
     lines = true;
@@ -33,6 +35,7 @@ void main() {
       quoteLines: () => lines,
       isForeground: () => foreground,
       sessionsOnScreen: () => {?active, ...beside},
+      seen: cleared.add,
     );
   });
 
@@ -78,8 +81,43 @@ void main() {
         sessionId: 'back',
         title: 'devbox',
         body: 'Claude is waiting for your input',
+        source: null,
       ),
     ]);
+  });
+
+  test('names the session where the system shows where it came from', () {
+    withClock(
+      Clock.fixed(now),
+      () => alerts.handle(
+        sessionId: 'back',
+        sessionName: 'devbox',
+        notification: const TerminalNotification(
+          title: 'make deploy finished',
+          body: 'Deployed',
+        ),
+        source: 'api',
+      ),
+    );
+
+    expect(posted.single.source, 'api');
+    expect(posted.single.title, 'make deploy finished');
+  });
+
+  test('a session that comes on screen is told about, once', () {
+    visibilityChanged();
+    expect(cleared, ['front']);
+
+    active = 'back';
+    visibilityChanged();
+    visibilityChanged();
+    expect(cleared, ['front', 'back']);
+
+    foreground = false;
+    visibilityChanged();
+    foreground = true;
+    visibilityChanged();
+    expect(cleared, ['front', 'back', 'back']);
   });
 
   test('the session on screen is not: its user has seen it', () {

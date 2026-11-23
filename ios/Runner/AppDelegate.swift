@@ -32,5 +32,50 @@ import UserNotifications
         forPlugin: TransferActivityChannel.name
       )!
     )
+    DeliveredNotificationsChannel.register(
+      with: engineBridge.pluginRegistry.registrar(
+        forPlugin: DeliveredNotificationsChannel.name
+      )!
+    )
+  }
+}
+
+/// Takes pushes about a session out of Notification Center once that session
+/// is opened. A push the system delivered while the app was closed is not the
+/// notifications plugin's own, so it cannot cancel it; it is found here by
+/// the machine and session its payload names, as `relay` in the functions
+/// sends them.
+enum DeliveredNotificationsChannel {
+  static let name = "dev.termphin.termphin/delivered_notifications"
+
+  static func register(with registrar: FlutterPluginRegistrar) {
+    let channel = FlutterMethodChannel(
+      name: name,
+      binaryMessenger: registrar.messenger()
+    )
+    channel.setMethodCallHandler { call, result in
+      guard call.method == "removeRelayed",
+        let args = call.arguments as? [String: Any],
+        let profileId = args["profileId"] as? String,
+        let session = args["session"] as? String
+      else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      let center = UNUserNotificationCenter.current()
+      center.getDeliveredNotifications { delivered in
+        let ids = delivered
+          .filter {
+            let info = $0.request.content.userInfo
+            return info["profileId"] as? String == profileId
+              && info["session"] as? String == session
+          }
+          .map { $0.request.identifier }
+        if !ids.isEmpty {
+          center.removeDeliveredNotifications(withIdentifiers: ids)
+        }
+        DispatchQueue.main.async { result(ids.count) }
+      }
+    }
   }
 }

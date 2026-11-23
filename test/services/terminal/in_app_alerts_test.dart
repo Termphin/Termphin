@@ -3,7 +3,12 @@ import 'package:termphin/services/terminal/in_app_alerts.dart';
 import 'package:termphin/services/terminal/terminal_alerts.dart';
 
 void main() {
-  const alert = (sessionId: 's', title: 'build finished', body: 'done');
+  const alert = (
+    sessionId: 's',
+    title: 'build finished',
+    body: 'done',
+    source: null,
+  );
 
   InAppAlerts alerts({
     bool foreground = true,
