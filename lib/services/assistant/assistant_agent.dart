@@ -286,7 +286,7 @@ class AssistantAgent {
     }
     switch (use['name']) {
       case 'inspect':
-        return _inspect(id, text('purpose'), text('command'));
+        return _inspect(run, id, text('purpose'), text('command'));
       case 'read_file':
         final path = text('path');
         final lines = ((input['lines'] as num?)?.toInt() ?? 200).clamp(1, 2000);
@@ -316,7 +316,7 @@ class AssistantAgent {
           );
           return _result(id, _report(output));
         }
-        return _inspect(id, text('purpose'), command, checked: false);
+        return _inspect(run, id, text('purpose'), command, checked: false);
       case 'propose':
         final commands = [
           for (final command in (input['commands'] as List? ?? const []))
@@ -512,12 +512,16 @@ class AssistantAgent {
   }
 
   Future<Map<String, dynamic>> _inspect(
+    int run,
     String id,
     String purpose,
     String command, {
     bool checked = true,
   }) async {
     final refusal = checked ? refuseInspect(command) : null;
+    if (refusal != null && refuseAsking(command) == null) {
+      return _askToCheck(run, id, purpose, command, refusal);
+    }
     final index = session.add(AssistantCheck(title: purpose, command: command));
     if (refusal != null) {
       session.replace(
@@ -531,7 +535,7 @@ class AssistantAgent {
       );
       return _result(
         id,
-        'The device refused to run this: $refusal. inspect runs only read-only commands; use propose for anything else.',
+        'The device refused to run this: $refusal. Run something that ends on its own, on one line.',
         error: true,
       );
     }
@@ -549,6 +553,56 @@ class AssistantAgent {
       ),
     );
     return _result(id, _report(output));
+  }
+
+  /// A check the device could not tell only reads: the user is asked, as
+  /// for a fix, and it runs in a terminal they can watch once they allow
+  /// it. The model hears the output, or that the user said no.
+  Future<Map<String, dynamic>> _askToCheck(
+    int run,
+    String id,
+    String purpose,
+    String command,
+    String refusal,
+  ) async {
+    final index = session.add(
+      AssistantProposal(
+        why: purpose,
+        commands: [command],
+        kind: AssistantProposalKind.check,
+        reason: refusal,
+      ),
+    );
+    if (!await _approval(index)) {
+      _settle(index, AssistantProposalState.skipped);
+      return _result(
+        id,
+        _declined(
+          'The device could not tell this only reads ($refusal), so it asked the user, who did not run it.',
+        ),
+      );
+    }
+    final terminal = Terminal(maxLines: 2000);
+    final proposal = session.steps[index] as AssistantProposal;
+    session.replace(
+      index,
+      proposal.copyWith(
+        state: AssistantProposalState.running,
+        terminal: terminal,
+      ),
+    );
+    session.setMood(AssistantMood.working, activity: purpose);
+    final outcome = await _runInTerminal(terminal, command);
+    terminal.onOutput = null;
+    terminal.onResize = null;
+    if (run != _run) return _result(id, 'The user stopped this.', error: true);
+    _settle(
+      index,
+      outcome.timedOut
+          ? AssistantProposalState.failed
+          : AssistantProposalState.done,
+    );
+    return _result(id, 'The user allowed it.\n${_report(outcome)}');
   }
 
   Future<AssistantRun> _runQuietly(String command, Duration timeout) async {

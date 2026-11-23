@@ -1784,6 +1784,8 @@
     "allow": "Allow",
     "readSecretTitle": "Read a file that may hold secrets?",
     "readSecretWhy": "{path} may hold passwords or keys. What it contains goes to the assistant, with anything that looks like a secret hidden first.",
+    "checkTitle": "Run this check?",
+    "checkWhy": "{purpose}\nPhin could not tell that this only reads ({reason}), so it runs only if you allow it.",
     "failSignedOut": "Sign in to use the assistant.",
     "failPro": "The assistant is part of Termphin Pro.",
     "failNotAllowed": "The assistant is not open to this account yet.",

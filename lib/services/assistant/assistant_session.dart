@@ -39,6 +39,10 @@ enum AssistantProposalKind {
   /// Reading a file that may hold secrets; [AssistantProposal.why] is its
   /// path.
   readSecret,
+
+  /// A check the device could not tell only reads, so it runs once the
+  /// user allows it; [AssistantProposal.reason] says why.
+  check,
 }
 
 /// Why the assistant could not go on.
@@ -128,6 +132,7 @@ class AssistantProposal extends AssistantStep {
     this.state = AssistantProposalState.pending,
     this.kind = AssistantProposalKind.change,
     this.terminal,
+    this.reason,
   });
 
   final String why;
@@ -139,6 +144,10 @@ class AssistantProposal extends AssistantStep {
   /// them; null until they do.
   final Terminal? terminal;
 
+  /// For a [AssistantProposalKind.check], what kept the device from running
+  /// it on its own.
+  final String? reason;
+
   AssistantProposal copyWith({
     AssistantProposalState? state,
     Terminal? terminal,
@@ -148,6 +157,7 @@ class AssistantProposal extends AssistantStep {
     state: state ?? this.state,
     kind: kind,
     terminal: terminal ?? this.terminal,
+    reason: reason,
   );
 }
 
