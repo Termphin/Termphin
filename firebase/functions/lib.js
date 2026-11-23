@@ -134,20 +134,64 @@ function syncSweepAction({ pro, lapsedAt, warnedAt }, now) {
   return now - lapsedAt >= SYNC_KEPT_AFTER_PRO_MS - SYNC_WARNING_MS ? "warn" : "keep";
 }
 
+/** What every session name the app creates starts with, as `SessionTab.ownedPrefix`. */
+const OWNED_SESSION_PREFIX = "termphin_";
+
+/**
+ * A session's name the way the app shows it: without the prefix that only
+ * marks the app's own sessions, as `SessionTab.displayName`.
+ */
+function sessionLabel(session) {
+  return session.startsWith(OWNED_SESSION_PREFIX)
+    ? session.slice(OWNED_SESSION_PREFIX.length)
+    : session;
+}
+
+/**
+ * The tag a relayed push about [session] of machine [profileId] carries on
+ * Android, as `relayTag` in the app's push_service.dart: a newer push about
+ * the same session replaces the older one, and the app takes it away by the
+ * same tag once that session is opened.
+ */
+function relayTag(profileId, session) {
+  return `relay:${profileId}:${session}`;
+}
+
 /**
  * The Android part of a relayed push. The system draws a push itself while the
  * app is closed, and without an icon named here it takes the launcher icon,
  * whose adaptive layer is mostly margin - the dolphin shows up tiny. The
  * status bar icon is the one the app's own notifications use, and every
  * released build has it.
+ *
+ * A push about a session names it after the title - a push drawn by the
+ * system has no place beside the app's name for it, as the app's own
+ * notifications do - and is tagged for it ([relayTag]).
  */
-function relayAndroid() {
+function relayAndroid({ title, session, profileId } = {}) {
   return {
     priority: "high",
     notification: {
       channelId: "terminal_alerts",
       icon: "ic_stat_termphin",
       visibility: "private",
+      ...(session && title ? { title: `${title} · ${sessionLabel(session)}` } : {}),
+      ...(session ? { tag: relayTag(profileId || "", session) } : {}),
+    },
+  };
+}
+
+/**
+ * The iPhone part of a relayed push: the session's name as the subtitle,
+ * under the title, where the app's own notifications put it.
+ */
+function relayApns({ title, body, session } = {}) {
+  return {
+    payload: {
+      aps: {
+        sound: "default",
+        alert: { title, body, ...(session ? { subtitle: sessionLabel(session) } : {}) },
+      },
     },
   };
 }
@@ -219,6 +263,9 @@ async function cancelStripeSubscriptions(uid, key, request = fetch) {
 module.exports = {
   cancelStripeSubscriptions,
   relayAndroid,
+  relayApns,
+  relayTag,
+  sessionLabel,
   relayText,
   syncSweepAction,
   proFromEvent,

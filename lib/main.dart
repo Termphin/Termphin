@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
+import 'models/session_tab.dart';
 import 'screens/share/share_screen.dart';
 import 'services/account/account_service.dart';
 import 'services/analytics/analytics_service.dart';
@@ -124,6 +125,7 @@ TerminalAlerts _bindTerminalAlerts() {
             sessionId: alert.sessionId,
             title: alert.title,
             body: alert.body,
+            source: alert.source,
           ),
         );
       }
@@ -138,6 +140,16 @@ TerminalAlerts _bindTerminalAlerts() {
     quoteLines: () => terminalSettings.noticeLines.value,
     isForeground: () => manager.foreground && _windowFocused(),
     sessionsOnScreen: () => manager.sessionsOnScreen,
+    seen: (sessionId) {
+      unawaited(notifications.cancelTerminalAlert(sessionId));
+      final session = manager.getSession(sessionId);
+      final name = session?.muxName;
+      if (session != null && name != null) {
+        unawaited(
+          PushService.instance.clearDelivered(session.profile.id, name),
+        );
+      }
+    },
   );
   manager.onTerminalNotification = (session, notification) => alerts.handle(
     sessionId: session.id,
@@ -145,6 +157,10 @@ TerminalAlerts _bindTerminalAlerts() {
         ? IdentityAnonymizer.name(session.profile.id)
         : session.profile.name,
     notification: notification,
+    source: switch (session.muxName) {
+      final name? => SessionTab.displayName(name),
+      null => null,
+    },
   );
   manager.addListener(alerts.visibilityChanged);
   return alerts;

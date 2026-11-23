@@ -50,6 +50,7 @@ import '../../widgets/snippets/snippet_picker_panel.dart';
 import '../../widgets/ssh/connection_log_sheet.dart';
 import '../../widgets/terminal/action_dock_menu.dart';
 import '../../widgets/terminal/add_session_sheet.dart';
+import '../../widgets/terminal/control_bar.dart';
 import '../../widgets/terminal/floating_action_dock.dart';
 import '../../widgets/terminal/older_session_sheet.dart';
 import '../../widgets/terminal/rename_session_dialog.dart';
@@ -249,6 +250,13 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
   /// each layout so the minimised assistant rests above them.
   final _bottomChromeKey = GlobalKey();
   final _bottomChrome = ValueNotifier<double>(0);
+
+  /// What the assistant keeps clear at the bottom: the toolbar and tab bar,
+  /// and the strip of a session another device holds.
+  final _assistantClearance = ValueNotifier<double>(0);
+
+  void _updateAssistantClearance() =>
+      _assistantClearance.value = _bottomChrome.value + controlBarHeight.value;
 
   void _measureBottomChrome() {
     if (!mounted) return;
@@ -746,6 +754,9 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
   void dispose() {
     _assistantAgent.stop();
     _assistant.dispose();
+    _bottomChrome.removeListener(_updateAssistantClearance);
+    controlBarHeight.removeListener(_updateAssistantClearance);
+    _assistantClearance.dispose();
     _bottomChrome.dispose();
     tabBarPositionSetting.removeListener(_onTabBarPositionChanged);
     phinEnabledSetting.removeListener(_onPhinEnabledChanged);
@@ -785,6 +796,8 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
   @override
   void initState() {
     super.initState();
+    _bottomChrome.addListener(_updateAssistantClearance);
+    controlBarHeight.addListener(_updateAssistantClearance);
     _swipe =
         SessionSwipeController(
           vsync: this,
@@ -2628,7 +2641,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
                   phinEnabledSetting.value && ProService.instance.active.value
                   ? AssistantOverlay(
                       session: _assistant,
-                      bubbleClearance: _bottomChrome,
+                      bubbleClearance: _assistantClearance,
                       hintKey: _assistantHintKey(),
                       makeRoom: scrollToBottomShown,
                       actions: AssistantActions(

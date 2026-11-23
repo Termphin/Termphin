@@ -3,7 +3,15 @@ import 'package:clock/clock.dart';
 import 'terminal_notification.dart';
 
 /// A notification ready to be posted: who it is for and what it says.
-typedef TerminalAlert = ({String sessionId, String title, String body});
+/// One notification to post: the session it is about, what it says, and
+/// [source], the session's name, shown where the system names a
+/// notification's origin.
+typedef TerminalAlert = ({
+  String sessionId,
+  String title,
+  String body,
+  String? source,
+});
 
 /// Decides which of the notifications programs ask for reach the system.
 ///
@@ -33,6 +41,7 @@ class TerminalAlerts {
     required this.quoteLines,
     required this.isForeground,
     required this.sessionsOnScreen,
+    this.seen,
     this.quietPeriod = const Duration(seconds: 3),
     this.quietSeen = const Duration(seconds: 10),
     this.finishedSeen = const Duration(seconds: 4),
@@ -46,6 +55,10 @@ class TerminalAlerts {
   /// The sessions whose output is on screen: the tab in front, and every
   /// pane beside it in a split.
   final Set<String> Function() sessionsOnScreen;
+
+  /// Told about each session that has just come on screen, so what was
+  /// posted about it can go: whoever looks at it now has seen what happened.
+  final void Function(String sessionId)? seen;
   final Duration quietPeriod;
   final Duration quietSeen;
   final Duration finishedSeen;
@@ -63,13 +76,16 @@ class TerminalAlerts {
     for (final left in _visible.difference(visible)) {
       _lastSeen[left] = now;
     }
+    final arrived = visible.difference(_visible);
     _visible = visible;
+    arrived.forEach(seen ?? (_) {});
   }
 
   void handle({
     required String sessionId,
     required String sessionName,
     required TerminalNotification notification,
+    String? source,
   }) {
     if (!allows(notification)) return;
     if (isForeground() && sessionsOnScreen().contains(sessionId)) return;
@@ -93,6 +109,7 @@ class TerminalAlerts {
           ? notification.title
           : sessionName,
       body: hasBody ? body : notification.title,
+      source: source,
     ));
   }
 

@@ -6,8 +6,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypto/crypto.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../models/session_tab.dart';
 import '../../models/ssh_profile.dart';
 import '../../utils/platform_info.dart';
 import '../account/account_service.dart';
@@ -229,8 +231,11 @@ class PushService {
       sessionId: target == null
           ? '$kRelayPayloadPrefix:'
           : '$kRelayPayloadPrefix${target.$1}:${target.$2}',
-      title: notification.title ?? '',
+      title: message.data['title'] as String? ?? notification.title ?? '',
       body: notification.body ?? '',
+      source: target == null || target.$2.isEmpty
+          ? null
+          : SessionTab.displayName(target.$2),
     );
     if (InAppAlerts.instance.handle(alert)) return;
     unawaited(
@@ -238,8 +243,36 @@ class PushService {
         sessionId: alert.sessionId,
         title: alert.title,
         body: alert.body,
+        source: alert.source,
       ),
     );
+  }
+
+  static const _delivered = MethodChannel(
+    'dev.termphin.termphin/delivered_notifications',
+  );
+
+  /// Takes away what reached this phone about [session] of machine
+  /// [profileId] - a push the system drew while the app was closed, or the
+  /// copy shown while it was open - now that the session is on screen.
+  Future<void> clearDelivered(String profileId, String session) async {
+    await LocalNotificationsService.instance.cancelTerminalAlert(
+      '$kRelayPayloadPrefix$profileId:$session',
+    );
+    try {
+      if (isIOSPlatform) {
+        await _delivered.invokeMethod<int>('removeRelayed', {
+          'profileId': profileId,
+          'session': session,
+        });
+      } else {
+        await LocalNotificationsService.instance.cancelTagged(
+          relayTag(profileId, session),
+        );
+      }
+    } on Object catch (error) {
+      debugPrint('Could not clear delivered pushes: $error');
+    }
   }
 
   void _openFrom(Map<String, dynamic> data) {
@@ -561,6 +594,11 @@ class PushService {
 /// session)`, the session empty when the server did not say. Null when it
 /// names no machine.
 @visibleForTesting
+/// The tag a relayed push about [session] of machine [profileId] carries on
+/// Android, as `relayTag` in the functions' lib.js.
+String relayTag(String profileId, String session) =>
+    'relay:$profileId:$session';
+
 (String, String)? relayTarget(Map<String, dynamic> data) {
   final profileId = data['profileId'];
   if (profileId is! String || profileId.isEmpty) return null;

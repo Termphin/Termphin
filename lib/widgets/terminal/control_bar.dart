@@ -90,3 +90,55 @@ class ControlBar extends StatelessWidget {
     );
   }
 }
+
+/// How tall the strip under the active session is while another device
+/// holds it ([ControlBar]), 0 without one, for anything floating over the
+/// bottom of the screen - the assistant - to sit above it.
+final ValueNotifier<double> controlBarHeight = ValueNotifier(0);
+
+/// [child] - the control strip, or nothing - telling [controlBarHeight] how
+/// tall it is while its session is the active one, after each frame, since
+/// it is read by a widget elsewhere in the tree.
+class ControlBarHeightReporter extends StatefulWidget {
+  const ControlBarHeightReporter({
+    super.key,
+    required this.active,
+    required this.child,
+    this.target,
+  });
+
+  final bool active;
+  final Widget? child;
+
+  /// Where the height goes; [controlBarHeight] unless a test says otherwise.
+  final ValueNotifier<double>? target;
+
+  @override
+  State<ControlBarHeightReporter> createState() =>
+      _ControlBarHeightReporterState();
+}
+
+class _ControlBarHeightReporterState extends State<ControlBarHeightReporter> {
+  ValueNotifier<double> get _target => widget.target ?? controlBarHeight;
+
+  void _publish() {
+    if (!mounted || !widget.active) return;
+    final box = context.findRenderObject();
+    final height = widget.child != null && box is RenderBox && box.hasSize
+        ? box.size.height
+        : 0.0;
+    if (_target.value != height) _target.value = height;
+  }
+
+  @override
+  void dispose() {
+    if (widget.active) _target.value = 0;
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) => _publish());
+    return widget.child ?? const SizedBox.shrink();
+  }
+}

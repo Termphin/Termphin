@@ -7,6 +7,9 @@ const {
   parseRelayKey,
   cleanText,
   relayAndroid,
+  relayApns,
+  relayTag,
+  sessionLabel,
   relayText,
 } = require("../lib");
 
@@ -115,6 +118,32 @@ test("a synced copy is kept a year after Pro ends, with a warning a month before
     "keep",
   );
   assert.equal(syncSweepAction({ pro: false, lapsedAt: null }, now), "keep");
+});
+
+test("a relayed push about a session names it and is tagged for it", () => {
+  const android = relayAndroid({ title: "make deploy finished", session: "api", profileId: "p1" });
+  assert.equal(android.notification.title, "make deploy finished · api");
+  assert.equal(android.notification.tag, "relay:p1:api");
+  assert.equal(relayTag("p1", "api"), "relay:p1:api");
+  const apns = relayApns({ title: "make deploy finished", body: "done", session: "api" });
+  assert.deepEqual(apns.payload.aps.alert, { title: "make deploy finished", body: "done", subtitle: "api" });
+  assert.equal(apns.payload.aps.sound, "default");
+});
+
+test("a session the app made is named without its prefix", () => {
+  assert.equal(sessionLabel("termphin_6d79be"), "6d79be");
+  assert.equal(sessionLabel("api"), "api");
+  const android = relayAndroid({ title: "Done", session: "termphin_api", profileId: "p1" });
+  assert.equal(android.notification.title, "Done · api");
+  assert.equal(android.notification.tag, "relay:p1:termphin_api");
+  assert.equal(relayApns({ title: "Done", body: "", session: "termphin_api" }).payload.aps.alert.subtitle, "api");
+});
+
+test("a relayed push without a session keeps its title and has no tag", () => {
+  const android = relayAndroid({ title: "Backup", session: "", profileId: "p1" });
+  assert.equal(android.notification.title, undefined);
+  assert.equal(android.notification.tag, undefined);
+  assert.equal(relayApns({ title: "Backup", body: "ok", session: "" }).payload.aps.alert.subtitle, undefined);
 });
 
 test("a relayed push names the status bar icon, not the launcher icon", () => {
