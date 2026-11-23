@@ -45,6 +45,16 @@ void main() {
         .setMockMethodCallHandler(notificationsPluginChannel, null);
   });
 
+  test('names the session after the title, as a push does', () {
+    expect(
+      titleWithSession('make deploy finished', 'api'),
+      'make deploy finished · api',
+    );
+    expect(titleWithSession('Backup', null), 'Backup');
+    expect(titleWithSession('Backup', ''), 'Backup');
+    expect(titleWithSession('', 'api'), 'api');
+  });
+
   test('is not supported off iOS', () {
     expect(service.supported, isFalse);
   });
