@@ -17,6 +17,7 @@ import '../../services/settings/assistant_settings.dart';
 import '../../theme/theme.dart';
 import '../../widgets/account/pro_feature_sheet.dart';
 import '../../widgets/assistant/phin_badges.dart';
+import '../../widgets/profiles/profile_avatar.dart';
 import '../../widgets/ui/app_card.dart';
 import '../../widgets/ui/app_divider.dart';
 import '../../widgets/ui/confirm_dialog.dart';
@@ -24,6 +25,7 @@ import '../../widgets/ui/empty_state.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
 import '../../widgets/ui/section_header.dart';
 import '../../widgets/ui/settings_tile.dart';
+import 'phin_server_notes_screen.dart';
 
 /// Phin's settings: whether it is there at all, whether it remembers, and
 /// what it remembers about each server, note by note, to read and forget.
@@ -61,18 +63,6 @@ class _PhinSettingsScreenState extends ConsumerState<PhinSettingsScreen> {
   Future<void> _reload() async {
     final notes = await assistantMemory.all();
     if (mounted) setState(() => _notes = notes);
-  }
-
-  Future<void> _forget(String profileId, String name) async {
-    final t = Translations.of(context).assistant;
-    final sure = await showConfirmDialog(
-      context,
-      title: t.forgetServer,
-      message: t.forgetServerConfirm(name: name),
-      confirmLabel: t.forget,
-      destructive: true,
-    );
-    if (sure) await assistantMemory.forget(profileId);
   }
 
   Future<void> _forgetAll() async {
@@ -209,81 +199,45 @@ class _PhinSettingsScreenState extends ConsumerState<PhinSettingsScreen> {
                   text: t.knowsEmpty,
                 )
               else ...[
-                for (final entry in _notes.entries) ...[
-                  AppCard.fields(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                          AppTheme.space16,
-                          AppTheme.space12,
-                          AppTheme.space4,
-                          AppTheme.space4,
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                nameOf(entry.key),
-                                style: TextStyle(
-                                  fontSize: AppTheme.font15,
-                                  fontWeight: FontWeight.w600,
-                                  color: colors.textPrimary,
-                                ),
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: () =>
-                                  _forget(entry.key, nameOf(entry.key)),
-                              child: Text(t.forget),
-                            ),
-                          ],
+                AppCard.fields(
+                  children: [
+                    for (final (index, entry) in _notes.entries.indexed) ...[
+                      if (index > 0) const AppDivider(),
+                      SettingsTile(
+                        key: ValueKey('phinKnows-${entry.key}'),
+                        leading: switch (profiles[entry.key]) {
+                          final profile? => ProfileAvatar(
+                            iconName: profile.iconName,
+                            colorHex: profile.colorHex,
+                            size: AppTheme.icon24,
+                          ),
+                          null => null,
+                        },
+                        icon: profiles[entry.key] == null
+                            ? PhosphorIconsRegular.hardDrives
+                            : null,
+                        title: nameOf(entry.key),
+                        subtitle: t.knowsNotes(n: entry.value.length),
+                        destination: () => PhinServerNotesScreen(
+                          profileId: entry.key,
+                          name: nameOf(entry.key),
                         ),
                       ),
-                      for (final note in entry.value) ...[
-                        const AppDivider(),
-                        Padding(
-                          padding: const EdgeInsets.only(
-                            left: AppTheme.space16,
-                            right: AppTheme.space4,
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  note,
-                                  style: TextStyle(
-                                    fontSize: AppTheme.font14,
-                                    height: 1.4,
-                                    color: colors.textSecondary,
-                                  ),
-                                ),
-                              ),
-                              IconButton(
-                                tooltip: t.removeNote,
-                                onPressed: () => unawaited(
-                                  assistantMemory.remove(entry.key, note),
-                                ),
-                                icon: Icon(
-                                  PhosphorIconsRegular.trash,
-                                  size: AppTheme.icon18,
-                                  color: colors.textTertiary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
                     ],
-                  ),
-                  const SizedBox(height: AppTheme.space12),
-                ],
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton(
-                    onPressed: _forgetAll,
-                    style: TextButton.styleFrom(foregroundColor: colors.error),
-                    child: Text(t.forgetAll),
-                  ),
+                  ],
+                ),
+                const SizedBox(height: AppTheme.space12),
+                AppCard.fields(
+                  children: [
+                    SettingsTile(
+                      key: const ValueKey('phinForgetAll'),
+                      icon: PhosphorIconsRegular.trash,
+                      iconColor: colors.error,
+                      title: t.forgetAll,
+                      trailing: SettingsTileTrailing.none,
+                      onTap: _forgetAll,
+                    ),
+                  ],
                 ),
               ],
             ],
