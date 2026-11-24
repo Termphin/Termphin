@@ -75,6 +75,7 @@ Future<void> main() async {
 
   await DesktopWindow.instance.init();
   AppCommands.instance.install();
+  AppUpdater.instance.bindContext(() => navigatorKey.currentContext);
   unawaited(AppUpdater.instance.start());
   if (isLinuxPlatform) unawaited(SecretCipher.instance.masterKey());
 

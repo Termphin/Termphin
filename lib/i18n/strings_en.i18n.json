@@ -1855,5 +1855,19 @@
     "usageUsed": "{percent}% of the allowance used",
     "usageRenews": "Renews on {date}",
     "beta": "Beta"
+  },
+  "updates": {
+    "upToDate": "Termphin is up to date.",
+    "checkFailed": "Could not check for updates.",
+    "availableNotice": "Termphin {version} is available.",
+    "availableTitle": "Update available",
+    "availableMessage": "Termphin {version} (build {build}) is available. Download and install it now?",
+    "install": "Update",
+    "downloading": "Downloading Termphin {version}…",
+    "installFailed": "Could not install the update.",
+    "readyTitle": "Update installed",
+    "readyMessage": "Termphin {version} is ready. Restart now to use the new version?",
+    "restartNow": "Restart",
+    "later": "Later"
   }
 }

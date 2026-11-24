@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
@@ -105,8 +107,23 @@ enum PlatformFeature {
   /// own; turning notifications on there sends its servers' to the phone.
   receivesPush,
 
-  /// The app updates itself (Sparkle), outside any store.
+  /// The app updates itself outside any store (Sparkle on macOS, or an
+  /// AppImage replacing itself on Linux).
   selfUpdates,
+}
+
+/// Test override for the `APPIMAGE` environment variable so widget tests can
+/// exercise Linux AppImage behaviour without spawning a real AppImage.
+String? debugAppImagePathOverride;
+
+/// Path to the running AppImage bundle on Linux, or `null` when Termphin is
+/// running outside an AppImage.
+String? get currentAppImagePath {
+  final override = debugAppImagePathOverride;
+  if (override != null) return override.isEmpty ? null : override;
+  if (kIsWeb) return null;
+  final env = Platform.environment['APPIMAGE']?.trim();
+  return env == null || env.isEmpty ? null : env;
 }
 
 bool platformHas(PlatformFeature feature) => switch (feature) {
@@ -133,7 +150,8 @@ bool platformHas(PlatformFeature feature) => switch (feature) {
   PlatformFeature.localSshFolder => isDesktopPlatform,
   PlatformFeature.webAccountLinks => isDesktopPlatform,
   PlatformFeature.receivesPush => isAndroidPlatform || isIOSPlatform,
-  PlatformFeature.selfUpdates => isMacOSPlatform,
+  PlatformFeature.selfUpdates =>
+    isMacOSPlatform || (isLinuxPlatform && currentAppImagePath != null),
 };
 
 /// The narrowest window that gets the sidebar layout. A landscape window

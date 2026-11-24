@@ -1,0 +1,165 @@
+name: Linux AppImage
+
+# A signed Linux AppImage of any branch or tag, started by hand or from a
+# release. The Flutter release bundle is packed into Termphin-x86_64.AppImage
+# with appimagetool (with gh-releases-zsync metadata embedded for external
+# AppImage managers) and signed into appcast-linux.xml with the same Ed25519
+# key as macOS so the running AppImage can verify and replace itself.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch or tag to build'
+        required: true
+        type: string
+      preview:
+        description: 'Publish the AppImage as a pre-release'
+        required: false
+        type: boolean
+        default: false
+      release_tag:
+        description: 'Put the AppImage and its appcast into this release'
+        required: false
+        type: string
+        default: ''
+      build_number:
+        description: 'Build number to use instead of the one in pubspec.yaml'
+        required: false
+        type: string
+        default: ''
+      feed_url:
+        description: 'Appcast the app checks, instead of the latest release'
+        required: false
+        type: string
+        default: ''
+  workflow_call:
+    inputs:
+      ref:
+        required: true
+        type: string
+      release_tag:
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: linux-appimage-${{ inputs.release_tag || inputs.ref }}
+  cancel-in-progress: true
+
+jobs:
+  appimage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            clang cmake ninja-build pkg-config \
+            libgtk-3-dev libsecret-1-dev liblzma-dev \
+            desktop-file-utils file zsync
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: '3.50.0'
+
+      - run: flutter pub get
+
+      - name: Build
+        env:
+          WEB_API_KEY: ${{ vars.FIREBASE_WEB_API_KEY }}
+          BUILD_NUMBER: ${{ inputs.build_number }}
+          FEED_URL: ${{ inputs.feed_url }}
+        run: |
+          ARGS=(--release --dart-define=FIREBASE_WEB_API_KEY="$WEB_API_KEY")
+          if [ -n "$BUILD_NUMBER" ]; then ARGS+=(--build-number="$BUILD_NUMBER"); fi
+          if [ -n "$FEED_URL" ]; then ARGS+=(--dart-define=LINUX_APPCAST_URL="$FEED_URL"); fi
+          flutter build linux "${ARGS[@]}"
+
+      - name: Install appimagetool
+        run: |
+          curl -fsSL \
+            https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage \
+            -o "$RUNNER_TEMP/appimagetool"
+          echo "ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0  $RUNNER_TEMP/appimagetool" | sha256sum -c -
+          chmod 0755 "$RUNNER_TEMP/appimagetool"
+
+      - name: Pack the AppImage
+        env:
+          APPIMAGETOOL: ${{ runner.temp }}/appimagetool
+        run: |
+          OWNER="${GITHUB_REPOSITORY%%/*}"
+          REPO="${GITHUB_REPOSITORY#*/}"
+          export APPIMAGE_UPDATE_INFO="gh-releases-zsync|$OWNER|$REPO|latest|Termphin-x86_64.AppImage.zsync"
+          bash linux/packaging/build_appimage.sh \
+            build/linux/x64/release/bundle \
+            Termphin-x86_64.AppImage
+          ls -lh Termphin-x86_64.AppImage*
+
+      - name: Write the appcast
+        env:
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+          BUILD_NUMBER: ${{ inputs.build_number }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          VERSION=$(sed -n 's/^version: *\([0-9.]*\).*/\1/p' pubspec.yaml)
+          BUILD=${BUILD_NUMBER:-$(sed -n 's/^version: *[0-9.]*+\([0-9]*\).*/\1/p' pubspec.yaml)}
+          TAG=${RELEASE_TAG:-desktop-$VERSION-linux-preview.$GITHUB_RUN_NUMBER}
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install --quiet cryptography
+          "$RUNNER_TEMP/venv/bin/python" scripts/sparkle_appcast.py \
+            --file Termphin-x86_64.AppImage \
+            --os linux \
+            --min-system "" \
+            --version "$VERSION" --build "$BUILD" \
+            --url "https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/Termphin-x86_64.AppImage" \
+            --out appcast-linux.xml
+          cat appcast-linux.xml
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: Termphin-linux-appimage
+          path: |
+            Termphin-x86_64.AppImage
+            Termphin-x86_64.AppImage.zsync
+            appcast-linux.xml
+          retention-days: 14
+
+      - name: Put it into the release
+        if: ${{ inputs.release_tag != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag }}
+        run: |
+          FILES=(Termphin-x86_64.AppImage appcast-linux.xml)
+          if [ -f Termphin-x86_64.AppImage.zsync ]; then FILES+=(Termphin-x86_64.AppImage.zsync); fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "${FILES[@]}" --clobber
+          else
+            gh release create "$TAG" "${FILES[@]}" --target "$(git rev-parse HEAD)" \
+              --prerelease --latest=false --title "Termphin for Linux $TAG" \
+              --notes "A test build of the desktop app for Linux (AppImage). Not a release."
+          fi
+
+      - name: Publish a pre-release
+        if: ${{ inputs.preview && inputs.release_tag == '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REF: ${{ inputs.ref }}
+        run: |
+          VERSION=$(sed -n 's/^version: *\([0-9.]*\).*/\1/p' pubspec.yaml)
+          TAG="desktop-$VERSION-linux-preview.$GITHUB_RUN_NUMBER"
+          FILES=(Termphin-x86_64.AppImage appcast-linux.xml)
+          if [ -f Termphin-x86_64.AppImage.zsync ]; then FILES+=(Termphin-x86_64.AppImage.zsync); fi
+          gh release create "$TAG" "${FILES[@]}" --target "$(git rev-parse HEAD)" --prerelease --latest=false \
+            --title "Termphin for Linux $VERSION preview $GITHUB_RUN_NUMBER" \
+            --notes "A test build of the desktop app for Linux from \`$REF\`. Not a release."

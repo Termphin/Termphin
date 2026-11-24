@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:termphin/i18n/strings.g.dart';
+import 'package:termphin/utils/platform_info.dart';
 import 'package:termphin/widgets/window/title_bar.dart';
 
 import '../../support/test_app.dart';
@@ -127,10 +128,19 @@ void main() {
   testWidgets('elsewhere nothing updates itself, so nothing offers to', (
     tester,
   ) async {
+    debugAppImagePathOverride = '';
+    addTearDown(() => debugAppImagePathOverride = null);
     await pumpTestApp(tester, const Scaffold(body: SizedBox.shrink()));
     expect(
       itemsOf(tester, 'Termphin'),
       isNot(contains('Check for updates...')),
     );
+  }, variant: TargetPlatformVariant.only(TargetPlatform.linux));
+
+  testWidgets('a Linux AppImage offers to check for updates', (tester) async {
+    debugAppImagePathOverride = '/tmp/Termphin.AppImage';
+    addTearDown(() => debugAppImagePathOverride = null);
+    await pumpTestApp(tester, const Scaffold(body: SizedBox.shrink()));
+    expect(itemsOf(tester, 'Termphin'), contains('Check for updates...'));
   }, variant: TargetPlatformVariant.only(TargetPlatform.linux));
 }
