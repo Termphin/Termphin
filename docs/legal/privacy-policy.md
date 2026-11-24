@@ -111,6 +111,15 @@ signing out deletes.
 Your password, if you use one, is held by Firebase Authentication as a salted
 hash; we never see it.
 
+**Signing in on a computer.** Termphin on a computer signs in with a code you
+type into the account page. While that code is open - at most ten minutes -
+we keep which kind of computer asked (macOS, Windows or Linux) and the
+country its request came from, read from its network address, and show them
+to you on the page before you confirm, so you can tell whether it was you.
+The address itself is only held in memory, for up to ten minutes, to limit
+how many sign-ins one address can start; it is never written down. The
+computer's kind and country are deleted with the code.
+
 **Deleting your account** is in the app under Settings, Account. It deletes
 the account itself and, at once, everything stored for it: sync data, device
 registrations, server relay keys and your customer record at RevenueCat
