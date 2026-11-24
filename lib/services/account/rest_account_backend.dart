@@ -17,9 +17,10 @@ import 'account_service.dart';
 /// it comes in at build time like the rest of the Firebase configuration.
 const kFirebaseWebApiKey = String.fromEnvironment('FIREBASE_WEB_API_KEY');
 
-/// Where the functions that sign a computer in live.
-const kLinkStartUrl =
-    'https://europe-central2-termphin-hexeosoft.cloudfunctions.net/linkStart';
+/// Where a computer starts its sign-in: through the account page, which
+/// adds the country the request came from for the confirm page to show,
+/// and where it then polls the function for the outcome.
+const kLinkStartUrl = '${ProjectUrls.accountPage}/api/link/start';
 const kLinkFinishUrl =
     'https://europe-central2-termphin-hexeosoft.cloudfunctions.net/linkFinish';
 
@@ -109,9 +110,11 @@ AccountProvider providerFromId(String? id) => switch (id) {
 /// page (`app.termphin.dev/link`) rather than by a provider's own sign-in,
 /// which needs a phone's or a browser's machinery.
 ///
-/// Signing in: [signInThroughBrowser] asks `linkStart` for a code, with the
-/// hash of a secret only this computer holds; the user confirms the code on
-/// the account page, signed in there with any provider; polling
+/// Signing in: [signInThroughBrowser] asks `linkStart`, through the account
+/// page, for a code, with the hash of a secret only this computer holds; the
+/// user types the code into the account page - which is opened bare, never
+/// with the code in its address, so a link to it hands nobody a sign-in -
+/// and confirms it, signed in there with any provider; polling
 /// `linkFinish` with the secret then hands back a custom token, which
 /// Firebase Auth trades for the account's own ID and refresh tokens. The
 /// refresh token is kept sealed ([SecretCipher]) so the next launch is
@@ -193,7 +196,7 @@ class RestAccountBackend implements AccountBackend {
     );
     final started = await _call(Uri.parse(kLinkStartUrl), {
       'secretHash': sha256.convert(utf8.encode(secret)).toString(),
-      'device': 'Termphin on ${_platformName()}',
+      'platform': _platformKey(),
     });
     final linkId = started.body['linkId'];
     final code = started.body['code'];
@@ -201,12 +204,7 @@ class RestAccountBackend implements AccountBackend {
     if (started.status != 200 || linkId is! String || code is! String) {
       throw const AccountException(AccountFailure.unavailable);
     }
-    show((
-      code: code,
-      page: Uri.parse(
-        '${ProjectUrls.accountPage}/link',
-      ).replace(queryParameters: {'code': code}),
-    ));
+    show((code: code, page: Uri.parse('${ProjectUrls.accountPage}/link')));
     final deadline = _now().add(Duration(seconds: expiresIn));
     while (true) {
       if (cancelled()) throw const AccountException(AccountFailure.cancelled);
@@ -404,10 +402,12 @@ class RestAccountBackend implements AccountBackend {
     }
   }
 
-  static String _platformName() {
-    if (isMacOSPlatform) return 'macOS';
-    if (isWindowsPlatform) return 'Windows';
-    return 'Linux';
+  /// The platform as the sign-in names it, for the fixed label the confirm
+  /// page shows.
+  static String _platformKey() {
+    if (isMacOSPlatform) return 'macos';
+    if (isWindowsPlatform) return 'windows';
+    return 'linux';
   }
 
   static Future<RestAnswer> _httpPost(

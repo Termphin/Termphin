@@ -16,6 +16,7 @@ import '../services/pro/pro_service.dart';
 import '../theme/theme.dart';
 import '../widgets/onboarding/legal_update_dialog.dart';
 import '../widgets/onboarding/whats_new_modal.dart';
+import '../widgets/pro/pro_welcome_dialog.dart';
 import '../widgets/terminal/older_session_sheet.dart';
 import '../widgets/terminal/terminal_rendering.dart';
 import '../widgets/ui/app_notifications.dart';
@@ -281,6 +282,22 @@ class _DebugSheet extends StatelessWidget {
               onTap: () => _then(context, (app) async {
                 final all = await WhatsNewService.instance.everyHighlight();
                 if (app.mounted) await showWhatsNewModal(app, all);
+              }),
+            ),
+            SettingsTile(
+              title: 'Pro welcome',
+              subtitle: 'The welcome shown once Pro comes on',
+              onTap: () => _then(context, showProWelcomeDialog),
+            ),
+            SettingsTile(
+              title: 'Pro welcome: show again',
+              subtitle:
+                  'Forget it was shown; shows for Pro bought within a day',
+              onTap: () => _then(context, (app) async {
+                await (await SharedPreferences.getInstance()).remove(
+                  ProWelcome.prefsKey,
+                );
+                await ProWelcome.maybeShow();
               }),
             ),
             for (final kind in AppNotificationKind.values)

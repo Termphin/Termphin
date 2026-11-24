@@ -56,7 +56,7 @@ void main() {
   );
 
   void signInScript({int pendingPolls = 1}) {
-    server.reply('linkStart', 200, {
+    server.reply('start', 200, {
       'linkId': 'link12345678',
       'code': 'ABCD-EFGH',
       'expiresIn': 600,
@@ -94,16 +94,15 @@ void main() {
     );
 
     expect(shown!.code, 'ABCD-EFGH');
-    expect(
-      shown!.page.toString(),
-      'https://app.termphin.dev/link?code=ABCD-EFGH',
-    );
+    expect(shown!.page.toString(), 'https://app.termphin.dev/link');
     expect(account.currentUser!.uid, 'u1');
     expect(account.currentUser!.provider, AccountProvider.github);
 
     final start = server.calls.first.$2;
     final finish = server.calls.firstWhere((c) => c.$1 == 'linkFinish').$2;
+    expect(server.calls.first.$1, 'start');
     expect(start['secretHash'], hasLength(64));
+    expect(start['platform'], isIn(['macos', 'windows', 'linux']));
     expect(start.containsKey('secret'), isFalse);
     expect(finish['secret'], isNot(start['secretHash']));
   });
@@ -177,7 +176,7 @@ void main() {
   });
 
   test('an expired code ends the wait', () async {
-    server.reply('linkStart', 200, {
+    server.reply('start', 200, {
       'linkId': 'link12345678',
       'code': 'ABCD-EFGH',
       'expiresIn': 600,

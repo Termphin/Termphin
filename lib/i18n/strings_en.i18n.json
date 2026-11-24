@@ -1536,10 +1536,10 @@
     "continueWithGitHub": "Continue with GitHub",
     "agreeNotice": "By signing in or creating an account you agree to the terms of service and the privacy policy.",
     "browser": {
-      "intro": "Sign in on your account page in the browser, with Google, GitHub, Apple or email, and confirm the code shown here.",
+      "intro": "Sign in on your account page in the browser, with Google, GitHub, Apple or email, then type the code shown here.",
       "start": "Sign in with your browser",
       "code": "Your code",
-      "waiting": "Waiting for you to confirm it in the browser...",
+      "waiting": "Type this code on the page in your browser and confirm it...",
       "openAgain": "Open the page again"
     },
     "orEmail": "Or with an email address",
@@ -1763,6 +1763,12 @@
     "phinSettings": "Phin settings",
     "phinSettingsSubtitle": "Memory and what Phin knows about your servers"
   },
+  "proWelcome": {
+    "title": "Welcome to Pro",
+    "body": "Thank you for backing Termphin. Here is everything that is now yours.",
+    "setUp": "Set it up",
+    "later": "Later"
+  },
   "legalUpdate": {
     "title": "Our terms and privacy policy have changed",
     "gotIt": "Got it"
@@ -1823,7 +1829,11 @@
     "memorySubtitle": "Phin keeps short notes about each server, such as which service runs your app, so it does not look them up again. Stored only on this device.",
     "knowsTitle": "What Phin knows",
     "knowsEmpty": "Nothing yet. Phin saves notes as it learns about your servers.",
-    "knowsNotes": "{n} notes",
+    "knowsNotes(n: num)": {
+      "one": "{n} note",
+      "other": "{n} notes"
+    },
+    "knowsServerSubtitle": "What Phin noted while working on this server. Remove anything wrong or out of date - Phin checks notes before relying on them.",
     "forgetServer": "Forget this server",
     "forgetServerConfirm": "Forget everything Phin noted about {name}?",
     "forgetAll": "Forget everything",

@@ -24,6 +24,8 @@
     - "Termphin Pro is the first row in Settings, for everyone"
     - "Settings rows show a small icon beside their title"
     - "Live status moved from the account screen to the Termphin Pro screen"
+  fixed:
+    - "Termphin installs on devices without WiFi"
 - version: "1.16.1"
   date: "2026-11-21"
   changed:

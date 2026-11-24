@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:terminal_view/terminal_view.dart';
 
 import '../ssh/remote_agent_service.dart' show shellQuote;
@@ -11,6 +12,7 @@ import 'assistant_memory.dart';
 import 'assistant_redactor.dart';
 import 'assistant_session.dart';
 import 'assistant_stream.dart';
+import 'server_system.dart';
 
 /// What a command run for the assistant printed and how it ended.
 typedef AssistantRun = ({String output, int? exitCode, bool timedOut});
@@ -52,7 +54,19 @@ typedef AssistantTarget = ({
   List<String> users,
   String profileId,
   String? Function() readScreen,
+  bool windows,
 });
+
+/// [body] as context for the model, inside a `<[tag]>` element: what the
+/// app adds to the first message - what the server runs, the notes saved
+/// about it - so it cannot be read as part of what the user asked, which
+/// follows it as a block of its own. A note that names the tag itself
+/// loses it, so it cannot close the element early.
+@visibleForTesting
+String contextBlock(String tag, String body) {
+  final inner = body.replaceAll('<$tag>', '').replaceAll('</$tag>', '');
+  return '<$tag>\n$inner\n</$tag>';
+}
 
 /// Runs the assistant: sends the conversation a step at a time, shows what
 /// the model says as it arrives, and carries out its tool calls - `inspect`
@@ -94,8 +108,14 @@ class AssistantAgent {
   /// How long an approved command may run, waiting for the user's answers
   /// included.
   static const _answerTimeout = Duration(minutes: 15);
-  static const _keepLines = 150;
-  static const _keepChars = 8000;
+
+  /// How much of a command's output reaches the model: its last lines, up
+  /// to this many characters. Every result stays in the conversation and
+  /// is sent again with each later step, so a long one is paid for many
+  /// times; the model is told to read narrowly, with grep and tail, and can
+  /// ask for more.
+  static const _keepLines = 80;
+  static const _keepChars = 4000;
 
   final _messages = <Map<String, dynamic>>[];
   AssistantTarget? _target;
@@ -149,12 +169,21 @@ class AssistantAgent {
     final notes = _messages.isEmpty && memoryOn()
         ? await memory.notesFor(_target!.profileId)
         : const <String>[];
+    final system = _messages.isEmpty ? _system : null;
     _appendUser([
+      if (system != null)
+        {
+          'type': 'text',
+          'text': _redactor!.hide(contextBlock('server_system', system)),
+        },
       if (notes.isNotEmpty)
         {
           'type': 'text',
           'text': _redactor!.hide(
-            'Notes saved about this server earlier:\n${notes.map((n) => '- $n').join('\n')}',
+            contextBlock(
+              'saved_notes',
+              'Notes saved about this server earlier:\n${notes.map((n) => '- $n').join('\n')}',
+            ),
           ),
         },
       {'type': 'text', 'text': _redactor!.hide(text)},
@@ -190,6 +219,7 @@ class AssistantAgent {
     _messages.clear();
     _target = null;
     _redactor = null;
+    _system = null;
     _warned = false;
   }
 
@@ -210,8 +240,17 @@ class AssistantAgent {
             .where((line) => line.isNotEmpty && line != 'localhost'),
     ];
     _redactor = AssistantRedactor(hosts: hosts, users: target.users);
+    final system = await _runQuietly(
+      target.windows ? kWindowsSystemProbe : kUnixSystemProbe,
+      const Duration(seconds: 5),
+    );
+    _system = describeServerSystem(system.output, windows: target.windows);
     return true;
   }
+
+  /// What the server is, for the model to pick its commands by; null when
+  /// it could not be told.
+  String? _system;
 
   Future<void> _loop(int run) async {
     for (var step = 0; step < maxSteps; step++) {

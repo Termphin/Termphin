@@ -11,6 +11,7 @@ import 'package:termphin/widgets/account/pro_card.dart';
 import 'package:termphin/widgets/account/pro_feature_sheet.dart';
 import 'package:termphin/widgets/account/sync_card.dart';
 import 'package:termphin/widgets/pro/feature_demos.dart';
+import 'package:termphin/widgets/pro/pro_benefits.dart';
 import 'package:termphin/widgets/settings/notifications_settings_section.dart';
 
 import '../../support/secure_storage_channel.dart';
@@ -54,6 +55,16 @@ void main() {
     await tester.scrollUntilVisible(find.byType(SyncCard), 200);
     expect(find.byType(SyncCard), findsOneWidget);
     expect(find.byType(ProCard), findsNothing);
+  });
+
+  testWidgets('every Pro benefit has its section', (tester) async {
+    await pump(tester);
+
+    for (final benefit in ProBenefit.values) {
+      final row = find.byKey(ValueKey('proBenefit-${benefit.name}'));
+      await tester.scrollUntilVisible(row, 200);
+      expect(row, findsOneWidget);
+    }
   });
 
   testWidgets('how it works shows the live demo', (tester) async {

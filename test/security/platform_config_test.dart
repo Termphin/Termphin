@@ -173,6 +173,14 @@ void main() {
       });
     });
 
+    test('no hardware a permission implies is required to install', () {
+      final features = {
+        for (final element in _elements('uses-feature'))
+          _attribute(element, 'name'): _attribute(element, 'required'),
+      };
+      expect(features['android.hardware.wifi'], 'false');
+    });
+
     test('a push the system draws uses the status bar icon', () {
       final icons = {
         for (final element in _elements('meta-data'))

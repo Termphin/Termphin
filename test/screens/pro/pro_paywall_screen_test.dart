@@ -11,6 +11,7 @@ import 'package:termphin/services/account/account_service.dart';
 import 'package:termphin/services/analytics/analytics_service.dart';
 import 'package:termphin/services/pro/pro_service.dart';
 import 'package:termphin/widgets/pro/feature_demos.dart';
+import 'package:termphin/widgets/pro/pro_benefits.dart';
 
 import '../../support/analytics_recorder.dart';
 import '../../support/test_app.dart';
@@ -95,6 +96,24 @@ void main() {
         isNull,
       );
     });
+  });
+
+  testWidgets('the paywall lists every Pro benefit', (tester) async {
+    await pumpTestApp(
+      tester,
+      const ProPaywallScreen(source: ProSource.settings, offers: []),
+    );
+    await tester.pump();
+
+    for (final benefit in ProBenefit.values) {
+      final row = find.byKey(ValueKey('proBenefit-${benefit.name}'));
+      await tester.scrollUntilVisible(
+        row,
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(row, findsOneWidget);
+    }
   });
 
   testWidgets('signed out, the paywall asks for a sign-in instead of saying '

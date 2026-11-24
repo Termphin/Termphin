@@ -16,6 +16,9 @@
     <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+    <!-- ACCESS_WIFI_STATE makes Play assume WiFi is required and hide the app
+         from devices without it. The app only reads the network state. -->
+    <uses-feature android:name="android.hardware.wifi" android:required="false"/>
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
     <!-- Firebase Analytics merges in the advertising ID permissions, Google
          Play services' and Android's own ad services. The app never reads

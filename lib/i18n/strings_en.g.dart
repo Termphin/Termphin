@@ -88,6 +88,7 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 	late final Translations$proFeature$en proFeature = Translations$proFeature$en.internal(_root);
 	late final Translations$proDemo$en proDemo = Translations$proDemo$en.internal(_root);
 	late final Translations$proHub$en proHub = Translations$proHub$en.internal(_root);
+	late final Translations$proWelcome$en proWelcome = Translations$proWelcome$en.internal(_root);
 	late final Translations$legalUpdate$en legalUpdate = Translations$legalUpdate$en.internal(_root);
 	late final Translations$assistant$en assistant = Translations$assistant$en.internal(_root);
 }
@@ -4658,6 +4659,27 @@ class Translations$proHub$en {
 	String get phinSettingsSubtitle => 'Memory and what Phin knows about your servers';
 }
 
+// Path: proWelcome
+class Translations$proWelcome$en {
+	Translations$proWelcome$en.internal(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'Welcome to Pro'
+	String get title => 'Welcome to Pro';
+
+	/// en: 'Thank you for backing Termphin. Here is everything that is now yours.'
+	String get body => 'Thank you for backing Termphin. Here is everything that is now yours.';
+
+	/// en: 'Set it up'
+	String get setUp => 'Set it up';
+
+	/// en: 'Later'
+	String get later => 'Later';
+}
+
 // Path: legalUpdate
 class Translations$legalUpdate$en {
 	Translations$legalUpdate$en.internal(this._root);
@@ -4846,8 +4868,14 @@ class Translations$assistant$en {
 	/// en: 'Nothing yet. Phin saves notes as it learns about your servers.'
 	String get knowsEmpty => 'Nothing yet. Phin saves notes as it learns about your servers.';
 
-	/// en: '{n} notes'
-	String knowsNotes({required Object n}) => '${n} notes';
+	/// en: '(one) {{n} note} (other) {{n} notes}'
+	String knowsNotes({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n,
+		one: '${n} note',
+		other: '${n} notes',
+	);
+
+	/// en: 'What Phin noted while working on this server. Remove anything wrong or out of date - Phin checks notes before relying on them.'
+	String get knowsServerSubtitle => 'What Phin noted while working on this server. Remove anything wrong or out of date - Phin checks notes before relying on them.';
 
 	/// en: 'Forget this server'
 	String get forgetServer => 'Forget this server';
@@ -5239,8 +5267,8 @@ class Translations$account$browser$en {
 
 	// Translations
 
-	/// en: 'Sign in on your account page in the browser, with Google, GitHub, Apple or email, and confirm the code shown here.'
-	String get intro => 'Sign in on your account page in the browser, with Google, GitHub, Apple or email, and confirm the code shown here.';
+	/// en: 'Sign in on your account page in the browser, with Google, GitHub, Apple or email, then type the code shown here.'
+	String get intro => 'Sign in on your account page in the browser, with Google, GitHub, Apple or email, then type the code shown here.';
 
 	/// en: 'Sign in with your browser'
 	String get start => 'Sign in with your browser';
@@ -5248,8 +5276,8 @@ class Translations$account$browser$en {
 	/// en: 'Your code'
 	String get code => 'Your code';
 
-	/// en: 'Waiting for you to confirm it in the browser...'
-	String get waiting => 'Waiting for you to confirm it in the browser...';
+	/// en: 'Type this code on the page in your browser and confirm it...'
+	String get waiting => 'Type this code on the page in your browser and confirm it...';
 
 	/// en: 'Open the page again'
 	String get openAgain => 'Open the page again';
@@ -7045,10 +7073,10 @@ extension on Translations {
 			'account.continueWithApple' => 'Continue with Apple',
 			'account.continueWithGitHub' => 'Continue with GitHub',
 			'account.agreeNotice' => 'By signing in or creating an account you agree to the terms of service and the privacy policy.',
-			'account.browser.intro' => 'Sign in on your account page in the browser, with Google, GitHub, Apple or email, and confirm the code shown here.',
+			'account.browser.intro' => 'Sign in on your account page in the browser, with Google, GitHub, Apple or email, then type the code shown here.',
 			'account.browser.start' => 'Sign in with your browser',
 			'account.browser.code' => 'Your code',
-			'account.browser.waiting' => 'Waiting for you to confirm it in the browser...',
+			'account.browser.waiting' => 'Type this code on the page in your browser and confirm it...',
 			'account.browser.openAgain' => 'Open the page again',
 			'account.orEmail' => 'Or with an email address',
 			'account.email' => 'Email',
@@ -7248,6 +7276,10 @@ extension on Translations {
 			'proHub.active' => 'Active',
 			'proHub.phinSettings' => 'Phin settings',
 			'proHub.phinSettingsSubtitle' => 'Memory and what Phin knows about your servers',
+			'proWelcome.title' => 'Welcome to Pro',
+			'proWelcome.body' => 'Thank you for backing Termphin. Here is everything that is now yours.',
+			'proWelcome.setUp' => 'Set it up',
+			'proWelcome.later' => 'Later',
 			'legalUpdate.title' => 'Our terms and privacy policy have changed',
 			'legalUpdate.gotIt' => 'Got it',
 			'assistant.title' => 'Phin',
@@ -7305,7 +7337,8 @@ extension on Translations {
 			'assistant.memorySubtitle' => 'Phin keeps short notes about each server, such as which service runs your app, so it does not look them up again. Stored only on this device.',
 			'assistant.knowsTitle' => 'What Phin knows',
 			'assistant.knowsEmpty' => 'Nothing yet. Phin saves notes as it learns about your servers.',
-			'assistant.knowsNotes' => ({required Object n}) => '${n} notes',
+			'assistant.knowsNotes' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '${n} note', other: '${n} notes', ), 
+			'assistant.knowsServerSubtitle' => 'What Phin noted while working on this server. Remove anything wrong or out of date - Phin checks notes before relying on them.',
 			'assistant.forgetServer' => 'Forget this server',
 			'assistant.forgetServerConfirm' => ({required Object name}) => 'Forget everything Phin noted about ${name}?',
 			'assistant.forgetAll' => 'Forget everything',
