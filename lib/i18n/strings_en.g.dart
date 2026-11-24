@@ -5236,8 +5236,8 @@ class Translations$account$browser$en {
 
 	// Translations
 
-	/// en: 'Sign in on your account page in the browser, with Google, GitHub, Apple or email, and confirm the code shown here.'
-	String get intro => 'Sign in on your account page in the browser, with Google, GitHub, Apple or email, and confirm the code shown here.';
+	/// en: 'Sign in on your account page in the browser, with Google, GitHub, Apple or email, then type the code shown here.'
+	String get intro => 'Sign in on your account page in the browser, with Google, GitHub, Apple or email, then type the code shown here.';
 
 	/// en: 'Sign in with your browser'
 	String get start => 'Sign in with your browser';
@@ -5245,8 +5245,8 @@ class Translations$account$browser$en {
 	/// en: 'Your code'
 	String get code => 'Your code';
 
-	/// en: 'Waiting for you to confirm it in the browser...'
-	String get waiting => 'Waiting for you to confirm it in the browser...';
+	/// en: 'Type this code on the page in your browser and confirm it...'
+	String get waiting => 'Type this code on the page in your browser and confirm it...';
 
 	/// en: 'Open the page again'
 	String get openAgain => 'Open the page again';
@@ -7041,10 +7041,10 @@ extension on Translations {
 			'account.continueWithApple' => 'Continue with Apple',
 			'account.continueWithGitHub' => 'Continue with GitHub',
 			'account.agreeNotice' => 'By signing in or creating an account you agree to the terms of service and the privacy policy.',
-			'account.browser.intro' => 'Sign in on your account page in the browser, with Google, GitHub, Apple or email, and confirm the code shown here.',
+			'account.browser.intro' => 'Sign in on your account page in the browser, with Google, GitHub, Apple or email, then type the code shown here.',
 			'account.browser.start' => 'Sign in with your browser',
 			'account.browser.code' => 'Your code',
-			'account.browser.waiting' => 'Waiting for you to confirm it in the browser...',
+			'account.browser.waiting' => 'Type this code on the page in your browser and confirm it...',
 			'account.browser.openAgain' => 'Open the page again',
 			'account.orEmail' => 'Or with an email address',
 			'account.email' => 'Email',

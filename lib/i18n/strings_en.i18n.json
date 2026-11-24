@@ -1535,10 +1535,10 @@
     "continueWithGitHub": "Continue with GitHub",
     "agreeNotice": "By signing in or creating an account you agree to the terms of service and the privacy policy.",
     "browser": {
-      "intro": "Sign in on your account page in the browser, with Google, GitHub, Apple or email, and confirm the code shown here.",
+      "intro": "Sign in on your account page in the browser, with Google, GitHub, Apple or email, then type the code shown here.",
       "start": "Sign in with your browser",
       "code": "Your code",
-      "waiting": "Waiting for you to confirm it in the browser...",
+      "waiting": "Type this code on the page in your browser and confirm it...",
       "openAgain": "Open the page again"
     },
     "orEmail": "Or with an email address",
