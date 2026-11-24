@@ -31,8 +31,12 @@ class AppUpdater {
   /// Whether this build updates itself: macOS, or Linux running as an AppImage.
   bool get supported => platformHas(PlatformFeature.selfUpdates);
 
+  /// Interval between background update checks on desktop.
+  static const kCheckInterval = Duration(hours: 24);
+
   bool _started = false;
   bool _busy = false;
+  Timer? _linuxTimer;
   BuildContext? Function()? _contextProvider;
 
   /// Latest update discovered on Linux AppImage builds, observed by the
@@ -45,7 +49,7 @@ class AppUpdater {
     _contextProvider = contextProvider;
   }
 
-  /// Starts quiet update checking at launch.
+  /// Starts quiet update checking at launch and every [kCheckInterval].
   Future<void> start() async {
     if (!supported || _started) return;
     _started = true;
@@ -55,6 +59,11 @@ class AppUpdater {
     }
     if (isLinuxPlatform) {
       unawaited(_checkLinuxQuietly());
+      _linuxTimer?.cancel();
+      _linuxTimer = Timer.periodic(
+        kCheckInterval,
+        (_) => unawaited(_checkLinuxQuietly()),
+      );
     }
   }
 
@@ -78,7 +87,7 @@ class AppUpdater {
   Future<void> _startMacOS() async {
     try {
       await autoUpdater.setFeedURL(kAppcastUrl);
-      await autoUpdater.setScheduledCheckInterval(86400);
+      await autoUpdater.setScheduledCheckInterval(kCheckInterval.inSeconds);
       await autoUpdater.checkForUpdates(inBackground: true);
     } catch (error) {
       debugPrint('Updates could not start: $error');
