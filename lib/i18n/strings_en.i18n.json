@@ -1762,6 +1762,12 @@
     "phinSettings": "Phin settings",
     "phinSettingsSubtitle": "Memory and what Phin knows about your servers"
   },
+  "proWelcome": {
+    "title": "Welcome to Pro",
+    "body": "Thank you for backing Termphin. Here is everything that is now yours.",
+    "setUp": "Set it up",
+    "later": "Later"
+  },
   "legalUpdate": {
     "title": "Our terms and privacy policy have changed",
     "gotIt": "Got it"

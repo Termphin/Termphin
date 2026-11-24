@@ -88,6 +88,7 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 	late final Translations$proFeature$en proFeature = Translations$proFeature$en.internal(_root);
 	late final Translations$proDemo$en proDemo = Translations$proDemo$en.internal(_root);
 	late final Translations$proHub$en proHub = Translations$proHub$en.internal(_root);
+	late final Translations$proWelcome$en proWelcome = Translations$proWelcome$en.internal(_root);
 	late final Translations$legalUpdate$en legalUpdate = Translations$legalUpdate$en.internal(_root);
 	late final Translations$assistant$en assistant = Translations$assistant$en.internal(_root);
 }
@@ -4655,6 +4656,27 @@ class Translations$proHub$en {
 	String get phinSettingsSubtitle => 'Memory and what Phin knows about your servers';
 }
 
+// Path: proWelcome
+class Translations$proWelcome$en {
+	Translations$proWelcome$en.internal(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'Welcome to Pro'
+	String get title => 'Welcome to Pro';
+
+	/// en: 'Thank you for backing Termphin. Here is everything that is now yours.'
+	String get body => 'Thank you for backing Termphin. Here is everything that is now yours.';
+
+	/// en: 'Set it up'
+	String get setUp => 'Set it up';
+
+	/// en: 'Later'
+	String get later => 'Later';
+}
+
 // Path: legalUpdate
 class Translations$legalUpdate$en {
 	Translations$legalUpdate$en.internal(this._root);
@@ -7244,6 +7266,10 @@ extension on Translations {
 			'proHub.active' => 'Active',
 			'proHub.phinSettings' => 'Phin settings',
 			'proHub.phinSettingsSubtitle' => 'Memory and what Phin knows about your servers',
+			'proWelcome.title' => 'Welcome to Pro',
+			'proWelcome.body' => 'Thank you for backing Termphin. Here is everything that is now yours.',
+			'proWelcome.setUp' => 'Set it up',
+			'proWelcome.later' => 'Later',
 			'legalUpdate.title' => 'Our terms and privacy policy have changed',
 			'legalUpdate.gotIt' => 'Got it',
 			'assistant.title' => 'Phin',

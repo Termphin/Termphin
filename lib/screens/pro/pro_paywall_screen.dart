@@ -16,6 +16,8 @@ import '../../theme/theme.dart';
 import '../../utils/platform_info.dart';
 import '../../widgets/account/pro_feature_sheet.dart';
 import '../../widgets/pro/ascii_glow.dart';
+import '../../widgets/pro/pro_benefits.dart';
+import '../../widgets/pro/pro_welcome_dialog.dart';
 import '../../widgets/ui/app_notifications.dart';
 import '../../widgets/ui/app_sheet.dart';
 import '../../widgets/ui/clipboard_and_links.dart';
@@ -93,6 +95,7 @@ class _ProPaywallScreenState extends ConsumerState<ProPaywallScreen> {
   @override
   void initState() {
     super.initState();
+    ProWelcome.hold();
     _pro.active.addListener(_leaveIfPro);
     unawaited(_load());
     unawaited(_checkPro());
@@ -101,6 +104,7 @@ class _ProPaywallScreenState extends ConsumerState<ProPaywallScreen> {
   @override
   void dispose() {
     _pro.active.removeListener(_leaveIfPro);
+    ProWelcome.release();
     super.dispose();
   }
 
@@ -335,29 +339,20 @@ class _ProPaywallScreenState extends ConsumerState<ProPaywallScreen> {
                         padding: sides,
                         child: Column(
                           children: [
-                            _Feature(
-                              icon: PhosphorIconsRegular.sparkle,
-                              title: p.phinTitle,
-                              body: p.phinBody,
-                              demo: ProFeature.phin,
-                            ),
-                            _Feature(
-                              icon: PhosphorIconsRegular.bellRinging,
-                              title: p.pushTitle,
-                              body: p.pushBody,
-                              demo: ProFeature.notifications,
-                            ),
-                            _Feature(
-                              icon: PhosphorIconsRegular.pulse,
-                              title: p.liveTitle,
-                              body: p.liveBody,
-                              demo: ProFeature.liveStatus,
-                            ),
-                            _Feature(
-                              icon: PhosphorIconsRegular.arrowsClockwise,
-                              title: p.syncTitle,
-                              body: p.syncBody,
-                            ),
+                            for (final benefit in ProBenefit.values)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: AppTheme.space10,
+                                ),
+                                child: ProBenefitRow(
+                                  benefit: benefit,
+                                  iconColor: colors.textSecondary,
+                                  footer: switch (benefit.demo) {
+                                    final demo? => _HowItWorks(demo: demo),
+                                    null => null,
+                                  },
+                                ),
+                              ),
                             _Feature(
                               icon: PhosphorIconsRegular.heart,
                               title: p.supportTitle,
@@ -494,24 +489,18 @@ int? savingPercent(ProOffer yearly, ProOffer? monthly) {
 /// stretch into bars.
 const double _columnWidth = 480;
 
+/// The line under the benefits that is not a feature: what Pro pays for.
 class _Feature extends StatelessWidget {
-  const _Feature({
-    required this.icon,
-    required this.title,
-    required this.body,
-    this.demo,
-  });
+  const _Feature({required this.icon, required this.title, required this.body});
 
   final IconData icon;
   final String title;
   final String body;
-  final ProFeature? demo;
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final colors = context.colors;
-    final demo = this.demo;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppTheme.space10),
       child: Row(
@@ -529,35 +518,39 @@ class _Feature extends StatelessWidget {
                   body,
                   style: text.bodySmall?.copyWith(color: colors.textSecondary),
                 ),
-                if (demo != null)
-                  TextButton.icon(
-                    key: ValueKey('paywallHowItWorks-${demo.name}'),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: AppTheme.space6,
-                      ),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      visualDensity: VisualDensity.compact,
-                      foregroundColor: colors.primary,
-                      textStyle: text.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    icon: const Icon(
-                      PhosphorIconsRegular.playCircle,
-                      size: AppTheme.icon16,
-                    ),
-                    label: Text(Translations.of(context).proFeature.howItWorks),
-                    onPressed: () => unawaited(
-                      showProFeatureSheet(context, demo, offerPro: false),
-                    ),
-                  ),
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// "How it works" under a benefit: its demo in a sheet, with no way to the
+/// paywall - this is the paywall.
+class _HowItWorks extends StatelessWidget {
+  const _HowItWorks({required this.demo});
+
+  final ProFeature demo;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return TextButton.icon(
+      key: ValueKey('paywallHowItWorks-${demo.name}'),
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: AppTheme.space6),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        visualDensity: VisualDensity.compact,
+        foregroundColor: context.colors.primary,
+        textStyle: text.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+      ),
+      icon: const Icon(PhosphorIconsRegular.playCircle, size: AppTheme.icon16),
+      label: Text(Translations.of(context).proFeature.howItWorks),
+      onPressed: () =>
+          unawaited(showProFeatureSheet(context, demo, offerPro: false)),
     );
   }
 }

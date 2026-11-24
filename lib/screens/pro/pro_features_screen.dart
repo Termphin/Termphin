@@ -10,6 +10,7 @@ import '../../widgets/account/live_status_card.dart';
 import '../../widgets/account/pro_feature_sheet.dart';
 import '../../widgets/account/sync_card.dart';
 import '../../widgets/pro/ascii_glow.dart';
+import '../../widgets/pro/pro_benefits.dart';
 import '../../widgets/settings/notifications_settings_section.dart';
 import '../../widgets/ui/app_badge.dart';
 import '../../widgets/ui/app_card.dart';
@@ -52,7 +53,6 @@ class _ProFeaturesScreenState extends State<ProFeaturesScreen> {
   @override
   Widget build(BuildContext context) {
     final t = Translations.of(context);
-    final p = t.account.pro.paywall;
     final hub = t.proHub;
     final colors = context.colors;
     final text = Theme.of(context).textTheme;
@@ -124,62 +124,11 @@ class _ProFeaturesScreenState extends State<ProFeaturesScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _Section(
-                        icon: PhosphorIconsRegular.sparkle,
-                        title: p.phinTitle,
-                        badge: t.assistant.beta,
-                        body: p.phinBody,
-                        child: ListenableBuilder(
-                          listenable: phinEnabledSetting,
-                          builder: (context, _) => AppCard.fields(
-                            children: [
-                              SettingsSwitchTile(
-                                icon: PhosphorIconsRegular.sparkle,
-                                title: t.assistant.enable,
-                                subtitle: t.assistant.enableSubtitle,
-                                value: phinEnabledSetting.value,
-                                onChanged: (on) =>
-                                    unawaited(phinEnabledSetting.set(on)),
-                              ),
-                              const AppDivider(),
-                              SettingsTile(
-                                icon: PhosphorIconsRegular.slidersHorizontal,
-                                title: hub.phinSettings,
-                                subtitle: hub.phinSettingsSubtitle,
-                                destination: () => const PhinSettingsScreen(),
-                              ),
-                              const AppDivider(),
-                              const HowItWorksTile(feature: ProFeature.phin),
-                            ],
-                          ),
+                      for (final benefit in ProBenefit.values)
+                        _Section(
+                          benefit: benefit,
+                          child: _controls(benefit, t),
                         ),
-                      ),
-                      _Section(
-                        icon: PhosphorIconsRegular.bellRinging,
-                        title: p.pushTitle,
-                        body: p.pushBody,
-                        child: AppCard.fields(
-                          children: [
-                            NotifyWhenClosedTiles(
-                              appVersion: widget.appVersion,
-                              divided: false,
-                              icon: PhosphorIconsRegular.bellRinging,
-                            ),
-                          ],
-                        ),
-                      ),
-                      _Section(
-                        icon: PhosphorIconsRegular.pulse,
-                        title: p.liveTitle,
-                        body: p.liveBody,
-                        child: const LiveStatusCard(),
-                      ),
-                      _Section(
-                        icon: PhosphorIconsRegular.arrowsClockwise,
-                        title: p.syncTitle,
-                        body: p.syncBody,
-                        child: const SyncCard(),
-                      ),
                     ],
                   ),
                 ),
@@ -190,32 +139,56 @@ class _ProFeaturesScreenState extends State<ProFeaturesScreen> {
       ),
     );
   }
+
+  /// The switches and links under [benefit] - what to tune of it here.
+  Widget _controls(ProBenefit benefit, Translations t) => switch (benefit) {
+    ProBenefit.phin => ListenableBuilder(
+      listenable: phinEnabledSetting,
+      builder: (context, _) => AppCard.fields(
+        children: [
+          SettingsSwitchTile(
+            icon: PhosphorIconsRegular.sparkle,
+            title: t.assistant.enable,
+            subtitle: t.assistant.enableSubtitle,
+            value: phinEnabledSetting.value,
+            onChanged: (on) => unawaited(phinEnabledSetting.set(on)),
+          ),
+          const AppDivider(),
+          SettingsTile(
+            icon: PhosphorIconsRegular.slidersHorizontal,
+            title: t.proHub.phinSettings,
+            subtitle: t.proHub.phinSettingsSubtitle,
+            destination: () => const PhinSettingsScreen(),
+          ),
+          const AppDivider(),
+          const HowItWorksTile(feature: ProFeature.phin),
+        ],
+      ),
+    ),
+    ProBenefit.notifications => AppCard.fields(
+      children: [
+        NotifyWhenClosedTiles(
+          appVersion: widget.appVersion,
+          divided: false,
+          icon: PhosphorIconsRegular.bellRinging,
+        ),
+      ],
+    ),
+    ProBenefit.liveStatus => const LiveStatusCard(),
+    ProBenefit.sync => const SyncCard(),
+  };
 }
 
-/// One Pro feature: said the way the paywall says it - an icon, a title,
-/// two lines - with its controls underneath.
+/// One Pro benefit: said the way the paywall says it, with its controls
+/// right under it.
 class _Section extends StatelessWidget {
-  const _Section({
-    required this.icon,
-    required this.title,
-    required this.body,
-    required this.child,
-    this.badge,
-  });
+  const _Section({required this.benefit, required this.child});
 
-  final IconData icon;
-  final String title;
-  final String body;
+  final ProBenefit benefit;
   final Widget child;
-
-  /// A word beside the title, such as "Beta".
-  final String? badge;
 
   @override
   Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    final colors = context.colors;
-    final badge = this.badge;
     return Padding(
       padding: const EdgeInsets.only(bottom: AppTheme.space24),
       child: Column(
@@ -223,36 +196,7 @@ class _Section extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppTheme.space8),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(icon, size: AppTheme.icon20, color: colors.gold),
-                const SizedBox(width: AppTheme.space12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Flexible(child: Text(title, style: text.titleSmall)),
-                          if (badge != null) ...[
-                            const SizedBox(width: AppTheme.space6),
-                            AppBadge(badge, tone: BadgeTone.highlight),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: AppTheme.space2),
-                      Text(
-                        body,
-                        style: text.bodySmall?.copyWith(
-                          color: colors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+            child: ProBenefitRow(benefit: benefit),
           ),
           const SizedBox(height: AppTheme.space12),
           child,
