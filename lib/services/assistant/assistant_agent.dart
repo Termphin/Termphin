@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:terminal_view/terminal_view.dart';
 
 import '../ssh/remote_agent_service.dart' show shellQuote;
@@ -55,6 +56,17 @@ typedef AssistantTarget = ({
   String? Function() readScreen,
   bool windows,
 });
+
+/// [body] as context for the model, inside a `<[tag]>` element: what the
+/// app adds to the first message - what the server runs, the notes saved
+/// about it - so it cannot be read as part of what the user asked, which
+/// follows it as a block of its own. A note that names the tag itself
+/// loses it, so it cannot close the element early.
+@visibleForTesting
+String contextBlock(String tag, String body) {
+  final inner = body.replaceAll('<$tag>', '').replaceAll('</$tag>', '');
+  return '<$tag>\n$inner\n</$tag>';
+}
 
 /// Runs the assistant: sends the conversation a step at a time, shows what
 /// the model says as it arrives, and carries out its tool calls - `inspect`
@@ -159,12 +171,19 @@ class AssistantAgent {
         : const <String>[];
     final system = _messages.isEmpty ? _system : null;
     _appendUser([
-      if (system != null) {'type': 'text', 'text': _redactor!.hide(system)},
+      if (system != null)
+        {
+          'type': 'text',
+          'text': _redactor!.hide(contextBlock('server_system', system)),
+        },
       if (notes.isNotEmpty)
         {
           'type': 'text',
           'text': _redactor!.hide(
-            'Notes saved about this server earlier:\n${notes.map((n) => '- $n').join('\n')}',
+            contextBlock(
+              'saved_notes',
+              'Notes saved about this server earlier:\n${notes.map((n) => '- $n').join('\n')}',
+            ),
           ),
         },
       {'type': 'text', 'text': _redactor!.hide(text)},
