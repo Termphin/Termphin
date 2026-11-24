@@ -94,8 +94,13 @@ class AssistantAgent {
   /// How long an approved command may run, waiting for the user's answers
   /// included.
   static const _answerTimeout = Duration(minutes: 15);
-  static const _keepLines = 150;
-  static const _keepChars = 8000;
+  /// How much of a command's output reaches the model: its last lines, up
+  /// to this many characters. Every result stays in the conversation and
+  /// is sent again with each later step, so a long one is paid for many
+  /// times; the model is told to read narrowly, with grep and tail, and can
+  /// ask for more.
+  static const _keepLines = 80;
+  static const _keepChars = 4000;
 
   final _messages = <Map<String, dynamic>>[];
   AssistantTarget? _target;

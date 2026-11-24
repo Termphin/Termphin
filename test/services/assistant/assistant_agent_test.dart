@@ -211,6 +211,13 @@ class FakeShell implements AssistantShell {
         timedOut: false,
       );
     }
+    if (command.startsWith('cat /var/log/big.log')) {
+      return (
+        output: [for (var i = 1; i <= 200; i++) 'line $i'].join('\n'),
+        exitCode: 0,
+        timedOut: false,
+      );
+    }
     return (
       output: 'mbadyl on web-01: $command ok',
       exitCode: 0,
@@ -287,6 +294,25 @@ void main() {
     expect((steps[1] as AssistantNote).text, 'Checking nginx on web-01.');
     expect((steps[2] as AssistantCheck).status, AssistantStepStatus.done);
     expect((steps.last as AssistantNote).text, 'nginx runs fine on web-01.');
+  });
+
+  test('a long output reaches the model as its last lines only', () async {
+    final transport = FakeTransport([
+      reply([
+        tool('t1', 'inspect', {
+          'command': 'cat /var/log/big.log',
+          'purpose': 'Read the log',
+        }),
+      ]),
+      reply([
+        {'type': 'text', 'text': 'Done.'},
+      ]),
+    ]);
+    await agent(transport).submit('count');
+    final sent = transport.sent.last;
+    expect(sent, contains('[120 earlier lines cut]'));
+    expect(sent, contains('line 200'));
+    expect(sent, isNot(contains('line 120\\n')));
   });
 
   test('a check the device cannot vouch for waits for the user', () async {
