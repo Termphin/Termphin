@@ -47,6 +47,7 @@ import 'utils/platform_info.dart';
 import 'widgets/onboarding/legal_update_dialog.dart';
 import 'widgets/onboarding/tag_migration_modal.dart';
 import 'widgets/onboarding/whats_new_modal.dart';
+import 'widgets/pro/pro_welcome_dialog.dart';
 import 'widgets/profiles/profile_avatar.dart';
 import 'widgets/profiles/profile_form_dialog.dart';
 import 'widgets/terminal/terminal_scheme_theme.dart';
@@ -518,13 +519,21 @@ class _AppShellState extends ConsumerState<_AppShell> {
       _openRelayedSession(profileId, session);
     };
     InAppAlerts.instance.present = _presentAlert;
+    ProWelcome.host = () => navigatorKey.currentContext;
+    ProService.instance.active.addListener(_welcomePro);
     WidgetsBinding.instance.addPostFrameCallback(
-      (_) => _runStartupInterstitials(),
+      (_) => _runStartupInterstitials().whenComplete(ProWelcome.ready),
     );
   }
 
+  /// Pro just came on - bought, restored, redeemed or picked up from the
+  /// web: welcome it, once the launch's own dialogs are done.
+  void _welcomePro() => unawaited(ProWelcome.maybeShow());
+
   @override
   void dispose() {
+    ProService.instance.active.removeListener(_welcomePro);
+    ProWelcome.host = null;
     LocalNotificationsService.instance.onOpenSession = null;
     PushService.instance.onOpenRelayed = null;
     InAppAlerts.instance.present = null;

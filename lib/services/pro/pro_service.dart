@@ -148,9 +148,17 @@ class ProService {
   /// in a store, and cancelled by the backend when the account is deleted.
   final boughtOnWeb = ValueNotifier<bool>(false);
 
+  /// When the account's Pro began, as the store last told: its first
+  /// purchase, which a renewal leaves as it was. Null while the store has
+  /// not said - on a computer, or before it answers.
+  final since = ValueNotifier<DateTime?>(null);
+
   void _readStore(CustomerInfo info) {
     final pro = info.entitlements.active[kProEntitlement];
     boughtOnWeb.value = pro != null && !storeKeepsBilling(pro.store);
+    since.value = pro == null
+        ? null
+        : DateTime.tryParse(pro.originalPurchaseDate);
   }
 
   bool _configured = false;
@@ -410,6 +418,7 @@ class ProService {
     active.value = false;
     confirmed.value = false;
     boughtOnWeb.value = false;
+    since.value = null;
     settled.value = false;
     _refreshedAt = null;
     _awaitingCode = false;
