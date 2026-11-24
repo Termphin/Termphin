@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -7,6 +9,7 @@ import '../../i18n/strings.g.dart';
 import '../../screens/settings/release_notes_screen.dart';
 import '../../services/app/app_commands.dart';
 import '../../services/app/project_urls.dart';
+import '../../services/platform/app_updater.dart';
 import '../../services/platform/desktop_window.dart';
 import '../../theme/theme.dart';
 import '../../utils/platform_info.dart';
@@ -481,6 +484,12 @@ List<AppMenu> appMenuModel(
           icon: PhosphorIconsRegular.sparkle,
           onSelected: releaseNotes,
         ),
+        if (platformHas(PlatformFeature.selfUpdates))
+          AppMenuItem(
+            label: t.window.checkForUpdates,
+            icon: PhosphorIconsRegular.arrowsClockwise,
+            onSelected: () => unawaited(AppUpdater.instance.checkNow()),
+          ),
       ],
       [
         AppMenuItem.command(

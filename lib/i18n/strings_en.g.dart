@@ -4199,6 +4199,9 @@ class Translations$window$en {
 	/// en: 'What's new'
 	String get releaseNotes => 'What\'s new';
 
+	/// en: 'Check for updates...'
+	String get checkForUpdates => 'Check for updates...';
+
 	/// en: 'Report an issue'
 	String get reportIssue => 'Report an issue';
 
@@ -7020,6 +7023,7 @@ extension on Translations {
 			'window.menuKeys' => 'Keys',
 			'window.menuSettings' => 'Settings',
 			'window.releaseNotes' => 'What\'s new',
+			'window.checkForUpdates' => 'Check for updates...',
 			'window.reportIssue' => 'Report an issue',
 			'window.quit' => 'Quit Termphin',
 			'window.search' => 'Search',
@@ -7251,9 +7255,9 @@ extension on Translations {
 			'agentFeatures.hint' => 'A new session has all of them. Programs running here keep running until you close it.',
 			'agentFeatures.newSession' => 'Open a new session',
 			'proHints.longCommand' => 'Know when a command finishes, even with Termphin closed',
-			'proHints.action' => 'See Pro',
 			_ => null,
 		} ?? switch (path) {
+			'proHints.action' => 'See Pro',
 			'proHints.dismiss' => 'Not now',
 			'proFeature.notificationsTitle' => 'Notifications with Termphin closed',
 			'proFeature.notificationsBody' => 'Termphin tells you when a command finishes or a program needs you. With Pro this reaches you even when the app is closed, through a relay that keeps nothing.',

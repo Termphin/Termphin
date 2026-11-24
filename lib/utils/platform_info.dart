@@ -104,6 +104,9 @@ enum PlatformFeature {
   /// Push notifications reach this device itself. A computer has none of its
   /// own; turning notifications on there sends its servers' to the phone.
   receivesPush,
+
+  /// The app updates itself (Sparkle), outside any store.
+  selfUpdates,
 }
 
 bool platformHas(PlatformFeature feature) => switch (feature) {
@@ -130,6 +133,7 @@ bool platformHas(PlatformFeature feature) => switch (feature) {
   PlatformFeature.localSshFolder => isDesktopPlatform,
   PlatformFeature.webAccountLinks => isDesktopPlatform,
   PlatformFeature.receivesPush => isAndroidPlatform || isIOSPlatform,
+  PlatformFeature.selfUpdates => isMacOSPlatform,
 };
 
 /// The narrowest window that gets the sidebar layout. A landscape window

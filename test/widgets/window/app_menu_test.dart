@@ -106,4 +106,31 @@ void main() {
 
     expect(_labels(tester), ['Termphin', 'View', 'Help']);
   }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+
+  List<String> itemsOf(WidgetTester tester, String menu) {
+    final t = Translations.of(tester.element(find.byType(Scaffold)));
+    final found = appMenuModel(
+      t,
+      () => null,
+    ).firstWhere((m) => m.label == menu);
+    return [
+      for (final group in found.groups)
+        for (final item in group) item.label,
+    ];
+  }
+
+  testWidgets('a Mac offers to check for updates', (tester) async {
+    await pumpTestApp(tester, const Scaffold(body: SizedBox.shrink()));
+    expect(itemsOf(tester, 'Termphin'), contains('Check for updates...'));
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
+  testWidgets('elsewhere nothing updates itself, so nothing offers to', (
+    tester,
+  ) async {
+    await pumpTestApp(tester, const Scaffold(body: SizedBox.shrink()));
+    expect(
+      itemsOf(tester, 'Termphin'),
+      isNot(contains('Check for updates...')),
+    );
+  }, variant: TargetPlatformVariant.only(TargetPlatform.linux));
 }

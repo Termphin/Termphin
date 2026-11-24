@@ -255,22 +255,16 @@ void main() {
     ).allMatches(File(path).readAsStringSync()).map((m) => m.group(1)!).toSet();
 
     for (final build in ['DebugProfile', 'Release']) {
-      test('$build is sandboxed and may still open an SSH connection', () {
+      test('$build is not sandboxed so Sparkle updates and SSH work', () {
         final keys = granted('macos/Runner/$build.entitlements');
-        expect(keys, contains('com.apple.security.app-sandbox'));
+        expect(
+          keys,
+          isNot(contains('com.apple.security.app-sandbox')),
+          reason: 'DMG builds outside the Mac App Store ship unsandboxed for Sparkle',
+        );
         expect(
           keys,
           contains('com.apple.security.network.client'),
-          reason: 'without it the sandbox blocks every outgoing connection',
-        );
-        expect(
-          keys,
-          contains('com.apple.security.files.user-selected.read-write'),
-        );
-        expect(
-          keys.where((k) => k.contains('temporary-exception')),
-          isEmpty,
-          reason: 'App Review refuses temporary exceptions',
         );
       });
     }
