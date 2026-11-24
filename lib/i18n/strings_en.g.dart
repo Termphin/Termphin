@@ -4865,8 +4865,14 @@ class Translations$assistant$en {
 	/// en: 'Nothing yet. Phin saves notes as it learns about your servers.'
 	String get knowsEmpty => 'Nothing yet. Phin saves notes as it learns about your servers.';
 
-	/// en: '{n} notes'
-	String knowsNotes({required Object n}) => '${n} notes';
+	/// en: '(one) {{n} note} (other) {{n} notes}'
+	String knowsNotes({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n,
+		one: '${n} note',
+		other: '${n} notes',
+	);
+
+	/// en: 'What Phin noted while working on this server. Remove anything wrong or out of date - Phin checks notes before relying on them.'
+	String get knowsServerSubtitle => 'What Phin noted while working on this server. Remove anything wrong or out of date - Phin checks notes before relying on them.';
 
 	/// en: 'Forget this server'
 	String get forgetServer => 'Forget this server';
@@ -7327,7 +7333,8 @@ extension on Translations {
 			'assistant.memorySubtitle' => 'Phin keeps short notes about each server, such as which service runs your app, so it does not look them up again. Stored only on this device.',
 			'assistant.knowsTitle' => 'What Phin knows',
 			'assistant.knowsEmpty' => 'Nothing yet. Phin saves notes as it learns about your servers.',
-			'assistant.knowsNotes' => ({required Object n}) => '${n} notes',
+			'assistant.knowsNotes' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '${n} note', other: '${n} notes', ), 
+			'assistant.knowsServerSubtitle' => 'What Phin noted while working on this server. Remove anything wrong or out of date - Phin checks notes before relying on them.',
 			'assistant.forgetServer' => 'Forget this server',
 			'assistant.forgetServerConfirm' => ({required Object name}) => 'Forget everything Phin noted about ${name}?',
 			'assistant.forgetAll' => 'Forget everything',

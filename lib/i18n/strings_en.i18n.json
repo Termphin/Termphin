@@ -1828,7 +1828,11 @@
     "memorySubtitle": "Phin keeps short notes about each server, such as which service runs your app, so it does not look them up again. Stored only on this device.",
     "knowsTitle": "What Phin knows",
     "knowsEmpty": "Nothing yet. Phin saves notes as it learns about your servers.",
-    "knowsNotes": "{n} notes",
+    "knowsNotes(n: num)": {
+      "one": "{n} note",
+      "other": "{n} notes"
+    },
+    "knowsServerSubtitle": "What Phin noted while working on this server. Remove anything wrong or out of date - Phin checks notes before relying on them.",
     "forgetServer": "Forget this server",
     "forgetServerConfirm": "Forget everything Phin noted about {name}?",
     "forgetAll": "Forget everything",
