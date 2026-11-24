@@ -245,6 +245,9 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
       users: [profile.username],
       profileId: profile.id,
       readScreen: () => _sessionKeys[session.$1]?.currentState?.screenText(),
+      windows:
+          manager.getSession(session.$1)?.remoteShellType ==
+          RemoteShellType.powershell,
     );
   }
 

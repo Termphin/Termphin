@@ -28,6 +28,13 @@ void main() {
       'crontab -l',
       'node --version',
       'for d in ~/Projects/*/; do echo "== \$d"; ls -la "\$d"; done | head -n 80',
+      r'Get-Content C:\inetpub\logs\app.log -Tail 50',
+      'Get-Service | Where-Object Status -eq Running | Format-Table',
+      r'Select-String -Path C:\nginx\conf\nginx.conf -Pattern listen',
+      'Get-NetTCPConnection -State Listen | Sort-Object LocalPort',
+      'Get-Process | Sort-Object CPU -Descending | Select-Object -First 10',
+      'ipconfig /all',
+      'tasklist',
       "sed -n '1,40p' /etc/nginx/nginx.conf",
       "sed 's/#.*//' /etc/hosts",
       "sed -n '/error/p' app.log",
@@ -43,6 +50,14 @@ void main() {
     for (final command in [
       'git status -sb',
       'git -C /srv/app log --oneline -n 5',
+      'Set-Content C:\\app\\config.json x',
+      'Remove-Item C:\\temp\\x',
+      'Get-Process | Where-Object { Stop-Process \$_ }',
+      'Get-Process | ForEach-Object { \$_.Kill() }',
+      'Restart-Service w3svc',
+      'Get-Content C:\\Users\\me\\.ssh\\id_rsa',
+      'type C:\\app\\.env',
+      'Invoke-WebRequest https://x.y -OutFile C:\\x',
       'git for-each-ref refs/heads',
       'git branch new-feature',
       "awk '{print>\"/tmp/x\"}' f",
@@ -167,6 +182,7 @@ void main() {
 
     test('turns down what never ends or cannot be read', () {
       expect(refuseAsking('tail -f /var/log/syslog'), isNotNull);
+      expect(refuseAsking(r'Get-Content C:\app.log -Wait'), isNotNull);
       expect(
         refuseAsking('for f in a; do journalctl -fu app; done'),
         isNotNull,
