@@ -7,6 +7,7 @@ import '../../i18n/strings.g.dart';
 import '../../utils/platform_info.dart';
 import '../../widgets/ui/app_notifications.dart';
 import '../../widgets/ui/confirm_dialog.dart';
+import '../../widgets/window/update_download_dialog.dart';
 import 'appcast_parser.dart';
 import 'linux_self_updater.dart';
 
@@ -33,6 +34,10 @@ class AppUpdater {
   bool _started = false;
   bool _busy = false;
   BuildContext? Function()? _contextProvider;
+
+  /// Latest update discovered on Linux AppImage builds, observed by the
+  /// desktop status bar.
+  final availableUpdate = ValueNotifier<AppcastEntry?>(null);
 
   /// Supplies the navigator context so background update checks on Linux can
   /// raise an in-app toast once the UI has mounted.
@@ -91,6 +96,7 @@ class AppUpdater {
     if (updater == null || _busy) return;
     try {
       final entry = await updater.checkForUpdate();
+      availableUpdate.value = entry;
       if (entry == null) return;
       final ctx = await _waitForContext();
       if (ctx == null || !ctx.mounted) return;
@@ -128,6 +134,7 @@ class AppUpdater {
     AppcastEntry? entry;
     try {
       entry = await updater.checkForUpdate();
+      availableUpdate.value = entry;
     } catch (error) {
       debugPrint('Could not check for updates: $error');
       _busy = false;
@@ -151,6 +158,15 @@ class AppUpdater {
     }
   }
 
+  /// Prompts to install [entry] if an update was already discovered.
+  Future<void> installAvailable({BuildContext? context}) async {
+    final entry = availableUpdate.value;
+    final updater = _createLinuxUpdater();
+    final ctx = context ?? _contextProvider?.call();
+    if (entry == null || updater == null || ctx == null || !ctx.mounted) return;
+    await _promptAndInstall(ctx, updater, entry);
+  }
+
   Future<void> _promptAndInstall(
     BuildContext ctx,
     LinuxSelfUpdater updater,
@@ -170,21 +186,58 @@ class AppUpdater {
     if (!confirmed || !ctx.mounted) return;
 
     _busy = true;
-    AppNotifications.info(
-      ctx,
-      t.updates.downloading(version: entry.version),
+    final progress = ValueNotifier<LinuxUpdateProgress>(
+      LinuxUpdateProgress(
+        stage: LinuxUpdateStage.downloading,
+        received: 0,
+        total: entry.length,
+      ),
     );
+    final cancelToken = LinuxUpdateCancelToken();
+    var dialogOpen = true;
+    final dialogFuture = showDialog<void>(
+      context: ctx,
+      barrierDismissible: false,
+      builder: (_) => UpdateDownloadDialog(
+        version: entry.version,
+        progress: progress,
+        onCancel: cancelToken.cancel,
+      ),
+    ).whenComplete(() => dialogOpen = false);
+
     try {
-      await updater.downloadAndInstall(entry);
+      await updater.downloadAndInstall(
+        entry,
+        onProgress: (snap) => progress.value = snap,
+        cancelToken: cancelToken,
+      );
+    } on LinuxUpdateCancelledException {
+      _busy = false;
+      if (dialogOpen && ctx.mounted) {
+        Navigator.of(ctx, rootNavigator: true).pop();
+      }
+      await dialogFuture;
+      progress.dispose();
+      return;
     } catch (error) {
       debugPrint('Update install failed: $error');
       _busy = false;
+      if (dialogOpen && ctx.mounted) {
+        Navigator.of(ctx, rootNavigator: true).pop();
+      }
+      await dialogFuture;
+      progress.dispose();
       if (ctx.mounted) {
         AppNotifications.error(ctx, t.updates.installFailed);
       }
       return;
     }
     _busy = false;
+    if (dialogOpen && ctx.mounted) {
+      Navigator.of(ctx, rootNavigator: true).pop();
+    }
+    await dialogFuture;
+    progress.dispose();
 
     if (!ctx.mounted) return;
     final restart = await showConfirmDialog(

@@ -21,6 +21,49 @@ const kLinuxAppcastUrl = String.fromEnvironment(
       'https://github.com/Termphin/Termphin/releases/latest/download/appcast-linux.xml',
 );
 
+/// Current phase of a Linux AppImage update.
+enum LinuxUpdateStage { downloading, verifying }
+
+/// Progress snapshot emitted while downloading and verifying an update.
+class LinuxUpdateProgress {
+  const LinuxUpdateProgress({
+    required this.stage,
+    required this.received,
+    this.total,
+  });
+
+  final LinuxUpdateStage stage;
+  final int received;
+  final int? total;
+
+  /// Download progress in `0.0..1.0`, or `null` when the total size is unknown.
+  double? get fraction {
+    if (stage == LinuxUpdateStage.verifying) return 1.0;
+    final t = total;
+    if (t == null || t <= 0) return null;
+    return (received / t).clamp(0.0, 1.0);
+  }
+}
+
+/// Token allowing the user to abort an in-flight update download.
+class LinuxUpdateCancelToken {
+  bool _cancelled = false;
+  VoidCallback? _onCancel;
+
+  bool get isCancelled => _cancelled;
+
+  void attach(VoidCallback onCancel) {
+    _onCancel = onCancel;
+    if (_cancelled) onCancel();
+  }
+
+  void cancel() {
+    if (_cancelled) return;
+    _cancelled = true;
+    _onCancel?.call();
+  }
+}
+
 /// Raised when an update cannot be fetched, verified, or written safely.
 class LinuxUpdateException implements Exception {
   const LinuxUpdateException(this.message);
@@ -29,6 +72,11 @@ class LinuxUpdateException implements Exception {
 
   @override
   String toString() => 'LinuxUpdateException: $message';
+}
+
+/// Raised when the user cancels an update download.
+class LinuxUpdateCancelledException implements Exception {
+  const LinuxUpdateCancelledException();
 }
 
 /// Checks a Sparkle-signed `appcast-linux.xml`, verifies the downloaded
@@ -95,13 +143,19 @@ class LinuxSelfUpdater {
 
   /// Downloads [entry], verifies its byte length and Ed25519 signature, and
   /// atomically replaces [appImagePath]. Leaves the existing file untouched if
-  /// any check fails.
-  Future<void> downloadAndInstall(AppcastEntry entry) async {
+  /// any check fails or [cancelToken] cancels.
+  Future<void> downloadAndInstall(
+    AppcastEntry entry, {
+    void Function(LinuxUpdateProgress progress)? onProgress,
+    LinuxUpdateCancelToken? cancelToken,
+  }) async {
     final sigBytes = _decodeSignature(entry.edSignature);
     final target = File(appImagePath);
     final parent = target.parent;
     if (!parent.existsSync()) {
-      throw LinuxUpdateException('Target directory does not exist: ${parent.path}');
+      throw LinuxUpdateException(
+        'Target directory does not exist: ${parent.path}',
+      );
     }
 
     final fileName = target.uri.pathSegments.lastWhere(
@@ -113,13 +167,41 @@ class LinuxSelfUpdater {
     );
 
     try {
-      final bytes = await _downloadBytes(entry.downloadUrl);
+      onProgress?.call(
+        LinuxUpdateProgress(
+          stage: LinuxUpdateStage.downloading,
+          received: 0,
+          total: entry.length,
+        ),
+      );
+      final bytes = await _downloadBytes(
+        entry.downloadUrl,
+        expectedTotal: entry.length,
+        cancelToken: cancelToken,
+        onProgress: (received, total) => onProgress?.call(
+          LinuxUpdateProgress(
+            stage: LinuxUpdateStage.downloading,
+            received: received,
+            total: total,
+          ),
+        ),
+      );
+      if (cancelToken?.isCancelled ?? false) {
+        throw const LinuxUpdateCancelledException();
+      }
       if (entry.length != null && bytes.length != entry.length) {
         throw LinuxUpdateException(
           'Downloaded size ${bytes.length} did not match appcast ${entry.length}',
         );
       }
 
+      onProgress?.call(
+        LinuxUpdateProgress(
+          stage: LinuxUpdateStage.verifying,
+          received: bytes.length,
+          total: bytes.length,
+        ),
+      );
       _verifySignature(bytes, sigBytes);
       await tempFile.writeAsBytes(bytes, flush: true);
       await _makeExecutable(tempFile.path);
@@ -156,7 +238,9 @@ class LinuxSelfUpdater {
         message: payload,
       );
       if (!ok) {
-        throw const LinuxUpdateException('Ed25519 signature verification failed');
+        throw const LinuxUpdateException(
+          'Ed25519 signature verification failed',
+        );
       }
     } catch (error) {
       if (error is LinuxUpdateException) rethrow;
@@ -164,11 +248,20 @@ class LinuxSelfUpdater {
     }
   }
 
-  Future<Uint8List> _downloadBytes(Uri initialUri) async {
+  Future<Uint8List> _downloadBytes(
+    Uri initialUri, {
+    int? expectedTotal,
+    LinuxUpdateCancelToken? cancelToken,
+    void Function(int received, int? total)? onProgress,
+  }) async {
     final client = _httpClientFactory();
+    cancelToken?.attach(() => client.close(force: true));
     try {
       var current = initialUri;
       for (var hop = 0; hop <= _maxRedirects; hop++) {
+        if (cancelToken?.isCancelled ?? false) {
+          throw const LinuxUpdateCancelledException();
+        }
         if (!isAllowedUri(current)) {
           throw LinuxUpdateException('Blocked non-HTTPS update URL: $current');
         }
@@ -194,13 +287,26 @@ class LinuxSelfUpdater {
           );
         }
 
+        final total =
+            response.contentLength >= 0 ? response.contentLength : expectedTotal;
         final builder = BytesBuilder(copy: false);
+        var received = 0;
         await for (final chunk in response) {
+          if (cancelToken?.isCancelled ?? false) {
+            throw const LinuxUpdateCancelledException();
+          }
           builder.add(chunk);
+          received += chunk.length;
+          onProgress?.call(received, total);
         }
         return builder.takeBytes();
       }
       throw LinuxUpdateException('Too many redirects fetching $initialUri');
+    } catch (error) {
+      if (cancelToken?.isCancelled ?? false) {
+        throw const LinuxUpdateCancelledException();
+      }
+      rethrow;
     } finally {
       client.close(force: true);
     }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -177,8 +178,15 @@ void main() {
       expect(update, isNotNull);
       expect(update!.buildNumber, '901');
 
-      await updater.downloadAndInstall(update);
+      final progressEvents = <LinuxUpdateProgress>[];
+      await updater.downloadAndInstall(
+        update,
+        onProgress: progressEvents.add,
+      );
 
+      expect(progressEvents.first.stage, LinuxUpdateStage.downloading);
+      expect(progressEvents.last.stage, LinuxUpdateStage.verifying);
+      expect(progressEvents.last.fraction, 1.0);
       expect(madeExecutablePath, contains('.Termphin.AppImage.update.'));
       expect(await target.readAsBytes(), newPayload);
       expect(
@@ -234,6 +242,62 @@ void main() {
         updater.downloadAndInstall(entry),
         throwsA(isA<LinuxUpdateException>()),
       );
+      expect(await target.readAsBytes(), originalBytes);
+      expect(
+        dir.listSync().where((e) => e.path.contains('.update.')),
+        isEmpty,
+      );
+    });
+
+    test('cancelling mid-download cleans up temp file and keeps existing AppImage', () async {
+      final dir = Directory.systemTemp.createTempSync('termphin-updater-cancel-');
+      addTearDown(() => dir.deleteSync(recursive: true));
+
+      final originalBytes = utf8.encode('good-existing-appimage');
+      final target = File('${dir.path}/Termphin.AppImage');
+      await target.writeAsBytes(originalBytes);
+
+      final signingKey = nacl.SigningKey.generate();
+      final pubBase64 = base64Encode(signingKey.verifyKey.asTypedList);
+      final sigBase64 = base64Encode(
+        signingKey.sign(Uint8List.fromList([1, 2, 3])).signature.asTypedList,
+      );
+
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() => server.close(force: true));
+      final firstChunkSent = Completer<void>();
+      server.listen((req) async {
+        req.response.statusCode = HttpStatus.ok;
+        req.response.contentLength = 1024;
+        req.response.add(List<int>.filled(64, 1));
+        await req.response.flush();
+        if (!firstChunkSent.isCompleted) firstChunkSent.complete();
+      });
+
+      final cancelToken = LinuxUpdateCancelToken();
+      final updater = LinuxSelfUpdater(
+        appImagePath: target.path,
+        feedUri: Uri.parse('http://127.0.0.1:${server.port}/appcast-linux.xml'),
+        publicKeyBase64: pubBase64,
+        readPackageInfo: () async => (version: '1.16.1', buildNumber: '900'),
+      );
+
+      final entry = AppcastEntry(
+        version: '1.17.0',
+        buildNumber: '901',
+        downloadUrl: Uri.parse('http://127.0.0.1:${server.port}/Termphin.AppImage'),
+        edSignature: sigBase64,
+        length: 1024,
+      );
+
+      final future = updater.downloadAndInstall(
+        entry,
+        cancelToken: cancelToken,
+      );
+      await firstChunkSent.future;
+      cancelToken.cancel();
+
+      await expectLater(future, throwsA(isA<LinuxUpdateCancelledException>()));
       expect(await target.readAsBytes(), originalBytes);
       expect(
         dir.listSync().where((e) => e.path.contains('.update.')),

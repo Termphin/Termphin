@@ -1863,11 +1863,17 @@
     "availableTitle": "Update available",
     "availableMessage": "Termphin {version} (build {build}) is available. Download and install it now?",
     "install": "Update",
+    "downloadingTitle": "Downloading update",
     "downloading": "Downloading Termphin {version}…",
+    "verifying": "Verifying signature…",
+    "progressBytes": "{received} / {total} MB ({percent}%)",
+    "progressUnknown": "{received} MB",
     "installFailed": "Could not install the update.",
     "readyTitle": "Update installed",
     "readyMessage": "Termphin {version} is ready. Restart now to use the new version?",
     "restartNow": "Restart",
-    "later": "Later"
+    "later": "Later",
+    "statusBarAvailable": "Update to {version}",
+    "versionLabel": "v{version} ({build})"
   }
 }
