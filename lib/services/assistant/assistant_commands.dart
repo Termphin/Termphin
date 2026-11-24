@@ -114,7 +114,12 @@ String? _refuseLoopBody(List<String> words) {
 String? _refuseFollow(List<String> words) {
   final program = words.first.split('/').last;
   final args = words.skip(1);
-  switch (program) {
+  switch (program.toLowerCase()) {
+    case 'get-content':
+    case 'gc':
+      if (args.any((a) => a.toLowerCase() == '-wait')) {
+        return '$program -Wait follows forever';
+      }
     case 'tail':
     case 'journalctl':
       if (args.any(
@@ -179,6 +184,12 @@ const _contentReaders = {
   'cut',
   'column',
   'openssl',
+  'get-content',
+  'gc',
+  'select-string',
+  'sls',
+  'findstr',
+  'type',
 };
 
 /// Reading a file that may hold a secret goes through `read_file`, which
@@ -186,12 +197,15 @@ const _contentReaders = {
 String? _refuseSecrets(String piece, List<String> words) {
   for (final word in words.skip(1)) {
     final looksLikePath =
-        word.contains('/') || word.startsWith('.') || word.startsWith('~');
+        word.contains('/') ||
+        word.contains('\\') ||
+        word.startsWith('.') ||
+        word.startsWith('~');
     if (looksLikePath && mayHoldSecrets(word)) {
       return '$word may hold secrets; read it with read_file';
     }
   }
-  final program = words.first.split('/').last;
+  final program = words.first.split('/').last.toLowerCase();
   if (_contentReaders.contains(program)) {
     final unquoted = _withoutQuoted(piece) ?? piece;
     if (RegExp(r'[*?\[]').hasMatch(unquoted)) {
@@ -204,7 +218,7 @@ String? _refuseSecrets(String piece, List<String> words) {
 /// Whether reading [path] may hand the assistant a secret, so the user is
 /// asked first.
 bool mayHoldSecrets(String path) {
-  final lower = path.toLowerCase();
+  final lower = path.toLowerCase().replaceAll('\\', '/');
   final name = lower.split('/').last;
   if (lower.contains('/.ssh/') ||
       lower.endsWith('/.ssh') ||
@@ -469,6 +483,8 @@ String? _refuseProgram(List<String> words) {
   if (RegExp(r'^[A-Za-z_][A-Za-z0-9_]*=').hasMatch(program)) {
     return 'sets a variable';
   }
+  final powershell = _refusePowerShell(program, args);
+  if (powershell != null) return powershell.isEmpty ? null : powershell;
   switch (program) {
     case 'sed':
       if (args.any(
@@ -922,4 +938,93 @@ bool _sedWritesOrRuns(String script) {
     }
   }
   return false;
+}
+
+/// PowerShell cmdlets and their aliases that only read, lowercased - what a
+/// Windows server is looked around with.
+const _powerShellReaders = {
+  'get-content',
+  'gc',
+  'select-string',
+  'sls',
+  'get-childitem',
+  'gci',
+  'dir',
+  'get-item',
+  'gi',
+  'get-itemproperty',
+  'gp',
+  'test-path',
+  'resolve-path',
+  'get-acl',
+  'get-filehash',
+  'get-service',
+  'gsv',
+  'get-process',
+  'gps',
+  'get-nettcpconnection',
+  'get-netudpendpoint',
+  'get-netipaddress',
+  'get-netadapter',
+  'get-netroute',
+  'get-dnsclientserveraddress',
+  'get-netfirewallrule',
+  'get-winevent',
+  'get-eventlog',
+  'get-ciminstance',
+  'get-computerinfo',
+  'get-hotfix',
+  'get-volume',
+  'get-psdrive',
+  'get-disk',
+  'get-localuser',
+  'get-localgroup',
+  'get-scheduledtask',
+  'get-windowsfeature',
+  'get-date',
+  'get-location',
+  'get-command',
+  'get-uptime',
+  'get-timezone',
+  'measure-object',
+  'measure',
+  'sort-object',
+  'sort',
+  'select-object',
+  'select',
+  'where-object',
+  'where',
+  'group-object',
+  'format-table',
+  'ft',
+  'format-list',
+  'fl',
+  'out-string',
+  'convertto-json',
+  'ipconfig',
+  'tasklist',
+  'systeminfo',
+  'netstat',
+  'findstr',
+  'type',
+};
+
+/// Why a PowerShell or Windows [program] may change something; '' when it
+/// only reads, null when it is not one of them. Script blocks are refused
+/// whole - `Where-Object { ... }` can run anything inside the braces - and
+/// so is following a file forever.
+String? _refusePowerShell(String program, List<String> args) {
+  final name = program.toLowerCase();
+  final cmdlet = RegExp(r'^[a-z]+-[a-z]+$').hasMatch(name);
+  if (name == 'sort' || !_powerShellReaders.contains(name)) {
+    return cmdlet ? '$program is not on the read-only list' : null;
+  }
+  if (args.any((a) => a.contains('{') || a.contains('}'))) {
+    return '$program with a script block';
+  }
+  if ((name == 'get-content' || name == 'gc') &&
+      args.any((a) => a.toLowerCase() == '-wait')) {
+    return '$program -Wait follows forever';
+  }
+  return '';
 }

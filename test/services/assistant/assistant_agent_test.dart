@@ -211,6 +211,14 @@ class FakeShell implements AssistantShell {
         timedOut: false,
       );
     }
+    if (command.startsWith('echo "uname=')) {
+      return (
+        output:
+            'uname=Linux 6.8.0\ndistro=Ubuntu 24.04 LTS\nshell=/bin/bash\nhas=python3\nhas=perl\n',
+        exitCode: 0,
+        timedOut: false,
+      );
+    }
     if (command.startsWith('cat /var/log/big.log')) {
       return (
         output: [for (var i = 1; i <= 200; i++) 'line $i'].join('\n'),
@@ -257,6 +265,7 @@ void main() {
                 users: ['mbadyl'],
                 profileId: 'p1',
                 readScreen: () => screen,
+                windows: false,
               )
             : null,
       );
@@ -294,6 +303,25 @@ void main() {
     expect((steps[1] as AssistantNote).text, 'Checking nginx on web-01.');
     expect((steps[2] as AssistantCheck).status, AssistantStepStatus.done);
     expect((steps.last as AssistantNote).text, 'nginx runs fine on web-01.');
+  });
+
+  test('the first message says what the server runs', () async {
+    final transport = FakeTransport([
+      reply([
+        {'type': 'text', 'text': 'Hi.'},
+      ]),
+      reply([
+        {'type': 'text', 'text': 'Again.'},
+      ]),
+    ]);
+    final a = agent(transport);
+    await a.submit('hello');
+    expect(
+      transport.sent.first,
+      contains('The server runs Ubuntu 24.04 LTS (Linux 6.8.0), shell bash'),
+    );
+    await a.submit('more');
+    expect(RegExp('The server runs').allMatches(transport.sent.last).length, 1);
   });
 
   test('a long output reaches the model as its last lines only', () async {

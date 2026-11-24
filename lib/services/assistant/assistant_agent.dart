@@ -11,6 +11,7 @@ import 'assistant_memory.dart';
 import 'assistant_redactor.dart';
 import 'assistant_session.dart';
 import 'assistant_stream.dart';
+import 'server_system.dart';
 
 /// What a command run for the assistant printed and how it ended.
 typedef AssistantRun = ({String output, int? exitCode, bool timedOut});
@@ -52,6 +53,7 @@ typedef AssistantTarget = ({
   List<String> users,
   String profileId,
   String? Function() readScreen,
+  bool windows,
 });
 
 /// Runs the assistant: sends the conversation a step at a time, shows what
@@ -94,6 +96,7 @@ class AssistantAgent {
   /// How long an approved command may run, waiting for the user's answers
   /// included.
   static const _answerTimeout = Duration(minutes: 15);
+
   /// How much of a command's output reaches the model: its last lines, up
   /// to this many characters. Every result stays in the conversation and
   /// is sent again with each later step, so a long one is paid for many
@@ -154,7 +157,9 @@ class AssistantAgent {
     final notes = _messages.isEmpty && memoryOn()
         ? await memory.notesFor(_target!.profileId)
         : const <String>[];
+    final system = _messages.isEmpty ? _system : null;
     _appendUser([
+      if (system != null) {'type': 'text', 'text': _redactor!.hide(system)},
       if (notes.isNotEmpty)
         {
           'type': 'text',
@@ -195,6 +200,7 @@ class AssistantAgent {
     _messages.clear();
     _target = null;
     _redactor = null;
+    _system = null;
     _warned = false;
   }
 
@@ -215,8 +221,17 @@ class AssistantAgent {
             .where((line) => line.isNotEmpty && line != 'localhost'),
     ];
     _redactor = AssistantRedactor(hosts: hosts, users: target.users);
+    final system = await _runQuietly(
+      target.windows ? kWindowsSystemProbe : kUnixSystemProbe,
+      const Duration(seconds: 5),
+    );
+    _system = describeServerSystem(system.output, windows: target.windows);
     return true;
   }
+
+  /// What the server is, for the model to pick its commands by; null when
+  /// it could not be told.
+  String? _system;
 
   Future<void> _loop(int run) async {
     for (var step = 0; step < maxSteps; step++) {
