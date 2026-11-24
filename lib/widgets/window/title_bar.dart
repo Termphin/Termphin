@@ -488,7 +488,8 @@ List<AppMenu> appMenuModel(
           AppMenuItem(
             label: t.window.checkForUpdates,
             icon: PhosphorIconsRegular.arrowsClockwise,
-            onSelected: () => unawaited(AppUpdater.instance.checkNow()),
+            onSelected: () =>
+                unawaited(AppUpdater.instance.checkNow(context: navigatorContext())),
           ),
       ],
       [

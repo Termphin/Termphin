@@ -53,6 +53,7 @@ import 'widgets/profiles/profile_form_dialog.dart';
 import 'widgets/terminal/terminal_scheme_theme.dart';
 import 'widgets/terminal/toolbar_import_sheet.dart';
 import 'widgets/ui/app_notifications.dart';
+import 'widgets/window/desktop_status_bar.dart';
 import 'widgets/window/desktop_tray_host.dart';
 import 'widgets/window/title_bar.dart';
 
@@ -207,7 +208,17 @@ class _DesktopChrome extends StatelessWidget {
                 child: MediaQuery.removePadding(
                   context: context,
                   removeTop: true,
+                  removeBottom: true,
                   child: child,
+                ),
+              ),
+              ValueListenableBuilder<bool>(
+                valueListenable: terminalOnScreen,
+                builder: (context, inSession, bar) =>
+                    inSession ? TerminalSchemeTheme(child: bar!) : bar!,
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: DesktopStatusBar(navigatorContext: navigatorContext),
                 ),
               ),
             ],

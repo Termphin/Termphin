@@ -7,8 +7,9 @@ on:
 
 # vX.Y.Z builds both platforms, sends the Android bundle to Play closed
 # testing and the iOS build to TestFlight, and publishes the release with its
-# notes; production is promoted by hand in each store. The only files
-# attached are the Mac DMG and its Sparkle appcast, the desktop app's update. A tag ending in -ios.N or -android.N (v1.12.0-ios.22) is a test build
+# notes; production is promoted by hand in each store. The desktop files
+# attached are the Mac DMG + appcast and the Linux AppImage + appcast, for
+# the desktop updaters. A tag ending in -ios.N or -android.N (v1.12.0-ios.22) is a test build
 # for that platform alone, N being the build number after the + in
 # pubspec.yaml; its release is a prerelease, so it never shows as the latest.
 #
@@ -173,14 +174,26 @@ jobs:
       APPSTORE_API_PRIVATE_KEY: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
       FIREBASE_CONFIG_BASE64: ${{ secrets.FIREBASE_CONFIG_BASE64 }}
 
-  # The Mac DMG and its appcast go into the same release, for the app's
-  # updater; a failure here does not hold the phones' release back.
+  # The Mac DMG and Linux AppImage (with their appcasts) go into the same
+  # release, for the desktop updaters; a failure here does not hold the phones'
+  # release back.
   macos:
     needs: [verify, draft]
     if: needs.verify.outputs.platform == 'all'
     permissions:
       contents: write
     uses: ./.github/workflows/macos-dmg.yml
+    with:
+      ref: ${{ github.ref_name }}
+      release_tag: ${{ github.ref_name }}
+    secrets: inherit
+
+  linux:
+    needs: [verify, draft]
+    if: needs.verify.outputs.platform == 'all'
+    permissions:
+      contents: write
+    uses: ./.github/workflows/linux-appimage.yml
     with:
       ref: ${{ github.ref_name }}
       release_tag: ${{ github.ref_name }}

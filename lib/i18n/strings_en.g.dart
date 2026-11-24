@@ -91,6 +91,7 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 	late final Translations$proWelcome$en proWelcome = Translations$proWelcome$en.internal(_root);
 	late final Translations$legalUpdate$en legalUpdate = Translations$legalUpdate$en.internal(_root);
 	late final Translations$assistant$en assistant = Translations$assistant$en.internal(_root);
+	late final Translations$updates$en updates = Translations$updates$en.internal(_root);
 }
 
 // Path: nav
@@ -4941,6 +4942,69 @@ class Translations$assistant$en {
 	String get beta => 'Beta';
 }
 
+// Path: updates
+class Translations$updates$en {
+	Translations$updates$en.internal(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'Termphin is up to date.'
+	String get upToDate => 'Termphin is up to date.';
+
+	/// en: 'Could not check for updates.'
+	String get checkFailed => 'Could not check for updates.';
+
+	/// en: 'Termphin {version} is available.'
+	String availableNotice({required Object version}) => 'Termphin ${version} is available.';
+
+	/// en: 'Update available'
+	String get availableTitle => 'Update available';
+
+	/// en: 'Termphin {version} (build {build}) is available. Download and install it now?'
+	String availableMessage({required Object version, required Object build}) => 'Termphin ${version} (build ${build}) is available. Download and install it now?';
+
+	/// en: 'Update'
+	String get install => 'Update';
+
+	/// en: 'Downloading update'
+	String get downloadingTitle => 'Downloading update';
+
+	/// en: 'Downloading Termphin {version}…'
+	String downloading({required Object version}) => 'Downloading Termphin ${version}…';
+
+	/// en: 'Verifying signature…'
+	String get verifying => 'Verifying signature…';
+
+	/// en: '{received} / {total} MB ({percent}%)'
+	String progressBytes({required Object received, required Object total, required Object percent}) => '${received} / ${total} MB (${percent}%)';
+
+	/// en: '{received} MB'
+	String progressUnknown({required Object received}) => '${received} MB';
+
+	/// en: 'Could not install the update.'
+	String get installFailed => 'Could not install the update.';
+
+	/// en: 'Update installed'
+	String get readyTitle => 'Update installed';
+
+	/// en: 'Termphin {version} is ready. Restart now to use the new version?'
+	String readyMessage({required Object version}) => 'Termphin ${version} is ready. Restart now to use the new version?';
+
+	/// en: 'Restart'
+	String get restartNow => 'Restart';
+
+	/// en: 'Later'
+	String get later => 'Later';
+
+	/// en: 'Update to {version}'
+	String statusBarAvailable({required Object version}) => 'Update to ${version}';
+
+	/// en: 'v{version} ({build})'
+	String versionLabel({required Object version, required Object build}) => 'v${version} (${build})';
+}
+
 // Path: terminal.control
 class Translations$terminal$control$en {
 	Translations$terminal$control$en.internal(this._root);
@@ -7360,6 +7424,24 @@ extension on Translations {
 			'assistant.usageUsed' => ({required Object percent}) => '${percent}% of the allowance used',
 			'assistant.usageRenews' => ({required Object date}) => 'Renews on ${date}',
 			'assistant.beta' => 'Beta',
+			'updates.upToDate' => 'Termphin is up to date.',
+			'updates.checkFailed' => 'Could not check for updates.',
+			'updates.availableNotice' => ({required Object version}) => 'Termphin ${version} is available.',
+			'updates.availableTitle' => 'Update available',
+			'updates.availableMessage' => ({required Object version, required Object build}) => 'Termphin ${version} (build ${build}) is available. Download and install it now?',
+			'updates.install' => 'Update',
+			'updates.downloadingTitle' => 'Downloading update',
+			'updates.downloading' => ({required Object version}) => 'Downloading Termphin ${version}…',
+			'updates.verifying' => 'Verifying signature…',
+			'updates.progressBytes' => ({required Object received, required Object total, required Object percent}) => '${received} / ${total} MB (${percent}%)',
+			'updates.progressUnknown' => ({required Object received}) => '${received} MB',
+			'updates.installFailed' => 'Could not install the update.',
+			'updates.readyTitle' => 'Update installed',
+			'updates.readyMessage' => ({required Object version}) => 'Termphin ${version} is ready. Restart now to use the new version?',
+			'updates.restartNow' => 'Restart',
+			'updates.later' => 'Later',
+			'updates.statusBarAvailable' => ({required Object version}) => 'Update to ${version}',
+			'updates.versionLabel' => ({required Object version, required Object build}) => 'v${version} (${build})',
 			_ => null,
 		};
 	}

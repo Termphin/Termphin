@@ -5,7 +5,7 @@
 	<key>SUPublicEDKey</key>
 	<string>TN6z5N9lFs3hMVH5g1pXsjz+mV+13+bsv4hMnfovQvs=</string>
 	<key>SUEnableAutomaticChecks</key>
-	<true/>
+	<false/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleExecutable</key>
