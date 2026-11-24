@@ -237,7 +237,9 @@ What it involves:
   **Anthropic**'s Claude model for the answer. Our server does not store
   conversations or write them to its logs. It keeps how much each account
   spent this week, under a one-way hash of the account identifier, until the
-  week ends, and the network address of a request briefly in memory, to
+  week ends - after which only totals that name no account remain, such as
+  how many accounts used Phin and what they spent together - and the network
+  address of a request briefly in memory, to
   limit how often one address can call it.
 - **OpenRouter and Anthropic** process the conversation to produce the answer
   and do not use it to train models. Anthropic may keep it for up to 30 days
