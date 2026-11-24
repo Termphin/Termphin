@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
 import '../../models/session_tab.dart';
@@ -39,7 +40,10 @@ const kTabPillPaddingY = kSessionTabPillPaddingY;
 /// everything beside it stops lining up with the text, and in the rail it
 /// also pushes the status badge and menu button all the way to its right
 /// edge instead of leaving them stranded right after a short name.
-class TerminalTabPill<T> extends StatelessWidget {
+///
+/// The menu's button is as tall as the tab and wider than its icon, and a
+/// right click anywhere on the tab opens the same menu.
+class TerminalTabPill<T> extends StatefulWidget {
   const TerminalTabPill({
     super.key,
     required this.sessionId,
@@ -77,7 +81,37 @@ class TerminalTabPill<T> extends StatelessWidget {
   final ValueChanged<T> onMenuAction;
 
   @override
+  State<TerminalTabPill<T>> createState() => _TerminalTabPillState<T>();
+}
+
+/// Width of the menu button's tap target, the icon centred in it.
+const kTabMenuButtonWidth = 40.0;
+
+class _TerminalTabPillState<T> extends State<TerminalTabPill<T>> {
+  final _openMenu = ValueNotifier(0);
+
+  @override
+  void dispose() {
+    _openMenu.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final TerminalTabPill(
+      :sessionId,
+      :profile,
+      :status,
+      :displayName,
+      :mode,
+      :isActive,
+      :stretch,
+      :collapsed,
+      :unread,
+      :menuItems,
+      :onTap,
+      :onMenuAction,
+    ) = widget;
     final theme = Theme.of(context);
     final activeText = theme.colorScheme.onSurface;
     final inactiveText = activeText.withValues(alpha: 0.55);
@@ -93,7 +127,7 @@ class TerminalTabPill<T> extends StatelessWidget {
       profile: profile,
       statusColor: statusColor,
       displayName: displayName,
-      sessionName: this.sessionName,
+      sessionName: widget.sessionName,
       isActive: isActive,
       collapsed: collapsed,
       unread: unread,
@@ -110,24 +144,38 @@ class TerminalTabPill<T> extends StatelessWidget {
           ),
         AppActionDropdown<T>(
           key: ValueKey('tabMenu-$sessionId'),
-          iconColor: isActive
-              ? activeText.withValues(alpha: 0.7)
-              : inactiveText,
           width: 280,
           items: menuItems,
           onSelected: onMenuAction,
+          openDropdownListenable: _openMenu,
+          child: SizedBox(
+            width: kTabMenuButtonWidth,
+            child: Center(
+              child: Icon(
+                PhosphorIconsRegular.dotsThreeVertical,
+                size: AppTheme.icon16,
+                color: isActive
+                    ? activeText.withValues(alpha: 0.7)
+                    : inactiveText,
+              ),
+            ),
+          ),
         ),
       ],
     );
 
-    if (!collapsed) return tab;
-    final sessionName = this.sessionName;
+    final clickable = GestureDetector(
+      onSecondaryTap: () => _openMenu.value++,
+      child: tab,
+    );
+    if (!collapsed) return clickable;
+    final sessionName = widget.sessionName;
     return Tooltip(
       message: sessionName != null
           ? '${SessionTab.displayName(sessionName)} - $displayName'
           : displayName,
       triggerMode: TooltipTriggerMode.manual,
-      child: tab,
+      child: clickable,
     );
   }
 }
