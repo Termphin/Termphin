@@ -92,7 +92,7 @@ class _DesktopStatusBarState extends State<DesktopStatusBar> {
                 builder: (context, update, _) {
                   if (update == null) return const SizedBox.shrink();
                   return Padding(
-                    padding: const EdgeInsets.only(right: AppTheme.space12),
+                    padding: const EdgeInsets.only(right: AppTheme.space8),
                     child: InkWell(
                       onTap: () => unawaited(
                         AppUpdater.instance.installAvailable(
@@ -100,10 +100,16 @@ class _DesktopStatusBarState extends State<DesktopStatusBar> {
                         ),
                       ),
                       borderRadius: BorderRadius.circular(AppTheme.radiusXs),
-                      child: Padding(
+                      child: Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: AppTheme.space6,
                           vertical: AppTheme.space2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: colors.warningHighlight,
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.radiusXs,
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -111,7 +117,7 @@ class _DesktopStatusBarState extends State<DesktopStatusBar> {
                             Icon(
                               PhosphorIconsRegular.arrowCircleUp,
                               size: AppTheme.icon12,
-                              color: colors.primary,
+                              color: colors.warning,
                             ),
                             const SizedBox(width: AppTheme.space4),
                             Text(
@@ -120,8 +126,8 @@ class _DesktopStatusBarState extends State<DesktopStatusBar> {
                               ),
                               style: TextStyle(
                                 fontSize: AppTheme.font11,
-                                fontWeight: FontWeight.w500,
-                                color: colors.primary,
+                                fontWeight: FontWeight.w600,
+                                color: colors.warning,
                               ),
                             ),
                           ],

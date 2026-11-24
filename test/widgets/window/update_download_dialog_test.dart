@@ -4,6 +4,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:termphin/services/platform/app_updater.dart';
 import 'package:termphin/services/platform/appcast_parser.dart';
 import 'package:termphin/services/platform/linux_self_updater.dart';
+import 'package:termphin/theme/theme.dart';
 import 'package:termphin/widgets/window/desktop_status_bar.dart';
 import 'package:termphin/widgets/window/update_download_dialog.dart';
 
@@ -84,5 +85,8 @@ void main() {
     await tester.pump();
 
     expect(find.text('Update to 1.17.0'), findsOneWidget);
+    final label = tester.widget<Text>(find.text('Update to 1.17.0'));
+    final ctx = tester.element(find.text('Update to 1.17.0'));
+    expect(label.style?.color, ctx.colors.warning);
   });
 }

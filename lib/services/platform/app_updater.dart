@@ -8,6 +8,7 @@ import '../../utils/platform_info.dart';
 import '../../widgets/ui/app_notifications.dart';
 import '../../widgets/ui/confirm_dialog.dart';
 import '../../widgets/window/update_download_dialog.dart';
+import 'appcast_fetcher.dart';
 import 'appcast_parser.dart';
 import 'linux_self_updater.dart';
 
@@ -23,6 +24,10 @@ const kAppcastUrl = String.fromEnvironment(
 /// Updates for desktop builds outside a store: Sparkle on macOS and signed
 /// self-replacing AppImage updates on Linux. Both verify an Ed25519 signature
 /// before installing anything.
+///
+/// Background checks at launch and every [kCheckInterval] stay completely
+/// silent on both platforms — surfacing only a subtle indicator in the bottom
+/// status bar until the user chooses to update.
 class AppUpdater {
   AppUpdater._();
 
@@ -35,43 +40,41 @@ class AppUpdater {
   static const kCheckInterval = Duration(hours: 24);
 
   bool _started = false;
+  bool _macConfigured = false;
   bool _busy = false;
-  Timer? _linuxTimer;
+  Timer? _checkTimer;
   BuildContext? Function()? _contextProvider;
 
-  /// Latest update discovered on Linux AppImage builds, observed by the
-  /// desktop status bar.
+  /// Latest update discovered by a background or manual check, observed by
+  /// the desktop status bar.
   final availableUpdate = ValueNotifier<AppcastEntry?>(null);
 
-  /// Supplies the navigator context so background update checks on Linux can
-  /// raise an in-app toast once the UI has mounted.
+  /// Supplies the navigator context so status-bar update actions can open
+  /// dialogs cleanly.
   void bindContext(BuildContext? Function() contextProvider) {
     _contextProvider = contextProvider;
   }
 
-  /// Starts quiet update checking at launch and every [kCheckInterval].
+  /// Starts silent update checking at launch and every [kCheckInterval].
   Future<void> start() async {
     if (!supported || _started) return;
     _started = true;
     if (isMacOSPlatform) {
-      await _startMacOS();
-      return;
+      await _configureMacOSFeed();
     }
-    if (isLinuxPlatform) {
-      unawaited(_checkLinuxQuietly());
-      _linuxTimer?.cancel();
-      _linuxTimer = Timer.periodic(
-        kCheckInterval,
-        (_) => unawaited(_checkLinuxQuietly()),
-      );
-    }
+    unawaited(_checkQuietly());
+    _checkTimer?.cancel();
+    _checkTimer = Timer.periodic(
+      kCheckInterval,
+      (_) => unawaited(_checkQuietly()),
+    );
   }
 
-  /// Checks now and surfaces the result to the user.
+  /// Checks now and opens the update prompt when a newer build is found.
   Future<void> checkNow({BuildContext? context}) async {
     if (!supported) return;
     if (isMacOSPlatform) {
-      await start();
+      await _configureMacOSFeed();
       try {
         await autoUpdater.checkForUpdates();
       } catch (error) {
@@ -84,13 +87,28 @@ class AppUpdater {
     }
   }
 
-  Future<void> _startMacOS() async {
+  /// Opens the update UI for an update already discovered in the background.
+  Future<void> installAvailable({BuildContext? context}) async {
+    if (!supported) return;
+    if (isMacOSPlatform) {
+      await checkNow(context: context);
+      return;
+    }
+    final entry = availableUpdate.value;
+    final updater = _createLinuxUpdater();
+    final ctx = context ?? _contextProvider?.call();
+    if (entry == null || updater == null || ctx == null || !ctx.mounted) return;
+    await _promptAndInstall(ctx, updater, entry);
+  }
+
+  Future<void> _configureMacOSFeed() async {
+    if (_macConfigured) return;
+    _macConfigured = true;
     try {
       await autoUpdater.setFeedURL(kAppcastUrl);
-      await autoUpdater.setScheduledCheckInterval(kCheckInterval.inSeconds);
-      await autoUpdater.checkForUpdates(inBackground: true);
     } catch (error) {
-      debugPrint('Updates could not start: $error');
+      _macConfigured = false;
+      debugPrint('Updates could not configure feed: $error');
     }
   }
 
@@ -100,40 +118,26 @@ class AppUpdater {
     return LinuxSelfUpdater(appImagePath: path);
   }
 
-  Future<void> _checkLinuxQuietly() async {
-    final updater = _createLinuxUpdater();
-    if (updater == null || _busy) return;
+  Future<void> _checkQuietly() async {
+    if (_busy) return;
     try {
-      final entry = await updater.checkForUpdate();
+      final AppcastEntry? entry;
+      if (isMacOSPlatform) {
+        entry = await fetchNewerAppcastEntry(
+          feedUri: Uri.parse(kAppcastUrl),
+          os: 'macos',
+        );
+      } else if (isLinuxPlatform) {
+        final updater = _createLinuxUpdater();
+        if (updater == null) return;
+        entry = await updater.checkForUpdate();
+      } else {
+        return;
+      }
       availableUpdate.value = entry;
-      if (entry == null) return;
-      final ctx = await _waitForContext();
-      if (ctx == null || !ctx.mounted) return;
-      final t = Translations.of(ctx);
-      AppNotifications.show(
-        ctx,
-        t.updates.availableNotice(version: entry.version),
-        kind: AppNotificationKind.info,
-        actionLabel: t.updates.install,
-        onAction: () {
-          final currentCtx = _contextProvider?.call();
-          if (currentCtx != null && currentCtx.mounted) {
-            unawaited(_promptAndInstall(currentCtx, updater, entry));
-          }
-        },
-      );
     } catch (error) {
       debugPrint('Background update check failed: $error');
     }
-  }
-
-  Future<BuildContext?> _waitForContext() async {
-    for (var i = 0; i < 20; i++) {
-      final ctx = _contextProvider?.call();
-      if (ctx != null && ctx.mounted) return ctx;
-      await Future<void>.delayed(const Duration(milliseconds: 250));
-    }
-    return null;
   }
 
   Future<void> _checkLinuxNow(BuildContext? ctx) async {
@@ -165,15 +169,6 @@ class AppUpdater {
     if (ctx != null && ctx.mounted) {
       await _promptAndInstall(ctx, updater, entry);
     }
-  }
-
-  /// Prompts to install [entry] if an update was already discovered.
-  Future<void> installAvailable({BuildContext? context}) async {
-    final entry = availableUpdate.value;
-    final updater = _createLinuxUpdater();
-    final ctx = context ?? _contextProvider?.call();
-    if (entry == null || updater == null || ctx == null || !ctx.mounted) return;
-    await _promptAndInstall(ctx, updater, entry);
   }
 
   Future<void> _promptAndInstall(

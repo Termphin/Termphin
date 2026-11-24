@@ -1,12 +1,17 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import 'package:pinenacl/ed25519.dart' as nacl;
 
+import 'appcast_fetcher.dart';
 import 'appcast_parser.dart';
+
+export 'appcast_fetcher.dart'
+    show
+        LinuxUpdateCancelToken,
+        LinuxUpdateCancelledException,
+        LinuxUpdateException;
 
 /// Ed25519 public key matching `SUPublicEDKey` in `macos/Runner/Info.plist`,
 /// used to verify signed Linux AppImage releases before replacing the binary.
@@ -45,40 +50,6 @@ class LinuxUpdateProgress {
   }
 }
 
-/// Token allowing the user to abort an in-flight update download.
-class LinuxUpdateCancelToken {
-  bool _cancelled = false;
-  VoidCallback? _onCancel;
-
-  bool get isCancelled => _cancelled;
-
-  void attach(VoidCallback onCancel) {
-    _onCancel = onCancel;
-    if (_cancelled) onCancel();
-  }
-
-  void cancel() {
-    if (_cancelled) return;
-    _cancelled = true;
-    _onCancel?.call();
-  }
-}
-
-/// Raised when an update cannot be fetched, verified, or written safely.
-class LinuxUpdateException implements Exception {
-  const LinuxUpdateException(this.message);
-
-  final String message;
-
-  @override
-  String toString() => 'LinuxUpdateException: $message';
-}
-
-/// Raised when the user cancels an update download.
-class LinuxUpdateCancelledException implements Exception {
-  const LinuxUpdateCancelledException();
-}
-
 /// Checks a Sparkle-signed `appcast-linux.xml`, verifies the downloaded
 /// AppImage with Ed25519, atomically replaces the running `$APPIMAGE` file,
 /// and relaunches the new version.
@@ -95,51 +66,32 @@ class LinuxSelfUpdater {
        _publicKeyBytes = Uint8List.fromList(
          base64Decode(publicKeyBase64 ?? kTermphinUpdatePublicKeyBase64),
        ),
-       _readPackageInfo = readPackageInfo ?? _defaultPackageInfo,
-       _httpClientFactory = httpClientFactory ?? HttpClient.new,
+       _readPackageInfo = readPackageInfo,
+       _httpClientFactory = httpClientFactory,
        _makeExecutable = makeExecutable ?? _defaultMakeExecutable,
        _relaunch = relaunch ?? _defaultRelaunch;
 
   final String appImagePath;
   final Uri feedUri;
   final Uint8List _publicKeyBytes;
-  final Future<({String version, String buildNumber})> Function()
+  final Future<({String version, String buildNumber})> Function()?
   _readPackageInfo;
-  final HttpClient Function() _httpClientFactory;
+  final HttpClient Function()? _httpClientFactory;
   final Future<void> Function(String path) _makeExecutable;
   final Future<void> Function(String path) _relaunch;
-
-  static const _maxRedirects = 5;
 
   /// Only `https://` is trusted in production; loopback `http://` stays open
   /// for local test servers.
   @visibleForTesting
-  static bool isAllowedUri(Uri uri) {
-    if (uri.scheme == 'https') return uri.hasAuthority;
-    if (uri.scheme == 'http') {
-      final host = uri.host.toLowerCase();
-      return host == 'localhost' || host == '127.0.0.1' || host == '::1';
-    }
-    return false;
-  }
+  static bool isAllowedUri(Uri uri) => isAllowedUpdateUri(uri);
 
   /// Fetches the feed and returns the newer release if one exists.
-  Future<AppcastEntry?> checkForUpdate() async {
-    final xmlBytes = await _downloadBytes(feedUri);
-    final xml = utf8.decode(xmlBytes);
-    final candidate = parseAppcast(xml, os: 'linux');
-    if (candidate == null) return null;
-
-    final info = await _readPackageInfo();
-    if (!isNewerAppcastEntry(
-      candidate,
-      currentBuild: info.buildNumber,
-      currentVersion: info.version,
-    )) {
-      return null;
-    }
-    return candidate;
-  }
+  Future<AppcastEntry?> checkForUpdate() => fetchNewerAppcastEntry(
+    feedUri: feedUri,
+    os: 'linux',
+    readPackageInfo: _readPackageInfo,
+    httpClientFactory: _httpClientFactory,
+  );
 
   /// Downloads [entry], verifies its byte length and Ed25519 signature, and
   /// atomically replaces [appImagePath]. Leaves the existing file untouched if
@@ -174,10 +126,11 @@ class LinuxSelfUpdater {
           total: entry.length,
         ),
       );
-      final bytes = await _downloadBytes(
+      final bytes = await downloadAppcastBytes(
         entry.downloadUrl,
         expectedTotal: entry.length,
         cancelToken: cancelToken,
+        httpClientFactory: _httpClientFactory,
         onProgress: (received, total) => onProgress?.call(
           LinuxUpdateProgress(
             stage: LinuxUpdateStage.downloading,
@@ -246,76 +199,6 @@ class LinuxSelfUpdater {
       if (error is LinuxUpdateException) rethrow;
       throw LinuxUpdateException('Ed25519 signature rejected: $error');
     }
-  }
-
-  Future<Uint8List> _downloadBytes(
-    Uri initialUri, {
-    int? expectedTotal,
-    LinuxUpdateCancelToken? cancelToken,
-    void Function(int received, int? total)? onProgress,
-  }) async {
-    final client = _httpClientFactory();
-    cancelToken?.attach(() => client.close(force: true));
-    try {
-      var current = initialUri;
-      for (var hop = 0; hop <= _maxRedirects; hop++) {
-        if (cancelToken?.isCancelled ?? false) {
-          throw const LinuxUpdateCancelledException();
-        }
-        if (!isAllowedUri(current)) {
-          throw LinuxUpdateException('Blocked non-HTTPS update URL: $current');
-        }
-        final request = await client.getUrl(current);
-        request.followRedirects = false;
-        final response = await request.close();
-
-        if (response.isRedirect ||
-            (response.statusCode >= 300 && response.statusCode < 400)) {
-          await response.drain<void>();
-          final location = response.headers.value(HttpHeaders.locationHeader);
-          if (location == null || location.isEmpty) {
-            throw const LinuxUpdateException('Redirect missing Location header');
-          }
-          current = current.resolve(location);
-          continue;
-        }
-
-        if (response.statusCode != HttpStatus.ok) {
-          await response.drain<void>();
-          throw LinuxUpdateException(
-            'HTTP ${response.statusCode} fetching $current',
-          );
-        }
-
-        final total =
-            response.contentLength >= 0 ? response.contentLength : expectedTotal;
-        final builder = BytesBuilder(copy: false);
-        var received = 0;
-        await for (final chunk in response) {
-          if (cancelToken?.isCancelled ?? false) {
-            throw const LinuxUpdateCancelledException();
-          }
-          builder.add(chunk);
-          received += chunk.length;
-          onProgress?.call(received, total);
-        }
-        return builder.takeBytes();
-      }
-      throw LinuxUpdateException('Too many redirects fetching $initialUri');
-    } catch (error) {
-      if (cancelToken?.isCancelled ?? false) {
-        throw const LinuxUpdateCancelledException();
-      }
-      rethrow;
-    } finally {
-      client.close(force: true);
-    }
-  }
-
-  static Future<({String version, String buildNumber})>
-  _defaultPackageInfo() async {
-    final info = await PackageInfo.fromPlatform();
-    return (version: info.version, buildNumber: info.buildNumber);
   }
 
   static Future<void> _defaultMakeExecutable(String path) async {
