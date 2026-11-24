@@ -60,6 +60,11 @@ class SessionTabPill extends StatelessWidget {
 
   /// Fills the rail's width rather than sizing to the label.
   final bool stretch;
+
+  /// Laid out the pill's full height, past the padding around the avatar
+  /// and name, so a button at the end can be as tall as the tab itself: a
+  /// finger aiming at a small icon at the edge of a tab lands anywhere on
+  /// that edge.
   final List<Widget> trailing;
 
   /// The label is one line: without `maxLines` a long name wraps and nothing
@@ -95,6 +100,7 @@ class SessionTabPill extends StatelessWidget {
 
     final name = _name(isActive ? activeText : inactiveText);
 
+    const vertical = EdgeInsets.symmetric(vertical: kSessionTabPillPaddingY);
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -102,9 +108,7 @@ class SessionTabPill extends StatelessWidget {
         duration: AppTheme.motionFast,
         padding: EdgeInsets.only(
           left: collapsed ? AppTheme.space4 : AppTheme.space14,
-          right: AppTheme.space4,
-          top: kSessionTabPillPaddingY,
-          bottom: kSessionTabPillPaddingY,
+          right: collapsed || trailing.isEmpty ? AppTheme.space4 : 0,
         ),
         decoration: BoxDecoration(
           color: isActive
@@ -120,26 +124,44 @@ class SessionTabPill extends StatelessWidget {
           ),
         ),
         child: collapsed
-            ? Center(child: avatar)
-            : Row(
-                mainAxisSize: stretch ? MainAxisSize.max : MainAxisSize.min,
-                children: [
-                  avatar,
-                  const SizedBox(width: AppTheme.space8),
-                  if (stretch)
-                    Expanded(child: name)
-                  else
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 170),
-                      child: name,
+            ? Padding(
+                padding: vertical,
+                child: Center(child: avatar),
+              )
+            : IntrinsicHeight(
+                child: Row(
+                  mainAxisSize: stretch ? MainAxisSize.max : MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: vertical,
+                      child: Center(child: avatar),
                     ),
-                  const SizedBox(width: AppTheme.space6),
-                  ...trailing,
-                ],
+                    const SizedBox(width: AppTheme.space8),
+                    if (stretch)
+                      Expanded(child: _start(name))
+                    else
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 170),
+                        child: _start(name),
+                      ),
+                    const SizedBox(width: AppTheme.space6),
+                    ...trailing,
+                  ],
+                ),
               ),
       ),
     );
   }
+
+  /// Centred down the pill's height, kept to the start across it and no
+  /// wider than the text - beside a fixed-width box it would otherwise take
+  /// the box's whole width.
+  static Widget _start(Widget child) => Align(
+    alignment: AlignmentDirectional.centerStart,
+    widthFactor: 1,
+    child: child,
+  );
 
   Widget _name(Color color) {
     final session = sessionName;
