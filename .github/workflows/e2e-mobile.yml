@@ -1,0 +1,320 @@
+name: E2E Mobile
+
+on:
+  push:
+    branches:
+      - 'release/**'
+  pull_request:
+    paths:
+      - 'lib/**'
+      - 'ios/**'
+      - 'android/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - '.maestro/**'
+      - 'scripts/run_maestro_e2e.py'
+      - '.github/workflows/e2e-mobile.yml'
+  workflow_dispatch:
+    inputs:
+      flows:
+        description: 'Optional space-separated Maestro flows (blank runs the full suite)'
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e-android:
+    name: Android Emulator E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      ANDROID_AVD_HOME: /home/runner/.android/avd
+      ANDROID_USER_HOME: /home/runner/.android
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: '3.50.1'
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies and build debug APK
+        run: |
+          flutter pub get
+          for attempt in 1 2 3; do
+            if flutter build apk --debug; then
+              exit 0
+            fi
+            echo "Gradle build attempt $attempt failed, retrying in 15s..." >&2
+            sleep 15
+          done
+          exit 1
+
+      - name: Start local test SSH server
+        run: |
+          docker build -t termphin-testvm -f test/live/Containerfile test/live
+          docker run -d --name termphin-e2e-ssh -p 127.0.0.1:34122:22 termphin-testvm
+
+      - name: Enable KVM and create Android AVD
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            "platform-tools" \
+            "emulator" \
+            "system-images;android-35;google_apis;x86_64"
+          mkdir -p "$ANDROID_AVD_HOME"
+          echo "no" | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd \
+            --force \
+            --name e2e_android \
+            --package "system-images;android-35;google_apis;x86_64" \
+            --device pixel_6 \
+            --path "$ANDROID_AVD_HOME/e2e_android.avd"
+          ls -la "$ANDROID_AVD_HOME"
+          "$ANDROID_HOME/emulator/emulator" -list-avds
+          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
+
+      - name: Boot Android emulator and install APK
+        run: |
+          sudo chmod 666 /dev/kvm || true
+          ls -la /dev/kvm || true
+          nohup "$ANDROID_HOME/emulator/emulator" \
+            -avd e2e_android \
+            -no-window \
+            -no-audio \
+            -no-boot-anim \
+            -no-snapshot-load \
+            -no-snapshot-save \
+            -no-metrics \
+            -memory 2048 \
+            -cores 2 \
+            -gpu swiftshader_indirect \
+            >/tmp/android-emulator.log 2>&1 </dev/null &
+          EMU_PID=$!
+          READY=false
+          for i in $(seq 1 90); do
+            if ! kill -0 "$EMU_PID" 2>/dev/null; then
+              echo "Android emulator exited prematurely:" >&2
+              cat /tmp/android-emulator.log >&2 || true
+              exit 1
+            fi
+            BOOT="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"
+            ACT="$(adb shell service check activity 2>/dev/null | tr -d '\r')"
+            if [ "$BOOT" = "1" ] && echo "$ACT" | grep -q "found"; then
+              echo "Android emulator ready after $((i * 2))s"
+              READY=true
+              break
+            fi
+            sleep 2
+          done
+          if [ "$READY" != "true" ]; then
+            echo "Android emulator did not finish booting in 180s:" >&2
+            cat /tmp/android-emulator.log >&2 || true
+            exit 1
+          fi
+          adb shell settings put global window_animation_scale 0
+          adb shell settings put global transition_animation_scale 0
+          adb shell settings put global animator_duration_scale 0
+          adb install -r -g build/app/outputs/flutter-apk/app-debug.apk
+
+      - name: Install Maestro CLI
+        run: |
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Run Maestro E2E suite (Android)
+        env:
+          FLOWS: ${{ inputs.flows || '.maestro/02_terminal_input_raw.yaml' }}
+        run: |
+          # shellcheck disable=SC2086
+          python3 -u scripts/run_maestro_e2e.py \
+            --runtime docker \
+            --container termphin-e2e-ssh \
+            --app-id dev.termphin.termphin.debug \
+            --ssh-host 10.0.2.2 \
+            --ssh-port 34122 \
+            --ssh-user tester \
+            --ssh-pass testpass \
+            --home-dir /home/tester \
+            $FLOWS
+
+      - name: Upload Maestro debug artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: maestro-debug-android
+          path: |
+            ~/.maestro/tests
+            /tmp/android-emulator.log
+          if-no-files-found: ignore
+
+  e2e-ios:
+    name: iOS Simulator E2E
+    runs-on: macos-15
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Select Xcode 26.3
+        run: |
+          XCODE=/Applications/Xcode_26.3.app
+          if [ ! -d "$XCODE" ]; then
+            echo "Expected $XCODE; available Xcodes:" >&2
+            ls -d /Applications/Xcode*.app >&2 || true
+            exit 1
+          fi
+          sudo xcode-select -s "$XCODE"
+          xcodebuild -version
+
+      - name: Start local test SSH server
+        run: |
+          sudo sysadminctl -addUser tester -password testpass -home /Users/tester -shell /bin/bash
+          sudo dscl . -create /Users/tester UserShell /bin/bash || true
+          sudo dseditgroup -o create -q com.apple.access_ssh || true
+          sudo dseditgroup -o edit -a tester -t user com.apple.access_ssh
+          sudo createhomedir -c -u tester || true
+          sudo mkdir -p /Users/tester /tmp/e2e_sshd
+          sudo touch /tmp/e2e_sshd/sshd.log
+          sudo chmod 644 /tmp/e2e_sshd/sshd.log
+          sudo chown -R tester:staff /Users/tester
+          sudo chmod 755 /Users/tester
+          sudo ssh-keygen -t ed25519 -N '' -f /tmp/e2e_sshd/ssh_host_ed25519_key
+          cat <<'EOF' | sudo tee /tmp/e2e_sshd/sshd_config >/dev/null
+          Port 34122
+          ListenAddress 127.0.0.1
+          HostKey /tmp/e2e_sshd/ssh_host_ed25519_key
+          PasswordAuthentication yes
+          KbdInteractiveAuthentication yes
+          UsePAM yes
+          AllowUsers tester
+          Subsystem sftp /usr/libexec/sftp-server
+          PidFile /tmp/e2e_sshd/sshd.pid
+          LogLevel VERBOSE
+          EOF
+          sudo /usr/sbin/sshd -f /tmp/e2e_sshd/sshd_config -E /tmp/e2e_sshd/sshd.log
+          sleep 1
+          nc -z 127.0.0.1 34122
+          python3 - <<'PY' || { sudo cat /tmp/e2e_sshd/sshd.log || true; exit 1; }
+          import os, pty, select, subprocess, time
+          master, slave = pty.openpty()
+          proc = subprocess.Popen(
+              [
+                  "ssh", "-v",
+                  "-o", "StrictHostKeyChecking=no",
+                  "-o", "UserKnownHostsFile=/dev/null",
+                  "-o", "PubkeyAuthentication=no",
+                  "-p", "34122",
+                  "tester@127.0.0.1",
+                  "echo SSH_SELF_TEST_OK",
+              ],
+              stdin=slave, stdout=slave, stderr=slave, close_fds=True,
+          )
+          os.close(slave)
+          out = b""
+          sent_pass = False
+          deadline = time.time() + 15
+          while time.time() < deadline:
+              r, _, _ = select.select([master], [], [], 0.5)
+              if r:
+                  try:
+                      chunk = os.read(master, 4096)
+                  except OSError:
+                      break
+                  if not chunk:
+                      break
+                  out += chunk
+                  if not sent_pass and b"password:" in out.lower():
+                      os.write(master, b"testpass\n")
+                      sent_pass = True
+              elif proc.poll() is not None:
+                  break
+          rc = proc.wait(timeout=5)
+          os.close(master)
+          text = out.decode("utf-8", errors="replace")
+          print(text)
+          if rc != 0 or "SSH_SELF_TEST_OK" not in text:
+              raise SystemExit(f"SSH self-test failed (rc={rc})")
+          PY
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: '3.50.1'
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies and build iOS Simulator app
+        run: |
+          flutter pub get
+          flutter build ios --simulator --debug
+
+      - name: Boot iOS Simulator and install app
+        run: |
+          # Keep the software keyboard active so tests exercise real UIKit deleteBackward.
+          defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool NO
+          UDID="$(xcrun simctl list devices available iPhone -j | python3 -c '
+          import json, sys
+          data = json.load(sys.stdin)["devices"]
+          for rt in sorted(data.keys(), reverse=True):
+              for dev in data[rt]:
+                  if dev.get("isAvailable") and "iPhone" in dev.get("name", ""):
+                      print(dev["udid"])
+                      sys.exit(0)
+          sys.exit(1)
+          ')"
+          echo "Booting iOS Simulator UDID=$UDID"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl install "$UDID" build/ios/iphonesimulator/Runner.app
+          # Pre-warm Impeller Metal shader compilation in parallel with Maestro install.
+          xcrun simctl launch "$UDID" dev.termphin.termphin || true
+
+      - name: Install Maestro CLI
+        run: |
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Run Maestro E2E suite (iOS)
+        env:
+          FLOWS: ${{ inputs.flows || '.maestro/02_terminal_input_raw.yaml' }}
+        run: |
+          # shellcheck disable=SC2086
+          python3 -u scripts/run_maestro_e2e.py \
+            --runtime local \
+            --app-id dev.termphin.termphin \
+            --ssh-host 127.0.0.1 \
+            --ssh-port 34122 \
+            --ssh-user tester \
+            --ssh-pass testpass \
+            --home-dir /Users/tester \
+            $FLOWS
+
+      - name: Upload Maestro debug artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: maestro-debug-ios
+          path: |
+            ~/.maestro/tests
+            /tmp/e2e_sshd/sshd.log
+          if-no-files-found: ignore

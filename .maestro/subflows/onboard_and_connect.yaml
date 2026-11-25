@@ -1,0 +1,82 @@
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+
+- extendedWaitUntil:
+    visible: "Get started"
+    timeout: 30000
+- tapOn: "Get started"
+- runFlow:
+    when:
+      visible: "Get started"
+    commands:
+      - waitForAnimationToEnd:
+          timeout: 5000
+      - tapOn: "Get started"
+
+- extendedWaitUntil:
+    visible: "Yes, I have one(?s).*"
+    timeout: 10000
+- tapOn: "Yes, I have one(?s).*"
+- tapOn: "Continue"
+
+- extendedWaitUntil:
+    visible: "Finish"
+    timeout: 10000
+- tapOn: "Finish"
+
+- extendedWaitUntil:
+    visible: "New Machine"
+    timeout: 10000
+
+- scrollUntilVisible:
+    element: "Name"
+    direction: DOWN
+- tapOn: "Name"
+- inputText: "E2E"
+- hideKeyboard
+
+- tapOn: "Host"
+- inputText: "${SSH_HOST}"
+- hideKeyboard
+
+- tapOn: "Port"
+- eraseText: 5
+- inputText: "${SSH_PORT}"
+
+- tapOn: "Username"
+- inputText: "${SSH_USER}"
+- hideKeyboard
+
+- scrollUntilVisible:
+    element: "Password(?s).*"
+    direction: DOWN
+- tapOn: "Password(?s).*"
+
+- scrollUntilVisible:
+    element:
+      text: "Password"
+    direction: DOWN
+- tapOn:
+    text: "Password"
+- inputText: "${SSH_PASS}"
+- hideKeyboard
+
+- tapOn: "Save"
+
+- extendedWaitUntil:
+    visible: "E2E(?s).*"
+    timeout: 20000
+- tapOn: "E2E(?s).*"
+
+- extendedWaitUntil:
+    visible: "Accept and remember"
+    timeout: 15000
+- tapOn: "Accept and remember"
+
+- extendedWaitUntil:
+    visible: "Control(?s).*CTRL"
+    timeout: 20000

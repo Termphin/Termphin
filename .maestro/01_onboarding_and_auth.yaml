@@ -1,0 +1,145 @@
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+
+# 1. Onboarding flow.
+- extendedWaitUntil:
+    visible: "Get started"
+    timeout: 15000
+- tapOn: "Get started"
+
+- extendedWaitUntil:
+    visible: "Yes, I have one(?s).*"
+    timeout: 10000
+- tapOn: "Yes, I have one(?s).*"
+- tapOn: "Continue"
+
+- extendedWaitUntil:
+    visible: "Finish"
+    timeout: 10000
+- tapOn: "Finish"
+
+# 2. Create machine with wrong password -> verify host key prompt + clear auth error.
+- extendedWaitUntil:
+    visible: "New Machine"
+    timeout: 10000
+
+- scrollUntilVisible:
+    element: "Name"
+    direction: DOWN
+- tapOn: "Name"
+- inputText: "BadAuth"
+
+- scrollUntilVisible:
+    element: "Host"
+    direction: DOWN
+- tapOn: "Host"
+- inputText: "${SSH_HOST}"
+
+- scrollUntilVisible:
+    element: "Port"
+    direction: DOWN
+- tapOn: "Port"
+- eraseText: 5
+- inputText: "${SSH_PORT}"
+
+- scrollUntilVisible:
+    element: "Username"
+    direction: DOWN
+- tapOn: "Username"
+- inputText: "${SSH_USER}"
+- hideKeyboard
+
+- scrollUntilVisible:
+    element: "Password(?s).*"
+    direction: DOWN
+- tapOn: "Password(?s).*"
+
+- scrollUntilVisible:
+    element:
+      text: "Password"
+    direction: DOWN
+- tapOn:
+    text: "Password"
+- inputText: "wrongpass"
+- hideKeyboard
+- tapOn: "Save"
+
+- extendedWaitUntil:
+    visible: "BadAuth(?s).*"
+    timeout: 10000
+- tapOn: "BadAuth(?s).*"
+
+- extendedWaitUntil:
+    visible: "Accept and remember"
+    timeout: 15000
+- tapOn: "Accept and remember"
+
+- extendedWaitUntil:
+    visible: ".*Wrong username or password.*"
+    timeout: 15000
+
+# 3. Return to Home, add valid machine on same host:port -> connects without re-prompting host key.
+- tapOn: "Back"
+- extendedWaitUntil:
+    visible: "Add machine"
+    timeout: 10000
+- tapOn: "Add machine"
+
+- extendedWaitUntil:
+    visible: "New Machine"
+    timeout: 10000
+- scrollUntilVisible:
+    element: "Name"
+    direction: DOWN
+- tapOn: "Name"
+- inputText: "GoodAuth"
+
+- scrollUntilVisible:
+    element: "Host"
+    direction: DOWN
+- tapOn: "Host"
+- inputText: "${SSH_HOST}"
+
+- scrollUntilVisible:
+    element: "Port"
+    direction: DOWN
+- tapOn: "Port"
+- eraseText: 5
+- inputText: "${SSH_PORT}"
+
+- scrollUntilVisible:
+    element: "Username"
+    direction: DOWN
+- tapOn: "Username"
+- inputText: "${SSH_USER}"
+- hideKeyboard
+
+- scrollUntilVisible:
+    element: "Password(?s).*"
+    direction: DOWN
+- tapOn: "Password(?s).*"
+
+- scrollUntilVisible:
+    element:
+      text: "Password"
+    direction: DOWN
+- tapOn:
+    text: "Password"
+- inputText: "${SSH_PASS}"
+- hideKeyboard
+- tapOn: "Save"
+
+- extendedWaitUntil:
+    visible: "GoodAuth(?s).*"
+    timeout: 10000
+- tapOn: "GoodAuth(?s).*"
+
+# Host key is already pinned, so terminal must connect directly with no host-key dialog.
+- extendedWaitUntil:
+    visible: "Control(?s).*CTRL"
+    timeout: 20000
+- assertNotVisible: "Accept and remember"

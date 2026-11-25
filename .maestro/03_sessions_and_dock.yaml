@@ -1,0 +1,42 @@
+appId: ${APP_ID}
+---
+- runFlow: subflows/onboard_and_connect.yaml
+
+# Open a second session from the terminal top bar picker.
+- tapOn: "Pick a machine to connect to"
+- extendedWaitUntil:
+    visible: "E2E(?s).*"
+    timeout: 10000
+- tapOn: "E2E(?s).*"
+
+- extendedWaitUntil:
+    visible: "Control(?s).*CTRL"
+    timeout: 20000
+
+# Return to Home and verify the floating session dock shows both sessions (count badge 2).
+- tapOn: "Back"
+- extendedWaitUntil:
+    visible: "E2E\\n${SSH_USER}@${SSH_HOST}\\n2"
+    timeout: 10000
+
+# Tap the floating dock to jump back into the active terminal.
+- tapOn: "E2E\\n${SSH_USER}@${SSH_HOST}\\n2"
+- extendedWaitUntil:
+    visible: "Control(?s).*CTRL"
+    timeout: 10000
+
+# Send app to background and return -> session must survive and accept input.
+- pressKey: Home
+- waitForAnimationToEnd:
+    timeout: 1500
+- launchApp:
+    clearState: false
+    stopApp: false
+- extendedWaitUntil:
+    visible: "Control(?s).*CTRL"
+    timeout: 15000
+
+- tapOn:
+    point: "50%,35%"
+- inputText: "echo ALIVE > /tmp/e2e_alive.txt"
+- pressKey: Enter

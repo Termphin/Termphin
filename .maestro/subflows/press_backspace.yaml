@@ -1,0 +1,13 @@
+appId: ${APP_ID}
+---
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+          text: "(?i)^delete$"
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - pressKey: Backspace
