@@ -1540,10 +1540,10 @@ packages:
     dependency: "direct main"
     description:
       name: terminal_view
-      sha256: "8971d83436f2b57d51b82d5565614624d24ef3899017aa31680cda70a1a45934"
+      sha256: ff6a83abd4e106a5801f6875ec32ade30a9eb72a3d775cb25a05054a9cf09dfd
       url: "https://pub.dev"
     source: hosted
-    version: "0.6.2"
+    version: "0.6.3"
   test_api:
     dependency: transitive
     description:
