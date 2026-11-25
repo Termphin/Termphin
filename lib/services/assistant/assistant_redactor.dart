@@ -1,13 +1,16 @@
+import 'assistant_secret_rules.dart';
+
 /// Hides who and where the user is from the assistant, and puts it back in
 /// what the assistant says.
 ///
 /// Everything sent to the model passes through [hide]: anything that looks
 /// like a secret becomes `[SECRET_n]`, and the server's names, addresses,
-/// users and emails become `HOST_n`, `IP_n`, `USER_n` and `EMAIL_n`. What
-/// the model sends back passes through [reveal] before the app shows or runs
-/// it. A value keeps its placeholder for the whole conversation, so the
-/// model can follow it, and the same text always hides the same way, so the
-/// conversation sent again next step is the one sent before.
+/// MACs, users and emails become `HOST_n`, `IP_n`, `MAC_n`, `USER_n` and
+/// `EMAIL_n`. What the model sends back passes through [reveal] before the
+/// app shows or runs it. A value keeps its placeholder for the whole
+/// conversation, so the model can follow it, and the same text always hides
+/// the same way, so the conversation sent again next step is the one sent
+/// before.
 ///
 /// Loopback and unspecified addresses stay as they are: `127.0.0.1:3000`
 /// says where an app listens, not whose server it is.
@@ -30,6 +33,7 @@ class AssistantRedactor {
   final _hosts = <String, String>{};
   final _users = <String, String>{};
   final _ips = <String, String>{};
+  final _macs = <String, String>{};
   final _emails = <String, String>{};
   final _secrets = <String, String>{};
   final _originals = <String, String>{};
@@ -49,22 +53,38 @@ class AssistantRedactor {
     'mysql',
     'redis',
     'node',
+    'public',
+    'default',
   };
 
   /// [text] with everything identifying replaced by placeholders.
   String hide(String text) {
     var out = text;
-    for (final pattern in _secretPatterns) {
-      out = out.replaceAllMapped(pattern.regex, (m) {
-        final secret = m.group(pattern.group)!;
-        if (_placeholder.hasMatch(secret)) return m.group(0)!;
+    final lower = out.toLowerCase();
+    for (final rule in assistantSecretRules) {
+      if (!rule.matchesKeywords(lower)) continue;
+      out = out.replaceAllMapped(rule.pattern, (m) {
+        final secret = rule.extractSecret(m);
+        if (secret == null || _placeholder.hasMatch(secret)) {
+          return m.group(0)!;
+        }
+        if (rule.allow?.call(secret) ?? false) return m.group(0)!;
+        if (rule.minEntropy != null &&
+            shannonEntropy(secret) < rule.minEntropy!) {
+          return m.group(0)!;
+        }
         final placeholder = _remember(
           _secrets,
           secret,
           'SECRET',
           bracketed: true,
         );
-        return m.group(0)!.replaceFirst(secret, placeholder);
+        final full = m.group(0)!;
+        if (secret == full) return placeholder;
+        final at = full.lastIndexOf(secret);
+        return at < 0
+            ? full
+            : '${full.substring(0, at)}$placeholder${full.substring(at + secret.length)}';
       });
     }
     out = out.replaceAllMapped(
@@ -82,6 +102,12 @@ class AssistantRedactor {
         return candidate;
       }
       return _remember(_ips, candidate.toLowerCase(), 'IP');
+    });
+    out = out.replaceAllMapped(_mac, (m) {
+      final mac = m.group(0)!;
+      final normalized = mac.toLowerCase().replaceAll('-', ':');
+      if (_keptMacs.contains(normalized)) return mac;
+      return _remember(_macs, mac.toLowerCase(), 'MAC');
     });
     out = out.replaceAllMapped(_homeDirectory, (m) {
       final name = m.group(1)!;
@@ -106,11 +132,15 @@ class AssistantRedactor {
     return out;
   }
 
-  /// [text] with every placeholder this redactor made put back.
-  String reveal(String text) => text.replaceAllMapped(
-    _placeholder,
-    (m) => _originals[m.group(0)!] ?? m.group(0)!,
-  );
+  /// [text] with every placeholder this redactor made put back, including
+  /// minor case changes or Markdown-escaped underscores from the model.
+  String reveal(String text) => text.replaceAllMapped(_revealPlaceholder, (m) {
+    final token = m.group(0)!;
+    final direct = _originals[token];
+    if (direct != null) return direct;
+    final normalized = token.replaceAll(r'\', '').toUpperCase();
+    return _originals[normalized] ?? token;
+  });
 
   /// Every placeholder and what it stands for, for keeping a conversation.
   Map<String, String> get placeholders => Map.unmodifiable(_originals);
@@ -137,7 +167,12 @@ class AssistantRedactor {
         ..sort((a, b) => b.key.length.compareTo(a.key.length));
 
   static final _placeholder = RegExp(
-    r'\[SECRET_\d+\]|\b(?:HOST|IP|USER|EMAIL)_\d+\b',
+    r'\[SECRET_\d+\]|\b(?:HOST|IP|USER|EMAIL|MAC)_\d+\b',
+  );
+
+  static final _revealPlaceholder = RegExp(
+    r'\[secret\\?_\d+\]|\b(?:host|ip|user|email|mac)\\?_\d+\b',
+    caseSensitive: false,
   );
 
   static const _keptAddresses = {
@@ -147,6 +182,8 @@ class AssistantRedactor {
     '::',
     '255.255.255.255',
   };
+
+  static const _keptMacs = {'00:00:00:00:00:00', 'ff:ff:ff:ff:ff:ff'};
 
   static final _email = RegExp(
     r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b',
@@ -162,6 +199,10 @@ class AssistantRedactor {
     r'(?<![\w:.])[0-9A-Fa-f]*:[0-9A-Fa-f:]*:[0-9A-Fa-f]*(?![\w:])',
   );
 
+  static final _mac = RegExp(
+    r'(?<![0-9A-Fa-f:-])(?:[0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}(?![0-9A-Fa-f:-])',
+  );
+
   static bool _isIPv6(String candidate) {
     try {
       Uri.parseIPv6Address(candidate);
@@ -171,39 +212,7 @@ class AssistantRedactor {
     }
   }
 
-  static final _homeDirectory = RegExp(r'(?:/home/|/Users/)([A-Za-z0-9._-]+)');
-
-  static final _secretPatterns = <({RegExp regex, int group})>[
-    (
-      regex: RegExp(
-        r'-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----',
-      ),
-      group: 0,
-    ),
-    (regex: RegExp(r'\b[a-z][a-z0-9+.-]*://[^\s:/@]+:([^\s@/]+)@'), group: 1),
-    (
-      regex: RegExp(
-        r'\b[A-Za-z0-9_]*(?:PASSWORD|PASSWD|SECRET|TOKEN|API_?KEY|ACCESS_?KEY|PRIVATE_?KEY|AUTH_?KEY|CREDENTIALS?)[A-Za-z0-9_]*\s*[=:]\s*"?([^\s"]{4,})',
-        caseSensitive: false,
-      ),
-      group: 1,
-    ),
-    (regex: RegExp(r'\b[Bb]earer\s+([A-Za-z0-9._~+/=-]{16,})'), group: 1),
-    (regex: RegExp(r'\bAKIA[0-9A-Z]{16}\b'), group: 0),
-    (regex: RegExp(r'\bgh[pousr]_[A-Za-z0-9]{30,}\b'), group: 0),
-    (regex: RegExp(r'\bgithub_pat_[A-Za-z0-9_]{30,}\b'), group: 0),
-    (
-      regex: RegExp(r'\b(?:sk|rk|pk)_(?:live|test)_[A-Za-z0-9]{16,}\b'),
-      group: 0,
-    ),
-    (regex: RegExp(r'\bxox[abposr]-[A-Za-z0-9-]{10,}\b'), group: 0),
-    (regex: RegExp(r'\bsk-[A-Za-z0-9_-]{20,}\b'), group: 0),
-    (regex: RegExp(r'\bAIza[0-9A-Za-z_-]{35}\b'), group: 0),
-    (
-      regex: RegExp(
-        r'\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b',
-      ),
-      group: 0,
-    ),
-  ];
+  static final _homeDirectory = RegExp(
+    r'(?:[A-Za-z]:[/\\]Users[/\\]|/home/|/Users/)([A-Za-z0-9._-]+)',
+  );
 }
