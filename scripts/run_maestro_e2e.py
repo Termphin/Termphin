@@ -104,7 +104,7 @@ def verify_file(runtime: str, container: str, path: str, expected: str) -> bool:
     return True
 
 
-def run_flow(flow_path: str, env_vars: dict[str, str], timeout_s: int = 360) -> int:
+def run_flow(flow_path: str, env_vars: dict[str, str], timeout_s: int = 600) -> int:
     env = os.environ.copy()
     env["PATH"] = env.get("PATH", "") + ":" + os.path.expanduser("~/.maestro/bin")
     env["MAESTRO_CLI_NO_ANALYTICS"] = "1"

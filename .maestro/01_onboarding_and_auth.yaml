@@ -51,7 +51,11 @@ appId: ${APP_ID}
     direction: DOWN
 - tapOn: "Username"
 - inputText: "${SSH_USER}"
-- hideKeyboard
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - hideKeyboard
 
 - scrollUntilVisible:
     element: "Password(?s).*"
@@ -65,7 +69,11 @@ appId: ${APP_ID}
 - tapOn:
     text: "Password"
 - inputText: "wrongpass"
-- hideKeyboard
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - hideKeyboard
 - tapOn: "Save"
 
 - extendedWaitUntil:
@@ -116,7 +124,11 @@ appId: ${APP_ID}
     direction: DOWN
 - tapOn: "Username"
 - inputText: "${SSH_USER}"
-- hideKeyboard
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - hideKeyboard
 
 - scrollUntilVisible:
     element: "Password(?s).*"
@@ -130,7 +142,11 @@ appId: ${APP_ID}
 - tapOn:
     text: "Password"
 - inputText: "${SSH_PASS}"
-- hideKeyboard
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - hideKeyboard
 - tapOn: "Save"
 
 - extendedWaitUntil:

@@ -37,19 +37,40 @@ appId: ${APP_ID}
     direction: DOWN
 - tapOn: "Name"
 - inputText: "E2E"
-- hideKeyboard
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - hideKeyboard
 
+- scrollUntilVisible:
+    element: "Host"
+    direction: DOWN
 - tapOn: "Host"
 - inputText: "${SSH_HOST}"
-- hideKeyboard
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - hideKeyboard
 
+- scrollUntilVisible:
+    element: "Port"
+    direction: DOWN
 - tapOn: "Port"
 - eraseText: 5
 - inputText: "${SSH_PORT}"
 
+- scrollUntilVisible:
+    element: "Username"
+    direction: DOWN
 - tapOn: "Username"
 - inputText: "${SSH_USER}"
-- hideKeyboard
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - hideKeyboard
 
 - scrollUntilVisible:
     element: "Password(?s).*"
@@ -63,7 +84,11 @@ appId: ${APP_ID}
 - tapOn:
     text: "Password"
 - inputText: "${SSH_PASS}"
-- hideKeyboard
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - hideKeyboard
 
 - tapOn: "Save"
 

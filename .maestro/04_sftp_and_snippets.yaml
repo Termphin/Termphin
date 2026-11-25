@@ -51,7 +51,11 @@ appId: ${APP_ID}
 - inputText: "E2E Snip"
 - tapOn: "Command"
 - inputText: "echo SNIP_OK > /tmp/e2e_snip.txt"
-- hideKeyboard
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - hideKeyboard
 - tapOn: "Save"
 
 - extendedWaitUntil:
