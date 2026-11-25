@@ -143,6 +143,27 @@ void main() {
     expect(manager.restoreStripSize('detached'), 2);
   });
 
+  test(
+    're-adopting a detached session keeps it detached and uncounted',
+    () async {
+      final profile = profileFixture();
+      final session = await manager.startSession(profile, sessionId: 'tab-1');
+      final muxName = session.muxName!;
+
+      await manager.stopSession('tab-1');
+      expect(manager.restorableTabs, isEmpty);
+
+      manager.adoptRemoteSession(profile, muxName);
+
+      expect(manager.restorableTabs, isEmpty);
+      expect(manager.restoreStripSize('other'), 1);
+    },
+  );
+
+  test('wasConnectedTab is false when no tab record exists', () {
+    expect(manager.wasConnectedTab('never-established'), isFalse);
+  });
+
   test('discards malformed tabs and tabs whose profile is gone', () async {
     SharedPreferences.setMockInitialValues({
       'session_tabs': [
