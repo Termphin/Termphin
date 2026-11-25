@@ -26,6 +26,10 @@
     - "Live status moved from the account screen to the Termphin Pro screen"
   fixed:
     - "Termphin installs on devices without WiFi"
+- version: "1.16.2"
+  date: "2026-11-25"
+  fixed:
+    - "Backspace no longer inserts a stray space after deleting a character, and Ctrl+C works on the first press right after deleting"
 - version: "1.16.1"
   date: "2026-11-21"
   changed:

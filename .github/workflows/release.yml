@@ -58,8 +58,19 @@ jobs:
             exit 1
           fi
 
-          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
-            echo "Tag $TAG points at a commit that is not on main" >&2
+          ON_ALLOWED=false
+          if git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            ON_ALLOWED=true
+          else
+            for ref in $(git for-each-ref --format='%(refname)' refs/remotes/origin/release/); do
+              if git merge-base --is-ancestor "$GITHUB_SHA" "$ref"; then
+                ON_ALLOWED=true
+                break
+              fi
+            done
+          fi
+          if [ "$ON_ALLOWED" != "true" ]; then
+            echo "Tag $TAG points at a commit that is not on main or a release/* branch" >&2
             exit 1
           fi
 
