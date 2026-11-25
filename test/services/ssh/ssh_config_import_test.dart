@@ -149,6 +149,18 @@ Host mine
       );
     });
 
+    test('a Snap reads SNAP_REAL_HOME, not its container HOME', () {
+      debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+      expect(
+        sshHomeDirectory({
+          'HOME': '/home/ana/snap/termphin/12',
+          'SNAP_REAL_HOME': '/home/ana',
+          'USER': 'ana',
+        }),
+        '/home/ana',
+      );
+    });
+
     test('elsewhere HOME is the home', () {
       debugDefaultTargetPlatformOverride = TargetPlatform.linux;
       expect(

@@ -77,3 +77,7 @@ app.*.map.json
 
 # Local build-tail defaults (machine paths)
 /.build-tail-conf.json
+
+# Snap staging and build outputs
+/.snap-bundle/
+/*.snap

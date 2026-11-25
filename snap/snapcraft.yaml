@@ -1,0 +1,70 @@
+name: termphin
+title: Termphin
+base: core24
+adopt-info: termphin
+summary: Termphin SSH client
+description: |
+  Termphin is an SSH client with a multi-tab and split-pane terminal, SFTP
+  file manager, encrypted key vault, command snippets, and reconnectable
+  remote sessions.
+license: GPL-3.0-or-later
+grade: stable
+confinement: strict
+icon: snap/gui/termphin.png
+
+platforms:
+  amd64:
+
+apps:
+  termphin:
+    command: usr/bin/termphin
+    extensions: [gnome]
+    common-id: dev.termphin.termphin
+    plugs:
+      - network
+      - network-bind
+      - home
+      - removable-media
+      - password-manager-service
+      - ssh-keys
+
+parts:
+  termphin:
+    plugin: nil
+    source: .
+    build-packages:
+      - clang
+      - cmake
+      - curl
+      - git
+      - libgtk-3-dev
+      - liblzma-dev
+      - libsecret-1-dev
+      - ninja-build
+      - pkg-config
+      - unzip
+      - xz-utils
+    stage-packages:
+      - libsecret-1-0
+    override-pull: |
+      craftctl default
+      VERSION=$(sed -n 's/^version: *\([0-9.]*\).*/\1/p' "$CRAFT_PART_SRC/pubspec.yaml")
+      craftctl set version="$VERSION"
+    override-build: |
+      set -eu
+      if [ -x "$CRAFT_PART_SRC/.snap-bundle/termphin" ]; then
+        BUNDLE_DIR="$CRAFT_PART_SRC/.snap-bundle"
+      else
+        FLUTTER_VER=$(sed -n 's/.*"flutter"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$CRAFT_PART_SRC/.fvmrc")
+        FLUTTER_DIR="$CRAFT_PART_BUILD/flutter-sdk"
+        if [ ! -x "$FLUTTER_DIR/bin/flutter" ]; then
+          git clone --depth 1 --branch "${FLUTTER_VER:-stable}" https://github.com/flutter/flutter.git "$FLUTTER_DIR"
+        fi
+        export PATH="$FLUTTER_DIR/bin:$PATH"
+        cd "$CRAFT_PART_SRC"
+        flutter pub get
+        flutter build linux --release
+        BUNDLE_DIR="$CRAFT_PART_SRC/build/linux/x64/release/bundle"
+      fi
+      mkdir -p "$CRAFT_PART_INSTALL/usr/bin"
+      cp -a "$BUNDLE_DIR/." "$CRAFT_PART_INSTALL/usr/bin/"

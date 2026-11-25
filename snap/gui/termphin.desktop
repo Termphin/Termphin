@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Termphin
+Comment=Termphin SSH client
+Exec=termphin %U
+Icon=${SNAP}/meta/gui/termphin.png
+Terminal=false
+Categories=Network;System;Utility;TerminalEmulator;
+StartupWMClass=dev.termphin.termphin
+MimeType=x-scheme-handler/ssh;x-scheme-handler/termphin;

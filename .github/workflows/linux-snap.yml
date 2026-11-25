@@ -1,0 +1,105 @@
+name: Linux Snap
+
+# Builds a strict-confinement core24 Snap package for Linux, started by hand
+# or from another workflow, and optionally publishes it to the Snap Store.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch or tag to build'
+        required: true
+        type: string
+      publish:
+        description: 'Publish the snap to the Snap Store'
+        required: false
+        type: boolean
+        default: false
+      channel:
+        description: 'Snap Store channel to release to when publishing'
+        required: false
+        type: choice
+        default: edge
+        options:
+          - edge
+          - beta
+          - candidate
+          - stable
+      build_number:
+        description: 'Build number to use instead of the one in pubspec.yaml'
+        required: false
+        type: string
+        default: ''
+  workflow_call:
+    inputs:
+      ref:
+        required: true
+        type: string
+      publish:
+        required: false
+        type: boolean
+        default: false
+      channel:
+        required: false
+        type: string
+        default: 'edge'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: linux-snap-${{ inputs.ref }}
+  cancel-in-progress: true
+
+jobs:
+  snap:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            clang cmake ninja-build pkg-config \
+            libgtk-3-dev libsecret-1-dev liblzma-dev
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: '3.50.1'
+
+      - run: flutter pub get
+
+      - name: Build Linux bundle
+        env:
+          WEB_API_KEY: ${{ vars.FIREBASE_WEB_API_KEY }}
+          BUILD_NUMBER: ${{ inputs.build_number }}
+        run: |
+          ARGS=(--release --dart-define=FIREBASE_WEB_API_KEY="$WEB_API_KEY")
+          if [ -n "$BUILD_NUMBER" ]; then ARGS+=(--build-number="$BUILD_NUMBER"); fi
+          flutter build linux "${ARGS[@]}"
+          rm -rf .snap-bundle
+          cp -a build/linux/x64/release/bundle .snap-bundle
+          rm -rf build .dart_tool
+
+      - name: Build Snap
+        id: snapcraft
+        uses: snapcore/action-build@3bdaa03e1ba6bf59a65f84a751d943d549a54e79 # v1.3.0
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: Termphin-linux-snap
+          path: ${{ steps.snapcraft.outputs.snap }}
+          retention-days: 14
+
+      - name: Publish to Snap Store
+        if: ${{ inputs.publish }}
+        uses: snapcore/action-publish@214b86e5ca036ead1668c79afb81e550e6c54d40 # v1.2.0
+        with:
+          store_login: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+          snap: ${{ steps.snapcraft.outputs.snap }}
+          release: ${{ inputs.channel || 'edge' }}
