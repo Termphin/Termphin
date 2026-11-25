@@ -170,8 +170,9 @@ String _unquote(String value) =>
 /// The user's home, where `~/.ssh` is; null where there is none to read.
 ///
 /// A sandboxed Mac app is told its container as `HOME`; the folder the user
-/// knows as home - and keeps `.ssh` in - is `/Users/<name>`. [environment]
-/// replaces the process's own in tests.
+/// knows as home - and keeps `.ssh` in - is `/Users/<name>`. A strict Snap on
+/// Linux puts its container in `HOME` and the real folder in
+/// `SNAP_REAL_HOME`. [environment] replaces the process's own in tests.
 String? sshHomeDirectory([Map<String, String>? environment]) {
   final env = environment ?? Platform.environment;
   if (isWindowsPlatform) {
@@ -185,6 +186,10 @@ String? sshHomeDirectory([Map<String, String>? environment]) {
       user != null &&
       home.contains('/Library/Containers/')) {
     return '/Users/$user';
+  }
+  if (isLinuxPlatform) {
+    final realHome = env['SNAP_REAL_HOME'];
+    if (realHome != null && realHome.isNotEmpty) return realHome;
   }
   return home == null || home.isEmpty ? null : home;
 }
