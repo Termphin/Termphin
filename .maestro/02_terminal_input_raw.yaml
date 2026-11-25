@@ -1,0 +1,107 @@
+appId: ${APP_ID}
+---
+- runFlow: subflows/onboard_and_connect.yaml
+
+# Focus terminal canvas to open the software keyboard.
+- tapOn:
+    point: "50%,35%"
+
+# Start raw-mode byte recorder on the SSH server (records every byte until ~DONE~).
+- inputText: "perl /tmp/raw_capture.pl /tmp/e2e_raw.hex"
+- pressKey: Enter
+- waitForAnimationToEnd:
+    timeout: 1500
+
+# 1. Typing + multiple Backspace + next char (catches stray 0x20 after delete).
+- inputText: "abXYZ"
+- runFlow: subflows/press_backspace.yaml
+- runFlow: subflows/press_backspace.yaml
+- runFlow: subflows/press_backspace.yaml
+- inputText: "c"
+
+# 2. CTRL oneshot immediately after Backspace, then plain char (auto-clears).
+- runFlow: subflows/press_backspace.yaml
+- tapOn: "Control(?s).*CTRL"
+- inputText: "c"
+- inputText: "c"
+
+# 3. CTRL locked (CTRL⇩) sends multiple control chars, 3rd tap unlocks.
+- tapOn: "Control(?s).*CTRL"
+- tapOn: "Control(?s).*CTRL"
+- inputText: "a"
+- inputText: "e"
+- tapOn: "Control(?s).*CTRL⇩"
+- inputText: "a"
+
+# 4. ALT oneshot and locked (ALT⇩).
+- tapOn: "Alt(?s).*ALT"
+- inputText: "b"
+- inputText: "b"
+- tapOn: "Alt(?s).*ALT"
+- tapOn: "Alt(?s).*ALT"
+- inputText: "f"
+- inputText: "b"
+- tapOn: "Alt(?s).*ALT⇩"
+- inputText: "f"
+
+# 5. Page 1 special keys: ESC, HOME, END, TAB, arrows.
+- tapOn: "Escape(?s).*ESC"
+- tapOn: "Home(?s).*HOME"
+- tapOn: "End(?s).*END"
+- tapOn: "Tab(?s).*TAB"
+- tapOn: "Arrow left(?s).*←"
+- tapOn: "Arrow up(?s).*↑"
+- tapOn: "Arrow down(?s).*↓"
+- tapOn: "Arrow right(?s).*→"
+
+# 6. Switch to Page 2: S+TAB, DEL, BKSP, PAGE↑, PAGE↓, F1, F2, F3.
+- tapOn: "Go to page 2"
+- tapOn: ".*S\\+TAB"
+- tapOn: ".*DEL"
+- tapOn: ".*BKSP"
+- tapOn: ".*PAGE↑"
+- tapOn: ".*PAGE↓"
+- tapOn: ".*F1"
+- tapOn: ".*F2"
+- tapOn: ".*F3"
+
+# 7. SHIFT oneshot on letter, then plain letter.
+- tapOn: "Shift(?s).*SHIFT"
+- inputText: "a"
+- inputText: "a"
+
+# 8. SHIFT locked (SHIFT⇩) on letters, symbols, Page 2 key, and Page 1 keys.
+- tapOn: "Shift(?s).*SHIFT"
+- tapOn: "Shift(?s).*SHIFT"
+- inputText: "b"
+- inputText: "1"
+- tapOn: ".*PAGE↑"
+- tapOn: "Go to page 1"
+- tapOn: "Tab(?s).*TAB"
+- tapOn: "Arrow up(?s).*↑"
+- tapOn: "Arrow right(?s).*→"
+- tapOn: "Go to page 2"
+- tapOn: "Shift(?s).*SHIFT⇩"
+- inputText: "c"
+
+# Stop raw recorder and return to bash.
+- inputText: "~DONE~"
+- waitForAnimationToEnd:
+    timeout: 1500
+
+# 9. Real interactive bash verification (Backspace + immediate first Ctrl+C).
+- tapOn: "Go to page 1"
+- inputText: "echo hiXYZ"
+- runFlow: subflows/press_backspace.yaml
+- runFlow: subflows/press_backspace.yaml
+- runFlow: subflows/press_backspace.yaml
+- inputText: " > /tmp/e2e_bs.txt"
+- pressKey: Enter
+
+- inputText: "sleep 30"
+- pressKey: Enter
+- runFlow: subflows/press_backspace.yaml
+- tapOn: "Control(?s).*CTRL"
+- inputText: "c"
+- inputText: "echo CTRL_OK > /tmp/e2e_ctrl.txt"
+- pressKey: Enter

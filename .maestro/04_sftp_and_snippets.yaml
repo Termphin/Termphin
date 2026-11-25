@@ -1,0 +1,72 @@
+appId: ${APP_ID}
+---
+- runFlow: subflows/onboard_and_connect.yaml
+
+# 1. Switch from Terminal to SFTP via the active tab pill's ⋮ menu and create a folder.
+- tapOn:
+    point: "55%,9%"
+- extendedWaitUntil:
+    visible: "Files"
+    timeout: 10000
+- tapOn: "Files"
+
+- extendedWaitUntil:
+    visible: "Show hidden files"
+    timeout: 15000
+
+# Open the SFTP add menu (+ button trailing in the path bar) -> New folder.
+- tapOn:
+    point: "94%,14%"
+- extendedWaitUntil:
+    visible: "New folder"
+    timeout: 10000
+- tapOn: "New folder"
+
+- extendedWaitUntil:
+    visible: "Folder name"
+    timeout: 10000
+- tapOn: "Folder name"
+- inputText: "e2e_dir"
+- tapOn: "Create"
+- extendedWaitUntil:
+    visible: "e2e_dir(?s).*"
+    timeout: 10000
+
+# 2. Go to Snippets tab, create a snippet, and run it on E2E.
+- tapOn: "Back"
+- extendedWaitUntil:
+    visible: "Snippets"
+    timeout: 10000
+- tapOn: "Snippets"
+
+- extendedWaitUntil:
+    visible: "New snippet"
+    timeout: 10000
+- tapOn: "New snippet"
+
+- extendedWaitUntil:
+    visible: "Command"
+    timeout: 10000
+- tapOn: "Name"
+- inputText: "E2E Snip"
+- tapOn: "Command"
+- inputText: "echo SNIP_OK > /tmp/e2e_snip.txt"
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - hideKeyboard
+- tapOn: "Save"
+
+- extendedWaitUntil:
+    visible: "E2E Snip(?s).*"
+    timeout: 10000
+- tapOn: "E2E Snip(?s).*"
+
+- extendedWaitUntil:
+    visible: "E2E(?s).*"
+    timeout: 10000
+- tapOn: "E2E(?s).*"
+- tapOn: "Run.*"
+- waitForAnimationToEnd:
+    timeout: 3000

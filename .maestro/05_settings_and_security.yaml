@@ -1,0 +1,54 @@
+appId: ${APP_ID}
+---
+- runFlow: subflows/onboard_and_connect.yaml
+
+# Close the active session cleanly via shell exit, then return to Home.
+- tapOn:
+    point: "50%,35%"
+- inputText: "exit"
+- pressKey: Enter
+- waitForAnimationToEnd:
+    timeout: 2000
+- tapOn:
+    text: "Back"
+    optional: true
+
+# Go to Settings -> Privacy & security -> Known hosts and forget the pinned host key.
+- extendedWaitUntil:
+    visible: "Settings"
+    timeout: 10000
+- tapOn: "Settings"
+- scrollUntilVisible:
+    element: "Privacy & security(?s).*"
+    direction: DOWN
+- tapOn: "Privacy & security(?s).*"
+
+- scrollUntilVisible:
+    element: "Known hosts(?s).*"
+    direction: DOWN
+- tapOn: "Known hosts(?s).*"
+
+- extendedWaitUntil:
+    visible: ".*${SSH_HOST}.*"
+    timeout: 10000
+- tapOn: "Forget"
+- extendedWaitUntil:
+    visible: "Forget this host key\\?"
+    timeout: 10000
+- tapOn: "Forget"
+- extendedWaitUntil:
+    visible: "No host keys pinned"
+    timeout: 10000
+
+# Return to Home and open a fresh session -> host key prompt must reappear.
+- tapOn: "Back"
+- tapOn: "Back"
+- tapOn: "Home"
+- extendedWaitUntil:
+    visible: "New session"
+    timeout: 10000
+- tapOn: "New session"
+
+- extendedWaitUntil:
+    visible: "Accept and remember"
+    timeout: 15000
