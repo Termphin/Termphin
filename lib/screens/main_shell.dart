@@ -1098,7 +1098,6 @@ class _BottomNavBar extends StatelessWidget {
       child: AnimatedContainer(
         duration: AppTheme.motionMedium,
         curve: AppTheme.interactiveCurve,
-        padding: EdgeInsets.all(floating ? AppTheme.strokeWide : 0),
         decoration: BoxDecoration(
           borderRadius: outerRadius,
           border: Border.all(

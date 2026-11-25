@@ -560,6 +560,12 @@ void main() {
                   )
                   .padding
               as EdgeInsets;
+      final floatOuter = tester.widget<AnimatedContainer>(
+        find
+            .descendant(of: navBar, matching: find.byType(AnimatedContainer))
+            .first,
+      );
+      expect(floatOuter.padding, isNull);
       expect(floatMargin.left, AppTheme.space16);
       expect(
         find.descendant(of: navBar, matching: find.text(t.nav.home)),
