@@ -302,6 +302,40 @@ void main() {
     expect(segment.contains(home), isTrue);
   });
 
+  testWidgets('dock badge tracks the mounted strip count after minimizing', (
+    tester,
+  ) async {
+    final profile = profileFixture();
+    final (container, fakeManager) = _containerWithFakeConnect();
+    addTearDown(fakeManager.dispose);
+
+    await pumpTestApp(tester, const MainShell(), container: container);
+    await tester.pump();
+    await fakeManager.startSession(profile, sessionId: 'tab-1');
+    await fakeManager.startSession(profile, sessionId: 'tab-2');
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    final navBar = find.byKey(const ValueKey('bottomNavBar'));
+    expect(
+      find.descendant(of: navBar, matching: find.text('2')),
+      findsOneWidget,
+    );
+
+    container
+        .read(terminalOverlayProvider.notifier)
+        .show('tab-2', profile, scope: SiblingScope.none);
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.descendant(of: navBar, matching: find.text('2')), findsNothing);
+  });
+
   group('the wide-layout sidebar collapses', () {
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
@@ -462,4 +496,90 @@ void main() {
       expect(find.byTooltip('Re-attach'), findsOneWidget);
     });
   });
+
+  testWidgets(
+    'mobile bottom bar docks at top and lifts into a floating pill with labels on scroll',
+    (tester) async {
+      final profiles = [
+        for (var i = 0; i < 16; i++)
+          profileFixture(
+            id: 'p-$i',
+            name: 'Server $i',
+            host: 'srv$i.example.com',
+          ),
+      ];
+      final (_, fakeManager) = _containerWithFakeConnect();
+      addTearDown(fakeManager.dispose);
+      final testContainer = ProviderContainer.test(
+        overrides: [
+          sshSessionManagerProvider.overrideWithValue(fakeManager),
+          profileStorageProvider.overrideWithValue(
+            FakeProfileStorage(profiles),
+          ),
+        ],
+      );
+      await testContainer.read(profilesProvider.notifier).loadProfiles();
+
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await pumpTestApp(tester, const MainShell(), container: testContainer);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final navBar = find.byKey(const ValueKey('bottomNavBar'));
+      final dockedMargin = tester
+          .widget<AnimatedPadding>(
+            find
+                .descendant(of: navBar, matching: find.byType(AnimatedPadding))
+                .first,
+          )
+          .padding;
+      expect(dockedMargin, EdgeInsets.zero);
+      expect(
+        find.descendant(of: navBar, matching: find.text(t.nav.home)),
+        findsOneWidget,
+      );
+
+      await tester.drag(
+        find.byType(CustomScrollView).first,
+        const Offset(0, -180),
+      );
+      await tester.pumpAndSettle();
+
+      final floatMargin =
+          tester
+                  .widget<AnimatedPadding>(
+                    find
+                        .descendant(
+                          of: navBar,
+                          matching: find.byType(AnimatedPadding),
+                        )
+                        .first,
+                  )
+                  .padding
+              as EdgeInsets;
+      expect(floatMargin.left, AppTheme.space16);
+      expect(
+        find.descendant(of: navBar, matching: find.text(t.nav.home)),
+        findsOneWidget,
+      );
+
+      await tester.drag(
+        find.byType(CustomScrollView).first,
+        const Offset(0, 300),
+      );
+      await tester.pumpAndSettle();
+
+      final redockedMargin = tester
+          .widget<AnimatedPadding>(
+            find
+                .descendant(of: navBar, matching: find.byType(AnimatedPadding))
+                .first,
+          )
+          .padding;
+      expect(redockedMargin, EdgeInsets.zero);
+    },
+  );
 }

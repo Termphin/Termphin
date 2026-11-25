@@ -213,12 +213,13 @@ class SshSessionManager extends ChangeNotifier {
   /// process hasn't touched yet (a cold-start stub always starts `dropped`,
   /// live or not, so opening the app never auto-connects on its own).
   ///
-  /// A tab the user detached on purpose never counts, however it went: the
-  /// tab bar carries connected sessions only, and detaching is exactly the
-  /// gesture for taking one out of it.
+  /// A tab with no persisted record was never connected, and a tab the user
+  /// detached on purpose never counts, however it went: the tab bar carries
+  /// connected sessions only, and detaching is exactly the gesture for taking
+  /// one out of it.
   bool wasConnectedTab(String tabId) {
     final tab = _tabs[tabId];
-    if (tab == null) return true;
+    if (tab == null) return false;
     return tab.wasConnected && !tab.detached;
   }
 
@@ -1490,7 +1491,11 @@ class SshSessionManager extends ChangeNotifier {
         multiplexer: multiplexer,
       ),
     );
-    _tabs[existing.tabId] = existing.copyWith(detached: false);
+    var changed = false;
+    if (!_tabs.containsKey(existing.tabId)) {
+      _tabs[existing.tabId] = existing;
+      changed = true;
+    }
     if (!_sessions.containsKey(existing.tabId)) {
       _sessions[existing.tabId] = ActiveSessionView(
         id: existing.tabId,
@@ -1499,9 +1504,12 @@ class SshSessionManager extends ChangeNotifier {
         muxName: existing.muxName,
         multiplexer: existing.multiplexer,
       )..dropped = true;
+      changed = true;
     }
-    unawaited(_saveTabs());
-    notifyListeners();
+    if (changed) {
+      unawaited(_saveTabs());
+      notifyListeners();
+    }
     return existing.tabId;
   }
 

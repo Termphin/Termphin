@@ -2818,6 +2818,19 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
   void openSession(String sessionId, SshProfile profile) =>
       _attachTab(sessionId, profile);
 
+  /// How many tabs this strip will hold if [sessionId] is attached via
+  /// [openSession].
+  ///
+  /// When the terminal overlay was minimized rather than closed, reopening it
+  /// via [openSession] keeps this mounted strip as-is instead of pulling in
+  /// unrelated restorable tabs, so the dock badge asks here first.
+  int dockStripSize(String sessionId) {
+    if (_sessions.any((session) => session.$1 == sessionId)) {
+      return _sessions.length;
+    }
+    return _sessions.length + 1;
+  }
+
   /// Picks a machine for a new tab, as the strip's + does. This and the
   /// methods after it are what the desktop's shortcuts and menus run: each is
   /// what the strip's own controls already do, under a name `MainShell` can

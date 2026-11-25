@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -69,6 +70,11 @@ class _MainShellState extends ConsumerState<MainShell>
   late final SshSessionManager _manager = ref.read(sshSessionManagerProvider);
 
   int _currentIndex = 0;
+
+  /// Per-tab scroll state for the mobile bottom bar: docked flat at the foot
+  /// of the screen while at the top of a list and lifted into a floating
+  /// capsule once content scrolls beneath it.
+  final List<bool> _navFloating = List.filled(_screens.length, false);
 
   static const _screens = <Widget>[
     HomeScreen(),
@@ -428,6 +434,29 @@ class _MainShellState extends ConsumerState<MainShell>
     setState(() => _currentIndex = index);
   }
 
+  /// Drives the mobile bottom bar from each tab's primary vertical scroll
+  /// view: docks flat at the top and lifts into a floating capsule once
+  /// scrolled away from it.
+  bool _onBodyScroll(ScrollNotification notification) {
+    if (notification.depth != 0 || notification.metrics.axis != Axis.vertical) {
+      return false;
+    }
+    final i = _currentIndex;
+    final pixels = notification.metrics.pixels;
+
+    var floating = _navFloating[i];
+    if (pixels > AppTheme.space12) {
+      floating = true;
+    } else if (pixels <= AppTheme.space4) {
+      floating = false;
+    }
+
+    if (floating != _navFloating[i]) {
+      setState(() => _navFloating[i] = floating);
+    }
+    return false;
+  }
+
   /// The tab the terminal was covering comes back into view when it goes
   /// away, which is a screen view like any other.
   void _reportCurrentTab() {
@@ -487,6 +516,16 @@ class _MainShellState extends ConsumerState<MainShell>
     ref.read(terminalOverlayProvider.notifier).hide();
   }
 
+  /// How many tabs the terminal strip will hold when the session dock brings
+  /// [sessionId] to the front: a mounted strip keeps its own tabs and only
+  /// adds [sessionId] if absent, whereas a closed strip restores all
+  /// restorable tabs from disk.
+  int _dockSessionCount(String sessionId) {
+    final terminal = _terminalKey.currentState;
+    if (terminal != null) return terminal.dockStripSize(sessionId);
+    return _manager.restoreStripSize(sessionId);
+  }
+
   /// Tells the session manager whether the terminal is what is on screen,
   /// which is what decides if a program's notification is news.
   void _syncTerminalOnScreen() {
@@ -519,13 +558,16 @@ class _MainShellState extends ConsumerState<MainShell>
   Widget _buildMobileScaffold(Translations t) {
     return Scaffold(
       extendBody: true,
-      body: Stack(
-        children: [
-          _AnimatedNavBody(currentIndex: _currentIndex, children: _screens),
-          _AnalyticsAskOverlay(
-            visible: _currentIndex == 0 && !_terminalVisible,
-          ),
-        ],
+      body: NotificationListener<ScrollNotification>(
+        onNotification: _onBodyScroll,
+        child: Stack(
+          children: [
+            _AnimatedNavBody(currentIndex: _currentIndex, children: _screens),
+            _AnalyticsAskOverlay(
+              visible: _currentIndex == 0 && !_terminalVisible,
+            ),
+          ],
+        ),
       ),
       bottomNavigationBar: ListenableBuilder(
         listenable: _manager,
@@ -540,10 +582,11 @@ class _MainShellState extends ConsumerState<MainShell>
                 currentIndex: _currentIndex,
                 onSelected: _selectTab,
                 items: _navItems(t),
+                floating: _navFloating[_currentIndex],
                 dock: !_terminalVisible && dockSession != null
                     ? _SessionDock(
                         session: dockSession,
-                        sessionCount: manager.restoreStripSize(dockSession.id),
+                        sessionCount: _dockSessionCount(dockSession.id),
                         embedded: true,
                         onTap: () => ref
                             .read(terminalOverlayProvider.notifier)
@@ -614,7 +657,7 @@ class _MainShellState extends ConsumerState<MainShell>
                   collapsed: collapsed,
                   dockSession: !_terminalVisible ? dockSession : null,
                   dockSessionCount: dockSession != null
-                      ? manager.restoreStripSize(dockSession.id)
+                      ? _dockSessionCount(dockSession.id)
                       : 0,
                   onDockTap: dockSession == null
                       ? null
@@ -950,25 +993,29 @@ class _AnimatedNavBody extends StatelessWidget {
   }
 }
 
-/// The tab bar on a phone: a capsule floating clear of the screen edges,
-/// with the open tab as a lighter segment that slides to whichever tab is
-/// picked - the same recessed-track-and-thumb look as the app's segmented
-/// switches, so the two read as one family.
+/// The tab bar on a phone: docked flush along the bottom edge while at the top
+/// of a screen and lifting into a floating capsule once content scrolls
+/// beneath it.
 ///
-/// It sits in the scaffold's bottom slot rather than over the content, so no
-/// list has to leave room under its last row for it.
+/// The open tab is a lighter segment that slides to whichever tab is picked -
+/// the same recessed-track-and-thumb look as the app's segmented switches, so
+/// the two read as one family.
 class _BottomNavBar extends StatelessWidget {
   const _BottomNavBar({
     super.key,
     required this.currentIndex,
     required this.onSelected,
     required this.items,
+    required this.floating,
     this.dock,
   });
 
   final int currentIndex;
   final ValueChanged<int> onSelected;
   final List<ShellNavItem> items;
+
+  /// Whether the bar has detached from the bottom edge into a floating pill.
+  final bool floating;
 
   /// The session dock, carried inside the bar: the capsule grows into one
   /// rounded panel with the way back to the session on top of the tabs, so
@@ -981,7 +1028,25 @@ class _BottomNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final dock = this.dock;
-    final radius = dock == null ? AppTheme.radiusPill : AppTheme.radiusLg;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final floatBottom =
+        math.max(bottomInset, AppTheme.space8) + AppTheme.space4;
+    final dockBottom = bottomInset > 0 ? bottomInset : AppTheme.space8;
+    final pillRadius = dock == null ? AppTheme.radiusXl : AppTheme.radiusLg;
+    final outerMargin = floating
+        ? EdgeInsets.fromLTRB(
+            AppTheme.space16,
+            AppTheme.space6,
+            AppTheme.space16,
+            floatBottom,
+          )
+        : EdgeInsets.zero;
+    final outerRadius = floating
+        ? BorderRadius.circular(pillRadius + AppTheme.strokeWide)
+        : BorderRadius.vertical(top: Radius.circular(AppTheme.radiusMd));
+    final innerRadius = floating
+        ? BorderRadius.circular(pillRadius)
+        : BorderRadius.vertical(top: Radius.circular(AppTheme.radiusMd));
     final tabs = SizedBox(
       height: AppTheme.bottomBarHeight - _inset * 2,
       child: LayoutBuilder(
@@ -1000,7 +1065,7 @@ class _BottomNavBar extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: colors.surfaceOffset2,
                     borderRadius: BorderRadius.circular(
-                      dock == null ? AppTheme.radiusPill : AppTheme.radiusMd,
+                      dock == null ? AppTheme.radiusXl : AppTheme.radiusMd,
                     ),
                   ),
                 ),
@@ -1026,50 +1091,61 @@ class _BottomNavBar extends StatelessWidget {
         },
       ),
     );
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.backgroundPrimary,
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(AppTheme.radiusLg + AppTheme.space16),
-        ),
-      ),
-      child: SafeArea(
-        top: false,
-        minimum: const EdgeInsets.only(bottom: AppTheme.space8),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppTheme.space16,
-            AppTheme.space6,
-            AppTheme.space16,
-            AppTheme.space4,
+    return AnimatedPadding(
+      duration: AppTheme.motionMedium,
+      curve: AppTheme.interactiveCurve,
+      padding: outerMargin,
+      child: AnimatedContainer(
+        duration: AppTheme.motionMedium,
+        curve: AppTheme.interactiveCurve,
+        padding: EdgeInsets.all(floating ? AppTheme.strokeWide : 0),
+        decoration: BoxDecoration(
+          borderRadius: outerRadius,
+          border: Border.all(
+            color: floating
+                ? colors.backgroundPrimary
+                : colors.backgroundPrimary.invisible,
+            width: floating ? AppTheme.strokeWide : 0,
           ),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: colors.surfaceCard,
-              borderRadius: BorderRadius.circular(radius),
-              border: Border.all(
-                color: colors.surfaceBorderStrong,
-                width: AppTheme.hairline,
-              ),
-              boxShadow: AppTheme.floatingShadow,
+          boxShadow: floating ? AppTheme.floatingShadow : const [],
+        ),
+        child: AnimatedContainer(
+          duration: AppTheme.motionMedium,
+          curve: AppTheme.interactiveCurve,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: colors.surfaceCard,
+            borderRadius: innerRadius,
+            border: Border.all(
+              color: colors.surfaceBorderStrong,
+              width: AppTheme.hairline,
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(radius),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (dock != null) ...[
-                    dock,
-                    Divider(
-                      height: AppTheme.hairline,
-                      thickness: AppTheme.hairline,
-                      color: colors.surfaceBorderStrong,
-                    ),
-                  ],
-                  Padding(padding: const EdgeInsets.all(_inset), child: tabs),
-                ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (dock != null) ...[
+                dock,
+                Divider(
+                  height: AppTheme.hairline,
+                  thickness: AppTheme.hairline,
+                  color: colors.surfaceBorderStrong,
+                ),
+              ],
+              AnimatedPadding(
+                duration: AppTheme.motionMedium,
+                curve: AppTheme.interactiveCurve,
+                padding: floating
+                    ? const EdgeInsets.all(_inset)
+                    : EdgeInsets.fromLTRB(
+                        AppTheme.space12,
+                        _inset,
+                        AppTheme.space12,
+                        _inset + dockBottom,
+                      ),
+                child: tabs,
               ),
-            ),
+            ],
           ),
         ),
       ),
