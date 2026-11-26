@@ -1,7 +1,7 @@
 # Live presence
 
 Which machines are online and which sessions they hold, without opening SSH.
-A Pro feature, on machines with server notifications on.
+A Pro feature, switched on per machine.
 
 ## The pieces
 
@@ -17,8 +17,9 @@ A Pro feature, on machines with server notifications on.
 The backend only routes what it is given; the session list is sealed end to
 end.
 
-- `PushService.ensureOnServer` - the same step that gives a machine its relay
-  key - also writes `~/.config/termphin/presence` (`<url> <key>`) when the
+- `PushService.setUpMachine` (called by `ensureOnServer` and `setMachine`) -
+  the same step that gives a machine its relay key - also writes
+  `~/.config/termphin/presence` (`<url> <key>`) when live status is on and the
   server has none, and reads back whichever key is there. The first device to
   set a machine up makes the key; every device that connects to it later
   learns the same one. It is kept per profile in `PresenceKeyStore`, sealed
@@ -27,8 +28,13 @@ end.
   data `termphin-presence:v1:<relay key id>`, in the layout `aead.dart` opens.
   `presence_state_test.dart` opens the same vector `termphin-agent`'s
   `known_vector_matches_the_app` produces.
-- Neither the backend nor Firebase holds a key: a device that has never
-  connected to a machine sees it online but not its sessions.
+- With sync on, the keys travel with the machines as `presenceKey` records,
+  sealed with the sync key like everything else synced
+  (`StorageSyncLocal`): a device signed in to the account reads a machine's
+  sessions before it ever connected to it. Without sync a device that has
+  never connected to a machine sees it online but not its sessions, which
+  `SyncNeededTile` says under the switch. Neither the backend nor Firebase
+  can open a key.
 
 ## Crontab
 
@@ -39,6 +45,39 @@ written back with the lines appended; when it cannot be read for a reason
 other than there being none, nothing is written. Turning the machine's
 notifications off removes exactly those lines. Windows has no crontab and
 shows online only while a session runs.
+
+## The switches
+
+Every machine starts with nothing on. The bell beside a machine's menu
+(`MachineProButton`) switches its two features one by one: notifications and
+live status. A switch counts at once on the account - the machine's relay
+key carries `notify` and `live` (`RelayKeyStore.setSwitches`), which the
+relay and the realtime backend read with the key. Only the switch flipped is
+written (`MachineSwitchChange`), so flipping one never decides the other; a
+key with both off stays until the server is cleaned up. The change is then set
+up on the server over a quick connection that asks the user nothing, gives up
+after eight seconds to connect and thirty to finish
+(`PushService.setMachine`, `SshSessionManager.withQuietClient`).
+
+A key from before the switches existed carries neither. It reads the way the
+backend treats it - live on, notifications as the machine's earlier
+`serverNotifications` - and its next connect settles each switch from the
+server (`resolveMachineSwitches`): notifications off when its relay file is
+quiet, live on when it holds a presence key. A server that cannot be asked
+settles nothing; a guess would switch something off for good. Live status
+also puts the agent there when it is missing, so the machine shows before
+its first session. When the quick connection does not get through, the
+switch waits in `PushService.pendingMachines` and the machine's next connect
+finishes it (`setUpMachine`).
+
+What a machine should do is the pending switch flipped here, else its key's
+switches, else nothing (`machineSwitchesFor`). A key from before the switches
+existed counts as notifications on and, on its next connect, is replaced by
+one that names the machine and carries them.
+
+The bell is the only place a machine's switches live. Termphin Pro's screen
+lists the phones and tablets that get notifications
+(`notifyPrefs/{installId}.enabled`, any device can switch them).
 
 ## When it runs
 
@@ -104,7 +143,7 @@ controller never prunes a listed session, and `SessionActivityLine` says
 
 ## Known gaps
 
-- Only machines with server notifications on, since the relay key is what
+- Only machines with live status switched on, since the relay key is what
   the agent authenticates with.
 - Windows machines without a session show offline (no crontab).
 - Device presence (which of the user's devices have the app open) is in the

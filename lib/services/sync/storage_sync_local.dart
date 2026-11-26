@@ -5,6 +5,7 @@ import '../../models/profile_group.dart';
 import '../../models/snippet.dart';
 import '../../models/ssh_key.dart';
 import '../../models/ssh_profile.dart';
+import '../realtime/presence_keys.dart';
 import '../storage/group_storage.dart';
 import '../storage/known_hosts_store.dart';
 import '../storage/profile_storage.dart';
@@ -20,10 +21,19 @@ abstract final class SyncKind {
   static const snippet = 'snippet';
   static const groups = 'groups';
   static const knownHost = 'knownHost';
+  static const presenceKey = 'presenceKey';
 }
 
-/// This device's machines, keys, snippets, groups, pinned host keys and the
+/// This device's machines, keys, snippets, groups, pinned host keys, the
+/// keys that open its machines' live status ([PresenceKeyStore]) and the
 /// preferences that follow the account ([SettingsSync]), as [SyncRecord]s.
+///
+/// A presence key has no time of its own; a conflict - two devices setting
+/// the same machine up with different keys - takes the account's copy. A
+/// presence key is never deleted by sync: an app from before keys were
+/// synced does not know the kind and deletes what it pulls, so a deletion
+/// arriving for one is ignored. A key goes with its machine instead, when
+/// the machine is deleted here or by sync.
 ///
 /// A record carries what the device itself stores - a machine with its
 /// password and inline key, a key with its private half. That is safe to
@@ -40,7 +50,9 @@ class StorageSyncLocal implements SyncLocal {
     GroupStorage? groups,
     KnownHostsStore? knownHosts,
     SettingsSync? settings,
+    PresenceKeyStore? presence,
   }) : _settings = settings ?? SettingsSync(),
+       _presence = presence ?? presenceKeys,
        _profiles = profiles ?? ProfileStorage(),
        _keys = keys ?? SshKeyStorage(),
        _snippets = snippets ?? SnippetStorage(),
@@ -53,6 +65,7 @@ class StorageSyncLocal implements SyncLocal {
   final GroupStorage _groups;
   final KnownHostsStore _knownHosts;
   final SettingsSync _settings;
+  final PresenceKeyStore _presence;
 
   /// The id of the one group-list record.
   static const groupsId = 'all';
@@ -104,6 +117,14 @@ class StorageSyncLocal implements SyncLocal {
           data: host.toJson(),
           updatedAt: host.addedAt,
         ),
+      for (final MapEntry(key: profileId, value: key)
+          in (await _presence.all()).entries)
+        SyncRecord(
+          kind: SyncKind.presenceKey,
+          id: profileId,
+          data: presenceKeyData(key),
+          updatedAt: DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+        ),
       ...await _settings.readAll(),
     ];
   }
@@ -147,6 +168,9 @@ class StorageSyncLocal implements SyncLocal {
         groupsChangedAt = clock.now().toUtc();
       case SyncKind.knownHost:
         await _knownHosts.trust(KnownHost.fromJson(record.data));
+      case SyncKind.presenceKey:
+        final key = presenceKeyFromData(record.data);
+        if (key != null) await _presence.remember(record.id, key);
       case kSettingKind:
         await _settings.upsert(record);
     }
@@ -157,12 +181,15 @@ class StorageSyncLocal implements SyncLocal {
     switch (kind) {
       case SyncKind.profile:
         await _profiles.deleteProfile(id);
+        await _presence.forget(id);
       case SyncKind.key:
         await _keys.deleteKey(id);
       case SyncKind.snippet:
         await _snippets.deleteSnippet(id);
       case SyncKind.knownHost:
         await _knownHosts.forgetSlot(id);
+      case SyncKind.presenceKey:
+        return;
       case SyncKind.groups || kSettingKind:
         return;
     }

@@ -12,6 +12,7 @@ import '../../widgets/account/sync_card.dart';
 import '../../widgets/pro/ascii_glow.dart';
 import '../../widgets/pro/pro_benefits.dart';
 import '../../widgets/settings/notifications_settings_section.dart';
+import '../../widgets/settings/pro_devices_list.dart';
 import '../../widgets/ui/app_badge.dart';
 import '../../widgets/ui/app_card.dart';
 import '../../widgets/ui/app_divider.dart';
@@ -165,13 +166,19 @@ class _ProFeaturesScreenState extends State<ProFeaturesScreen> {
         ],
       ),
     ),
-    ProBenefit.notifications => AppCard.fields(
+    ProBenefit.notifications => Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        NotifyWhenClosedTiles(
-          appVersion: widget.appVersion,
-          divided: false,
-          icon: PhosphorIconsRegular.bellRinging,
+        AppCard.fields(
+          children: [
+            NotifyWhenClosedTiles(
+              appVersion: widget.appVersion,
+              divided: false,
+              icon: PhosphorIconsRegular.bellRinging,
+            ),
+          ],
         ),
+        const ProDevicesList(),
       ],
     ),
     ProBenefit.liveStatus => const LiveStatusCard(),

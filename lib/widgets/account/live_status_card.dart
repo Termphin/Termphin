@@ -1,32 +1,29 @@
-import 'dart:async';
-
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
 import '../../services/pro/pro_service.dart';
-import '../../services/settings/live_presence_setting.dart';
 import '../../theme/theme.dart';
 import '../ui/app_card.dart';
 import '../ui/app_divider.dart';
 import '../ui/settings_tile.dart';
 import 'pro_feature_sheet.dart';
+import 'sync_needed_tile.dart';
 
-/// The account's switch for live status, off until turned on, with the way
-/// to the demo of how it works under it. Without Pro the row itself shows
-/// how live status works, with the way to the paywall there.
-class LiveStatusCard extends StatelessWidget {
+/// What live status is - on for every machine with Termphin Pro on, with
+/// nothing to switch here - with a note when sync is off and the way to the
+/// demo of how it works under it. Without Pro the row itself shows how live
+/// status works, with the way to the paywall there.
+class LiveStatusCard extends ConsumerWidget {
   const LiveStatusCard({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final t = Translations.of(context);
     return AppCard(
       child: ListenableBuilder(
-        listenable: Listenable.merge([
-          ProService.instance.active,
-          livePresenceSetting,
-        ]),
+        listenable: ProService.instance.active,
         builder: (context, _) {
           if (!ProService.instance.active.value) {
             return SettingsTile(
@@ -39,13 +36,13 @@ class LiveStatusCard extends StatelessWidget {
           }
           return Column(
             children: [
-              SettingsSwitchTile(
+              SettingsTile(
                 icon: PhosphorIconsRegular.pulse,
                 title: t.account.live.title,
                 subtitle: t.account.live.subtitle,
-                value: livePresenceSetting.value,
-                onChanged: (on) => unawaited(livePresenceSetting.set(on)),
+                trailing: SettingsTileTrailing.none,
               ),
+              SyncNeededTile(message: t.account.sync.needsSyncLive),
               const AppDivider(),
               const HowItWorksTile(feature: ProFeature.liveStatus),
             ],

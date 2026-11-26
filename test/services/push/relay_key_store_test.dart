@@ -85,4 +85,71 @@ void main() {
       throwsA(isA<FirestoreRestException>()),
     );
   });
+
+  test(
+    'a key carries what its machine may do, read with old keys as push only',
+    () async {
+      replies.add((
+        status: 200,
+        body: [
+          {
+            'document': {
+              'name':
+                  'projects/termphin-hexeosoft/databases/(default)/documents/relayKeys/new',
+              'fields': {
+                'uid': {'stringValue': 'u1'},
+                'label': {'stringValue': 'web'},
+                'profileId': {'stringValue': 'p1'},
+                'notify': {'booleanValue': false},
+                'live': {'booleanValue': true},
+              },
+            },
+          },
+          key('old', '2026-11-01T10:00:00Z', profile: 'p2'),
+        ],
+      ));
+      final servers = {
+        for (final server in await store().fetch('u1')) server.keyId: server,
+      };
+      expect(servers['new']!.notify, isFalse);
+      expect(servers['new']!.live, isTrue);
+      expect(servers['old']!.notify, isNull);
+      expect(servers['old']!.live, isNull);
+    },
+  );
+
+  test(
+    'switching a key writes only its two switches, to a key that exists',
+    () async {
+      await store().setSwitches('k1', notify: false, live: true);
+      final write =
+          (((calls.single.$3! as Map)['writes'] as List).single as Map)
+              .cast<String, Object?>();
+      expect((write['updateMask']! as Map)['fieldPaths'], ['notify', 'live']);
+      expect(write['currentDocument'], {'exists': true});
+      expect((write['update']! as Map)['fields'], {
+        'notify': {'booleanValue': false},
+        'live': {'booleanValue': true},
+      });
+    },
+  );
+
+  test(
+    'flipping one switch writes that one alone, leaving the other as it is',
+    () async {
+      await store().setSwitches('k1', notify: false);
+      final write =
+          (((calls.single.$3! as Map)['writes'] as List).single as Map)
+              .cast<String, Object?>();
+      expect((write['updateMask']! as Map)['fieldPaths'], ['notify']);
+      expect((write['update']! as Map)['fields'], {
+        'notify': {'booleanValue': false},
+      });
+    },
+  );
+
+  test('flipping nothing writes nothing', () async {
+    await store().setSwitches('k1');
+    expect(calls, isEmpty);
+  });
 }

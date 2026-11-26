@@ -9,7 +9,6 @@ import '../../models/pro_source.dart';
 import '../../providers/account_provider.dart';
 import '../../screens/pro/pro_paywall_screen.dart';
 import '../../screens/settings/notifications_settings_screen.dart';
-import '../../screens/settings/relay_servers_screen.dart';
 import '../../services/account/account_service.dart';
 import '../../services/analytics/analytics_service.dart';
 import '../../services/pro/pro_service.dart';
@@ -206,9 +205,11 @@ class _OpenAppNotices extends StatelessWidget {
 }
 
 /// The Pro part of notifications: the switch that lets servers reach this
-/// device with Termphin closed, and under it, once it is on, the servers
-/// that can, or a way to renew while Pro has lapsed; last, the way to the
-/// demo of how it works.
+/// device with Termphin closed - on a computer, which gets none, a line
+/// saying they go to the phones and tablets - or a way to renew while Pro
+/// has lapsed; last, the way to the demo of how it works. Which server
+/// sends notifications is switched from the bell beside its menu, and
+/// which device gets them is under Termphin Pro ([ProDevicesList]).
 ///
 /// Without Pro the row carries a gold pill and opens the paywall instead of
 /// turning on. In a card after other rows it starts with a divider;
@@ -302,6 +303,20 @@ class _NotifyWhenClosedTilesState extends ConsumerState<NotifyWhenClosedTiles> {
         final enabled = PushService.instance.enabledNotifier.value;
         final paused = enabled && signedIn && !pro;
         if (!platformHas(PlatformFeature.receivesPush)) {
+          if (signedIn && pro) {
+            return Column(
+              children: [
+                if (widget.divided) const AppDivider(),
+                SettingsTile(
+                  key: const ValueKey('notifyPhonesNote'),
+                  icon: widget.icon,
+                  title: t.serversPanel.phonesTitle,
+                  subtitle: t.serversPanel.phonesSubtitle,
+                  trailing: SettingsTileTrailing.none,
+                ),
+              ],
+            );
+          }
           return Column(
             children: [
               if (widget.divided) const AppDivider(),
@@ -369,13 +384,6 @@ class _NotifyWhenClosedTilesState extends ConsumerState<NotifyWhenClosedTiles> {
                   context,
                   source: ProSource.settingsNotifications,
                 ),
-              ),
-            ],
-            if (enabled && signedIn) ...[
-              const AppDivider(),
-              SettingsTile(
-                title: t.settings.notifyServers,
-                destination: () => const RelayServersScreen(),
               ),
             ],
             const AppDivider(),

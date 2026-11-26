@@ -12,7 +12,6 @@ import '../settings/assistant_settings.dart';
 import '../settings/desktop_settings.dart';
 import '../settings/editor_settings.dart';
 import '../settings/floating_dock_settings.dart';
-import '../settings/live_presence_setting.dart';
 import '../settings/sftp_settings.dart';
 import '../settings/terminal_settings.dart';
 import '../settings/theme_settings.dart';
@@ -59,7 +58,6 @@ const kSyncedSettingGroups = <String, List<String>>{
   ],
   'app.commandSuggestions': ['app.commandSuggestions'],
   'app.proTips': ['app.proTips'],
-  'app.livePresence': ['app.livePresence'],
   'app.phin': ['app.phinEnabled', 'app.phinMemory'],
   'app.profileFormMoreOptions': ['app.profileFormMoreOptions'],
   'app.closeToTray': ['app.closeToTray'],
@@ -146,7 +144,6 @@ class SettingsSync {
     sftpSortDescendingSetting,
     commandSuggestionsSetting,
     proTipsSetting,
-    livePresenceSetting,
     phinEnabledSetting,
     phinMemorySetting,
     closeToTraySetting,

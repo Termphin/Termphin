@@ -5,7 +5,6 @@ import '../settings/assistant_settings.dart';
 import '../settings/desktop_settings.dart';
 import '../settings/editor_settings.dart';
 import '../settings/floating_dock_settings.dart';
-import '../settings/live_presence_setting.dart';
 import '../settings/lock_settings.dart';
 import '../settings/profile_form_settings.dart';
 import '../settings/setting.dart';
@@ -119,7 +118,6 @@ Future<Map<String, dynamic>> exportAppPreferences({
     'sftpSortDescending': await sftpSortDescendingSetting.load(),
     'commandSuggestions': await commandSuggestionsSetting.load(),
     'proTips': await proTipsSetting.load(),
-    'livePresence': await livePresenceSetting.load(),
     'phinEnabled': await phinEnabledSetting.load(),
     'phinMemory': await phinMemorySetting.load(),
     'tabBarPosition': (await tabBarPositionSetting.load()).name,
@@ -347,8 +345,6 @@ Future<void> importAppPreferences(
   final proTips = appPrefs['proTips'];
   if (proTips is bool) await proTipsSetting.set(proTips);
 
-  final livePresence = appPrefs['livePresence'];
-  if (livePresence is bool) await livePresenceSetting.set(livePresence);
   final phinEnabled = appPrefs['phinEnabled'];
   if (phinEnabled is bool) await phinEnabledSetting.set(phinEnabled);
   final phinMemory = appPrefs['phinMemory'];

@@ -25,9 +25,17 @@ void main() {
 
   tearDown(() {});
 
+  final forgotten = <String>[];
+
   ProviderContainer createContainer(FakeProfileStorage storage) {
+    forgotten.clear();
     return ProviderContainer.test(
-      overrides: [profileStorageProvider.overrideWithValue(storage)],
+      overrides: [
+        profileStorageProvider.overrideWithValue(storage),
+        machineForgetterProvider.overrideWithValue((id) async {
+          forgotten.add(id);
+        }),
+      ],
     );
   }
 
@@ -138,6 +146,27 @@ void main() {
     expect(updated.sshKeyId, isNull);
   });
 
+  test(
+    'the bell writes notifications into the machine setting that syncs, '
+    'so an earlier version keeps the server quiet',
+    () async {
+      final profile = profileFixture();
+      final container = createContainer(FakeProfileStorage([profile]));
+      final notifier = container.read(profilesProvider.notifier);
+      await notifier.loadProfiles();
+
+      await notifier.setServerNotifications(profile.id, false);
+
+      final updated = container.read(profilesProvider).single;
+      expect(updated.serverNotifications, isFalse);
+      expect(
+        updated.updatedAt.isAfter(profile.updatedAt),
+        isTrue,
+        reason: 'sync takes the newer copy',
+      );
+    },
+  );
+
   test('deletes profiles and reloads state', () async {
     final profile = profileFixture();
     final storage = FakeProfileStorage([profile]);
@@ -147,6 +176,15 @@ void main() {
 
     expect(container.read(profilesProvider), isEmpty);
     expect(storage.deleteCount, 1);
+  });
+
+  test('a deleted machine takes its relay keys off the account', () async {
+    final profile = profileFixture();
+    final container = createContainer(FakeProfileStorage([profile]));
+
+    await container.read(profilesProvider.notifier).deleteProfile(profile.id);
+
+    expect(forgotten, [profile.id]);
   });
 
   test(

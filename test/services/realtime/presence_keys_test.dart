@@ -85,4 +85,58 @@ void main() {
     expect(await second.keyFor('profile-1'), key);
     expect(await second.keyFor('profile-2'), isNull);
   });
+
+  test('keys travel to the account as records and come back whole', () {
+    final key = newPresenceKey();
+    expect(presenceKeyFromData(presenceKeyData(key)), key);
+    expect(presenceKeyFromData({'key': encodePresenceKey(key)}), key);
+    expect(presenceKeyFromData({'key': 'short'}), isNull);
+    expect(presenceKeyFromData({'key': '!!not base64!!'}), isNull);
+    expect(presenceKeyFromData({'key': 7}), isNull);
+    expect(presenceKeyFromData(const {}), isNull);
+  });
+
+  test(
+    'every key is listed for sync, and a machine deleted elsewhere loses its key',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final store = PresenceKeyStore(
+        cipher: cipherFixture(store: FakeMasterKeyStore()),
+      );
+      final one = newPresenceKey();
+      final two = newPresenceKey();
+      await store.remember('profile-1', one);
+      await store.remember('profile-2', two);
+      expect(await store.all(), {'profile-1': one, 'profile-2': two});
+      final before = store.changes.value;
+      await store.forget('profile-1');
+      expect(await store.all(), {'profile-2': two});
+      expect(store.changes.value, before + 1);
+      await store.forget('profile-1');
+      expect(store.changes.value, before + 1);
+    },
+  );
+
+  test(
+    'the immediate presence command runs the agent when installed',
+    () async {
+      final home = await Directory.systemTemp.createTemp(
+        'termphin-presence-now',
+      );
+      addTearDown(() => home.delete(recursive: true));
+      final bin = File('${home.path}/.local/lib/termphin/termphin-agent')
+        ..createSync(recursive: true)
+        ..writeAsStringSync(
+          '#!/bin/sh\nprintf "%s\\n" "\$@" > "${home.path}/ran"\n',
+        );
+      await Process.run('chmod', ['+x', bin.path]);
+      final result = await Process.run(
+        'sh',
+        ['-c', presenceReportNowCommand()],
+        environment: {'HOME': home.path},
+      );
+      expect(result.exitCode, 0);
+      expect(File('${home.path}/ran').readAsStringSync().trim(), 'presence');
+    },
+  );
 }

@@ -8,12 +8,17 @@ import 'presence_keys.dart';
 import 'presence_socket.dart';
 import 'presence_state.dart';
 
-/// Where apps connect: the presence backend's `/v1/app` over `wss`.
+/// Where apps connect: the presence backend's `/v1/app` over `wss`, under
+/// the base's own path when it has one - a second instance served below the
+/// first, as `https://presence.example/staging`.
 Uri presenceAppUrl([String base = kPresenceUrl]) {
   final url = Uri.parse(base);
+  final prefix = url.path.endsWith('/')
+      ? url.path.substring(0, url.path.length - 1)
+      : url.path;
   return url.replace(
     scheme: url.scheme == 'http' ? 'ws' : 'wss',
-    path: '/v1/app',
+    path: '$prefix/v1/app',
   );
 }
 
@@ -101,6 +106,7 @@ class LivePresence {
   int _attempt = 0;
   bool _connecting = false;
   bool _forceToken = false;
+  bool _hadSessions = false;
   int _generation = 0;
   Future<void> _processing = Future.value();
 
@@ -131,6 +137,7 @@ class LivePresence {
       _raw.clear();
       _opened.clear();
       _freshness.clear();
+      _hadSessions = false;
       byProfile.value = const {};
     }
   }
@@ -346,7 +353,10 @@ class LivePresence {
       if (opened != null) sessions[profileId] = opened.sessions;
     }
     if (!mapEquals(result, byProfile.value)) byProfile.value = result;
-    if (sessions.isNotEmpty) onSessions?.call(sessions);
+    if (sessions.isNotEmpty || _hadSessions) {
+      _hadSessions = sessions.isNotEmpty;
+      onSessions?.call(sessions);
+    }
   }
 
   OpenedPresence? _openState(Uint8List key, String keyId, String state) {

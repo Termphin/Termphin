@@ -5,7 +5,6 @@ import 'package:termphin/i18n/strings.g.dart';
 import 'package:termphin/screens/pro/pro_features_screen.dart';
 import 'package:termphin/services/pro/pro_service.dart';
 import 'package:termphin/services/settings/app_settings.dart';
-import 'package:termphin/services/settings/live_presence_setting.dart';
 import 'package:termphin/widgets/account/live_status_card.dart';
 import 'package:termphin/widgets/account/pro_card.dart';
 import 'package:termphin/widgets/account/pro_feature_sheet.dart';
@@ -25,7 +24,6 @@ void main() {
     SharedPreferences.resetStatic();
     mockSecureStorage();
     await loadAppSettings();
-    await livePresenceSetting.load();
     ProService.instance.active.value = true;
   });
 

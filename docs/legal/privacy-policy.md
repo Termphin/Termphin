@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated: 23 November 2026**
+**Last updated: 26 November 2026**
 
 ## Summary
 
@@ -83,8 +83,8 @@ receive, and could not produce:
 With sync on, your machines, keys and snippets reach us only as encrypted
 data we cannot decrypt (section 5). With push on, the two things that do
 reach us in readable form are the name you gave a machine and the text of a
-notification on its way to your phone (section 6). With live status on, the
-sessions on your servers reach us only encrypted (section 6). When you ask
+notification on its way to your phone (section 6). The sessions on your
+servers reach us only encrypted (section 6). When you ask
 Phin for help, what it reads on your server passes through us to an AI model,
 with names, addresses and secrets replaced first (section 7).
 
@@ -128,8 +128,9 @@ cancel it in your Google Play or App Store account.
 
 ## 5. Sync (Termphin Pro)
 
-Sync keeps your machines, keys, snippets, groups and known host keys the same
-on every device signed in to your account. It is off until you turn it on and
+Sync keeps your machines, keys, snippets, groups, known host keys and the
+keys that open your servers' live status the same on every device signed in
+to your account. It is off until you turn it on and
 choose a passphrase.
 
 **It is end-to-end encrypted.** Your passphrase never leaves your device. It is
@@ -167,11 +168,19 @@ What it involves:
 - **Each phone** with push on registers a notification token from Google
   Firebase Cloud Messaging, stored under your account with the phone's
   platform, so we know where to deliver.
-- **Each server** you connect to with push on gets a relay key, written to a
-  file in your home directory on that server. We store only a hash of its
-  secret, the name you gave that machine in Termphin, a random identifier
-  for it, when the key was made and when it last sent something. You can see
-  and revoke these keys in the app under Settings, Notifications, Servers.
+- **Each server** you turn notifications or live status on for - nothing is
+  on until you do, with the bell next to that server in your list of
+  machines - gets a relay key, written to a file in your home directory on
+  that server. We store only a hash of its secret, the name you gave that
+  machine in Termphin, a random identifier for it, which of the two you
+  turned on, when the key was made and when it last sent something. Turning
+  notifications off makes the relay send nothing from it at once. With both
+  off, the key stays, sending and reporting nothing, until Termphin next
+  reaches that server; then the key is deleted and the file goes from the
+  server. Deleting the machine in Termphin deletes its key at once.
+- **Each phone or tablet** also stores, under your account, whether it gets
+  notifications and whether it is a phone or a tablet, so any of your
+  devices can switch it on or off.
 - **A notification** - its title, its text and the name of the session it
   came from - goes from your server to our relay (a Cloud Function in the EU,
   `europe-central2`), which passes it to Firebase Cloud Messaging and, for
@@ -191,9 +200,10 @@ straight from the session, with nothing sent anywhere.
 
 ### Live status
 
-With live status on, your devices show which of your servers are online and
-which sessions are open on them, without connecting. It is off until you
-turn it on in Settings, Account, and works on servers that have push on.
+With live status on for a server, your devices show whether it is online
+and which sessions are open on it, without connecting. It is off until you
+turn it on for that server, with the bell next to it in your list of
+machines.
 
 What it involves:
 
@@ -201,7 +211,13 @@ What it involves:
   home directory, which your devices also keep. On a Linux or macOS server
   the app also adds two lines marked `termphin-presence` to your crontab, so
   the server reports every five minutes and after a restart even with no
-  session open; turning live status off removes them.
+  session open, and the Termphin helper is put on the server if it is not
+  there yet. Turning live status off for that server stops its reports
+  being taken within a minute, and the lines and the key go the next time
+  Termphin reaches it.
+  With sync on, the key also travels in your synced copy, sealed with your
+  passphrase like everything else there (section 5), so your other devices
+  can read the reports too.
 - **A report** - the names of the sessions, when they started, which of
   your devices are attached to them (the name and type of each device), what
   each one is doing and the name of the program running in it - is sealed
@@ -353,7 +369,8 @@ backend and keeps nothing.
 | --- | --- |
 | Account, device registrations, relay keys | Until you delete them or your account |
 | Sync data | Until you delete it or your account; 12 months after Pro ends, with an email a month before |
-| A relay key you revoke, or a device that turns push off | Deleted at once |
+| The relay key of a machine you delete, or a device that turns push off | Deleted at once |
+| The relay key of a server with notifications and live status both off | Deleted the next time Termphin reaches that server |
 | A notification on its way to your phone | Not kept |
 | A server's live status | In memory only, until 12 minutes after its last report |
 | A conversation with Phin | Not kept by us; up to 30 days at Anthropic |
