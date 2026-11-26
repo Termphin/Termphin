@@ -35,6 +35,7 @@ import 'services/terminal/in_app_alerts.dart';
 import 'services/terminal/terminal_alerts.dart';
 import 'services/terminal/terminal_notification.dart';
 import 'utils/platform_info.dart';
+import 'utils/system_bars.dart';
 import 'widgets/ssh/host_key_dialog.dart';
 import 'widgets/ssh/keyboard_interactive_dialog.dart';
 
@@ -67,6 +68,7 @@ Future<void> main() async {
   _mainInitialized = true;
 
   WidgetsFlutterBinding.ensureInitialized();
+  await drawBehindSystemBars();
   ErrorReports.instance.install();
   registerFontLicenses();
 
