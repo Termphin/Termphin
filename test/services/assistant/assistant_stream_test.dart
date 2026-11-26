@@ -45,5 +45,13 @@ void main() {
       assistantStepUri(env: 'dev', base: 'https://rt.example').toString(),
       'https://rt.example/dev/v1/assistant/step',
     );
+    expect(
+      assistantStepUri(env: 'dev', base: 'https://rt.example/dev').toString(),
+      'https://rt.example/dev/v1/assistant/step',
+    );
+    expect(
+      assistantStepUri(env: 'dev', base: 'https://rt.example/dev/').toString(),
+      'https://rt.example/dev/v1/assistant/step',
+    );
   });
 }
