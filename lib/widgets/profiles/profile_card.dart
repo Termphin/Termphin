@@ -12,6 +12,7 @@ import '../../theme/theme.dart';
 import '../ui/app_card.dart';
 import '../ui/app_dropdown.dart';
 import '../ui/selection_action_bar.dart';
+import 'machine_pro_button.dart';
 import 'profile_avatar.dart';
 
 enum _ProfileCardAction { edit, loadSessions, delete }
@@ -187,6 +188,7 @@ class ProfileCard extends ConsumerWidget {
             ),
           ),
           const SizedBox(width: AppTheme.space8),
+          if (!selectionMode) MachineProButton(profile: profile),
           if (selectionMode)
             const SizedBox(width: AppTheme.space40)
           else

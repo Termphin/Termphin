@@ -8,7 +8,6 @@ import 'assistant_settings.dart';
 import 'desktop_settings.dart';
 import 'editor_settings.dart';
 import 'floating_dock_settings.dart';
-import 'live_presence_setting.dart';
 import 'lock_settings.dart';
 import 'profile_form_settings.dart';
 import 'setting.dart';
@@ -49,7 +48,6 @@ Future<void> loadAppSettings() async {
     sidebarWidthSetting.load(),
     commandSuggestionsSetting.load(),
     proTipsSetting.load(),
-    livePresenceSetting.load(),
     phinEnabledSetting.load(),
     phinMemorySetting.load(),
     sftpShowHiddenSetting.load(),

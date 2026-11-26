@@ -6,8 +6,16 @@ import 'package:uuid/uuid.dart';
 import '../models/port_forwarding_rule.dart';
 import '../models/ssh_profile.dart';
 import '../services/analytics/analytics_service.dart';
+import '../services/push/push_service.dart';
+import '../services/realtime/presence_keys.dart';
 import '../services/storage/group_storage.dart';
 import '../services/storage/profile_storage.dart';
+
+/// What forgets a deleted machine's keys on the account: indirection so
+/// tests can tell it was asked.
+final machineForgetterProvider = Provider<Future<void> Function(String)>(
+  (ref) => PushService.instance.forgetMachine,
+);
 
 final profileStorageProvider = Provider<ProfileStorage>((ref) {
   return ProfileStorage();
@@ -141,9 +149,13 @@ class ProfilesNotifier extends Notifier<List<SshProfile>> {
     await loadProfiles();
   }
 
+  /// Deletes the machine, and with it the key that opened its live status
+  /// and its relay keys on the account ([PushService.forgetMachine]).
   Future<void> deleteProfile(String id) async {
     await _storage.deleteProfile(id);
+    await presenceKeys.forget(id);
     await loadProfiles();
+    unawaited(ref.read(machineForgetterProvider)(id));
   }
 
   Future<void> touchLastConnected(String id) async {
@@ -151,6 +163,21 @@ class ProfilesNotifier extends Notifier<List<SshProfile>> {
     final index = profiles.indexWhere((p) => p.id == id);
     if (index == -1) return;
     final updated = profiles[index].copyWith(lastConnectedAt: DateTime.now());
+    await _storage.updateProfile(updated);
+    await loadProfiles();
+  }
+
+  /// Sets the machine's own notifications setting from before the bell
+  /// ([SshProfile.serverNotifications]), as a change that syncs: devices on
+  /// an earlier version keep its server quiet by it.
+  Future<void> setServerNotifications(String id, bool on) async {
+    final profiles = await _storage.loadProfiles();
+    final index = profiles.indexWhere((p) => p.id == id);
+    if (index == -1 || profiles[index].serverNotifications == on) return;
+    final updated = profiles[index].copyWith(
+      serverNotifications: on,
+      updatedAt: DateTime.now(),
+    );
     await _storage.updateProfile(updated);
     await loadProfiles();
   }

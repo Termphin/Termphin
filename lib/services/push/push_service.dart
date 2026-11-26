@@ -20,12 +20,14 @@ import '../platform/local_notifications_service.dart';
 import '../pro/pro_service.dart';
 import '../realtime/presence_keys.dart';
 import '../security/aead.dart';
-import '../settings/live_presence_setting.dart';
 import '../settings/terminal_settings.dart';
 import '../ssh/remote_agent_service.dart'
     show powerShellCommandLine, shellQuote;
 import '../ssh/ssh_session_manager.dart';
 import '../terminal/in_app_alerts.dart';
+import 'machine_shell.dart';
+import 'machine_switches.dart';
+import 'notify_prefs_store.dart';
 import 'relay_key_store.dart';
 
 export 'relay_key_store.dart' show RelayServer;
@@ -41,6 +43,7 @@ const kRelayUrl = String.fromEnvironment(
 const _installIdPrefsKey = 'push_install_id';
 const _enabledPrefsKey = 'push_enabled';
 const _serverKeysPrefsKey = 'push_server_keys';
+const _pendingMachinesPrefsKey = 'pending_machines';
 
 /// The payload prefix of a push shown while the app is open: what follows
 /// is `<profileId>:<session>`.
@@ -54,6 +57,12 @@ const kRelayPayloadPrefix = 'relay:';
 /// server, its hash in `relayKeys/{id}` - written to
 /// `~/.config/termphin/relay`, and the agent sends through the relay what a
 /// program asks the terminal to announce whenever no phone is attached.
+///
+/// Which device hears from which machine is the relay's to decide, at once:
+/// each phone or tablet has its own settings in `users/{uid}/notifyPrefs`
+/// ([NotifyPrefsStore]) - switched on or off - that any of the account's
+/// devices, a computer too, can change; and nothing goes out from a machine
+/// whose key has notifications switched off ([setMachine]).
 ///
 /// Servers are not set up by hand: [ensureOnServer] runs on every connect,
 /// gives a machine a key when it has none or a stale one, and takes it away
@@ -104,6 +113,14 @@ class PushService {
       ? RestRelayKeyStore()
       : FirestoreRelayKeyStore();
 
+  late final NotifyPrefsStore _prefs = _usesRest
+      ? RestNotifyPrefsStore()
+      : FirestoreNotifyPrefsStore();
+
+  /// What this device is in the account's list of devices, set by
+  /// `main.dart` from the screen: a phone until told otherwise.
+  NotifyDeviceKind Function() deviceKind = () => NotifyDeviceKind.phone;
+
   /// Whether the account's documents can be reached: the REST API needs
   /// nothing started, the plugin needs Firebase up.
   Future<bool> _accountReady() async =>
@@ -116,6 +133,8 @@ class PushService {
   /// Picks registration back up at launch on a phone that turned it on, and
   /// opens the session behind a push that launched the app.
   Future<void> init() async {
+    await _loadPendingMachines();
+    unawaited(settleOldLiveSwitches());
     enabledNotifier.value = await enabled;
     if (!enabledNotifier.value) return;
     if (AccountService.instance.user == null) return;
@@ -135,6 +154,7 @@ class PushService {
       return false;
     }
     await _register();
+    await _setOwnEnabled(true);
     await (await SharedPreferences.getInstance()).setBool(
       _enabledPrefsKey,
       true,
@@ -213,11 +233,33 @@ class PushService {
   }
 
   Future<void> _store(String uid, String token) async {
-    await _devices(uid).doc(await _installId()).set({
+    final id = await _installId();
+    await _devices(uid).doc(id).set({
       'token': token,
       'platform': isIOSPlatform ? 'ios' : 'android',
       'updatedAt': FieldValue.serverTimestamp(),
     });
+    try {
+      await _prefs.describe(uid, id, deviceKind());
+    } catch (_) {}
+  }
+
+  /// Switches this device's own entry on or off for every machine: what
+  /// turning push on here means once the device is registered, and what
+  /// another device's switch for it changes too. Quiet on failure.
+  Future<void> _setOwnEnabled(bool enabled) async {
+    final uid = AccountService.instance.user?.uid;
+    if (uid == null) return;
+    try {
+      await _prefs.setEnabled(
+        uid,
+        NotifyDestination(
+          id: await _installId(),
+          platform: isIOSPlatform ? 'ios' : 'android',
+        ),
+        enabled,
+      );
+    } catch (_) {}
   }
 
   /// A push that arrives with the app open is not shown by the system; it
@@ -297,156 +339,339 @@ class PushService {
     return id;
   }
 
-  /// Brings the server behind [sessionId] in line with [profile]: a fresh
-  /// relay key when it should have one and does not (or has one this phone
-  /// did not give it), none when the machine's notifications are off.
-  /// Quiet on every failure. Only a machine whose key ended up as it should
-  /// counts as checked: one met before push was on, before the account was
-  /// signed in or before Pro was confirmed - bought a moment later, say - is
-  /// looked at again on the next chance instead of waiting for a restart.
+  /// Brings the server behind [sessionId] in line with [profile]'s switches,
+  /// over that session's connection ([setUpMachine]).
   Future<void> ensureOnServer({
     required SshSessionManager manager,
     required String sessionId,
     required SshProfile profile,
-  }) async {
-    if (!_checks.start(profile.id)) return;
-    var outcome = MachineCheck.notReady;
+  }) => setUpMachine(profile, MachineShell.session(manager, sessionId));
+
+  /// Switches flipped on this device that have not reached their machine
+  /// yet, by profile id: the next connect to it - or the quick one
+  /// [setMachine] makes - finishes them. Kept across launches.
+  final pendingMachines = ValueNotifier<Map<String, MachineSwitchChange>>({});
+
+  Future<void> _loadPendingMachines() async {
+    final stored = (await SharedPreferences.getInstance()).getString(
+      _pendingMachinesPrefsKey,
+    );
     try {
-      final pushEnabled =
-          !platformHas(PlatformFeature.receivesPush) || await enabled;
-      final live = livePresenceSetting.value;
-      if (!pushEnabled && !live) return;
-      final push = pushEnabled && profile.serverNotifications;
+      final decoded = stored == null ? null : jsonDecode(stored);
+      pendingMachines.value = {
+        if (decoded is Map)
+          for (final MapEntry(:key, :value) in decoded.entries)
+            if (key is String) key: ?MachineSwitchChange.fromJson(value),
+      };
+    } on FormatException {
+      pendingMachines.value = {};
+    }
+  }
+
+  Future<void> _savePendingMachines(
+    Map<String, MachineSwitchChange> pending,
+  ) async {
+    pendingMachines.value = pending;
+    await (await SharedPreferences.getInstance()).setString(
+      _pendingMachinesPrefsKey,
+      jsonEncode({
+        for (final MapEntry(:key, :value) in pending.entries)
+          key: value.toJson(),
+      }),
+    );
+  }
+
+  /// Switches what [profile]'s machine may do, as the user asked from its
+  /// card - only the switches in [change], so flipping one never decides the
+  /// other: at once on the account - its key's switches; a key with both off
+  /// stays until the server is cleaned up, so the machine's agent is not
+  /// refused meanwhile - and then on the server, over a quick connection
+  /// that asks the user nothing and gives up after [connectWithin]. True
+  /// when the server was set up now; false when it could not be reached -
+  /// a host key not trusted yet, a password to type, the machine off - and
+  /// its next connect finishes it.
+  Future<bool> setMachine(
+    SshProfile profile,
+    MachineSwitchChange change, {
+    required SshSessionManager manager,
+    Duration connectWithin = const Duration(seconds: 8),
+  }) async {
+    final earlier = pendingMachines.value[profile.id];
+    await _savePendingMachines({
+      ...pendingMachines.value,
+      profile.id: earlier?.then(change) ?? change,
+    });
+    _checks.forget(profile.id);
+    final uid = AccountService.instance.user?.uid;
+    if (uid != null && await _accountReady()) {
+      try {
+        for (final key in await _accountKeys(uid)) {
+          if (key.profileId != profile.id) continue;
+          await _keys.setSwitches(
+            key.keyId,
+            notify: change.notify,
+            live: change.live,
+          );
+        }
+      } catch (_) {}
+    }
+    await _checks.idle(profile.id);
+    _checks.forget(profile.id);
+    try {
+      final outcome = await manager.withQuietClient(
+        profile,
+        (client) => setUpMachine(
+          profile,
+          MachineShell('quick:${profile.id}', client.run),
+          prepareAgent: () => manager.ensureAgentQuietly(profile, client),
+        ),
+        connectWithin: connectWithin,
+      );
+      return outcome == MachineCheck.settled;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// The account's keys as the server has them now, never a cached copy:
+  /// taking a machine's setup away must not rest on a stale or empty one.
+  Future<List<RelayServer>> _accountKeys(String uid) =>
+      _keys.current(uid).timeout(const Duration(seconds: 20));
+
+  /// Brings the machine [shell] runs on in line with what it should do
+  /// ([machineSwitchesFor]): a switch flipped here and not on the server
+  /// yet, or the switches on its key. A machine with nothing switched on -
+  /// every machine until the user turns something on from its card - is
+  /// left alone, or, when it was set up before, has it all taken away.
+  /// Switched on, with Pro, it gets a relay key naming the machine and
+  /// carrying the switches (made fresh when it has none, one this device did
+  /// not give it, or one from before keys named it); with live status on also
+  /// its presence key, the crontab lines and - through [prepareAgent], when
+  /// given - the agent, so it shows before its first session.
+  /// A key made for another machine pointing at the same server is never
+  /// taken over, switched or deleted for this one ([keyBelongsTo],
+  /// [adoptableKey], [mayClearServer]): each writes its own key there when
+  /// it connects, and the server reports as whichever did last.
+  /// Quiet on every failure. Only a machine that ended up as it should counts
+  /// as checked: one met signed out or before Pro was confirmed is looked at
+  /// again on the next chance instead of waiting for a restart.
+  ///
+  /// Returns how it went; [MachineCheck.settled] at once for a machine
+  /// already settled since launch, and null for one being checked right now
+  /// or waiting after a failure.
+  Future<MachineCheck?> setUpMachine(
+    SshProfile profile,
+    MachineShell shell, {
+    Future<void> Function()? prepareAgent,
+  }) async {
+    if (_checks.isSettled(profile.id)) return MachineCheck.settled;
+    final run = _checks.start(profile.id);
+    if (run == null) return null;
+    shell = _checks.guard(run, shell);
+    var outcome = MachineCheck.notReady;
+    MachineSwitches? applied;
+    try {
+      final remembered = (await _serverKeys())[profile.id];
+      final pending = pendingMachines.value[profile.id];
       final uid = AccountService.instance.user?.uid;
-      if (uid == null || !await _accountReady()) return;
+      if (uid == null || !await _accountReady()) return outcome;
+      final keys = await _accountKeys(uid);
+      final given =
+          remembered != null && keyBelongsTo(remembered, profile.id, keys)
+          ? remembered
+          : null;
+      if (remembered != null && given == null) {
+        await _dropRemembered(profile.id);
+      }
+      final own = keys.where((key) => key.profileId == profile.id).firstOrNull;
+      final wanted = await resolveMachineSwitches(
+        change: pending,
+        key: own,
+        legacyKey: isLegacyServerKey(given, keys),
+        hadNotifications: () =>
+            _hadNotifications(shell, fallback: profile.serverNotifications),
+        hadLiveStatus: () => _hadLiveStatus(shell, profile.id),
+      );
+      applied = wanted;
+      if (!wanted.any) {
+        if (given != null || pending != null || own != null) {
+          final windows = await _onWindows(shell);
+          final onServer = await _keyOnServer(shell, windows: windows);
+          final ownIds = [
+            ?given,
+            for (final key in keysOfMachine(keys, profile.id)) key.keyId,
+          ];
+          if (mayClearServer(onServer, ownIds)) {
+            await shell.exec(
+              windows ? relayRemoveCommandWindows() : relayRemoveCommand,
+            );
+            await _removePresence(shell);
+          }
+          if (given != null) {
+            try {
+              await _forget(profile.id, given);
+            } catch (_) {}
+          }
+          for (final key in keys) {
+            if (key.profileId != profile.id || key.keyId == given) continue;
+            try {
+              await _deleteKey(key.keyId);
+            } catch (_) {}
+          }
+        }
+        outcome = MachineCheck.settled;
+        return outcome;
+      }
       if (!ProService.instance.confirmed.value && !_proRefreshed) {
         _proRefreshed = true;
         await ProService.instance.refresh();
       }
-      if (!ProService.instance.confirmed.value) return;
-      final keys = await _serverKeys();
-      final given = keys[profile.id];
-      if (!push && !live) {
-        if (given != null) {
-          final windows = await _onWindows(manager, sessionId);
-          await manager.exec(
-            sessionId,
-            windows ? relayRemoveCommandWindows() : relayRemoveCommand,
-          );
-          await _removePresence(manager, sessionId);
-          await _forget(profile.id, given);
-        }
-        outcome = MachineCheck.settled;
-        return;
+      if (!ProService.instance.confirmed.value) return outcome;
+      final named = {
+        for (final key in keys)
+          if (key.profileId != null) key.keyId,
+      };
+      final windows = await _onWindows(shell);
+      Future<void> unquiet() => shell.exec(
+        windows
+            ? relayQuietCommandWindows(quiet: false)
+            : relayQuietCommand(quiet: false),
+      );
+      String? kept;
+      final onServer = await _keyOnServer(shell, windows: windows);
+      if (given != null && named.contains(given)) {
+        if (keyIdAnswered(onServer, given)) kept = given;
       }
-      if (given != null) {
-        final windows = await _onWindows(manager, sessionId);
-        final onServer = utf8.decode(
-          await manager.exec(
-            sessionId,
-            windows ? relayKeyIdCommandWindows() : relayKeyIdCommand,
-          ),
-          allowMalformed: true,
-        );
-        if (keyIdAnswered(onServer, given)) {
-          await manager.exec(
-            sessionId,
-            windows
-                ? relayQuietCommandWindows(quiet: !push)
-                : relayQuietCommand(quiet: !push),
-          );
-          await _syncPresence(manager, sessionId, profile.id, live: live);
-          outcome = MachineCheck.settled;
-          return;
-        }
-      }
-      if (given == null) {
-        final adopted = await _adoptServerKey(manager, sessionId, uid);
-        if (adopted != null) {
-          final windows = await _onWindows(manager, sessionId);
-          await manager.exec(
-            sessionId,
-            windows
-                ? relayQuietCommandWindows(quiet: !push)
-                : relayQuietCommand(quiet: !push),
-          );
+      String? adopted;
+      if (kept == null && given == null) {
+        adopted = adoptableKey(onServer, profile.id, keys);
+        if (adopted != null && named.contains(adopted)) {
+          kept = adopted;
           await _rememberKey(profile.id, adopted);
-          await _syncPresence(manager, sessionId, profile.id, live: live);
-          outcome = MachineCheck.settled;
-          return;
         }
       }
-      final keyId = await installOnServer(
-        manager: manager,
-        sessionId: sessionId,
-        label: profile.name,
-        profileId: profile.id,
-        quiet: !push,
-      );
-      if (given != null) await _deleteKey(given);
-      await _rememberKey(profile.id, keyId);
-      await _syncPresence(manager, sessionId, profile.id, live: live);
+      if (kept != null) {
+        await unquiet();
+        await _keys.setSwitches(kept, notify: wanted.notify, live: wanted.live);
+      } else {
+        final keyId = await installOnServer(
+          shell: shell,
+          label: profile.name,
+          profileId: profile.id,
+          notify: wanted.notify,
+          live: wanted.live,
+        );
+        if (given != null) await _deleteKey(given);
+        if (adopted != null) await _deleteKey(adopted);
+        await _rememberKey(profile.id, keyId);
+        unawaited(
+          AnalyticsService.instance.capture(AnalyticsEvent.relayServerAdded),
+        );
+      }
+      if (wanted.live) {
+        if (prepareAgent != null) {
+          try {
+            await prepareAgent();
+          } catch (_) {}
+        }
+        await _ensurePresenceKey(shell, profile.id);
+      } else {
+        await _removePresence(shell);
+      }
       outcome = MachineCheck.settled;
-      unawaited(
-        AnalyticsService.instance.capture(AnalyticsEvent.relayServerAdded),
-      );
     } catch (_) {
       outcome = MachineCheck.failed;
       unawaited(
         AnalyticsService.instance.capture(AnalyticsEvent.relayServerFailed),
       );
     } finally {
-      _checks.finish(profile.id, outcome);
+      _checks.finish(run, outcome);
+      if (outcome == MachineCheck.settled &&
+          pendingSettledBy(pendingMachines.value[profile.id], applied)) {
+        await _savePendingMachines(
+          {...pendingMachines.value}..remove(profile.id),
+        );
+      }
     }
+    return outcome;
   }
 
-  /// Puts live status on the server behind [sessionId] in line with [live]:
-  /// a presence key and the crontab lines when on, neither when off.
-  Future<void> _syncPresence(
-    SshSessionManager manager,
-    String sessionId,
-    String profileId, {
-    required bool live,
-  }) => live
-      ? _ensurePresenceKey(manager, sessionId, profileId)
-      : _removePresence(manager, sessionId);
+  /// Whether the machine behind [shell] had notifications before keys
+  /// carried the switch: its relay file is not quiet. [fallback] - the
+  /// machine's own setting from before the bell - when it has no relay file.
+  Future<bool> _hadNotifications(
+    MachineShell shell, {
+    required bool fallback,
+  }) async {
+    final windows = await _onWindows(shell);
+    return hadNotificationsFrom(
+      utf8.decode(
+        await shell.exec(
+          windows ? relayLoudnessCommandWindows() : relayLoudnessCommand,
+        ),
+        allowMalformed: true,
+      ),
+      fallback: fallback,
+    );
+  }
 
-  /// Takes live status off the server behind [sessionId]: its presence key
-  /// and, on a POSIX server, the crontab lines. Quiet on failure.
-  Future<void> _removePresence(
-    SshSessionManager manager,
-    String sessionId,
-  ) async {
-    try {
-      final windows = await _onWindows(manager, sessionId);
-      await manager.exec(
-        sessionId,
-        windows ? presenceRemoveCommandWindows() : presenceRemoveCommand,
+  /// Whether the machine behind [shell] was set up for live status before
+  /// keys carried the switch ([hadLiveStatus]).
+  Future<bool> _hadLiveStatus(MachineShell shell, String profileId) =>
+      hadLiveStatus(
+        heldHere: () async => await presenceKeys.keyFor(profileId) != null,
+        askServer: () async {
+          final windows = await _onWindows(shell);
+          return utf8.decode(
+            await shell.exec(
+              windows ? presenceExistsCommandWindows() : presenceExistsCommand,
+            ),
+            allowMalformed: true,
+          );
+        },
       );
-      if (!windows) await manager.exec(sessionId, presenceCronRemoveCommand());
+
+  /// Writes `live: true` on the account's keys from before the switch
+  /// existed whose machine this device holds a presence key for: they had
+  /// live status, and say so now without waiting for their next connect.
+  /// The rest are settled on their next connect ([setUpMachine]). Quiet on
+  /// failure.
+  Future<void> settleOldLiveSwitches() async {
+    final uid = AccountService.instance.user?.uid;
+    if (uid == null || !await _accountReady()) return;
+    try {
+      for (final key in await _accountKeys(uid)) {
+        final profileId = key.profileId;
+        if (key.live != null || profileId == null) continue;
+        if (await presenceKeys.keyFor(profileId) == null) continue;
+        await _keys.setSwitches(key.keyId, live: true);
+      }
     } catch (_) {}
   }
 
-  /// Machines already set up are looked at again on their next connect -
-  /// for live status being switched on or off.
-  void recheckMachines() => _checks.reset();
+  /// Takes live status off the machine behind [shell]: its presence key
+  /// and, on a POSIX server, the crontab lines. Quiet on failure.
+  Future<void> _removePresence(MachineShell shell) async {
+    try {
+      final windows = await _onWindows(shell);
+      await shell.exec(
+        windows ? presenceRemoveCommandWindows() : presenceRemoveCommand,
+      );
+      if (!windows) await shell.exec(presenceCronRemoveCommand());
+    } catch (_) {}
+  }
 
-  /// Gives the server behind [sessionId] a presence key when it has none and
+  /// Gives the machine behind [shell] a presence key when it has none and
   /// keeps whichever key it holds on this device, so this device can read the
   /// sessions its agent reports; on a POSIX server also puts the crontab
   /// lines in place that keep it online while it has no session. Quiet on failure: live presence is a bonus
   /// on top of the relay, never a reason to call the machine failed.
-  Future<void> _ensurePresenceKey(
-    SshSessionManager manager,
-    String sessionId,
-    String profileId,
-  ) async {
+  Future<void> _ensurePresenceKey(MachineShell shell, String profileId) async {
     try {
-      final windows = await _onWindows(manager, sessionId);
+      final windows = await _onWindows(shell);
       final fresh = encodePresenceKey(newPresenceKey());
       final output = utf8.decode(
-        await manager.exec(
-          sessionId,
+        await shell.exec(
           windows
               ? presenceKeyCommandWindows(kPresenceUrl, fresh)
               : presenceKeyCommand(kPresenceUrl, fresh),
@@ -455,11 +680,14 @@ class PushService {
       );
       final key = parsePresenceKey(output);
       if (key != null) await presenceKeys.remember(profileId, key);
-      if (!windows) await manager.exec(sessionId, presenceCronInstallCommand());
+      if (!windows) {
+        await shell.exec(presenceCronInstallCommand());
+        await shell.exec(presenceReportNowCommand());
+      }
     } catch (_) {}
   }
 
-  /// Makes a relay key for the server behind [sessionId] and writes it
+  /// Makes a relay key for the machine behind [shell] and writes it
   /// there, readable by its user alone. [label] names the server in the
   /// list of keys and in pushes without a title. Returns the key's id.
   ///
@@ -468,27 +696,26 @@ class PushService {
   /// leaves nothing behind, where registering first left a key in the
   /// account for every failed try.
   Future<String> installOnServer({
-    required SshSessionManager manager,
-    required String sessionId,
+    required MachineShell shell,
     required String label,
     String? profileId,
     bool quiet = false,
+    bool notify = true,
+    bool live = false,
   }) async {
     final uid = AccountService.instance.user?.uid;
     if (uid == null || !await _accountReady()) {
       throw StateError('Not signed in.');
     }
     final key = newRelayKey();
-    final windows = await _onWindows(manager, sessionId);
-    await manager.exec(
-      sessionId,
+    final windows = await _onWindows(shell);
+    await shell.exec(
       windows
           ? relayInstallCommandWindows(kRelayUrl, key.token, quiet: quiet)
           : relayInstallCommand(kRelayUrl, key.token, quiet: quiet),
     );
     final written = utf8.decode(
-      await manager.exec(
-        sessionId,
+      await shell.exec(
         windows ? relayKeyIdCommandWindows() : relayKeyIdCommand,
       ),
       allowMalformed: true,
@@ -502,18 +729,20 @@ class PushService {
       secretHash: key.secretHash,
       label: label.length > 100 ? label.substring(0, 100) : label,
       profileId: profileId,
+      notify: notify,
+      live: live,
     );
     return key.id;
   }
 
-  /// Whether the server behind [sessionId] is Windows. `uname -s` is asked
+  /// Whether the machine behind [shell] is Windows. `uname -s` is asked
   /// because it answers on every POSIX server and fails on cmd.exe and
   /// PowerShell alike, which is what decides the command shape.
-  Future<bool> _onWindows(SshSessionManager manager, String sessionId) async {
-    final cached = _windowsBySession[sessionId];
+  Future<bool> _onWindows(MachineShell shell) async {
+    final cached = _windowsBySession[shell.key];
     if (cached != null) return cached;
     final output = utf8.decode(
-      await manager.exec(sessionId, 'uname -s'),
+      await shell.exec('uname -s'),
       allowMalformed: true,
     );
     final windows = unameSaysWindows(output)
@@ -521,63 +750,88 @@ class PushService {
         : unameSaysPosix(output)
         ? false
         : throw StateError('Could not tell the server system from: $output');
-    _windowsBySession[sessionId] = windows;
+    _windowsBySession[shell.key] = windows;
     return windows;
+  }
+
+  /// The account's phones and tablets with their notification settings,
+  /// latest registration first.
+  Stream<List<NotifyDestination>> destinations() {
+    final uid = AccountService.instance.user?.uid;
+    if (uid == null) return Stream.value(const []);
+    return Stream.fromFuture(_accountReady()).asyncExpand(
+      (ready) => ready
+          ? _prefs.list(uid)
+          : const Stream<List<NotifyDestination>>.empty(),
+    );
+  }
+
+  /// Switches [destination] on or off for every machine, at once: the relay
+  /// reads it on every push.
+  Future<void> setDestinationEnabled(
+    NotifyDestination destination,
+    bool enabled,
+  ) async {
+    final uid = AccountService.instance.user?.uid;
+    if (uid == null) return;
+    await _prefs.setEnabled(uid, destination, enabled);
   }
 
   /// The servers holding a key to this account, newest first.
   Stream<List<RelayServer>> servers() {
     final uid = AccountService.instance.user?.uid;
-    if (uid == null || !(_usesRest || FirebaseService.instance.ready)) {
-      return Stream.value(const []);
-    }
-    return _keys.list(uid);
+    if (uid == null) return Stream.value(const []);
+    return Stream.fromFuture(_accountReady()).asyncExpand(
+      (ready) =>
+          ready ? _keys.list(uid) : const Stream<List<RelayServer>>.empty(),
+    );
   }
 
-  /// The key already on the server behind [sessionId], when it is one of
-  /// [uid]'s own - set up by another of the account's devices - so this
-  /// device keeps it rather than writing a new one over it, which would
-  /// leave the other device's key stale and the two replacing each other's
-  /// on every connect. Null when the server has none or someone else's.
-  Future<String?> _adoptServerKey(
-    SshSessionManager manager,
-    String sessionId,
-    String uid,
-  ) async {
+  /// What the relay key id command prints on the machine behind [shell]:
+  /// the id of the key its relay file holds, if any.
+  Future<String> _keyOnServer(
+    MachineShell shell, {
+    required bool windows,
+  }) async => utf8.decode(
+    await shell.exec(windows ? relayKeyIdCommandWindows() : relayKeyIdCommand),
+    allowMalformed: true,
+  );
+
+  /// Forgets the machine of [profileId], deleted by the user: its keys go
+  /// from the account - so the relay and the realtime backend take nothing
+  /// more from them, and no other device lists them - along with what this
+  /// device remembered for it. The server is not touched: another machine
+  /// may point at the same one, and its next connect replaces the file.
+  /// Quiet on failure.
+  Future<void> forgetMachine(String profileId) async {
+    _checks.forget(profileId);
+    if (pendingMachines.value.containsKey(profileId)) {
+      await _savePendingMachines({...pendingMachines.value}..remove(profileId));
+    }
+    final remembered = await _serverKeys();
+    final given = remembered.remove(profileId);
+    if (given != null) await _saveServerKeys(remembered);
+    final uid = AccountService.instance.user?.uid;
+    if (uid == null || !await _accountReady()) return;
     try {
-      final windows = await _onWindows(manager, sessionId);
-      final onServer = utf8.decode(
-        await manager.exec(
-          sessionId,
-          windows ? relayKeyIdCommandWindows() : relayKeyIdCommand,
-        ),
-        allowMalformed: true,
-      );
-      final mine = await _keys
-          .list(uid)
-          .first
-          .timeout(const Duration(seconds: 20));
-      for (final server in mine) {
-        if (keyIdAnswered(onServer, server.keyId)) return server.keyId;
+      final keys = await _accountKeys(uid);
+      for (final key in keysOfMachine(keys, profileId)) {
+        await _deleteKey(key.keyId);
+      }
+      if (given != null && keyBelongsTo(given, profileId, keys)) {
+        await _deleteKey(given);
       }
     } catch (_) {}
-    return null;
-  }
-
-  /// Takes [server]'s key away: the relay refuses it from now on. The file
-  /// left on the server is harmless, and replaced on its next connect if
-  /// its notifications are still on.
-  Future<void> revoke(RelayServer server) async {
-    await _deleteKey(server.keyId);
-    final keys = await _serverKeys();
-    keys.removeWhere((_, keyId) => keyId == server.keyId);
-    await _saveServerKeys(keys);
-    final profileId = server.profileId;
-    if (profileId != null) _checks.forget(profileId);
   }
 
   Future<void> _forget(String profileId, String keyId) async {
     await _deleteKey(keyId);
+    await _dropRemembered(profileId);
+  }
+
+  /// Forgets which key this device gave the machine of [profileId], leaving
+  /// the key itself alone.
+  Future<void> _dropRemembered(String profileId) async {
     final keys = await _serverKeys()
       ..remove(profileId);
     await _saveServerKeys(keys);
@@ -683,11 +937,47 @@ String relayQuietCommand({required bool quiet}) {
 @visibleForTesting
 const presenceRemoveCommand = 'rm -f ~/.config/termphin/presence';
 
-/// Prints the id half of the server's relay key and nothing of its secret,
-/// or nothing when there is no key.
+/// Prints `present` when the server holds a presence key, and changes
+/// nothing.
 @visibleForTesting
-const relayKeyIdCommand =
-    "cut -d' ' -f2 ~/.config/termphin/relay 2>/dev/null | cut -d. -f1";
+const presenceExistsCommand =
+    '[ -s ~/.config/termphin/presence ] && echo present || true';
+
+/// Prints the id half of the server's relay key and nothing of its secret,
+/// or [kNoRelayFile] when there is no relay file. Run through `sh`, since
+/// the login shell it reaches may be fish or tcsh, which speak no `if`.
+@visibleForTesting
+final relayKeyIdCommand =
+    'sh -c ${shellQuote("if [ -e ~/.config/termphin/relay ] || [ -L ~/.config/termphin/relay ]; "
+    "then cut -d' ' -f2 ~/.config/termphin/relay 2>/dev/null | cut -d. -f1; "
+    "else echo $kNoRelayFile; fi")}';
+
+/// What the key id command prints, on a line of its own, when the server
+/// has no relay file at all - the one answer that says "no key" for sure,
+/// where an empty one may be a file that could not be read.
+@visibleForTesting
+const kNoRelayFile = 'termphin-no-relay-file';
+
+/// Prints how the server's relay file stands: `quiet` when its pushes are
+/// held back, `loud` when they go out, `none` when there is no file. Run
+/// through `sh`, like [relayKeyIdCommand].
+@visibleForTesting
+final relayLoudnessCommand =
+    'sh -c ${shellQuote('f=~/.config/termphin/relay; if [ ! -s "\$f" ]; then echo none; '
+    'elif [ "\$(cut -d\' \' -f3 "\$f")" = quiet ]; then echo quiet; '
+    'else echo loud; fi')}';
+
+/// Whether a machine had notifications, from what [relayLoudnessCommand]
+/// printed: not when its relay file is quiet; [fallback] when it has none.
+/// Throws on any other answer - a file that could not be read is no answer.
+@visibleForTesting
+bool hadNotificationsFrom(String answer, {required bool fallback}) {
+  final lines = answer.split(RegExp(r'\r?\n')).map((line) => line.trim());
+  if (lines.contains('quiet')) return false;
+  if (lines.contains('loud')) return true;
+  if (lines.contains('none')) return fallback;
+  throw StateError('Could not tell whether the relay file is quiet: $answer');
+}
 
 /// Deletes the server's relay key.
 @visibleForTesting
@@ -744,6 +1034,21 @@ $file = Join-Path $env:USERPROFILE '.config\termphin\relay'
 if (Test-Path -LiteralPath $file) {
   $fields = (Get-Content -LiteralPath $file -Raw -ErrorAction SilentlyContinue).Trim() -split ' '
   if ($fields.Count -ge 2) { $fields[1].Split('.')[0] }
+} else {
+  'termphin-no-relay-file'
+}
+''');
+
+/// The Windows twin of [relayLoudnessCommand].
+@visibleForTesting
+String relayLoudnessCommandWindows() => powerShellCommandLine(r'''
+$ProgressPreference = 'SilentlyContinue'
+$file = Join-Path $env:USERPROFILE '.config\termphin\relay'
+if (-not (Test-Path -LiteralPath $file) -or (Get-Item -LiteralPath $file).Length -eq 0) {
+  'none'
+} else {
+  $fields = (Get-Content -LiteralPath $file -Raw).Trim() -split ' '
+  if ($fields.Count -ge 3 -and $fields[2] -eq 'quiet') { 'quiet' } else { 'loud' }
 }
 ''');
 
@@ -763,6 +1068,14 @@ if (Test-Path -LiteralPath $file) {
 }
 ''',
 );
+
+/// The Windows twin of [presenceExistsCommand].
+@visibleForTesting
+String presenceExistsCommandWindows() => powerShellCommandLine(r'''
+$ProgressPreference = 'SilentlyContinue'
+$file = Join-Path $env:USERPROFILE '.config\termphin\presence'
+if ((Test-Path -LiteralPath $file) -and (Get-Item -LiteralPath $file).Length -gt 0) { 'present' }
+''');
 
 /// The Windows twin of [presenceRemoveCommand].
 @visibleForTesting
@@ -813,44 +1126,95 @@ enum MachineCheck {
   failed,
 }
 
+/// One check of a machine, from [MachineChecks.start] to
+/// [MachineChecks.finish].
+final class MachineRun {
+  MachineRun._(this.id) : since = clock.now();
+
+  final String id;
+  final DateTime since;
+  final _done = Completer<void>();
+}
+
 /// Which machines have been set up since launch. A machine counts as done
 /// only once its key ended up as it should; one met before push was on or
 /// before Pro was confirmed is looked at again on the next chance, and one
-/// whose server failed waits [retryAfter] first.
+/// whose server failed waits [retryAfter] first. A check still running after
+/// [runLimit] - a server that stopped answering halfway - is given up on, so
+/// it holds up neither the next check nor anyone waiting for it.
 @visibleForTesting
 class MachineChecks {
-  MachineChecks({this.retryAfter = const Duration(minutes: 1)});
+  MachineChecks({
+    this.retryAfter = const Duration(minutes: 1),
+    this.runLimit = const Duration(minutes: 1),
+  });
 
   final Duration retryAfter;
+  final Duration runLimit;
   final _settled = <String>{};
-  final _running = <String>{};
+  final _running = <String, MachineRun>{};
   final _failedAt = <String, DateTime>{};
 
-  /// Whether a check of [id] should run now: not settled, not running, not
-  /// waiting after a failure.
-  bool start(String id) {
-    if (_settled.contains(id) || _running.contains(id)) return false;
+  /// A check of [id] to run now, or null when it should not: settled,
+  /// running, waiting after a failure.
+  MachineRun? start(String id) {
+    if (_settled.contains(id)) return null;
+    final running = _running[id];
+    if (running != null) {
+      if (!_givenUp(running)) return null;
+      _running.remove(id);
+      running._done.complete();
+    }
     final failed = _failedAt[id];
     if (failed != null && clock.now().difference(failed) < retryAfter) {
-      return false;
+      return null;
     }
-    _running.add(id);
-    return true;
+    return _running[id] = MachineRun._(id);
   }
 
-  /// The check of [id] is over, as [outcome] says.
-  void finish(String id, MachineCheck outcome) {
-    _running.remove(id);
+  bool _givenUp(MachineRun run) =>
+      clock.now().difference(run.since) >= runLimit;
+
+  /// Completes once no check of [id] is running, or once the one running is
+  /// given up on.
+  Future<void> idle(String id) {
+    final run = _running[id];
+    if (run == null) return Future.value();
+    final left = runLimit - clock.now().difference(run.since);
+    if (left <= Duration.zero) return Future.value();
+    return run._done.future.timeout(left, onTimeout: () {});
+  }
+
+  /// [run] is over, as [outcome] says. Nothing for a run given up on and
+  /// started again since: the newer one decides.
+  void finish(MachineRun run, MachineCheck outcome) {
+    if (!identical(_running[run.id], run)) return;
+    _running.remove(run.id);
+    run._done.complete();
     switch (outcome) {
       case MachineCheck.settled:
-        _settled.add(id);
-        _failedAt.remove(id);
+        _settled.add(run.id);
+        _failedAt.remove(run.id);
       case MachineCheck.notReady:
-        _failedAt.remove(id);
+        _failedAt.remove(run.id);
       case MachineCheck.failed:
-        _failedAt[id] = clock.now();
+        _failedAt[run.id] = clock.now();
     }
   }
+
+  /// [shell], refusing every command once [run] is given up on: a check
+  /// stuck on a live session's connection, which nothing disconnects, must
+  /// not go on changing the machine alongside the newer one.
+  MachineShell guard(MachineRun run, MachineShell shell) =>
+      MachineShell(shell.key, (command) async {
+        if (!identical(_running[run.id], run) || _givenUp(run)) {
+          throw StateError('The check of this machine was given up on.');
+        }
+        return shell.exec(command);
+      });
+
+  /// Whether [id] ended up as it should since launch.
+  bool isSettled(String id) => _settled.contains(id);
 
   /// Checks [id] again on the next chance.
   void forget(String id) {
@@ -863,4 +1227,80 @@ class MachineChecks {
     _settled.clear();
     _failedAt.clear();
   }
+}
+
+/// Whether a check that set its machine up as [applied] finishes the switch
+/// waiting for it ([pending]): only when the two match. One flipped again
+/// while the check ran is newer than what it applied, and waits for the
+/// next one.
+@visibleForTesting
+bool pendingSettledBy(MachineSwitchChange? pending, MachineSwitches? applied) =>
+    pending != null &&
+    applied != null &&
+    (pending.notify == null || pending.notify == applied.notify) &&
+    (pending.live == null || pending.live == applied.live);
+
+/// The keys among [keys] made for the machine of [profileId].
+@visibleForTesting
+Iterable<RelayServer> keysOfMachine(
+  Iterable<RelayServer> keys,
+  String profileId,
+) => keys.where((key) => key.profileId == profileId);
+
+/// Whether the key [keyId] may be changed or deleted for the machine of
+/// [profileId]: it names that machine, names none (a key from before keys
+/// named their machine), or is gone from the account. A key naming another
+/// machine - two machines pointing at one server, which earlier versions let
+/// share a key - stays that machine's, so switching or deleting this one
+/// never touches it.
+@visibleForTesting
+bool keyBelongsTo(String keyId, String profileId, Iterable<RelayServer> keys) {
+  final key = keys.where((key) => key.keyId == keyId).firstOrNull;
+  return key == null || key.profileId == null || key.profileId == profileId;
+}
+
+/// The account key the server's relay file holds ([onServer], what the key
+/// id command printed) when the machine of [profileId] may take it over:
+/// one made for it on another of the account's devices, or one from before
+/// keys named their machine. Null for none, a key of another account, or one
+/// made for another machine pointing at the same server.
+@visibleForTesting
+String? adoptableKey(
+  String onServer,
+  String profileId,
+  Iterable<RelayServer> keys,
+) {
+  for (final key in keys) {
+    if (!keyIdAnswered(onServer, key.keyId)) continue;
+    return key.profileId == null || key.profileId == profileId
+        ? key.keyId
+        : null;
+  }
+  return null;
+}
+
+/// Whether the server's relay file ([onServer], what the key id command
+/// printed) may be deleted, with the presence setup beside it, when the
+/// machine is switched off: it holds one of the machine's own keys ([own]),
+/// or there is no file ([kNoRelayFile]). Anything else - another machine's
+/// key on the same server, another account's, a file that could not be
+/// read and printed nothing - is left alone.
+@visibleForTesting
+bool mayClearServer(String onServer, Iterable<String> own) =>
+    keyIdAnswered(onServer, kNoRelayFile) ||
+    own.any((id) => keyIdAnswered(onServer, id));
+
+/// Whether a machine was set up for live status before keys carried the
+/// switch: this device holds its presence key ([heldHere]), or the server
+/// has one ([askServer], what the presence check printed) - set up from
+/// another device. What a key from before the switch gets written as, so
+/// nobody loses live status by updating. Throws when either cannot be told:
+/// a guess of "no" would take a working live status away for good.
+@visibleForTesting
+Future<bool> hadLiveStatus({
+  required Future<bool> Function() heldHere,
+  required Future<String> Function() askServer,
+}) async {
+  if (await heldHere()) return true;
+  return (await askServer()).contains('present');
 }

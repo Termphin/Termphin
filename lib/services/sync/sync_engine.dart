@@ -11,7 +11,8 @@ class SyncRecord {
     required this.updatedAt,
   });
 
-  /// `profile`, `key`, `snippet`, `groups`, `knownHost`.
+  /// `profile`, `key`, `snippet`, `groups`, `knownHost`, `presenceKey`,
+  /// `setting`.
   final String kind;
   final String id;
   final Map<String, Object?> data;

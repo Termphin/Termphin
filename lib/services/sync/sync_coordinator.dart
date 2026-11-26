@@ -59,6 +59,9 @@ class SyncCoordinator {
   /// new passphrase, from another one - for the card to say so once.
   final ended = ValueNotifier<SyncFailure?>(null);
 
+  /// Whether automatic sync runs on this device, for notes that ask to turn it on.
+  final running = ValueNotifier<bool>(false);
+
   /// When the device last synced, from the service.
   ValueListenable<DateTime?> get lastSynced => _service.lastSynced;
 
@@ -88,6 +91,7 @@ class SyncCoordinator {
       return;
     }
     _active = true;
+    running.value = true;
     _watchRemote();
     await syncNow();
   }
@@ -96,6 +100,7 @@ class SyncCoordinator {
   /// key.
   void stop() {
     _active = false;
+    running.value = false;
     _timer?.cancel();
     _timer = null;
     unawaited(_remote?.cancel());

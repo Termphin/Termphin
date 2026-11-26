@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:termphin/models/ssh_profile.dart';
 import 'package:termphin/providers/live_presence_provider.dart';
+import 'package:termphin/services/push/machine_switches.dart';
+import 'package:termphin/services/push/relay_key_store.dart';
 import 'package:termphin/services/realtime/live_presence.dart';
 import 'package:termphin/services/realtime/presence_keys.dart';
 import 'package:termphin/services/realtime/presence_socket.dart';
@@ -110,16 +112,44 @@ void main() {
     expect(adopted, [('profile-a', 'main')]);
   });
 
+  test('runs only signed in with Pro, in front on a phone', () async {
+    controller.pro = true;
+    await pumpEventQueue();
+    expect(connects, isEmpty, reason: 'nobody is signed in yet');
+    controller.signedIn = true;
+    await pumpEventQueue();
+    expect(connects, hasLength(1));
+  });
+
   test(
-    'runs only signed in with Pro and live status on, in front on a phone',
-    () async {
-      controller.pro = true;
-      controller.signedIn = true;
-      await pumpEventQueue();
-      expect(connects, isEmpty, reason: 'live status is off by default');
-      controller.enabled = true;
-      await pumpEventQueue();
-      expect(connects, hasLength(1));
+    'turning live status off stops tracking without pruning existing rows',
+    () {
+      report({
+        'profile-a': ['main'],
+      });
+      expect(adopted, [('profile-a', 'main')]);
+      pruned.clear();
+      report(const {});
+      expect(pruned, isEmpty);
+    },
+  );
+
+  test(
+    'liveProfileKeys omits machines with live status off or pending off',
+    () {
+      const servers = [
+        RelayServer(keyId: 'k1', label: 'a', profileId: 'a', live: true),
+        RelayServer(keyId: 'k2', label: 'b', profileId: 'b', live: false),
+        RelayServer(keyId: 'k3', label: 'c', profileId: 'c', live: true),
+      ];
+      expect(liveProfileKeys(servers), {'k1': 'a', 'k3': 'c'});
+      expect(
+        liveProfileKeys(
+          servers,
+          pending: const {'c': MachineSwitchChange(live: false)},
+        ),
+        {'k1': 'a'},
+      );
     },
   );
 }

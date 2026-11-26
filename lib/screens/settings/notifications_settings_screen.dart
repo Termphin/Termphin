@@ -1,17 +1,26 @@
 import 'dart:async';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
+import '../../providers/account_provider.dart';
+import '../../services/account/account_service.dart';
 import '../../services/analytics/analytics_service.dart';
+import '../../services/pro/pro_service.dart';
 import '../../theme/theme.dart';
 import '../../utils/platform_info.dart';
 import '../../widgets/settings/notification_permission_note.dart';
 import '../../widgets/settings/notifications_demo.dart';
 import '../../widgets/settings/notifications_settings_section.dart';
 import '../../widgets/settings/setting_reveal.dart';
+import '../../widgets/ui/app_card.dart';
 import '../../widgets/ui/info_note.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
+import '../../widgets/ui/section_navigator.dart';
+import '../../widgets/ui/settings_tile.dart';
+import '../pro/pro_features_screen.dart';
 
 /// Every notification setting on a screen of its own, reached from the one
 /// row Settings keeps for them.
@@ -72,6 +81,7 @@ class _NotificationsSettingsScreenState
               const SizedBox(height: AppTheme.space16),
             ],
             NotificationsSettingsList(appVersion: widget.appVersion),
+            if (AccountService.instance.available) const _MachinesLink(),
             if (isAndroidPlatform || isIOSPlatform) ...[
               const SizedBox(height: AppTheme.space20),
               const NotificationPermissionRow(),
@@ -79,6 +89,39 @@ class _NotificationsSettingsScreenState
           ],
         ),
       ),
+    );
+  }
+}
+
+/// The way from notifications to where machines and devices are switched,
+/// Termphin Pro's own screen; shown signed in with Pro.
+class _MachinesLink extends ConsumerWidget {
+  const _MachinesLink();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (ref.watch(accountProvider) == null) return const SizedBox.shrink();
+    final t = Translations.of(context);
+    return ValueListenableBuilder<bool>(
+      valueListenable: ProService.instance.active,
+      builder: (context, pro, _) => pro
+          ? Padding(
+              padding: const EdgeInsets.only(top: AppTheme.space20),
+              child: AppCard(
+                child: SettingsTile(
+                  key: const ValueKey('machinesLink'),
+                  icon: PhosphorIconsRegular.hardDrives,
+                  title: t.serversPanel.linkTitle,
+                  subtitle: t.serversPanel.linkSubtitle,
+                  onTap: () => pushAppPage<void>(
+                    context,
+                    title: t.proHub.title,
+                    builder: (_) => const ProFeaturesScreen(),
+                  ),
+                ),
+              ),
+            )
+          : const SizedBox.shrink(),
     );
   }
 }

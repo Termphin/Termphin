@@ -105,7 +105,7 @@ class SettingsTile extends StatelessWidget {
   }
 }
 
-/// A switch row in a settings card: optional [icon], [title], optional
+/// A switch row in a settings card: optional [icon] or [leading], [title], optional
 /// [subtitle], and the switch itself. [titleTrailing] sits right after the
 /// title, for a badge or an info button; [below] goes under the subtitle, for
 /// something to show rather than say.
@@ -117,17 +117,22 @@ class SettingsSwitchTile extends StatelessWidget {
     required this.onChanged,
     this.icon,
     this.iconColor,
+    this.leading,
     this.subtitle,
     this.titleTrailing,
     this.below,
     this.dense = false,
     this.contentPadding,
-  });
+  }) : assert(icon == null || leading == null);
 
   final String title;
   final bool value;
   final ValueChanged<bool>? onChanged;
   final IconData? icon;
+
+  /// Stands before the title and subtitle instead of [icon], as on
+  /// [SettingsTile] - a machine's own avatar, say.
+  final Widget? leading;
 
   /// Overrides the icon's secondary grey, e.g. a warning tint while a switch
   /// that exports credentials is on.
@@ -164,6 +169,7 @@ class SettingsSwitchTile extends StatelessWidget {
                 below,
               ],
             ),
+      secondary: leading,
       value: value,
       activeThumbColor: context.colors.primary,
       onChanged: onChanged,

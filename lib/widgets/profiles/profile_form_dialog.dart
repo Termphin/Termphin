@@ -191,8 +191,7 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
   bool get _usesMoreOptions =>
       _fallbackHosts.isNotEmpty ||
       _jumpHostProfileId != null ||
-      _forwardingRules.isNotEmpty ||
-      !_serverNotifications;
+      _forwardingRules.isNotEmpty;
 
   void _toggleMoreOptions() {
     setState(() => _moreOptions = !_moreOptions);
@@ -676,19 +675,6 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
 
                       const SizedBox(height: AppTheme.space24),
                       _buildPortForwardingSection(t),
-
-                      const SizedBox(height: AppTheme.space24),
-                      SectionHeader(t.profileForm.notifications),
-                      const SizedBox(height: AppTheme.space10),
-                      AppCard(
-                        child: SettingsSwitchTile(
-                          title: t.profileForm.serverNotifications,
-                          subtitle: t.profileForm.serverNotificationsHint,
-                          value: _serverNotifications,
-                          onChanged: (value) =>
-                              setState(() => _serverNotifications = value),
-                        ),
-                      ),
                     ],
                   ],
                 ),
@@ -719,7 +705,6 @@ class _ProfileFormDialogState extends ConsumerState<ProfileFormDialog> {
             : f.moreJumpHost(name: jumpHost.name),
       if (_forwardingRules.isNotEmpty)
         f.moreForwards(n: _forwardingRules.length),
-      if (!_serverNotifications) f.moreNotificationsOff,
     ].join(' · ');
     return AppCard(
       child: SettingsTile(

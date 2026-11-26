@@ -82,7 +82,7 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 	late final Translations$contextMenu$en contextMenu = Translations$contextMenu$en.internal(_root);
 	late final Translations$frameStats$en frameStats = Translations$frameStats$en.internal(_root);
 	late final Translations$account$en account = Translations$account$en.internal(_root);
-	late final Translations$relayServers$en relayServers = Translations$relayServers$en.internal(_root);
+	late final Translations$serversPanel$en serversPanel = Translations$serversPanel$en.internal(_root);
 	late final Translations$agentFeatures$en agentFeatures = Translations$agentFeatures$en.internal(_root);
 	late final Translations$proHints$en proHints = Translations$proHints$en.internal(_root);
 	late final Translations$proFeature$en proFeature = Translations$proFeature$en.internal(_root);
@@ -540,9 +540,6 @@ class Translations$profileForm$en {
 		other: '${n} forwards',
 	);
 
-	/// en: 'notifications off'
-	String get moreNotificationsOff => 'notifications off';
-
 	/// en: 'Fallback addresses'
 	String get fallbackHosts => 'Fallback addresses';
 
@@ -608,15 +605,6 @@ class Translations$profileForm$en {
 
 	/// en: 'Choose how to sign in to this machine.'
 	String get chooseAuth => 'Choose how to sign in to this machine.';
-
-	/// en: 'Notifications'
-	String get notifications => 'Notifications';
-
-	/// en: 'Reach me when I am not connected'
-	String get serverNotifications => 'Reach me when I am not connected';
-
-	/// en: 'With Pro, a long command or a program asking for you here sends a push even with Termphin closed.'
-	String get serverNotificationsHint => 'With Pro, a long command or a program asking for you here sends a push even with Termphin closed.';
 }
 
 // Path: keys
@@ -2055,8 +2043,8 @@ class Translations$settings$en {
 	/// en: 'Servers you use here notify your phone, even with Termphin closed. Turn it on in Termphin on your phone.'
 	String get notifyOnPhoneSubtitle => 'Servers you use here notify your phone, even with Termphin closed. Turn it on in Termphin on your phone.';
 
-	/// en: 'Servers'
-	String get notifyServers => 'Servers';
+	/// en: 'Turn on sync so tapping a notification opens its session on every device, not only the one that set the server up.'
+	String get notifyNeedsSync => 'Turn on sync so tapping a notification opens its session on every device, not only the one that set the server up.';
 
 	/// en: 'Notifications are turned off for Termphin in the system settings.'
 	String get notifyDenied => 'Notifications are turned off for Termphin in the system settings.';
@@ -4486,40 +4474,82 @@ class Translations$account$en {
 	late final Translations$account$reset$en reset = Translations$account$reset$en.internal(_root);
 }
 
-// Path: relayServers
-class Translations$relayServers$en {
-	Translations$relayServers$en.internal(this._root);
+// Path: serversPanel
+class Translations$serversPanel$en {
+	Translations$serversPanel$en.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
 	// Translations
 
-	/// en: 'Servers'
-	String get title => 'Servers';
+	/// en: 'This device'
+	String get thisDevice => 'This device';
 
-	/// en: 'Machines that can reach this account while no phone is connected. Each gets its key on its own the first time you connect with push on.'
-	String get intro => 'Machines that can reach this account while no phone is connected. Each gets its key on its own the first time you connect with push on.';
+	/// en: 'iPhone'
+	String get iphone => 'iPhone';
 
-	/// en: 'No server can reach you yet'
-	String get empty => 'No server can reach you yet';
+	/// en: 'iPad'
+	String get ipad => 'iPad';
 
-	/// en: 'Connect to a machine with push on and it is set up on its own.'
-	String get emptyHint => 'Connect to a machine with push on and it is set up on its own.';
+	/// en: 'Android phone'
+	String get androidPhone => 'Android phone';
 
-	/// en: 'Last notification {time}'
-	String lastSent({required Object time}) => 'Last notification ${time}';
+	/// en: 'Android tablet'
+	String get androidTablet => 'Android tablet';
 
-	/// en: 'Set up {time}'
-	String setUp({required Object time}) => 'Set up ${time}';
+	/// en: 'Could not save that. Try again.'
+	String get failed => 'Could not save that. Try again.';
 
-	/// en: 'Revoke'
-	String get revoke => 'Revoke';
+	/// en: 'Notifications on your phones and tablets'
+	String get phonesTitle => 'Notifications on your phones and tablets';
 
-	/// en: 'Revoke {name}?'
-	String revokeTitle({required Object name}) => 'Revoke ${name}?';
+	/// en: 'Choose below which servers reach which device.'
+	String get phonesSubtitle => 'Choose below which servers reach which device.';
 
-	/// en: 'It can no longer reach you. Connecting to it again with its notifications on gives it a new key.'
-	String get revokeMessage => 'It can no longer reach you. Connecting to it again with its notifications on gives it a new key.';
+	/// en: 'Machines and devices'
+	String get linkTitle => 'Machines and devices';
+
+	/// en: 'Which machines and devices use Termphin Pro'
+	String get linkSubtitle => 'Which machines and devices use Termphin Pro';
+
+	/// en: 'Phones and tablets'
+	String get devicesTitle => 'Phones and tablets';
+
+	/// en: 'Show all {n}'
+	String showAll({required Object n}) => 'Show all ${n}';
+
+	/// en: 'Notifications and live status'
+	String get buttonTooltip => 'Notifications and live status';
+
+	/// en: 'Notifications'
+	String get notifications => 'Notifications';
+
+	/// en: 'Live status'
+	String get live => 'Live status';
+
+	/// en: 'Done on {name}'
+	String setUp({required Object name}) => 'Done on ${name}';
+
+	/// en: 'Could not reach {name}. It is set up the next time you connect to it.'
+	String notReached({required Object name}) => 'Could not reach ${name}. It is set up the next time you connect to it.';
+
+	/// en: 'Machines with notifications'
+	String get notifyMachinesTitle => 'Machines with notifications';
+
+	/// en: 'Machines with live status'
+	String get liveMachinesTitle => 'Machines with live status';
+
+	/// en: 'No machine sends notifications yet. Turn them on with the bell next to a machine's menu in your list of machines.'
+	String get notifyEmpty => 'No machine sends notifications yet. Turn them on with the bell next to a machine\'s menu in your list of machines.';
+
+	/// en: 'No machine shows its live status yet. Turn it on with the bell next to a machine's menu in your list of machines.'
+	String get liveEmpty => 'No machine shows its live status yet. Turn it on with the bell next to a machine\'s menu in your list of machines.';
+
+	/// en: 'Set up the next time you connect'
+	String get pending => 'Set up the next time you connect';
+
+	/// en: 'On'
+	String get ready => 'On';
 }
 
 // Path: agentFeatures
@@ -5316,8 +5346,8 @@ class Translations$account$live$en {
 	/// en: 'Live status'
 	String get title => 'Live status';
 
-	/// en: 'Online machines and what their sessions are doing, without connecting. Adds a line to each machine's crontab.'
-	String get subtitle => 'Online machines and what their sessions are doing, without connecting. Adds a line to each machine\'s crontab.';
+	/// en: 'Online machines and what their sessions are doing, without connecting. Turned on machine by machine.'
+	String get subtitle => 'Online machines and what their sessions are doing, without connecting. Turned on machine by machine.';
 
 	/// en: 'Online machines and live sessions, without connecting'
 	String get proHint => 'Online machines and live sessions, without connecting';
@@ -5438,8 +5468,14 @@ class Translations$account$sync$en {
 	/// en: 'Sync'
 	String get title => 'Sync';
 
-	/// en: 'Keep machines, keys, snippets and groups the same on every device. End-to-end encrypted with a passphrase only you know.'
-	String get off => 'Keep machines, keys, snippets and groups the same on every device. End-to-end encrypted with a passphrase only you know.';
+	/// en: 'Keep machines, keys, snippets and groups the same on every device, see live sessions from all of them, and open the right session from any notification. End-to-end encrypted with a passphrase only you know.'
+	String get off => 'Keep machines, keys, snippets and groups the same on every device, see live sessions from all of them, and open the right session from any notification. End-to-end encrypted with a passphrase only you know.';
+
+	/// en: 'Sync is off'
+	String get needsSyncTitle => 'Sync is off';
+
+	/// en: 'Your other devices see these sessions only with sync on.'
+	String get needsSyncLive => 'Your other devices see these sessions only with sync on.';
 
 	/// en: 'Turn on sync'
 	String get turnOn => 'Turn on sync';
@@ -5907,7 +5943,6 @@ extension on Translations {
 			'profileForm.moreJumpHost' => ({required Object name}) => 'via ${name}',
 			'profileForm.moreJumpHostHidden' => 'via a jump host',
 			'profileForm.moreForwards' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '${n} forward', other: '${n} forwards', ), 
-			'profileForm.moreNotificationsOff' => 'notifications off',
 			'profileForm.fallbackHosts' => 'Fallback addresses',
 			'profileForm.fallbackHostsHint' => 'Tried in order if the host above doesn\'t answer, e.g. a Tailscale IP or a LAN address.',
 			'profileForm.fallbackHostHint' => 'host or host:port',
@@ -5930,9 +5965,6 @@ extension on Translations {
 			'profileForm.sshKeyHint' => 'A key pair: the private half stays on this device, the public half goes into ~/.ssh/authorized_keys on the server. Safer than a password, and nothing to type.',
 			'profileForm.createKey' => 'Create a new key',
 			'profileForm.chooseAuth' => 'Choose how to sign in to this machine.',
-			'profileForm.notifications' => 'Notifications',
-			'profileForm.serverNotifications' => 'Reach me when I am not connected',
-			'profileForm.serverNotificationsHint' => 'With Pro, a long command or a program asking for you here sends a push even with Termphin closed.',
 			'keys.title' => 'SSH Keys',
 			'keys.subtitle' => 'Generate, import and manage your SSH keys',
 			'keys.allKeys' => 'All keys',
@@ -6291,12 +6323,12 @@ extension on Translations {
 			'settings.lockAfterImmediately' => 'Right away',
 			'settings.lockAfter30s' => 'After 30 seconds',
 			'settings.lockAfter1m' => 'After 1 minute',
-			_ => null,
-		} ?? switch (path) {
 			'settings.lockAfter5m' => 'After 5 minutes',
 			'settings.pinLockDisabled' => 'Disabled',
 			'settings.biometricUnlock' => 'Biometric unlock',
 			'settings.biometricSubtitle' => 'Use fingerprint or face as alternative',
+			_ => null,
+		} ?? switch (path) {
 			'settings.biometricSubtitleDesktop' => 'Unlock with the computer\'s own sign-in, a fingerprint or face, instead of the PIN',
 			'settings.biometricUnavailable' => 'Not available on this device',
 			'settings.enablePinFirst' => 'Enable PIN lock first',
@@ -6455,7 +6487,7 @@ extension on Translations {
 			'settings.notifyWhenClosedSubtitleIos' => 'Wherever you are, even with Termphin closed. On iPhone, the only way to hear from your servers in the background.',
 			'settings.notifyOnPhone' => 'Notifications on your phone',
 			'settings.notifyOnPhoneSubtitle' => 'Servers you use here notify your phone, even with Termphin closed. Turn it on in Termphin on your phone.',
-			'settings.notifyServers' => 'Servers',
+			'settings.notifyNeedsSync' => 'Turn on sync so tapping a notification opens its session on every device, not only the one that set the server up.',
 			'settings.notifyDenied' => 'Notifications are turned off for Termphin in the system settings.',
 			'settings.notifyFailed' => 'That did not work. Try again.',
 			'settings.notifyPaused' => 'Paused because Pro has ended. Your servers keep their keys; renew Pro and notifications come back.',
@@ -6805,12 +6837,12 @@ extension on Translations {
 			'toolbar.customTextHint' => 'Text to send',
 			'toolbar.goToPage' => ({required Object number}) => 'Go to page ${number}',
 			'toolbar.quickSettings' => 'Quick settings',
-			_ => null,
-		} ?? switch (path) {
 			'toolbar.quickTabToolbar' => 'Toolbar',
 			'toolbar.quickTabAppearance' => 'Appearance',
 			'toolbar.allTerminalSettings' => 'All terminal settings',
 			'toolbar.importTitle' => 'Add toolbar layout',
+			_ => null,
+		} ?? switch (path) {
 			'toolbar.importUnnamed' => 'Shared layout',
 			'toolbar.importTextKeys' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '1 key types text', other: '${n} keys type text', ), 
 			'toolbar.importPressEnter' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '1 presses Enter', other: '${n} press Enter', ), 
@@ -7126,7 +7158,7 @@ extension on Translations {
 			'frameStats.glyphAtlas' => 'glyph atlas · tap for text',
 			'frameStats.paragraphs' => 'text · tap for glyph atlas',
 			'account.live.title' => 'Live status',
-			'account.live.subtitle' => 'Online machines and what their sessions are doing, without connecting. Adds a line to each machine\'s crontab.',
+			'account.live.subtitle' => 'Online machines and what their sessions are doing, without connecting. Turned on machine by machine.',
 			'account.live.proHint' => 'Online machines and live sessions, without connecting',
 			'account.section' => 'Account',
 			'account.signIn' => 'Sign in',
@@ -7236,7 +7268,9 @@ extension on Translations {
 			'account.pro.buyOnWeb' => 'Get Pro on the web',
 			'account.pro.buyOnWebBody' => 'Buy Pro on your account page. It works here as soon as you are signed in with the same account.',
 			'account.sync.title' => 'Sync',
-			'account.sync.off' => 'Keep machines, keys, snippets and groups the same on every device. End-to-end encrypted with a passphrase only you know.',
+			'account.sync.off' => 'Keep machines, keys, snippets and groups the same on every device, see live sessions from all of them, and open the right session from any notification. End-to-end encrypted with a passphrase only you know.',
+			'account.sync.needsSyncTitle' => 'Sync is off',
+			'account.sync.needsSyncLive' => 'Your other devices see these sessions only with sync on.',
 			'account.sync.turnOn' => 'Turn on sync',
 			'account.sync.choose' => 'Choose a sync passphrase',
 			'account.sync.chooseHint' => 'At least 8 characters. It cannot be recovered: lose it and the synced copy is lost, though your devices keep theirs.',
@@ -7298,15 +7332,31 @@ extension on Translations {
 			'account.reset.sentBody' => ({required Object email}) => 'If an account uses ${email}, a link to set a new password is on its way. It can take a minute - look in spam too.',
 			'account.reset.resend' => 'Send again',
 			'account.reset.back' => 'Back to sign in',
-			'relayServers.title' => 'Servers',
-			'relayServers.intro' => 'Machines that can reach this account while no phone is connected. Each gets its key on its own the first time you connect with push on.',
-			'relayServers.empty' => 'No server can reach you yet',
-			'relayServers.emptyHint' => 'Connect to a machine with push on and it is set up on its own.',
-			'relayServers.lastSent' => ({required Object time}) => 'Last notification ${time}',
-			'relayServers.setUp' => ({required Object time}) => 'Set up ${time}',
-			'relayServers.revoke' => 'Revoke',
-			'relayServers.revokeTitle' => ({required Object name}) => 'Revoke ${name}?',
-			'relayServers.revokeMessage' => 'It can no longer reach you. Connecting to it again with its notifications on gives it a new key.',
+			'serversPanel.thisDevice' => 'This device',
+			'serversPanel.iphone' => 'iPhone',
+			'serversPanel.ipad' => 'iPad',
+			'serversPanel.androidPhone' => 'Android phone',
+			'serversPanel.androidTablet' => 'Android tablet',
+			'serversPanel.failed' => 'Could not save that. Try again.',
+			'serversPanel.phonesTitle' => 'Notifications on your phones and tablets',
+			'serversPanel.phonesSubtitle' => 'Choose below which servers reach which device.',
+			'serversPanel.linkTitle' => 'Machines and devices',
+			'serversPanel.linkSubtitle' => 'Which machines and devices use Termphin Pro',
+			'serversPanel.devicesTitle' => 'Phones and tablets',
+			'serversPanel.showAll' => ({required Object n}) => 'Show all ${n}',
+			'serversPanel.buttonTooltip' => 'Notifications and live status',
+			'serversPanel.notifications' => 'Notifications',
+			'serversPanel.live' => 'Live status',
+			'serversPanel.setUp' => ({required Object name}) => 'Done on ${name}',
+			'serversPanel.notReached' => ({required Object name}) => 'Could not reach ${name}. It is set up the next time you connect to it.',
+			'serversPanel.notifyMachinesTitle' => 'Machines with notifications',
+			'serversPanel.liveMachinesTitle' => 'Machines with live status',
+			'serversPanel.notifyEmpty' => 'No machine sends notifications yet. Turn them on with the bell next to a machine\'s menu in your list of machines.',
+			'serversPanel.liveEmpty' => 'No machine shows its live status yet. Turn it on with the bell next to a machine\'s menu in your list of machines.',
+			'serversPanel.pending' => 'Set up the next time you connect',
+			'serversPanel.ready' => 'On',
+			_ => null,
+		} ?? switch (path) {
 			'agentFeatures.title' => 'Started with an older helper',
 			'agentFeatures.body' => 'This session keeps the helper it started with, so it does without:',
 			'agentFeatures.longCommandNotice' => 'A notification when a long command finishes',
@@ -7319,8 +7369,6 @@ extension on Translations {
 			'agentFeatures.hint' => 'A new session has all of them. Programs running here keep running until you close it.',
 			'agentFeatures.newSession' => 'Open a new session',
 			'proHints.longCommand' => 'Know when a command finishes, even with Termphin closed',
-			_ => null,
-		} ?? switch (path) {
 			'proHints.action' => 'See Pro',
 			'proHints.dismiss' => 'Not now',
 			'proFeature.notificationsTitle' => 'Notifications with Termphin closed',

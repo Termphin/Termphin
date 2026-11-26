@@ -21,9 +21,11 @@ const _storeAad = 'presence_keys';
 ///
 /// A server's key is made by the first device that sets it up and kept in
 /// `~/.config/termphin/presence` there; every device that connects reads it
-/// back and keeps it here, sealed like the rest of the app's secrets. That
-/// way any of the user's devices with SSH access to a server can read its
-/// sessions, and neither the backend nor Firebase ever holds the key.
+/// back and keeps it here, sealed like the rest of the app's secrets. With
+/// sync on the keys travel with the machines, sealed end to end with the
+/// sync key, so a device signed in to the account reads a server's sessions
+/// before it ever connected to it. Neither the backend nor Firebase can
+/// open one.
 class PresenceKeyStore {
   PresenceKeyStore({SecretCipher? cipher})
     : _cipher = cipher ?? SecretCipher.instance;
@@ -37,11 +39,26 @@ class PresenceKeyStore {
   Future<Uint8List?> keyFor(String profileId) async =>
       (await _load())[profileId];
 
+  /// Every key held, by profile id: what sync sends to the account.
+  Future<Map<String, Uint8List>> all() async => Map.of(await _load());
+
   Future<void> remember(String profileId, Uint8List key) async {
     final keys = await _load();
     final existing = keys[profileId];
     if (existing != null && listEquals(existing, key)) return;
     keys[profileId] = key;
+    await _save(keys);
+  }
+
+  /// Drops the key of [profileId]: its machine was deleted on another
+  /// device.
+  Future<void> forget(String profileId) async {
+    final keys = await _load();
+    if (keys.remove(profileId) == null) return;
+    await _save(keys);
+  }
+
+  Future<void> _save(Map<String, Uint8List> keys) async {
     final encoded = jsonEncode({
       for (final entry in keys.entries)
         entry.key: base64Url.encode(entry.value),
@@ -174,3 +191,27 @@ String presenceCronInstallCommand() =>
 /// Removes the lines [presenceCronInstallCommand] added and nothing else.
 String presenceCronRemoveCommand() =>
     'sh -c ${shellQuote(_presenceCronRemove)}';
+
+/// Runs the agent's one-shot `presence` report right away when the binary is
+/// already on the server, so switching live status on shows at once instead
+/// of waiting up to five minutes for the crontab line.
+String presenceReportNowCommand() =>
+    'sh -c ${shellQuote('bin="\$HOME/.local/lib/termphin/termphin-agent"; [ -x "\$bin" ] && "\$bin" presence >/dev/null 2>&1 || true')}';
+
+/// [key] as a synced record's data.
+Map<String, Object?> presenceKeyData(Uint8List key) => {
+  'key': encodePresenceKey(key),
+};
+
+/// The key in a synced record's [data], or null for anything that is not a
+/// 32-byte key.
+Uint8List? presenceKeyFromData(Map<String, Object?> data) {
+  final encoded = data['key'];
+  if (encoded is! String) return null;
+  try {
+    final key = base64Url.decode(base64Url.normalize(encoded));
+    return key.length == 32 ? key : null;
+  } on FormatException {
+    return null;
+  }
+}

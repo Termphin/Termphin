@@ -1746,6 +1746,57 @@ class SshSessionManager extends ChangeNotifier {
   Future<void> testConnection(SshProfile profile, {CancelToken? cancel}) =>
       _withTemporaryClient(profile, (_) async {}, cancel: cancel);
 
+  /// Runs [operation] for a change the user asked for that needs the
+  /// server but not their attention - switching a machine's notifications
+  /// or live status: over [profile]'s live connection when one is up,
+  /// otherwise over a short-lived one that never asks anything. A host key
+  /// not already trusted, or a server that wants something typed (a code, a
+  /// password not saved), is refused rather than prompted for, so no host
+  /// key is ever accepted blind; and a machine that has not answered within
+  /// [connectWithin] is taken to be away. [operation] itself gets
+  /// [finishWithin], upload of the agent included, so a server that stops
+  /// answering halfway leaves no connection open and nothing waiting on it
+  /// for good. Throws what [SshService.connect] throws, or
+  /// [TimeoutException].
+  Future<T> withQuietClient<T>(
+    SshProfile profile,
+    Future<T> Function(SSHClient client) operation, {
+    Duration connectWithin = const Duration(seconds: 8),
+    Duration finishWithin = const Duration(seconds: 30),
+  }) async {
+    final live = _liveClientFor(profile.id);
+    if (live != null) return operation(live).timeout(finishWithin);
+    final service = _serviceFactory();
+    try {
+      await service.connect(profile).timeout(connectWithin);
+      return await operation(service.client!).timeout(finishWithin);
+    } finally {
+      await service.disconnect();
+    }
+  }
+
+  /// Puts the agent on [profile]'s machine over [client] when it is missing
+  /// or needs repair and the agent is on in settings, so a machine with live
+  /// status switched on shows before its first session. Leaves a working
+  /// agent alone, and a machine with a session of its own, open or opening,
+  /// to that session, whose connect installs the agent too - two uploads at
+  /// once would write the same file.
+  Future<void> ensureAgentQuietly(SshProfile profile, SSHClient client) async {
+    if (_sessions.values.any((session) => session.profile.id == profile.id)) {
+      return;
+    }
+    var status = await _remoteAgentService.probe(client);
+    final state = status.publicStatus.state;
+    if (remoteAgentSetting.value &&
+        status.supported &&
+        (state == RemoteAgentState.missing ||
+            state == RemoteAgentState.repair)) {
+      status = await _remoteAgentService.install(client, current: status);
+    }
+    _agentProbes.put(profile.id, status);
+    await _recordAgentStatus(profile.id, status.publicStatus);
+  }
+
   /// Opens a short-lived [SSHClient] for [profile], runs [operation] on it
   /// and disconnects again.
   ///

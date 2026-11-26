@@ -125,6 +125,10 @@ void main() {
       presenceAppUrl('http://127.0.0.1:8090').toString(),
       'ws://127.0.0.1:8090/v1/app',
     );
+    expect(
+      presenceAppUrl('https://presence.example/staging/').toString(),
+      'wss://presence.example/staging/v1/app',
+    );
   });
 
   test('the default URL reaches the server over TLS', () {
@@ -359,4 +363,34 @@ void main() {
       expect(h.sockets, hasLength(1));
     });
   });
+
+  test(
+    'dropping a key from profileForKey clears its state and notifies onSessions',
+    () {
+      _withHarness((async, h) {
+        final shown = <Map<String, List<PresenceSession>>>[];
+        h.presence.onSessions = shown.add;
+        unawaited(h.keys.remember('profile-a', _key()));
+        h.presence.profileForKey = {'key-a': 'profile-a'};
+        h.presence.setWanted(true);
+        async.flushMicrotasks();
+
+        h.socket.push({
+          'type': 'snapshot',
+          'servers': [
+            _server('key-a', true, _state('key-a', 5, ['main']), 10),
+          ],
+          'devices': <Object>[],
+        });
+        async.flushMicrotasks();
+        expect(h.presence.byProfile.value.keys, ['profile-a']);
+        expect(shown.last.keys, ['profile-a']);
+
+        h.presence.profileForKey = const {};
+        async.flushMicrotasks();
+        expect(h.presence.byProfile.value, isEmpty);
+        expect(shown.last, isEmpty);
+      });
+    },
+  );
 }
