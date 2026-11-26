@@ -15,10 +15,13 @@ const kAssistantEnv = String.fromEnvironment(
 );
 
 /// Where one step of a conversation is sent.
-Uri assistantStepUri({
-  String env = kAssistantEnv,
-  String base = kPresenceUrl,
-}) => Uri.parse('$base${env == 'dev' ? '/dev' : ''}/v1/assistant/step');
+Uri assistantStepUri({String env = kAssistantEnv, String base = kPresenceUrl}) {
+  final trimmed = base.endsWith('/')
+      ? base.substring(0, base.length - 1)
+      : base;
+  final prefix = env == 'dev' && !trimmed.endsWith('/dev') ? '/dev' : '';
+  return Uri.parse('$trimmed$prefix/v1/assistant/step');
+}
 
 /// The service refused a step; [code] is its error code, such as
 /// `pro_required` or `budget_spent`, or `network` when it could not be
