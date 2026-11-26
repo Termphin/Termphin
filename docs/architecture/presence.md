@@ -75,10 +75,9 @@ switches, else nothing (`machineSwitchesFor`). A key from before the switches
 existed counts as notifications on and, on its next connect, is replaced by
 one that names the machine and carries them.
 
-Termphin Pro's screen lists the machines with each feature on - three, then
-the rest on request - each with a switch to turn it off, and the phones and
-tablets that get notifications (`notifyPrefs/{installId}.enabled`, any device
-can switch them).
+The bell is the only place a machine's switches live. Termphin Pro's screen
+lists the phones and tablets that get notifications
+(`notifyPrefs/{installId}.enabled`, any device can switch them).
 
 ## When it runs
 

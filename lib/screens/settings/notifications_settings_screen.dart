@@ -109,8 +109,8 @@ class _MachinesLink extends ConsumerWidget {
               padding: const EdgeInsets.only(top: AppTheme.space20),
               child: AppCard(
                 child: SettingsTile(
-                  key: const ValueKey('machinesLink'),
-                  icon: PhosphorIconsRegular.hardDrives,
+                  key: const ValueKey('devicesLink'),
+                  icon: PhosphorIconsRegular.deviceMobile,
                   title: t.serversPanel.linkTitle,
                   subtitle: t.serversPanel.linkSubtitle,
                   onTap: () => pushAppPage<void>(

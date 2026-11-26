@@ -11,9 +11,8 @@ import '../../widgets/account/pro_feature_sheet.dart';
 import '../../widgets/account/sync_card.dart';
 import '../../widgets/pro/ascii_glow.dart';
 import '../../widgets/pro/pro_benefits.dart';
-import '../../widgets/profiles/machine_pro_button.dart';
 import '../../widgets/settings/notifications_settings_section.dart';
-import '../../widgets/settings/pro_machines_list.dart';
+import '../../widgets/settings/pro_devices_list.dart';
 import '../../widgets/ui/app_badge.dart';
 import '../../widgets/ui/app_card.dart';
 import '../../widgets/ui/app_divider.dart';
@@ -179,17 +178,10 @@ class _ProFeaturesScreenState extends State<ProFeaturesScreen> {
             ),
           ],
         ),
-        const ProMachinesList(feature: MachineFeature.notifications),
         const ProDevicesList(),
       ],
     ),
-    ProBenefit.liveStatus => const Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        LiveStatusCard(),
-        ProMachinesList(feature: MachineFeature.live),
-      ],
-    ),
+    ProBenefit.liveStatus => const LiveStatusCard(),
     ProBenefit.sync => const SyncCard(),
   };
 }

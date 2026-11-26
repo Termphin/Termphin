@@ -4503,20 +4503,17 @@ class Translations$serversPanel$en {
 	/// en: 'Notifications on your phones and tablets'
 	String get phonesTitle => 'Notifications on your phones and tablets';
 
-	/// en: 'Choose below which servers reach which device.'
-	String get phonesSubtitle => 'Choose below which servers reach which device.';
+	/// en: 'Choose below which of them get notifications. A machine sends them once you turn them on with the bell next to it.'
+	String get phonesSubtitle => 'Choose below which of them get notifications. A machine sends them once you turn them on with the bell next to it.';
 
-	/// en: 'Machines and devices'
-	String get linkTitle => 'Machines and devices';
+	/// en: 'Phones and tablets'
+	String get linkTitle => 'Phones and tablets';
 
-	/// en: 'Which machines and devices use Termphin Pro'
-	String get linkSubtitle => 'Which machines and devices use Termphin Pro';
+	/// en: 'Which of your devices get notifications'
+	String get linkSubtitle => 'Which of your devices get notifications';
 
 	/// en: 'Phones and tablets'
 	String get devicesTitle => 'Phones and tablets';
-
-	/// en: 'Show all {n}'
-	String showAll({required Object n}) => 'Show all ${n}';
 
 	/// en: 'Notifications and live status'
 	String get buttonTooltip => 'Notifications and live status';
@@ -4532,24 +4529,6 @@ class Translations$serversPanel$en {
 
 	/// en: 'Could not reach {name}. It is set up the next time you connect to it.'
 	String notReached({required Object name}) => 'Could not reach ${name}. It is set up the next time you connect to it.';
-
-	/// en: 'Machines with notifications'
-	String get notifyMachinesTitle => 'Machines with notifications';
-
-	/// en: 'Machines with live status'
-	String get liveMachinesTitle => 'Machines with live status';
-
-	/// en: 'No machine sends notifications yet. Turn them on with the bell next to a machine's menu in your list of machines.'
-	String get notifyEmpty => 'No machine sends notifications yet. Turn them on with the bell next to a machine\'s menu in your list of machines.';
-
-	/// en: 'No machine shows its live status yet. Turn it on with the bell next to a machine's menu in your list of machines.'
-	String get liveEmpty => 'No machine shows its live status yet. Turn it on with the bell next to a machine\'s menu in your list of machines.';
-
-	/// en: 'Set up the next time you connect'
-	String get pending => 'Set up the next time you connect';
-
-	/// en: 'On'
-	String get ready => 'On';
 }
 
 // Path: agentFeatures
@@ -7339,24 +7318,15 @@ extension on Translations {
 			'serversPanel.androidTablet' => 'Android tablet',
 			'serversPanel.failed' => 'Could not save that. Try again.',
 			'serversPanel.phonesTitle' => 'Notifications on your phones and tablets',
-			'serversPanel.phonesSubtitle' => 'Choose below which servers reach which device.',
-			'serversPanel.linkTitle' => 'Machines and devices',
-			'serversPanel.linkSubtitle' => 'Which machines and devices use Termphin Pro',
+			'serversPanel.phonesSubtitle' => 'Choose below which of them get notifications. A machine sends them once you turn them on with the bell next to it.',
+			'serversPanel.linkTitle' => 'Phones and tablets',
+			'serversPanel.linkSubtitle' => 'Which of your devices get notifications',
 			'serversPanel.devicesTitle' => 'Phones and tablets',
-			'serversPanel.showAll' => ({required Object n}) => 'Show all ${n}',
 			'serversPanel.buttonTooltip' => 'Notifications and live status',
 			'serversPanel.notifications' => 'Notifications',
 			'serversPanel.live' => 'Live status',
 			'serversPanel.setUp' => ({required Object name}) => 'Done on ${name}',
 			'serversPanel.notReached' => ({required Object name}) => 'Could not reach ${name}. It is set up the next time you connect to it.',
-			'serversPanel.notifyMachinesTitle' => 'Machines with notifications',
-			'serversPanel.liveMachinesTitle' => 'Machines with live status',
-			'serversPanel.notifyEmpty' => 'No machine sends notifications yet. Turn them on with the bell next to a machine\'s menu in your list of machines.',
-			'serversPanel.liveEmpty' => 'No machine shows its live status yet. Turn it on with the bell next to a machine\'s menu in your list of machines.',
-			'serversPanel.pending' => 'Set up the next time you connect',
-			'serversPanel.ready' => 'On',
-			_ => null,
-		} ?? switch (path) {
 			'agentFeatures.title' => 'Started with an older helper',
 			'agentFeatures.body' => 'This session keeps the helper it started with, so it does without:',
 			'agentFeatures.longCommandNotice' => 'A notification when a long command finishes',
@@ -7364,6 +7334,8 @@ extension on Translations {
 			'agentFeatures.inPlaceUpdates' => 'Updating on its own without restarting',
 			'agentFeatures.wentQuietNotice' => 'A notification when an agent or program stops and may need you',
 			'agentFeatures.backgroundNotices' => 'Notifications while Termphin is in the background on iPhone',
+			_ => null,
+		} ?? switch (path) {
 			'agentFeatures.deviceInfo' => 'Showing your other devices that this session is open here',
 			'agentFeatures.control' => 'Taking control of the session from another device',
 			'agentFeatures.hint' => 'A new session has all of them. Programs running here keep running until you close it.',
