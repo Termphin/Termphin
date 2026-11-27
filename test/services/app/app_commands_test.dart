@@ -151,15 +151,6 @@ void main() {
     expect(AppCommands.shortcutLabel(AppCommand.previousTab), '⌃⇧Tab');
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
-  testWidgets('Phin opens on Cmd+Shift+A on a Mac, never on the select-all '
-      'Cmd+A is there', (tester) async {
-    expect(AppCommands.shortcutLabel(AppCommand.askPhin), '⇧⌘A');
-  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
-
-  testWidgets('Phin opens on Ctrl+Shift+A elsewhere', (tester) async {
-    expect(AppCommands.shortcutLabel(AppCommand.askPhin), 'Ctrl+Shift+A');
-  }, variant: _linux);
-
   test('every command but the tab digits has a shortcut', () {
     for (final command in AppCommand.values) {
       if (command == AppCommand.selectTab) continue;

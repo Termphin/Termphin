@@ -10,10 +10,8 @@ import '../../screens/pro/pro_paywall_screen.dart';
 import '../../services/app/whats_new_service.dart';
 import '../../services/completion/command_completion.dart';
 import '../../services/pro/pro_service.dart';
-import '../../services/settings/assistant_settings.dart';
 import '../../services/settings/setting.dart';
 import '../../theme/theme.dart';
-import '../assistant/phin_demo.dart';
 import '../pro/ascii_glow.dart';
 import '../ui/legal_links.dart';
 import '../ui/modal_actions.dart';
@@ -34,22 +32,13 @@ whatsNewToggles = {
     setting: commandSuggestionsSetting,
     label: (t) => t.settings.commandSuggestions,
   ),
-  phinEnabledSetting.key: (
-    setting: phinEnabledSetting,
-    label: (t) => t.assistant.enable,
-  ),
 };
 
 /// The live demos a highlight may play in place of an image, by name.
 ///
 /// Closed like [whatsNewToggles]: the yaml names one, and only one listed
 /// here draws anything - `whats_new_test.dart` fails on any other.
-final Map<String, Widget Function()> whatsNewDemos = {
-  'phin': () => const PhinDemo(height: _kDemoHeight),
-};
-
-/// How tall a live demo stands on its page.
-const _kDemoHeight = 200.0;
+final Map<String, Widget Function()> whatsNewDemos = {};
 
 /// The glow above a page with nothing to show in it: enough to carry the
 /// look, not enough to push the words down.

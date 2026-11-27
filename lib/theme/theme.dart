@@ -546,18 +546,6 @@ class AppTheme {
   static Duration get interactiveDuration => _motion(160);
   static Duration get motionSlow => _motion(200);
   static Duration get motionPage => _motion(320);
-
-  /// The assistant growing from its orb into its window, and back. Phin
-  /// moves on a desktop too, unlike the transitions around it: the motion is
-  /// how it shows where it lives and what it is doing, not a page changing.
-  static const Duration assistantMorph = Duration(milliseconds: 420);
-
-  /// The assistant's smaller movements - a step appearing, a card
-  /// settling - kept on a desktop for the same reason as [assistantMorph].
-  static const Duration assistantMotion = Duration(milliseconds: 250);
-
-  /// The assistant's scroll and fade between steps, kept on a desktop.
-  static const Duration assistantMotionSlow = Duration(milliseconds: 320);
   static Duration get motionPageReverse => _motion(220);
 
   /// The wrong-PIN shake: long enough to read as a shake, not a flinch.
@@ -589,34 +577,6 @@ class AppTheme {
 
   /// The bottom navigation bar's height.
   static const double bottomBarHeight = 60;
-
-  /// The assistant's orb on its own, before a task.
-  static const double assistantOrbLarge = 84;
-
-  /// The assistant's orb in the header over a task.
-  static const double assistantOrbSmall = 40;
-
-  /// The assistant minimised: the orb's button, and the pill it grows into
-  /// to say what it is doing.
-  static const double assistantBubble = 44;
-
-  /// How much of the assistant's orb stays in sight when it is tucked
-  /// behind the edge of the screen.
-  static const double assistantPeek = 18;
-
-  /// How tall Phin's "How it works" demo stands.
-  static const double assistantDemoHeight = 420;
-
-  /// The terminal approved commands run in, inside the assistant.
-  static const double assistantTerminalHeight = 180;
-
-  /// The widest the assistant's status pill grows when minimised.
-  static const double assistantPillMaxWidth = 260;
-
-  /// The assistant's window: no wider than this on a wide screen, and no
-  /// taller.
-  static const double assistantWindowMaxWidth = 560;
-  static const double assistantWindowMaxHeight = 440;
 
   /// Docks and bars.
   static const List<BoxShadow> raisedShadow = [

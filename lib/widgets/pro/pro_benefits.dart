@@ -14,7 +14,6 @@ import '../ui/app_badge.dart';
 /// these for each benefit's controls, so it does not build until it says
 /// what the new one's are.
 enum ProBenefit {
-  phin(PhosphorIconsRegular.sparkle, demo: ProFeature.phin),
   notifications(
     PhosphorIconsRegular.bellRinging,
     demo: ProFeature.notifications,
@@ -32,7 +31,6 @@ enum ProBenefit {
   String title(Translations t) {
     final p = t.account.pro.paywall;
     return switch (this) {
-      phin => p.phinTitle,
       notifications => p.pushTitle,
       liveStatus => p.liveTitle,
       sync => p.syncTitle,
@@ -42,7 +40,6 @@ enum ProBenefit {
   String body(Translations t) {
     final p = t.account.pro.paywall;
     return switch (this) {
-      phin => p.phinBody,
       notifications => p.pushBody,
       liveStatus => p.liveBody,
       sync => p.syncBody,
@@ -50,10 +47,7 @@ enum ProBenefit {
   }
 
   /// A word beside the title, such as "Beta".
-  String? badge(Translations t) => switch (this) {
-    phin => t.assistant.beta,
-    _ => null,
-  };
+  String? badge(Translations t) => null;
 }
 
 /// One benefit as every list of them draws it: an icon, the title with its

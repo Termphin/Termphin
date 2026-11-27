@@ -8,7 +8,6 @@ import '../../i18n/strings.g.dart';
 import '../../models/pro_source.dart';
 import '../../services/pro/pro_service.dart';
 import '../../theme/theme.dart';
-import '../../widgets/assistant/phin_badges.dart';
 import '../../widgets/settings/account_settings_section.dart';
 import '../../widgets/settings/appearance_settings_section.dart';
 import '../../widgets/settings/connection_settings_section.dart';
@@ -28,7 +27,6 @@ import '../groups/groups_screen.dart';
 import '../pro/pro_features_screen.dart';
 import '../pro/pro_paywall_screen.dart';
 import 'notifications_settings_screen.dart';
-import 'phin_settings_screen.dart';
 import 'settings_categories.dart';
 import 'settings_search.dart';
 
@@ -242,14 +240,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: t.settings.notificationsRowSubtitle,
             destination: () =>
                 NotificationsSettingsScreen(appVersion: _appVersion),
-          ),
-          const AppDivider(),
-          SettingsTile(
-            icon: PhosphorIconsRegular.sparkle,
-            title: t.assistant.settingsTitle,
-            titleTrailing: const PhinBadges(),
-            subtitle: t.assistant.settingsSubtitle,
-            destination: () => const PhinSettingsScreen(),
           ),
           const AppDivider(),
           category(
