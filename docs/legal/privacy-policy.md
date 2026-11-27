@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated: 26 November 2026**
+**Last updated: 27 November 2026**
 
 ## Summary
 
@@ -10,8 +10,7 @@ the app, the website at termphin.dev and the account page at app.termphin.dev.
 
 - **Your sessions never pass through us.** SSH and SFTP connections go straight
   from your device to your server. We cannot see terminal output, commands,
-  files or anything else you do on your servers - except what you choose to
-  show Phin, the assistant in Termphin Pro.
+  files or anything else you do on your servers.
 - **Everything works without an account.** An account is only needed for
   Termphin Pro. If you never create one, the app stores your data on your
   device and nowhere else.
@@ -24,10 +23,6 @@ the app, the website at termphin.dev and the account page at app.termphin.dev.
 - **Live status is end-to-end encrypted.** Which sessions are open on your
   servers reaches your other devices through our server sealed with a key
   only your devices and that server hold, and is kept in memory only.
-- **Phin sees only what it is asked about.** When you ask Phin, the assistant
-  in Termphin Pro, for help, your question and what it reads on your server
-  go to an AI model to answer it, with names, addresses and secrets replaced
-  first. Nothing is kept by us, and you can turn Phin off.
 - **Analytics and crash reports are off until you turn them on**, and are never
   tied to your account.
 - **No ads, no advertising identifiers, no data sold or shared for marketing.**
@@ -84,9 +79,7 @@ With sync on, your machines, keys and snippets reach us only as encrypted
 data we cannot decrypt (section 5). With push on, the two things that do
 reach us in readable form are the name you gave a machine and the text of a
 notification on its way to your phone (section 6). The sessions on your
-servers reach us only encrypted (section 6). When you ask
-Phin for help, what it reads on your server passes through us to an AI model,
-with names, addresses and secrets replaced first (section 7).
+servers reach us only encrypted (section 6).
 
 ## 4. Your account (only for Termphin Pro)
 
@@ -123,7 +116,7 @@ computer's kind and country are deleted with the code.
 **Deleting your account** is in the app under Settings, Account. It deletes
 the account itself and, at once, everything stored for it: sync data, device
 registrations, server relay keys and your customer record at RevenueCat
-(section 8). It does not cancel a subscription, which the store bills -
+(section 7). It does not cancel a subscription, which the store bills -
 cancel it in your Google Play or App Store account.
 
 ## 5. Sync (Termphin Pro)
@@ -232,49 +225,7 @@ What it involves:
   your sessions or your account.
 - **Our server** is run by us on a machine at Hetzner in Nuremberg, Germany.
 
-## 7. Phin, the assistant (Termphin Pro, beta)
-
-Phin is an assistant over the terminal: you tell it what is wrong, it looks
-around the server with read-only commands, explains what it found and
-proposes changes, which run only when you tap Run. It comes with Termphin
-Pro, is on by default there, and can be turned off under Settings, Phin AI;
-off, it sends nothing.
-
-What it involves:
-
-- **What Phin sends.** Only while you are using it: your question and the
-  conversation so far; what the read-only commands it runs on your server
-  print, and the files it reads there; the text on the terminal's screen when
-  it looks at it; and, if memory is on, the notes it saved about that server.
-  Phin will not read files that usually hold secrets, such as private keys.
-- **What is replaced first.** On your device, before anything leaves it, host
-  names, IP addresses, usernames, email addresses and anything that looks
-  like a password, key or token are replaced with placeholders such as
-  `HOST_1` or `[SECRET_1]`. They are put back only on your device. Something
-  sensitive that does not look like any of these can still get through, so
-  do not ask Phin about anything you would not share.
-- **Commands run from your device**, over your own SSH connection, never from
-  our servers. Nothing that changes the server runs until you approve it.
-- **The way it goes.** Your device sends the conversation, with your
-  account's sign-in token, to our server (on the machine at Hetzner in
-  Germany, section 6), which checks that the account has Pro and is within
-  its limits, and passes it on to **OpenRouter**, which sends it to
-  **Anthropic**'s Claude model for the answer. Our server does not store
-  conversations or write them to its logs. It keeps how much each account
-  spent this week, under a one-way hash of the account identifier, until the
-  week ends - after which only totals that name no account remain, such as
-  how many accounts used Phin and what they spent together - and the network
-  address of a request briefly in memory, to
-  limit how often one address can call it.
-- **OpenRouter and Anthropic** process the conversation to produce the answer
-  and do not use it to train models. Anthropic may keep it for up to 30 days
-  to detect abuse, then deletes it.
-- **Memory.** With memory on, Phin can save short notes about a server - what
-  runs there, where its logs are - so you do not have to explain again. They
-  are kept only on your device, with the app's other secrets, and you can
-  see, delete or turn them off under Settings, Phin AI.
-
-## 8. Purchases
+## 7. Purchases
 
 Termphin Pro is sold through **Google Play** and the **App Store**. The store
 takes the payment; we never see your card or billing details.
@@ -285,7 +236,7 @@ country, dates and renewal status - so it can tell the app and our backend
 whether your account has Pro. We keep only that answer and its expiry date
 with your account (section 4).
 
-## 9. Analytics and crash reports, only if you allow them
+## 8. Analytics and crash reports, only if you allow them
 
 Once you have used Termphin for a couple of days, it asks you once whether to
 share anonymous usage data and crash reports, with "Sure" and "No thanks"
@@ -312,7 +263,7 @@ No event carries a hostname, address, port, username, machine name, file name,
 path, command or snippet. Analytics are not linked to your account, and the
 advertising identifier and ad personalisation are switched off.
 
-## 10. The website
+## 9. The website
 
 termphin.dev is a static site: pages, screenshots, the changelog and this
 document. There are no accounts on it and nothing to sign in to; that is the
@@ -334,7 +285,7 @@ as request counts per page and country; we never look at individual visitors.
 you can create an account, see your Pro status and what is synced, revoke a
 server's notification key, change your email address or password, and delete
 the synced copy or the whole account. It works with the same account data the
-app does (sections 4 to 8) and keeps nothing of its own, apart from codes for
+app does (sections 4 to 7) and keeps nothing of its own, apart from codes for
 Pro you redeem there: which account redeemed a code, its email address, when,
 and until when it gave Pro, kept on Cloudflare with the code; ask us to delete it at any time. Your browser stores
 the sign-in session and your choice of light or dark theme; both are strictly
@@ -349,21 +300,21 @@ you and is not linked to your account. Deleting the synced copy from the page
 passes through a small Cloudflare service that hands the request to our
 backend and keeps nothing.
 
-## 11. Legal basis for processing
+## 10. Legal basis for processing
 
-- **Your account, sync, push notifications, live status, Phin and purchases**
-  (sections 4 to 8)
+- **Your account, sync, push notifications, live status and purchases**
+  (sections 4 to 7)
   are processed because they are needed to provide Termphin Pro, which you
   asked for: performance of a contract, Article 6(1)(b) GDPR.
-- **Analytics and crash reports** (section 9) are processed on your
+- **Analytics and crash reports** (section 8) are processed on your
   **consent**, Article 6(1)(a) GDPR. Withdrawing it in Settings does not
   affect processing before.
 - **Keeping the relay from being abused** - limiting how often a key can
   send - and **keeping automated sign-ins off the account page** (the
-  Turnstile check, section 10) are in our **legitimate interest** in a service
+  Turnstile check, section 9) are in our **legitimate interest** in a service
   that works for everyone, Article 6(1)(f) GDPR.
 
-## 12. How long it is kept
+## 11. How long it is kept
 
 | Data | Kept |
 | --- | --- |
@@ -373,9 +324,6 @@ backend and keeps nothing.
 | The relay key of a server with notifications and live status both off | Deleted the next time Termphin reaches that server |
 | A notification on its way to your phone | Not kept |
 | A server's live status | In memory only, until 12 minutes after its last report |
-| A conversation with Phin | Not kept by us; up to 30 days at Anthropic |
-| What an account spent on Phin this week | Until the week ends |
-| Phin's notes about your servers | On your device, until you delete them |
 | RevenueCat's purchase record | Until you delete your account |
 | Analytics events | 2 months |
 | Crash reports | 90 days |
@@ -383,7 +331,7 @@ backend and keeps nothing.
 The stores keep their own records of purchases under their own policies. Data
 on your device stays there until you delete it or uninstall the app.
 
-## 13. Who else is involved
+## 12. Who else is involved
 
 | Provider | What for | Where the data is |
 | --- | --- | --- |
@@ -395,9 +343,7 @@ on your device stays there until you delete it or uninstall the app.
 | Google Play, App Store | Selling Pro; their own terms apply | - |
 | GitHub | Signing in with GitHub, if you choose it; its own terms apply | United States |
 | Cloudflare | Hosting, CDN and DNS for the website and the account page; the Turnstile check on the account page | Global |
-| Hetzner | The machine our live status and Phin servers run on | Germany (EU) |
-| OpenRouter | Passing Phin's requests to the AI model | United States |
-| Anthropic | The AI model that answers Phin's requests | United States |
+| Hetzner | The machine our live status server runs on | Germany (EU) |
 
 Where data goes to the United States, the transfer relies on the EU-US Data
 Privacy Framework where the provider is certified under it, and otherwise on
@@ -408,14 +354,14 @@ in the app.
 The servers you connect to are yours, not ours. Whatever happens to data on
 them is governed by whoever runs them.
 
-## 14. Your rights
+## 13. Your rights
 
 If you are in the EEA or the UK, the GDPR gives you the right to:
 
 - **access** the personal data we hold about you
 - **rectify** it if it is inaccurate
 - **erase** it - deleting your account in the app does this for everything in
-  sections 4 to 8, and deleting the synced copy does it for section 5
+  sections 4 to 7, and deleting the synced copy does it for section 5
 - **restrict** or **object to** its processing
 - receive it in a portable form
 - **withdraw consent** at any time
@@ -431,7 +377,7 @@ Analytics are not linked to your account, so to act on a request about them we
 need the installation identifier from you; uninstalling the app severs the
 link for good.
 
-## 15. Security
+## 14. Security
 
 Credentials on the device are encrypted as described in section 2, and synced
 data is encrypted before it leaves the device (section 5). SSH and SFTP are
@@ -443,19 +389,19 @@ No system is perfectly secure. If a breach affects your personal data and is
 likely to put your rights at risk, we will notify the supervisory authority
 within 72 hours and tell you where the law requires it.
 
-## 16. Children
+## 15. Children
 
 Termphin is a developer tool and is not directed at children. We do not
 knowingly collect personal data from anyone under 16. If you believe a child
 has given us personal data, write to us and we will delete it.
 
-## 17. International users
+## 16. International users
 
 Termphin is published from Poland and available worldwide. Wherever you live,
 the practices in this policy apply to you. Depending on your country you may
 have additional rights under local law; nothing here is meant to limit them.
 
-## 18. Changes to this policy
+## 17. Changes to this policy
 
 When this policy changes, the date at the top changes with it, and the
 current version is always at https://termphin.dev/privacy. Material changes
@@ -463,6 +409,6 @@ to what we collect are announced in the app before they take effect, and if a
 change needs your consent we ask again rather than assume the old answer
 still applies.
 
-## 19. Contact
+## 18. Contact
 
 Questions, requests or complaints: **contact@termphin.dev**

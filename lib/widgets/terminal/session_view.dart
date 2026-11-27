@@ -64,10 +64,6 @@ import 'terminal_pane.dart';
 /// browser says nothing about what the next one should show.
 enum SessionViewMode { terminal, sftp }
 
-/// Whether the active session shows its scroll-to-bottom button, for
-/// anything floating over the same corner - the assistant - to make room.
-final ValueNotifier<bool> scrollToBottomShown = ValueNotifier(false);
-
 class SessionView extends ConsumerStatefulWidget {
   const SessionView({
     super.key,
@@ -365,19 +361,8 @@ class SessionViewState extends ConsumerState<SessionView> {
 
   bool get _scrollButtonShown => _scrollModeManual && !_selectionPopupVisible;
 
-  /// Tells [scrollToBottomShown] about this session's button while it is
-  /// the active one, after the frame, since it is read by a widget
-  /// elsewhere in the tree.
-  void _publishScrollButton(bool shown) {
-    if (!widget.isActive || scrollToBottomShown.value == shown) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && widget.isActive) scrollToBottomShown.value = shown;
-    });
-  }
-
   @override
   void dispose() {
-    if (widget.isActive) scrollToBottomShown.value = false;
     _dismissLink();
     terminalSettings.changes.removeListener(_onSettingsChanged);
     commandSuggestionsSetting.removeListener(_refreshCommandLine);
@@ -851,19 +836,6 @@ class SessionViewState extends ConsumerState<SessionView> {
   /// Puts everything the terminal holds, scrollback included, on the
   /// clipboard. A clipboard has a size limit of its own on some systems, so a
   /// refusal points to saving the output instead.
-  /// The last [lines] lines the terminal holds - the screen and what is
-  /// just above it - for the assistant to read. Null before the terminal
-  /// is up.
-  String? screenText({int lines = 80}) {
-    final text = _nativeController.bufferText();
-    if (text == null) return null;
-    final all = text.split('\n');
-    while (all.isNotEmpty && all.last.trim().isEmpty) {
-      all.removeLast();
-    }
-    return all.sublist(all.length > lines ? all.length - lines : 0).join('\n');
-  }
-
   Future<void> copyAllOutput() async {
     final t = Translations.of(context);
     final text = _nativeController.bufferText();
@@ -1146,9 +1118,6 @@ class SessionViewState extends ConsumerState<SessionView> {
     final state = ref.watch(sshConnectionProvider(widget.sessionKey));
 
     _terminalReady = _readyAttachId == state.attachId;
-    _publishScrollButton(
-      _scrollButtonShown && widget.viewMode == SessionViewMode.terminal,
-    );
 
     return _PhaseSwitcher(
       phase: _phaseOf(state),
@@ -1516,13 +1485,10 @@ class SessionViewState extends ConsumerState<SessionView> {
           ValueListenableBuilder(
             valueListenable: session.control,
             builder: (context, control, _) => control == null || control.holds
-                ? ControlBarHeightReporter(active: widget.isActive, child: null)
-                : ControlBarHeightReporter(
-                    active: widget.isActive,
-                    child: ControlBar(
-                      control: control,
-                      onTake: () => _manager.takeControl(session.id),
-                    ),
+                ? const SizedBox.shrink()
+                : ControlBar(
+                    control: control,
+                    onTake: () => _manager.takeControl(session.id),
                   ),
           ),
       ],

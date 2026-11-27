@@ -1,13 +1,9 @@
-import 'dart:async';
-
 import 'package:material_ui/material_ui.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../i18n/strings.g.dart';
-import '../../services/settings/assistant_settings.dart';
 import '../../theme/theme.dart';
 import '../../widgets/account/live_status_card.dart';
-import '../../widgets/account/pro_feature_sheet.dart';
 import '../../widgets/account/sync_card.dart';
 import '../../widgets/pro/ascii_glow.dart';
 import '../../widgets/pro/pro_benefits.dart';
@@ -15,23 +11,20 @@ import '../../widgets/settings/notifications_settings_section.dart';
 import '../../widgets/settings/pro_devices_list.dart';
 import '../../widgets/ui/app_badge.dart';
 import '../../widgets/ui/app_card.dart';
-import '../../widgets/ui/app_divider.dart';
 import '../../widgets/ui/large_title_scaffold.dart';
-import '../../widgets/ui/settings_tile.dart';
-import '../settings/phin_settings_screen.dart';
 
 /// Everything Termphin Pro adds, for an account that has it, dressed like
 /// the paywall that sold it: the same glow at the top, "Termphin Pro" and
 /// that it is active, then each feature the way the paywall described it -
-/// Phin, notifications with Termphin closed, live status and sync - with
-/// its controls right under it.
+/// notifications with Termphin closed, live status and sync - with its
+/// controls right under it.
 ///
 /// Live status lives only here. The others also live where they always
-/// did - notifications in Settings, sync on the account page, Phin in its
-/// own settings - and the controls here are the same ones, so this is where
-/// to see and tune all of Pro at once. Only what Pro adds: of notifications
-/// the switch for when the app is closed, and not the subscription, which
-/// the account page keeps.
+/// did - notifications in Settings, sync on the account page - and the
+/// controls here are the same ones, so this is where to see and tune all
+/// of Pro at once. Only what Pro adds: of notifications the switch for when
+/// the app is closed, and not the subscription, which the account page
+/// keeps.
 class ProFeaturesScreen extends StatefulWidget {
   const ProFeaturesScreen({super.key, this.appVersion});
 
@@ -143,29 +136,6 @@ class _ProFeaturesScreenState extends State<ProFeaturesScreen> {
 
   /// The switches and links under [benefit] - what to tune of it here.
   Widget _controls(ProBenefit benefit, Translations t) => switch (benefit) {
-    ProBenefit.phin => ListenableBuilder(
-      listenable: phinEnabledSetting,
-      builder: (context, _) => AppCard.fields(
-        children: [
-          SettingsSwitchTile(
-            icon: PhosphorIconsRegular.sparkle,
-            title: t.assistant.enable,
-            subtitle: t.assistant.enableSubtitle,
-            value: phinEnabledSetting.value,
-            onChanged: (on) => unawaited(phinEnabledSetting.set(on)),
-          ),
-          const AppDivider(),
-          SettingsTile(
-            icon: PhosphorIconsRegular.slidersHorizontal,
-            title: t.proHub.phinSettings,
-            subtitle: t.proHub.phinSettingsSubtitle,
-            destination: () => const PhinSettingsScreen(),
-          ),
-          const AppDivider(),
-          const HowItWorksTile(feature: ProFeature.phin),
-        ],
-      ),
-    ),
     ProBenefit.notifications => Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [

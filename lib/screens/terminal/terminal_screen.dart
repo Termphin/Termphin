@@ -10,7 +10,6 @@ import '../../i18n/strings.g.dart';
 import '../../models/active_session.dart';
 import '../../models/agent_feature.dart';
 import '../../models/port_forwarding_rule.dart';
-import '../../models/pro_source.dart';
 import '../../models/remote_shell.dart';
 import '../../models/session_tab.dart';
 import '../../models/snippet.dart';
@@ -24,14 +23,7 @@ import '../../providers/ssh_session_manager_provider.dart';
 import '../../providers/terminal_overlay_provider.dart' show SiblingScope;
 import '../../services/app/app_commands.dart';
 import '../../services/app/identity_anonymizer.dart';
-import '../../services/assistant/assistant_agent.dart';
-import '../../services/assistant/assistant_client.dart';
-import '../../services/assistant/assistant_memory.dart';
-import '../../services/assistant/assistant_session.dart';
-import '../../services/assistant/assistant_ssh_shell.dart';
-import '../../services/pro/pro_service.dart';
 import '../../services/settings/action_dock_settings.dart';
-import '../../services/settings/assistant_settings.dart';
 import '../../services/settings/floating_dock_settings.dart';
 import '../../services/settings/sidebar_settings.dart';
 import '../../services/settings/tab_bar_settings.dart';
@@ -41,8 +33,6 @@ import '../../services/ssh/ssh_session_manager.dart';
 import '../../services/terminal/session_terminal.dart';
 import '../../theme/theme.dart';
 import '../../utils/platform_info.dart';
-import '../../widgets/assistant/assistant_overlay.dart';
-import '../../widgets/assistant/assistant_panel.dart';
 import '../../widgets/profiles/profile_avatar.dart';
 import '../../widgets/sftp/sftp_browser_view.dart';
 import '../../widgets/shell/nav_rail.dart';
@@ -51,7 +41,6 @@ import '../../widgets/snippets/snippet_picker_panel.dart';
 import '../../widgets/ssh/connection_log_sheet.dart';
 import '../../widgets/terminal/action_dock_menu.dart';
 import '../../widgets/terminal/add_session_sheet.dart';
-import '../../widgets/terminal/control_bar.dart';
 import '../../widgets/terminal/floating_action_dock.dart';
 import '../../widgets/terminal/older_session_sheet.dart';
 import '../../widgets/terminal/rename_session_dialog.dart';
@@ -78,7 +67,6 @@ import '../../widgets/ui/section_header.dart';
 import '../../widgets/ui/section_navigator.dart';
 import '../../widgets/ui/shortcut_hint.dart';
 import '../../widgets/window/app_menu.dart';
-import '../pro/pro_paywall_screen.dart';
 import '../settings/terminal_appearance_screen.dart';
 import '../settings/toolbar_profiles_screen.dart';
 import 'state/session_swipe.dart';
@@ -198,101 +186,6 @@ class TerminalScreen extends ConsumerStatefulWidget {
 /// clear of.
 class TerminalScreenState extends ConsumerState<TerminalScreen>
     with TickerProviderStateMixin {
-  /// The assistant's conversation on this screen and the agent that runs
-  /// it, on the session that was active when it began.
-  final _assistant = AssistantSession();
-  late final _assistantAgent = AssistantAgent(
-    session: _assistant,
-    transport: HttpAssistantTransport(),
-    target: _assistantTarget,
-    memory: assistantMemory,
-    memoryOn: () => phinMemorySetting.value,
-  );
-
-  /// Turning Phin off, or losing Pro, ends whatever it was doing and
-  /// forgets the conversation, so nothing runs where the user can no longer
-  /// see it.
-  void _onPhinEnabledChanged() {
-    if (phinEnabledSetting.value && ProService.instance.active.value) return;
-    _assistantAgent.reset();
-    _assistant.reset();
-  }
-
-  /// The connected active session, for the "Ask Phin" the assistant says
-  /// the first time it sees one.
-  String? _assistantHintKey() {
-    if (_sessions.isEmpty) return null;
-    final session = _sessions[_activeIndex];
-    final state = ref.watch(sshConnectionProvider(session));
-    return state.status == ConnectionStatus.connected ? session.$1 : null;
-  }
-
-  /// The active session's server for a new conversation, or null when it
-  /// is not connected.
-  AssistantTarget? _assistantTarget() {
-    if (_sessions.isEmpty) return null;
-    final session = _sessions[_activeIndex];
-    final state = ref.read(sshConnectionProvider(session));
-    if (state.status != ConnectionStatus.connected) return null;
-    final manager = ref.read(sshSessionManagerProvider);
-    final profile = session.$2;
-    return (
-      shell: SessionAssistantShell(manager, session.$1),
-      hosts: [
-        profile.host,
-        if (RegExp(r'[.\d-]').hasMatch(profile.name)) profile.name,
-      ],
-      users: [profile.username],
-      profileId: profile.id,
-      readScreen: () => _sessionKeys[session.$1]?.currentState?.screenText(),
-      windows:
-          manager.getSession(session.$1)?.remoteShellType ==
-          RemoteShellType.powershell,
-    );
-  }
-
-  /// The tab bar at the bottom and the special-keys toolbar, measured after
-  /// each layout so the minimised assistant rests above them.
-  final _bottomChromeKey = GlobalKey();
-  final _bottomChrome = ValueNotifier<double>(0);
-
-  final _assistantOverlay = GlobalKey<AssistantOverlayState>();
-  VoidCallback? _assistantEscape;
-
-  /// Opens Phin's window, or folds it away when open: the desktop
-  /// shortcut. Without Pro it shows what Pro adds, Phin first.
-  void toggleAssistant() {
-    final overlay = _assistantOverlay.currentState;
-    if (overlay != null) {
-      overlay.toggle();
-      return;
-    }
-    if (!ProService.instance.active.value) {
-      unawaited(ProPaywallScreen.show(context, source: ProSource.phin));
-    }
-  }
-
-  /// Esc folds Phin's window away while it has the keyboard.
-  bool _minimizeAssistant() {
-    final overlay = _assistantOverlay.currentState;
-    if (overlay == null || !overlay.isOpen) return false;
-    overlay.minimize();
-    return true;
-  }
-
-  /// What the assistant keeps clear at the bottom: the toolbar and tab bar,
-  /// and the strip of a session another device holds.
-  final _assistantClearance = ValueNotifier<double>(0);
-
-  void _updateAssistantClearance() =>
-      _assistantClearance.value = _bottomChrome.value + controlBarHeight.value;
-
-  void _measureBottomChrome() {
-    if (!mounted) return;
-    final box = _bottomChromeKey.currentContext?.findRenderObject();
-    if (box is RenderBox && box.hasSize) _bottomChrome.value = box.size.height;
-  }
-
   /// Owns the sessions, which one is active, each tab's view mode, focus
   /// history and splits - everything that is pure state, with no
   /// `BuildContext`, `ref` or manager call anywhere near it.
@@ -781,16 +674,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
 
   @override
   void dispose() {
-    _assistantAgent.stop();
-    _assistant.dispose();
-    _assistantEscape?.call();
-    _bottomChrome.removeListener(_updateAssistantClearance);
-    controlBarHeight.removeListener(_updateAssistantClearance);
-    _assistantClearance.dispose();
-    _bottomChrome.dispose();
     tabBarPositionSetting.removeListener(_onTabBarPositionChanged);
-    phinEnabledSetting.removeListener(_onPhinEnabledChanged);
-    ProService.instance.active.removeListener(_onPhinEnabledChanged);
     _tabScrollController.dispose();
     _swipe.dispose();
     _axis.dispose();
@@ -826,9 +710,6 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
   @override
   void initState() {
     super.initState();
-    _bottomChrome.addListener(_updateAssistantClearance);
-    _assistantEscape = AppCommands.instance.registerEscape(_minimizeAssistant);
-    controlBarHeight.addListener(_updateAssistantClearance);
     _swipe =
         SessionSwipeController(
           vsync: this,
@@ -848,8 +729,6 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
     _floatingDockEnabled = floatingDockSettings.enabled.value;
     _toolbarEnabled = toolbarSettings.enabled.value;
     tabBarPositionSetting.addListener(_onTabBarPositionChanged);
-    phinEnabledSetting.addListener(_onPhinEnabledChanged);
-    ProService.instance.active.addListener(_onPhinEnabledChanged);
     _tabBarPosition = tabBarPositionSetting.value;
 
     final manager = _manager;
@@ -2595,7 +2474,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
 
     final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
 
-    final contentStack = Column(
+    final content = Column(
       children: [
         if (showActionBar) _buildDesktopActionBar(activeKey),
         Expanded(
@@ -2640,7 +2519,6 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
           ),
         ),
         Column(
-          key: _bottomChromeKey,
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -2655,40 +2533,6 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
               ),
           ],
         ),
-      ],
-    );
-    WidgetsBinding.instance.addPostFrameCallback((_) => _measureBottomChrome());
-    final content = Stack(
-      children: [
-        Positioned.fill(child: contentStack),
-        if (terminalLive)
-          Positioned.fill(
-            child: ListenableBuilder(
-              listenable: Listenable.merge([
-                phinEnabledSetting,
-                ProService.instance.active,
-              ]),
-              builder: (context, _) =>
-                  phinEnabledSetting.value && ProService.instance.active.value
-                  ? AssistantOverlay(
-                      key: _assistantOverlay,
-                      onFolded: focusActiveTerminal,
-                      session: _assistant,
-                      bubbleClearance: _assistantClearance,
-                      hintKey: _assistantHintKey(),
-                      makeRoom: scrollToBottomShown,
-                      actions: AssistantActions(
-                        onSubmit: (text) =>
-                            unawaited(_assistantAgent.submit(text)),
-                        onApprove: _assistantAgent.approve,
-                        onSkip: _assistantAgent.skip,
-                        onStop: _assistantAgent.stop,
-                        onNewChat: _assistantAgent.reset,
-                      ),
-                    )
-                  : const SizedBox.shrink(),
-            ),
-          ),
       ],
     );
 
@@ -3056,12 +2900,6 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
             icon: PhosphorIconsRegular.magnifyingGlass,
             enabled: !files,
           ),
-          if (phinEnabledSetting.value)
-            AppMenuItem.command(
-              t,
-              AppCommand.askPhin,
-              icon: PhosphorIconsRegular.sparkle,
-            ),
           AppMenuItem.command(
             t,
             AppCommand.uploadFile,

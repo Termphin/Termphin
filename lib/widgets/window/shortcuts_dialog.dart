@@ -38,7 +38,6 @@ class _ShortcutsList extends StatelessWidget {
     AppCommand.previousTab,
     AppCommand.selectTab,
     AppCommand.findInTerminal,
-    AppCommand.askPhin,
     AppCommand.toggleFiles,
     AppCommand.endSession,
     AppCommand.uploadFile,

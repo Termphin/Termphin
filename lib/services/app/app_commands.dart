@@ -17,7 +17,6 @@ enum AppCommand {
   previousTab,
   selectTab,
   findInTerminal,
-  askPhin,
   toggleFiles,
   endSession,
   uploadFile,
@@ -309,7 +308,6 @@ class AppCommands {
       ],
       AppCommand.selectTab => const [],
       AppCommand.findInTerminal => [primary(LogicalKeyboardKey.keyF)],
-      AppCommand.askPhin => [primary(LogicalKeyboardKey.keyA, shift: true)],
       AppCommand.toggleFiles => [primary(LogicalKeyboardKey.keyE)],
       AppCommand.endSession => [
         mac
@@ -516,7 +514,6 @@ class AppCommands {
     AppCommand.previousTab => t.commands.previousTab,
     AppCommand.selectTab => t.commands.selectTab,
     AppCommand.findInTerminal => t.commands.findInTerminal,
-    AppCommand.askPhin => t.commands.askPhin,
     AppCommand.toggleFiles => t.commands.toggleFiles,
     AppCommand.endSession => t.commands.endSession,
     AppCommand.uploadFile => t.commands.uploadFile,

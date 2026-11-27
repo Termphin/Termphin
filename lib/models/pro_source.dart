@@ -7,7 +7,6 @@ enum ProSource {
   syncCard('sync_card'),
   liveStatus('live_status'),
   longCommandHint('long_command_hint'),
-  phin('phin'),
   settings('settings'),
   whatsNew('whats_new');
 
