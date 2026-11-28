@@ -209,6 +209,13 @@ Shift+Insert and Ctrl+Shift+A are there too. On a Mac it is ⌘C/V/A and Ctrl
 is the shell's. Plain Ctrl+A is never bound: it is the line start and tmux's
 prefix.
 
+Every paste - the keys (`TerminalPasteIntent`), the right-click menu and the
+middle button - goes through `pasteFromClipboard`: the clipboard's text as
+before, or, with no text there, its image (`readClipboardImage`, the
+`pasteboard` plugin), which goes up through fast upload under a timestamped
+`clipboard-*.png` name and comes back as its path at the cursor. A screenshot
+pasted into a remote Claude Code session arrives as a file it can open.
+
 Command suggestions are worked from the keyboard there: while the popup is
 up and the session's terminal has focus, Ctrl+Up/Down move through it and
 Ctrl+Right takes the one picked (Cmd on a Mac, whose Ctrl+arrows are Mission

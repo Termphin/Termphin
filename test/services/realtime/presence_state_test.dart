@@ -104,6 +104,60 @@ void main() {
     expect(sessions[3].activity, isNull);
   });
 
+  test('reads what a program says it is doing', () {
+    final state = _seal(_key(), _keyId, {
+      'v': 1,
+      't': 3,
+      'sessions': [
+        {
+          'name': 'agent',
+          'created': 1,
+          'clients': 0,
+          'activity': {
+            'state': 'waiting',
+            'command': 'claude',
+            'program': {
+              'state': 'blocked',
+              'kind': 'permission',
+              'app': 'claude-code',
+              'msg': 'approve Bash',
+            },
+          },
+        },
+        {
+          'name': 'odd',
+          'created': 1,
+          'clients': 0,
+          'activity': {
+            'state': 'running',
+            'program': {'state': 'sleeping', 'app': 'x'},
+          },
+        },
+        {
+          'name': 'older',
+          'created': 1,
+          'clients': 0,
+          'activity': {'state': 'running', 'command': 'codex'},
+        },
+      ],
+    });
+    final sessions = openPresenceState(_key(), _keyId, state)!.sessions;
+    final program = sessions[0].activity!.program!;
+    expect(program.state, ProgramState.blocked);
+    expect(program.block, ProgramBlock.permission);
+    expect(program.app, 'claude-code');
+    expect(program.message, 'approve Bash');
+    expect(sessions[1].activity!.program, isNull);
+    expect(sessions[2].activity!.program, isNull);
+  });
+
+  test('programs are named the way people say them', () {
+    expect(programName('claude-code'), 'Claude Code');
+    expect(programName('codex'), 'Codex');
+    expect(programName('antigravity'), 'Antigravity');
+    expect(programName('newthing'), 'newthing');
+  });
+
   test('reads which sessions a reboot left to restore', () {
     final state = _seal(_key(), _keyId, {
       'v': 1,

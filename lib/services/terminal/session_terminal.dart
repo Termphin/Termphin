@@ -5,10 +5,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:terminal_view/terminal_view.dart';
 
+import '../settings/terminal_settings.dart';
 import 'terminal_notification.dart';
-
-/// Lines of scrollback a session keeps.
-const kTerminalScrollbackLines = 10000;
 
 /// A session's terminal - the screen, its scrollback and the parser feeding
 /// them - alive for as long as the session is.
@@ -28,7 +26,8 @@ const kTerminalScrollbackLines = 10000;
 /// A pane [bind]s to it while mounted and [release]s it on the way out. In
 /// between nobody is looking, but the program on the far end still asks its
 /// questions - cursor position, device attributes - so the answers go to
-/// [onReply] rather than nowhere.
+/// [onReply] rather than nowhere. It keeps as many lines of scrollback as
+/// the user's setting says when it is made, or [maxLines] when given.
 class SessionTerminal {
   SessionTerminal({
     int columns = 80,
@@ -37,8 +36,9 @@ class SessionTerminal {
     this.onReply,
     this.onNotification,
     this.onPresenceBack,
+    int? maxLines,
   }) : terminal = _SessionTerminalCore(
-         maxLines: kTerminalScrollbackLines,
+         maxLines: maxLines ?? terminalSettings.scrollbackLines.value,
          platform: _terminalPlatform(defaultTargetPlatform),
        ) {
     terminal

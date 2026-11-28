@@ -1335,76 +1335,86 @@ class _AuthMethodRow extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
+  /// An `InkWell`, not a bare gesture detector, so Tab reaches the row on a
+  /// desktop and Enter or Space picks it, as with every other choice.
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppTheme.space14,
-          vertical: AppTheme.space14,
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: AppTheme.icon18,
-              color: selected
-                  ? context.colors.primary
-                  : context.colors.textTertiary,
+    return Material(
+      type: MaterialType.transparency,
+      child: InkWell(
+        onTap: onTap,
+        child: Semantics(
+          inMutuallyExclusiveGroup: true,
+          checked: selected,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppTheme.space14,
+              vertical: AppTheme.space14,
             ),
-            const SizedBox(width: AppTheme.space12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: AppTheme.font15,
-                      fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                      color: selected
-                          ? context.colors.textPrimary
-                          : context.colors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: AppTheme.space2),
-                  Text(
-                    hint,
-                    style: context.colors.uiSmall.copyWith(
-                      color: context.colors.textTertiary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: AppTheme.space12),
-            AnimatedContainer(
-              duration: AppTheme.interactiveDuration,
-              width: 18,
-              height: 18,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: selected
-                    ? context.colors.primary
-                    : context.colors.primary.invisible,
-                border: Border.all(
+            child: Row(
+              children: [
+                Icon(
+                  icon,
+                  size: AppTheme.icon18,
                   color: selected
                       ? context.colors.primary
-                      : context.colors.surfaceBorder,
-                  width: 2,
+                      : context.colors.textTertiary,
                 ),
-              ),
-              child: selected
-                  ? Icon(
-                      PhosphorIconsRegular.check,
-                      size: AppTheme.icon10,
-                      color: context.colors.onPrimary,
-                    )
-                  : null,
+                const SizedBox(width: AppTheme.space12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: AppTheme.font15,
+                          fontWeight: selected
+                              ? FontWeight.w600
+                              : FontWeight.w400,
+                          color: selected
+                              ? context.colors.textPrimary
+                              : context.colors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: AppTheme.space2),
+                      Text(
+                        hint,
+                        style: context.colors.uiSmall.copyWith(
+                          color: context.colors.textTertiary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppTheme.space12),
+                AnimatedContainer(
+                  duration: AppTheme.interactiveDuration,
+                  width: 18,
+                  height: 18,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: selected
+                        ? context.colors.primary
+                        : context.colors.primary.invisible,
+                    border: Border.all(
+                      color: selected
+                          ? context.colors.primary
+                          : context.colors.surfaceBorder,
+                      width: 2,
+                    ),
+                  ),
+                  child: selected
+                      ? Icon(
+                          PhosphorIconsRegular.check,
+                          size: AppTheme.icon10,
+                          color: context.colors.onPrimary,
+                        )
+                      : null,
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

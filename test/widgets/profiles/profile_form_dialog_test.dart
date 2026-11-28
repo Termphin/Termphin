@@ -271,6 +271,38 @@ void main() {
     expect(storage.addCount, 0);
   });
 
+  testWidgets('a sign-in method is picked from the keyboard too', (
+    tester,
+  ) async {
+    final storage = FakeProfileStorage();
+    final container = ProviderContainer.test(
+      overrides: [profileStorageProvider.overrideWithValue(storage)],
+    );
+    await pumpTestApp(
+      tester,
+      const ProfileFormDialog(
+        prefill: SshLink(host: 'devbox', user: 'alice'),
+      ),
+      container: container,
+    );
+    await tester.pumpAndSettle();
+
+    final row = find.ancestor(
+      of: find.text(t.profileForm.noAuth),
+      matching: find.byType(InkWell),
+    );
+    expect(row, findsOneWidget, reason: 'a row Tab can reach');
+    Focus.of(tester.element(find.text(t.profileForm.noAuth))).requestFocus();
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, 'Save'));
+    await tester.pumpAndSettle();
+
+    expect(storage.addCount, 1);
+    expect(storage.profiles.single.authMethod, AuthMethod.none);
+  });
+
   testWidgets('creates a trimmed profile without authentication', (
     tester,
   ) async {

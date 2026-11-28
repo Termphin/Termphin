@@ -130,6 +130,44 @@ reported at once and carried in the status line's sixth field.
 the warning colour; with `anonymizeProvider` on only the state shows. Linux
 and macOS only.
 
+### A program that says what it is doing
+
+AI coding agents - Claude Code, Codex, Amp, goose, Qwen Code, opencode and
+more - report their own state over the OSC 7501 Program Status Protocol: idle,
+working, blocked on the user (for a permission, a question or a sign-in, with
+one line saying what), done or failed. The master stands in for the terminal
+the protocol talks to (`status.rs` in the agent): it answers the support query
+some agents send before reporting - Claude Code among them - keeps the records,
+and turns a program becoming blocked, done or failing into its own
+notification, as `quiet` (blocked) or `finished` (done, failed), so the
+user's switches for those two kinds and for quoting the line hold for it. A
+finished turn quotes the last two sentences the agent said (`last_sentences`,
+about 180 characters); one reported bare waits a moment and a half for the
+same moment told with words - from a hook set up by hand - before the
+master reads them from the transcript instead. On Windows the pseudo console drops
+an escape sequence written to its input, so the support reply is typed in
+as win32-input-mode key presses instead. A
+program that reports this way is never guessed at from silence, and the
+notifications it also sends the classic way (OSC 9, 777, 99) are not relayed
+twice. Its state travels as the status line's seventh field and the
+activity's `program` in presence; `SessionActivityLine` shows "Claude Code
+needs your permission · approve Bash", the program's own words hidden with
+`anonymizeProvider` on, since they can name a host or a path.
+
+The app changes nothing outside its own files. A finished turn quotes the
+agent's last reply - from its own report when it gives one (Antigravity
+does), otherwise read from the transcript Claude Code or Codex keeps
+(`insight.rs`), only ever read - and names the commands it started through a
+shell that are still running ("Still running: npm run dev"); what it had
+running at rest, its MCP servers, is left out, and a server started straight
+by the agent rather than through a shell never counts. tmux drops OSC 7501;
+for an agent there, or one too old to report, `termphin-agent hooks
+install` puts hooks into Claude Code's and Codex's own settings, by hand
+only. A hook finds its session by `TERMPHIN_SESSION_ID`, or by its own
+ancestors and the `shell_pid` each master records, so a renamed session or
+one whose master was upgraded in place still works. An earlier build of the
+app wrote those hooks itself; `setUpMachine` takes out the ones it wrote, once.
+
 ## Restart
 
 A master stopped by a signal - the system shutting down - keeps its session

@@ -195,6 +195,86 @@ void main() {
     },
   );
 
+  group('pasting on a computer', () {
+    String? clipboardText;
+
+    setUp(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+            if (call.method == 'Clipboard.getData') {
+              final text = clipboardText;
+              return text == null ? null : {'text': text};
+            }
+            return null;
+          });
+    });
+
+    tearDown(() {
+      clipboardText = null;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, null);
+    });
+
+    Future<({List<String> sent, List<Uint8List> images, List<int> reads})>
+    pasteWith(WidgetTester tester, {Uint8List? image}) async {
+      final sent = <String>[];
+      final images = <Uint8List>[];
+      final reads = <int>[];
+      await pumpTestApp(
+        tester,
+        Scaffold(
+          body: TerminalPane(
+            terminal: SessionTerminal(),
+            onInput: (input) => sent.add(utf8.decode(input)),
+            onResize: (_, _) {},
+            onPasteImage: (png) async => images.add(png),
+            readImage: () async {
+              reads.add(1);
+              return image;
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(TerminalView));
+      await tester.pumpAndSettle();
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyV);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
+      return (sent: sent, images: images, reads: reads);
+    }
+
+    testWidgets('text on the clipboard is pasted as text, image unasked', (
+      tester,
+    ) async {
+      clipboardText = 'ls -la';
+      final result = await pasteWith(
+        tester,
+        image: Uint8List.fromList([1, 2, 3]),
+      );
+      expect(result.sent.join(), contains('ls -la'));
+      expect(result.reads, isEmpty);
+      expect(result.images, isEmpty);
+    }, variant: TargetPlatformVariant.only(TargetPlatform.linux));
+
+    testWidgets('an image with no text goes up instead of nothing happening', (
+      tester,
+    ) async {
+      final png = Uint8List.fromList([137, 80, 78, 71]);
+      final result = await pasteWith(tester, image: png);
+      expect(result.images.single, png);
+      expect(result.sent.join(), isEmpty);
+    }, variant: TargetPlatformVariant.only(TargetPlatform.linux));
+
+    testWidgets('an empty clipboard pastes nothing', (tester) async {
+      final result = await pasteWith(tester);
+      expect(result.images, isEmpty);
+      expect(result.sent.join(), isEmpty);
+    }, variant: TargetPlatformVariant.only(TargetPlatform.linux));
+  });
+
   group('OSC 52', () {
     late List<String?> clipboardWrites;
     late StreamController<Uint8List> output;

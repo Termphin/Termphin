@@ -12,6 +12,14 @@ const kTerminalCursorStylePrefsKey = 'terminal_cursor_style';
 const kTerminalCursorBlinkPrefsKey = 'terminal_cursor_blink';
 const kTerminalFontFamilyPrefsKey = 'terminal_font_family';
 const kTerminalPredictiveEchoPrefsKey = 'terminal_predictive_echo';
+const kTerminalScrollbackLinesPrefsKey = 'terminal_scrollback_lines';
+
+/// Lines of scrollback a session keeps until the user picks another length.
+const kTerminalScrollbackLines = 10000;
+
+/// The scrollback lengths offered: fewer lines are lighter on memory and on
+/// a slow device, more keep a long build's output in reach.
+const kTerminalScrollbackChoices = [1000, 5000, 10000, 25000, 50000];
 const kTerminalProgramNotificationsPrefsKey = 'terminal_program_notifications';
 const kTerminalFinishedNotificationsPrefsKey =
     'terminal_finished_notifications';
@@ -122,6 +130,16 @@ class TerminalSettings {
     fallback: true,
   );
 
+  /// Lines of scrollback a session keeps ([kTerminalScrollbackChoices]),
+  /// read when its terminal is made: a session opened or reattached after a
+  /// change has the new length, one already on screen keeps its own.
+  final scrollbackLines = Setting.integer(
+    kTerminalScrollbackLinesPrefsKey,
+    fallback: kTerminalScrollbackLines,
+    min: kTerminalScrollbackChoices.first,
+    max: kTerminalScrollbackChoices.last,
+  );
+
   /// Shows what a program asks the terminal to announce - Claude Code done
   /// or waiting, `termphin notify` at the end of a build - as a system
   /// notification, when its session is not the one on screen.
@@ -191,6 +209,7 @@ class TerminalSettings {
     cursorStyle,
     cursorBlink,
     predictiveEcho,
+    scrollbackLines,
     programNotifications,
     finishedNotifications,
     quietNotifications,

@@ -208,6 +208,7 @@ final Map<Setting<Object?>, Object?> _alternatives = {
   ),
   terminalSettings.cursorBlink: false,
   terminalSettings.predictiveEcho: false,
+  terminalSettings.scrollbackLines: 25000,
   terminalSettings.programNotifications: false,
   terminalSettings.finishedNotifications: false,
   terminalSettings.quietNotifications: false,

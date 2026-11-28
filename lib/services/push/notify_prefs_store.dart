@@ -9,6 +9,9 @@ import '../firebase/firestore_rest.dart';
 /// offers a switch for a device the relay would skip anyway.
 const kRelayMaxDevices = 10;
 
+/// The longest name a device may be given, as the security rules allow.
+const kNotifyDeviceNameMax = 40;
+
 /// What a phone or tablet is, for its icon and the name it is listed under.
 /// A computer is never one: only phones and tablets get pushes.
 enum NotifyDeviceKind { phone, tablet }
@@ -26,6 +29,7 @@ class NotifyDestination {
     this.enabled = true,
     this.hasPrefs = false,
     this.registeredAt,
+    this.name,
   });
 
   /// The device's install id.
@@ -45,6 +49,10 @@ class NotifyDestination {
 
   /// When the device last registered its token.
   final DateTime? registeredAt;
+
+  /// The name the user gave it, listed instead of its kind and platform;
+  /// null until they do.
+  final String? name;
 
   /// The list in the order the relay picks devices: latest registration
   /// first, at most [kRelayMaxDevices].
@@ -83,6 +91,16 @@ abstract interface class NotifyPrefsStore {
     NotifyDestination destination,
     bool enabled,
   );
+
+  /// Gives [destination] its own [name], or takes it away with null, so it
+  /// is listed by its kind and platform again.
+  Future<void> setName(String uid, NotifyDestination destination, String? name);
+}
+
+/// [name] as stored: trimmed, null when nothing is left of it.
+String? cleanDeviceName(String? name) {
+  final trimmed = name?.trim() ?? '';
+  return trimmed.isEmpty ? null : trimmed;
 }
 
 class FirestoreNotifyPrefsStore implements NotifyPrefsStore {
@@ -157,6 +175,7 @@ class FirestoreNotifyPrefsStore implements NotifyPrefsStore {
     kind: _kind(prefs?['kind']),
     enabled: prefs?['enabled'] != false,
     hasPrefs: prefs != null,
+    name: cleanDeviceName(prefs?['name'] as String?),
   );
 
   @override
@@ -186,6 +205,20 @@ class FirestoreNotifyPrefsStore implements NotifyPrefsStore {
     'enabled': enabled,
     'updatedAt': FieldValue.serverTimestamp(),
   }, SetOptions(merge: true));
+
+  @override
+  Future<void> setName(
+    String uid,
+    NotifyDestination destination,
+    String? name,
+  ) {
+    final cleaned = cleanDeviceName(name);
+    return _prefs(uid, destination.id).set({
+      'name': cleaned ?? FieldValue.delete(),
+      if (!destination.hasPrefs) 'enabled': destination.enabled,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
 }
 
 /// The same documents through Firestore's REST API, for a computer. The API
@@ -268,16 +301,19 @@ class RestNotifyPrefsStore implements NotifyPrefsStore {
       kind: _kind(FirestoreRest.string(prefs?['kind'])),
       enabled: FirestoreRest.value(prefs?['enabled']) != false,
       hasPrefs: prefs != null,
+      name: cleanDeviceName(FirestoreRest.string(prefs?['name'])),
     );
   }
 
   /// Writes [fields] (REST-typed) and [transforms] onto device [id]'s
-  /// settings, creating them when missing, with the server's time.
+  /// settings, creating them when missing, with the server's time. The
+  /// fields in [cleared] are taken off the document.
   Future<void> _write(
     String uid,
     String id,
     Map<String, Object?> fields, {
     List<Map<String, Object?>> transforms = const [],
+    List<String> cleared = const [],
   }) async {
     final answer = await _rest.call(
       'POST',
@@ -289,7 +325,9 @@ class RestNotifyPrefsStore implements NotifyPrefsStore {
               'name': FirestoreRest.name('users/$uid/notifyPrefs/$id'),
               'fields': fields,
             },
-            'updateMask': {'fieldPaths': fields.keys.toList()},
+            'updateMask': {
+              'fieldPaths': [...fields.keys, ...cleared],
+            },
             'updateTransforms': [
               ...transforms,
               {'fieldPath': 'updatedAt', 'setToServerValue': 'REQUEST_TIME'},
@@ -323,6 +361,25 @@ class RestNotifyPrefsStore implements NotifyPrefsStore {
   ) => _write(uid, destination.id, {
     'enabled': {'booleanValue': enabled},
   });
+
+  @override
+  Future<void> setName(
+    String uid,
+    NotifyDestination destination,
+    String? name,
+  ) {
+    final cleaned = cleanDeviceName(name);
+    return _write(
+      uid,
+      destination.id,
+      {
+        'name': ?(cleaned == null ? null : {'stringValue': cleaned}),
+        if (!destination.hasPrefs)
+          'enabled': {'booleanValue': destination.enabled},
+      },
+      cleared: [if (cleaned == null) 'name'],
+    );
+  }
 
   @override
   Stream<List<NotifyDestination>> list(String uid) {

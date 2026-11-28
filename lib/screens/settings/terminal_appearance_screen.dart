@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../i18n/strings.g.dart';
@@ -45,6 +46,7 @@ class _TerminalAppearanceScreenState extends State<TerminalAppearanceScreen> {
   String get _cursorStyle => _settings.cursorStyle.value;
   bool get _cursorBlink => _settings.cursorBlink.value;
   bool get _predictiveEcho => _settings.predictiveEcho.value;
+  int get _scrollbackLines => _settings.scrollbackLines.value;
 
   @override
   void initState() {
@@ -213,6 +215,34 @@ class _TerminalAppearanceScreenState extends State<TerminalAppearanceScreen> {
                               value: _predictiveEcho,
                               onChanged: (v) =>
                                   _write(_settings.predictiveEcho, v),
+                            ),
+                            const SizedBox(height: AppTheme.space8),
+                            SettingsDropdownRow<int>(
+                              key: const ValueKey('scrollbackLines'),
+                              label: t.settings.scrollback,
+                              value: _scrollbackLines,
+                              labels: {
+                                for (final lines in kTerminalScrollbackChoices)
+                                  lines: t.settings.scrollbackLines(
+                                    n: NumberFormat.decimalPattern().format(
+                                      lines,
+                                    ),
+                                  ),
+                              },
+                              onChanged: (v) =>
+                                  _write(_settings.scrollbackLines, v),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                bottom: AppTheme.space8,
+                              ),
+                              child: Text(
+                                t.settings.scrollbackSubtitle,
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color: context.colors.textSecondary,
+                                    ),
+                              ),
                             ),
                           ],
                         ),

@@ -12,6 +12,7 @@ import '../../i18n/strings.g.dart';
 import '../../models/active_session.dart';
 import '../../services/app/app_commands.dart';
 import '../../services/completion/command_line_reader.dart';
+import '../../services/platform/clipboard_image.dart';
 import '../../services/settings/terminal_settings.dart';
 import '../../services/terminal/predictive_echo.dart';
 import '../../services/terminal/session_terminal.dart';
@@ -25,7 +26,7 @@ import 'terminal_rendering.dart';
 import 'terminal_search_bar.dart';
 import 'watching_zoom.dart';
 
-export '../../services/terminal/session_terminal.dart'
+export '../../services/settings/terminal_settings.dart'
     show kTerminalScrollbackLines;
 
 /// The fewest rows the PTY is ever told it has.
@@ -191,6 +192,8 @@ class TerminalPane extends StatefulWidget {
     this.onKeyEvent,
     this.fixedSize,
     this.holderIcon,
+    this.onPasteImage,
+    this.readImage = readClipboardImage,
   });
 
   /// The session's terminal, which outlives this pane: mounting draws what
@@ -228,6 +231,15 @@ class TerminalPane extends StatefulWidget {
   /// happens. The badge is where an avatar goes once sessions are shared
   /// between people whose accounts are known.
   final IconData? holderIcon;
+
+  /// Takes a paste that found an image on the clipboard and no text - a
+  /// screenshot - as PNG bytes, to upload it and put its path at the cursor.
+  /// Null leaves such a paste doing nothing, as before.
+  final Future<void> Function(Uint8List png)? onPasteImage;
+
+  /// Reads that image ([readClipboardImage]); stands in for the system
+  /// clipboard in tests.
+  final Future<Uint8List?> Function() readImage;
 
   @override
   State<TerminalPane> createState() => _TerminalPaneState();
@@ -943,12 +955,31 @@ class _TerminalPaneState extends State<TerminalPane> {
   /// with mouse reporting on gets the click instead and never calls this.
   Future<void> _onMiddleClick(TapDownDetails details, CellOffset offset) async {
     final selected = selectedText;
-    final text = selected != null && selected.isNotEmpty
-        ? selected
-        : (await Clipboard.getData(Clipboard.kTextPlain))?.text;
-    if (!mounted || text == null || text.isEmpty) return;
     focusTerminal();
-    _terminal.paste(text);
+    if (selected != null && selected.isNotEmpty) {
+      _terminal.paste(selected);
+      return;
+    }
+    await pasteFromClipboard();
+  }
+
+  /// Pastes the clipboard's text, or - with no text there - hands its image
+  /// to [TerminalPane.onPasteImage]. Text wins when there is both: a copied
+  /// path or command is what a paste has always meant.
+  Future<void> pasteFromClipboard() async {
+    final text = (await Clipboard.getData(Clipboard.kTextPlain))?.text;
+    if (!mounted) return;
+    if (text != null && text.isNotEmpty) {
+      _terminal.paste(text);
+      clearSelection();
+      return;
+    }
+    final onImage = widget.onPasteImage;
+    if (onImage == null) return;
+    final image = await widget.readImage();
+    if (!mounted || image == null) return;
+    clearSelection();
+    await onImage(image);
   }
 
   Future<void> _onSecondaryTapDown(
@@ -1047,12 +1078,7 @@ class _TerminalPaneState extends State<TerminalPane> {
       case 'copy':
         copySelection();
       case 'paste':
-        final data = await Clipboard.getData(Clipboard.kTextPlain);
-        final text = data?.text;
-        if (text != null && text.isNotEmpty) {
-          _terminal.paste(text);
-          clearSelection();
-        }
+        await pasteFromClipboard();
       case 'selectAll':
         _terminalController.selectAll(_terminal.buffer);
       case 'find':
@@ -1378,6 +1404,9 @@ class _TerminalPaneState extends State<TerminalPane> {
                                   CopyIfSelectedIntent: _CopyIfSelectedAction(
                                     this,
                                   ),
+                                  TerminalPasteIntent: _TerminalPasteAction(
+                                    this,
+                                  ),
                                 },
                                 child: view,
                               )
@@ -1591,7 +1620,10 @@ class _TerminalPaneState extends State<TerminalPane> {
     );
     return _desktop
         ? Actions(
-            actions: {CopyIfSelectedIntent: _CopyIfSelectedAction(this)},
+            actions: {
+              CopyIfSelectedIntent: _CopyIfSelectedAction(this),
+              TerminalPasteIntent: _TerminalPasteAction(this),
+            },
             child: interactive,
           )
         : interactive;
@@ -1861,6 +1893,25 @@ TerminalForegroundPainter _linkUnderlines(Terminal terminal, Color color) =>
 
 const _maxLineRows = 16;
 
+/// Pastes what the clipboard holds: its text, as the terminal always did,
+/// or - with no text there - an image, which goes up to the server and comes
+/// back as its path ([TerminalPane.onPasteImage]).
+class TerminalPasteIntent extends Intent {
+  const TerminalPasteIntent();
+}
+
+class _TerminalPasteAction extends Action<TerminalPasteIntent> {
+  _TerminalPasteAction(this.state);
+
+  final _TerminalPaneState state;
+
+  @override
+  Object? invoke(TerminalPasteIntent intent) {
+    unawaited(state.pasteFromClipboard());
+    return null;
+  }
+}
+
 /// Copies the terminal's selection - and only claims the key when there is
 /// one, so a Ctrl+C with nothing selected still reaches the shell as the
 /// interrupt it has always been there.
@@ -1901,7 +1952,7 @@ Map<ShortcutActivator, Intent> desktopTerminalShortcuts() {
       const SingleActivator(LogicalKeyboardKey.keyC, meta: true):
           CopySelectionTextIntent.copy,
       const SingleActivator(LogicalKeyboardKey.keyV, meta: true):
-          const PasteTextIntent(SelectionChangedCause.keyboard),
+          const TerminalPasteIntent(),
       const SingleActivator(LogicalKeyboardKey.keyA, meta: true):
           const SelectAllTextIntent(SelectionChangedCause.keyboard),
     };
@@ -1910,13 +1961,13 @@ Map<ShortcutActivator, Intent> desktopTerminalShortcuts() {
     const SingleActivator(LogicalKeyboardKey.keyC, control: true):
         const CopyIfSelectedIntent(),
     const SingleActivator(LogicalKeyboardKey.keyV, control: true):
-        const PasteTextIntent(SelectionChangedCause.keyboard),
+        const TerminalPasteIntent(),
     const SingleActivator(LogicalKeyboardKey.keyC, control: true, shift: true):
         CopySelectionTextIntent.copy,
     const SingleActivator(LogicalKeyboardKey.keyV, control: true, shift: true):
-        const PasteTextIntent(SelectionChangedCause.keyboard),
+        const TerminalPasteIntent(),
     const SingleActivator(LogicalKeyboardKey.insert, shift: true):
-        const PasteTextIntent(SelectionChangedCause.keyboard),
+        const TerminalPasteIntent(),
     const SingleActivator(LogicalKeyboardKey.keyA, control: true, shift: true):
         const SelectAllTextIntent(SelectionChangedCause.keyboard),
   };

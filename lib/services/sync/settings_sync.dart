@@ -69,12 +69,13 @@ const kSyncedSettingGroups = <String, List<String>>{
 };
 
 /// Preferences that stay with the device: sizes that depend on its screen,
-/// the lock, and where its panes sit. Everything the backup carries is in
+/// the scrollback its memory carries, the lock, and where its panes sit. Everything the backup carries is in
 /// exactly one of the two lists, which a test holds it to.
 @visibleForTesting
 const kDeviceSettings = <String>{
   'terminal.fontSize',
   'terminal.sidePadding',
+  'terminal.scrollbackLines',
   'app.toolbarOrder',
   'app.toolbarColumns',
   'app.toolbarRows',

@@ -118,4 +118,71 @@ void main() {
     expect(find.text('Working'), findsOneWidget);
     expect(find.textContaining('prod-db'), findsNothing);
   });
+
+  testWidgets('a program blocked on the user says what it needs', (
+    tester,
+  ) async {
+    await pump(
+      tester,
+      const SessionActivity(
+        state: SessionActivityState.waiting,
+        command: 'claude',
+        program: ProgramStatus(
+          state: ProgramState.blocked,
+          block: ProgramBlock.permission,
+          app: 'claude-code',
+          message: 'approve Bash: npm test',
+        ),
+      ),
+    );
+    expect(
+      find.text('Claude Code needs your permission · approve Bash: npm test'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('a program\'s own words stay hidden with names hidden', (
+    tester,
+  ) async {
+    await pump(
+      tester,
+      const SessionActivity(
+        state: SessionActivityState.waiting,
+        command: 'claude',
+        program: ProgramStatus(
+          state: ProgramState.blocked,
+          block: ProgramBlock.question,
+          app: 'claude-code',
+          message: 'deploy to web-01?',
+        ),
+      ),
+      anonymize: true,
+    );
+    expect(find.text('Claude Code has a question'), findsOneWidget);
+    expect(find.textContaining('web-01'), findsNothing);
+  });
+
+  testWidgets('a program that finished or failed says so', (tester) async {
+    await pump(
+      tester,
+      const SessionActivity(
+        state: SessionActivityState.running,
+        command: 'codex',
+        program: ProgramStatus(state: ProgramState.done, app: 'codex'),
+      ),
+    );
+    expect(find.text('Codex is done'), findsOneWidget);
+  });
+
+  testWidgets('a program at rest leaves the usual line', (tester) async {
+    await pump(
+      tester,
+      const SessionActivity(
+        state: SessionActivityState.running,
+        command: 'claude',
+        program: ProgramStatus(state: ProgramState.idle, app: 'claude-code'),
+      ),
+    );
+    expect(find.text('claude · Running'), findsOneWidget);
+  });
 }

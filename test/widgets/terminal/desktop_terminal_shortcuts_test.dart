@@ -31,7 +31,7 @@ void main() {
     );
     expect(
       _intentFor(const SingleActivator(LogicalKeyboardKey.keyV, control: true)),
-      isA<PasteTextIntent>(),
+      isA<TerminalPasteIntent>(),
     );
     expect(
       _intentFor(const SingleActivator(LogicalKeyboardKey.keyA, control: true)),
@@ -58,7 +58,7 @@ void main() {
     );
     expect(
       _intentFor(const SingleActivator(LogicalKeyboardKey.keyV, meta: true)),
-      isA<PasteTextIntent>(),
+      isA<TerminalPasteIntent>(),
     );
     expect(
       _intentFor(const SingleActivator(LogicalKeyboardKey.keyC, control: true)),

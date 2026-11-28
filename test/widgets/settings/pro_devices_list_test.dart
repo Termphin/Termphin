@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -30,6 +32,13 @@ void main() {
     expect(notifyDeviceName(t, unknown), t.serversPanel.androidPhone);
     expect(notifyDeviceIcon(tablet), PhosphorIconsRegular.deviceTablet);
     expect(notifyDeviceIcon(unknown), PhosphorIconsRegular.deviceMobile);
+    const named = NotifyDestination(
+      id: 'n',
+      platform: 'android',
+      name: 'Work phone',
+    );
+    expect(notifyDeviceName(t, named), 'Work phone');
+    expect(defaultNotifyDeviceName(t, named), t.serversPanel.androidPhone);
   });
 
   testWidgets('This device badge uses the accent tone', (tester) async {
@@ -56,5 +65,51 @@ void main() {
     await tester.pumpAndSettle();
     final badge = tester.widget<AppBadge>(find.byType(AppBadge));
     expect(badge.tone, BadgeTone.accent);
+  });
+
+  testWidgets('a device is renamed from its menu, and can go back', (
+    tester,
+  ) async {
+    final container = ProviderContainer(
+      overrides: [accountProvider.overrideWith(_Account.new)],
+    );
+    addTearDown(container.dispose);
+    final renamed = <String?>[];
+    final devices = StreamController<List<NotifyDestination>>.broadcast();
+    addTearDown(devices.close);
+    await pumpTestApp(
+      tester,
+      Scaffold(
+        body: ProDevicesList(
+          ownId: 'other',
+          devices: devices.stream,
+          rename: (device, name) async => renamed.add(name),
+        ),
+      ),
+      container: container,
+    );
+    devices.add(const [NotifyDestination(id: 'd1', platform: 'android')]);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('More'));
+    await tester.pumpAndSettle();
+    expect(find.text('Use the default name'), findsNothing);
+    await tester.tap(find.text('Rename'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField), 'Work phone');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(renamed, ['Work phone']);
+
+    devices.add(const [
+      NotifyDestination(id: 'd1', platform: 'android', name: 'Work phone'),
+    ]);
+    await tester.pumpAndSettle();
+    expect(find.text('Work phone'), findsOneWidget);
+    await tester.tap(find.byTooltip('More'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Use the default name'));
+    await tester.pumpAndSettle();
+    expect(renamed, ['Work phone', null]);
   });
 }
