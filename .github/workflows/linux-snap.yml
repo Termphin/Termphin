@@ -77,10 +77,10 @@ jobs:
       - name: Build Linux bundle
         env:
           WEB_API_KEY: ${{ vars.FIREBASE_WEB_API_KEY }}
-          BUILD_NUMBER: ${{ inputs.build_number }}
+          INPUT_BUILD_NUMBER: ${{ inputs.build_number }}
         run: |
           ARGS=(--release --dart-define=FIREBASE_WEB_API_KEY="$WEB_API_KEY")
-          if [ -n "$BUILD_NUMBER" ]; then ARGS+=(--build-number="$BUILD_NUMBER"); fi
+          if [ -n "$INPUT_BUILD_NUMBER" ]; then ARGS+=(--build-number="$INPUT_BUILD_NUMBER"); fi
           flutter build linux "${ARGS[@]}"
           rm -rf .snap-bundle
           cp -a build/linux/x64/release/bundle .snap-bundle

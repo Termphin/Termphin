@@ -31,7 +31,6 @@ import '../utils/group_match.dart';
 import '../utils/platform_info.dart';
 import '../utils/profile_sort.dart';
 import '../widgets/account/account_avatar_button.dart';
-import '../widgets/account/pro_hint_card.dart';
 import '../widgets/groups/group_filter_chips.dart';
 import '../widgets/groups/group_picker_sheet.dart';
 import '../widgets/groups/group_section_header.dart';
@@ -981,16 +980,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               onChanged: (group) =>
                                   setState(() => _selectedGroup = group),
                             ),
-                          ),
-                        if (profiles.isNotEmpty)
-                          const SliverPadding(
-                            padding: EdgeInsets.fromLTRB(
-                              AppTheme.space16,
-                              AppTheme.space4,
-                              AppTheme.space16,
-                              0,
-                            ),
-                            sliver: SliverToBoxAdapter(child: ProHintCard()),
                           ),
                         if (localProfile != null)
                           SliverPadding(

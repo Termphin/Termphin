@@ -50,4 +50,62 @@ void main() {
     );
     expect(focus.autofocus, isFalse);
   }, variant: const TargetPlatformVariant({TargetPlatform.android}));
+
+  testWidgets(
+    'on a desktop Ctrl+S still saves after a nested dialog pops and drops focus',
+    (tester) async {
+      var saved = 0;
+      await tester.pumpWidget(const MaterialApp(home: Scaffold()));
+      final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+      navigator.push(
+        DialogRoute<void>(
+          context: navigator.context,
+          builder: (formCtx) => SaveShortcuts(
+            onSave: () => saved++,
+            child: Scaffold(
+              body: Builder(
+                builder: (btnCtx) => ElevatedButton(
+                  onPressed: () {
+                    showDialog<void>(
+                      context: formCtx,
+                      builder: (dlgCtx) => AlertDialog(
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(dlgCtx).pop(),
+                            child: const Text('Accept'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  child: const Text('Test'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Test'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Accept'));
+      await tester.pumpAndSettle();
+
+      FocusScope.of(tester.element(find.byType(SaveShortcuts))).unfocus();
+      await tester.pump();
+      await tester.pump();
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyS);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.pump();
+
+      expect(saved, 1);
+    },
+    variant: const TargetPlatformVariant({
+      TargetPlatform.windows,
+      TargetPlatform.linux,
+    }),
+  );
 }

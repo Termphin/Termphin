@@ -16,6 +16,7 @@ import '../../models/remote_shell.dart';
 import '../../models/session_control.dart';
 import '../../models/session_tab.dart';
 import '../../models/ssh_profile.dart';
+import '../../utils/platform_info.dart';
 import '../realtime/presence_device.dart';
 import '../realtime/presence_state.dart';
 import '../settings/setting.dart';
@@ -750,7 +751,9 @@ class SshSessionManager extends ChangeNotifier {
     var changed = false;
     for (final tab in _tabs.values.toList()) {
       final profile = tab.profileId == kLocalProfileId
-          ? localComputerProfile(name: t.profiles.thisComputer)
+          ? (platformHas(PlatformFeature.localSessions)
+                ? localComputerProfile(name: t.profiles.thisComputer)
+                : null)
           : profilesById[tab.profileId];
       if (profile == null) {
         _tabs.remove(tab.tabId);
@@ -1743,8 +1746,19 @@ class SshSessionManager extends ChangeNotifier {
     );
   }
 
+  /// Runs a short-lived shell [command] on this computer without SSH.
+  Future<Uint8List> execLocal(String command) =>
+      _localAgentService.runShellCommand(command);
+
   Future<Uint8List> exec(String sessionId, String command) async {
-    final client = _sessions[sessionId]?.sshService?.client;
+    final session = _sessions[sessionId];
+    if (session != null && session.profile.isLocal) {
+      if (session.connecting || session.dropped) {
+        throw Exception('Session not connected.');
+      }
+      return execLocal(command);
+    }
+    final client = session?.sshService?.client;
     if (client == null || client.isClosed) {
       throw Exception('Session not connected.');
     }
@@ -1902,6 +1916,12 @@ class SshSessionManager extends ChangeNotifier {
     }
     _agentProbes.put(profile.id, status);
     await _recordAgentStatus(profile.id, status.publicStatus);
+  }
+
+  /// Installs or repairs the bundled local `termphin-agent` so local live
+  /// status can report even before the user opens a session on this computer.
+  Future<void> ensureLocalAgentQuietly() async {
+    await _localAgentService.ensureInstalled();
   }
 
   /// Opens a short-lived [SSHClient] for [profile], runs [operation] on it

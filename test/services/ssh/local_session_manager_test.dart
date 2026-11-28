@@ -1,17 +1,19 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:termphin/models/remote_shell.dart';
 import 'package:termphin/models/session_tab.dart';
 import 'package:termphin/models/ssh_profile.dart';
+import 'package:termphin/services/push/machine_shell.dart';
 import 'package:termphin/services/ssh/ssh_session_manager.dart';
 import 'package:termphin/services/terminal/local_agent_service.dart';
 import 'package:termphin/services/terminal/local_agent_transport.dart';
 import 'package:termphin/services/terminal/terminal_text.dart';
+import 'package:termphin/utils/platform_info.dart';
 
 import '../../support/secure_storage_channel.dart';
 import '../../support/ssh_fakes.dart';
@@ -29,15 +31,26 @@ class _FakeLocalAgentService extends LocalAgentService {
   final List<String> killed = [];
   final List<(String, String)> renamed = [];
   final List<(String, String, String)> deviceCommands = [];
+  final List<String> shellCommands = [];
   int listCalls = 0;
+  int ensureInstalledCalls = 0;
 
   @override
   bool get isWindows => windows;
 
   @override
-  Future<String> ensureInstalled() async => windows
-      ? r'C:\Users\alice\AppData\Local\termphin\bin\termphin-agent.exe'
-      : '/home/alice/.local/lib/termphin/termphin-agent';
+  Future<String> ensureInstalled() async {
+    ensureInstalledCalls++;
+    return windows
+        ? r'C:\Users\alice\AppData\Local\termphin\bin\termphin-agent.exe'
+        : '/home/alice/.local/lib/termphin/termphin-agent';
+  }
+
+  @override
+  Future<Uint8List> runShellCommand(String command) async {
+    shellCommands.add(command);
+    return Uint8List.fromList(utf8.encode(windows ? '' : 'Linux\n'));
+  }
 
   @override
   Future<List<RemoteMuxSession>> list() async {
@@ -163,6 +176,8 @@ void main() {
   test(
     'local profile survives _restoreOfflineTabs without being in storage',
     () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
       SharedPreferences.setMockInitialValues({
         'session_tabs': [
           jsonEncode(
@@ -195,6 +210,32 @@ void main() {
       expect(restored.dropped, isTrue);
     },
   );
+
+  test('Snap drops persisted local tabs during _restoreOfflineTabs', () async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+    debugSnapPackageOverride = true;
+    addTearDown(() {
+      debugDefaultTargetPlatformOverride = null;
+      debugSnapPackageOverride = null;
+    });
+    SharedPreferences.setMockInitialValues({
+      'session_tabs': [
+        jsonEncode(
+          SessionTab(
+            tabId: 'local-1',
+            profileId: kLocalProfileId,
+            muxName: 'termphin_local',
+            lastSeen: DateTime.utc(2026, 2, 1),
+            wasConnected: true,
+          ).toJson(),
+        ),
+      ],
+    });
+
+    await manager.init();
+
+    expect(manager.tabs, isEmpty);
+  });
 
   test(
     'listRemoteSessions, rename and kill route to LocalAgentService for local profile',
@@ -258,6 +299,71 @@ void main() {
 
       await manager.endSession('local-tab');
       expect(localService.killed, ['local_1']);
+    },
+  );
+
+  test(
+    'exec, MachineShell.local and ensureLocalAgentQuietly run without SSH',
+    () async {
+      final profile = localComputerProfile(name: 'This computer');
+      await manager.startSession(
+        profile,
+        sessionId: 'local-exec',
+        muxName: 'local_2',
+        initialWidth: 80,
+        initialHeight: 24,
+        replayRemoteHistory: true,
+      );
+
+      final out = await manager.exec('local-exec', 'uname -s');
+      expect(utf8.decode(out), 'Linux\n');
+
+      final shellOut = await MachineShell.local(manager).exec('echo hi');
+      expect(utf8.decode(shellOut), 'Linux\n');
+
+      await manager.ensureLocalAgentQuietly();
+      expect(localService.shellCommands, ['uname -s', 'echo hi']);
+      expect(localService.ensureInstalledCalls, 2);
+      expect(sshBackend.calls, isEmpty);
+    },
+  );
+
+  test(
+    'LocalAgentService.runShellCommand dispatches sh on POSIX and cmd on Windows',
+    () async {
+      final calls = <(String, List<String>)>[];
+      final posix = LocalAgentService(
+        operatingSystem: 'Linux',
+        architecture: 'x86_64',
+        runProcess: (exe, args) async {
+          calls.add((exe, args));
+          return ProcessResult(1, 0, 'Linux\n', '');
+        },
+      );
+      expect(utf8.decode(await posix.runShellCommand('uname -s')), 'Linux\n');
+      expect(calls.single.$1, 'sh');
+      expect(calls.single.$2, ['-c', 'uname -s']);
+
+      calls.clear();
+      final win = LocalAgentService(
+        operatingSystem: 'Windows',
+        architecture: 'AMD64',
+        runProcess: (exe, args) async {
+          calls.add((exe, args));
+          return ProcessResult(
+            2,
+            1,
+            '',
+            "'uname' is not recognized as an internal or external command.",
+          );
+        },
+      );
+      expect(
+        utf8.decode(await win.runShellCommand('uname -s')),
+        contains('is not recognized'),
+      );
+      expect(calls.single.$1, 'cmd');
+      expect(calls.single.$2, ['/c', 'uname -s']);
     },
   );
 }

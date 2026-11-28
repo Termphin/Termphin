@@ -33,7 +33,6 @@ import 'services/app/whats_new_service.dart';
 import 'services/platform/desktop_window.dart';
 import 'services/platform/local_notifications_service.dart';
 import 'services/platform/quick_actions_service.dart';
-import 'services/pro/pro_hints.dart';
 import 'services/pro/pro_service.dart';
 import 'services/push/push_service.dart';
 import 'services/security/lock_service.dart';
@@ -316,7 +315,6 @@ class _AppGateState extends ConsumerState<_AppGate> {
         presence.setForeground(true);
         sync.resumed();
         unawaited(ProService.instance.resumed());
-        ProHints.instance.flush();
       },
     );
     ref.listenManual(accountProvider, (previous, user) {
@@ -620,6 +618,14 @@ class _AppShellState extends ConsumerState<_AppShell> {
     }
     final context = navigatorKey.currentContext;
     if (context == null || !context.mounted) return;
+    if (profileId == kLocalProfileId &&
+        !platformHas(PlatformFeature.localSessions)) {
+      AppNotifications.info(
+        context,
+        Translations.of(context).session.localUnavailableHere,
+      );
+      return;
+    }
     final container = ProviderScope.containerOf(context);
     final profile = profileId == kLocalProfileId
         ? localComputerProfile(

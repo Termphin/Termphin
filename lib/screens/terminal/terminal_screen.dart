@@ -16,7 +16,6 @@ import '../../models/snippet.dart';
 import '../../models/ssh_profile.dart';
 import '../../providers/anonymize_provider.dart';
 import '../../providers/port_forwarding_provider.dart';
-import '../../providers/profiles_provider.dart';
 import '../../providers/snippets_provider.dart';
 import '../../providers/ssh_connection_provider.dart';
 import '../../providers/ssh_session_manager_provider.dart';
@@ -1291,7 +1290,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen>
     await SystemChannels.textInput.invokeMethod<void>('TextInput.hide');
 
     if (!mounted) return;
-    final profiles = ref.read(profilesProvider);
+    final profiles = sessionPickerProfiles(ref, Translations.of(context));
     await showAppSheet<void>(
       context: context,
       handle: false,

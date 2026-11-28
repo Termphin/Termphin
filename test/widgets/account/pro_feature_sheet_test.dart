@@ -85,4 +85,34 @@ void main() {
     );
     expect(find.text(t.proFeature.seePro), findsNothing);
   });
+
+  for (final feature in [ProFeature.notifications, ProFeature.liveStatus]) {
+    testWidgets('${feature.name} sheet steps to the AI agents second card', (
+      tester,
+    ) async {
+      await pumpTestApp(tester, const SizedBox.expand());
+      final screen = tester.element(find.byType(SizedBox));
+
+      unawaited(showProFeatureSheet(screen, feature));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text(t.proFeature.aiAgentsTitle), findsNothing);
+
+      await tester.tap(find.byKey(const ValueKey('proFeatureNext')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text(t.proFeature.aiAgentsTitle), findsOneWidget);
+      expect(find.text(t.proFeature.aiAgentsBody), findsOneWidget);
+      expect(find.byType(FeatureDemo), findsNothing);
+
+      await tester.tap(find.byKey(const ValueKey('proFeaturePrev')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.byType(FeatureDemo), findsOneWidget);
+      expect(find.text(t.proFeature.aiAgentsTitle), findsNothing);
+    });
+  }
 }

@@ -100,6 +100,21 @@ void main() {
     expect(adopted, isEmpty);
   });
 
+  test(
+    'sessions reported before sync loads the machine appear once it arrives',
+    () {
+      report({
+        'profile-synced': ['main', 'logs'],
+      });
+      expect(adopted, isEmpty);
+
+      profiles = [...profiles, profileFixture(id: 'profile-synced')];
+      controller.syncProfiles();
+
+      expect(adopted, [('profile-synced', 'main'), ('profile-synced', 'logs')]);
+    },
+  );
+
   test('signing out forgets what was seen', () {
     report({
       'profile-a': ['main'],

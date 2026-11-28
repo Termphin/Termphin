@@ -1,5 +1,4 @@
 import '../completion/command_completion.dart';
-import '../pro/pro_hints.dart';
 import '../settings/action_dock_settings.dart';
 import '../settings/desktop_settings.dart';
 import '../settings/editor_settings.dart';
@@ -117,7 +116,6 @@ Future<Map<String, dynamic>> exportAppPreferences({
     'sftpSortField': (await sftpSortFieldSetting.load()).name,
     'sftpSortDescending': await sftpSortDescendingSetting.load(),
     'commandSuggestions': await commandSuggestionsSetting.load(),
-    'proTips': await proTipsSetting.load(),
     'tabBarPosition': (await tabBarPositionSetting.load()).name,
     'lockTimeout': (await lockTimeoutSetting.load()).name,
     'closeToTray': await closeToTraySetting.load(),
@@ -344,9 +342,6 @@ Future<void> importAppPreferences(
   if (commandSuggestions is bool) {
     await commandSuggestionsSetting.set(commandSuggestions);
   }
-
-  final proTips = appPrefs['proTips'];
-  if (proTips is bool) await proTipsSetting.set(proTips);
 
   final tabBarPosition = _byName(
     TabBarPosition.values,

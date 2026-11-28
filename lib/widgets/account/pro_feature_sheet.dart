@@ -8,6 +8,7 @@ import '../../models/pro_source.dart';
 import '../../screens/pro/pro_paywall_screen.dart';
 import '../../services/pro/pro_service.dart';
 import '../../theme/theme.dart';
+import '../pro/ascii_glow.dart';
 import '../pro/feature_demos.dart';
 import '../ui/app_badge.dart';
 import '../ui/app_sheet.dart';
@@ -69,12 +70,13 @@ Future<void> showProFeatureSheet(
   );
 }
 
-/// What a Pro feature does: shown working on a phone, then in two
-/// sentences, with a way to the paywall for an account without Pro.
+/// What a Pro feature does: two cards users can swipe or step through - the
+/// feature's own phone demo first, then the AI agent alerts/live-status
+/// card - with a way to the paywall for an account without Pro.
 ///
 /// [paywallContext] is the screen the sheet was opened from: the sheet is
 /// gone by the time the paywall opens, so the paywall is pushed from there.
-class ProFeatureSheet extends StatelessWidget {
+class ProFeatureSheet extends StatefulWidget {
   const ProFeatureSheet({
     super.key,
     required this.feature,
@@ -89,10 +91,28 @@ class ProFeatureSheet extends StatelessWidget {
   final bool offerPro;
 
   @override
+  State<ProFeatureSheet> createState() => _ProFeatureSheetState();
+}
+
+class _ProFeatureSheetState extends State<ProFeatureSheet> {
+  static const _pageCount = 2;
+  int _page = 0;
+  int _direction = 1;
+
+  void _goTo(int next) {
+    final clamped = next.clamp(0, _pageCount - 1);
+    if (clamped == _page) return;
+    setState(() {
+      _direction = clamped > _page ? 1 : -1;
+      _page = clamped;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final t = Translations.of(context);
-    final text = Theme.of(context).textTheme;
-    final (title, body, demo) = switch (feature) {
+    final colors = context.colors;
+    final (primaryTitle, primaryBody, primaryDemo) = switch (widget.feature) {
       ProFeature.notifications => (
         t.proFeature.notificationsTitle,
         t.proFeature.notificationsBody,
@@ -104,8 +124,22 @@ class ProFeatureSheet extends StatelessWidget {
         const FeatureDemo(kind: FeatureDemoKind.live) as Widget,
       ),
     };
+    final card = switch (_page) {
+      0 => _FeatureCard(
+        key: ValueKey('proFeaturePage-0-${widget.feature.name}'),
+        media: primaryDemo,
+        title: primaryTitle,
+        body: primaryBody,
+      ),
+      _ => _FeatureCard(
+        key: ValueKey('proFeaturePage-1-${widget.feature.name}'),
+        media: const _AiAgentsShowcase(),
+        title: t.proFeature.aiAgentsTitle,
+        body: t.proFeature.aiAgentsBody,
+      ),
+    };
     return SafeArea(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(
           AppTheme.space20,
           AppTheme.space16,
@@ -114,20 +148,99 @@ class ProFeatureSheet extends StatelessWidget {
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Center(child: demo),
-            const SizedBox(height: AppTheme.space20),
-            Text(title, style: text.titleMedium),
-            const SizedBox(height: AppTheme.space12),
-            Text(
-              body,
-              style: text.bodyMedium?.copyWith(
-                color: context.colors.textSecondary,
+            GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onHorizontalDragEnd: (details) {
+                final vx = details.primaryVelocity ?? 0;
+                if (vx < -200) {
+                  _goTo(_page + 1);
+                } else if (vx > 200) {
+                  _goTo(_page - 1);
+                }
+              },
+              child: AnimatedSize(
+                duration: AppTheme.motionFast,
+                curve: Curves.easeOutCubic,
+                alignment: Alignment.topCenter,
+                child: AnimatedSwitcher(
+                  duration: AppTheme.motionFast,
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  transitionBuilder: (child, animation) {
+                    final offset = Tween<Offset>(
+                      begin: Offset(_direction * 0.08, 0),
+                      end: Offset.zero,
+                    ).animate(animation);
+                    return FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(position: offset, child: child),
+                    );
+                  },
+                  child: card,
+                ),
               ),
             ),
-            if (offerPro && !ProService.instance.active.value) ...[
-              const SizedBox(height: AppTheme.space24),
+            const SizedBox(height: AppTheme.space14),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton(
+                  key: const ValueKey('proFeaturePrev'),
+                  visualDensity: VisualDensity.compact,
+                  onPressed: _page > 0 ? () => _goTo(_page - 1) : null,
+                  icon: Icon(
+                    PhosphorIconsRegular.caretLeft,
+                    size: AppTheme.icon16,
+                    color: _page > 0
+                        ? colors.textSecondary
+                        : colors.textTertiary,
+                  ),
+                ),
+                for (var i = 0; i < _pageCount; i++)
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => _goTo(i),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppTheme.space2,
+                        vertical: AppTheme.space6,
+                      ),
+                      child: AnimatedContainer(
+                        duration: AppTheme.interactiveDuration,
+                        curve: Curves.easeOut,
+                        height: 6,
+                        width: i == _page ? 18 : 6,
+                        decoration: BoxDecoration(
+                          color: i == _page
+                              ? colors.primary
+                              : colors.surfaceBorderStrong,
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.radiusPill,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                IconButton(
+                  key: const ValueKey('proFeatureNext'),
+                  visualDensity: VisualDensity.compact,
+                  onPressed: _page < _pageCount - 1
+                      ? () => _goTo(_page + 1)
+                      : null,
+                  icon: Icon(
+                    PhosphorIconsRegular.caretRight,
+                    size: AppTheme.icon16,
+                    color: _page < _pageCount - 1
+                        ? colors.textSecondary
+                        : colors.textTertiary,
+                  ),
+                ),
+              ],
+            ),
+            if (widget.offerPro && !ProService.instance.active.value) ...[
+              const SizedBox(height: AppTheme.space12),
               ModalActions(
                 primary: FilledButton(
                   style: FilledButton.styleFrom(
@@ -137,8 +250,8 @@ class ProFeatureSheet extends StatelessWidget {
                     Navigator.of(context).pop();
                     unawaited(
                       ProPaywallScreen.show(
-                        paywallContext,
-                        source: feature.source,
+                        widget.paywallContext,
+                        source: widget.feature.source,
                       ),
                     );
                   },
@@ -146,6 +259,80 @@ class ProFeatureSheet extends StatelessWidget {
                 ),
               ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FeatureCard extends StatelessWidget {
+  const _FeatureCard({
+    super.key,
+    required this.media,
+    required this.title,
+    required this.body,
+  });
+
+  final Widget media;
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Center(child: media),
+        const SizedBox(height: AppTheme.space20),
+        Text(title, style: text.titleMedium),
+        const SizedBox(height: AppTheme.space12),
+        Text(
+          body,
+          style: text.bodyMedium?.copyWith(color: context.colors.textSecondary),
+        ),
+      ],
+    );
+  }
+}
+
+/// The AI coding agents showcase card from What's New, framed over the ASCII
+/// glow so both pages in [ProFeatureSheet] carry the same visual weight.
+class _AiAgentsShowcase extends StatelessWidget {
+  const _AiAgentsShowcase();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border.all(color: colors.surfaceBorder),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        ),
+        child: Stack(
+          children: [
+            const Positioned.fill(child: IgnorePointer(child: AsciiGlow())),
+            Padding(
+              padding: const EdgeInsets.all(AppTheme.space16),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 250),
+                child: AspectRatio(
+                  aspectRatio: 16 / 7,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                    child: Image.asset(
+                      'assets/whats_new/ai-agents.png',
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),

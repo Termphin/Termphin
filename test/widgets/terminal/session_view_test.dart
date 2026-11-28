@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -12,9 +13,12 @@ import 'package:termphin/i18n/strings.g.dart';
 import 'package:termphin/models/ssh_profile.dart';
 import 'package:termphin/providers/ssh_connection_provider.dart';
 import 'package:termphin/providers/ssh_session_manager_provider.dart';
+import 'package:termphin/services/platform/clipboard_image.dart';
 import 'package:termphin/services/settings/app_settings.dart';
 import 'package:termphin/services/ssh/ssh_service.dart';
 import 'package:termphin/services/ssh/ssh_session_manager.dart';
+import 'package:termphin/services/terminal/local_agent_service.dart';
+import 'package:termphin/services/terminal/local_agent_transport.dart';
 import 'package:termphin/widgets/sftp/sftp_browser_view.dart';
 import 'package:termphin/widgets/ssh/connecting_view.dart';
 import 'package:termphin/widgets/ssh/connection_quality_pill.dart';
@@ -485,4 +489,132 @@ void main() {
       expect(find.text('SSH error: no matching key exchange'), findsOneWidget);
     });
   });
+
+  group('local clipboard image paste', () {
+    testWidgets(
+      'pasting an image on This computer writes a temp file and pastes its quoted path',
+      (tester) async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+        final tempDir = Directory.systemTemp.createTempSync(
+          'termphin-local-paste-',
+        );
+        final stdinWrites = <String>[];
+        final fakeStdin = StreamController<List<int>>();
+        fakeStdin.stream.listen((bytes) => stdinWrites.add(utf8.decode(bytes)));
+        final localAgent = _FakeLocalAgent(windows: true);
+        final localManager = SshSessionManager.test(
+          remoteAgentService: agent,
+          serviceFactory: backend.createService,
+          localAgentService: localAgent,
+          localTransportFactory: () => LocalAgentTransport(
+            startProcess: (_, _, _) async => _FakeProcess(
+              stdinController: fakeStdin,
+              onStart: (stdoutController) {
+                stdoutController.add(
+                  utf8.encode(
+                    '\x1b]5384;termphin-master;0.21.0\x07'
+                    '\x1b]5380;termphin-replay-end\x07',
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+        final clipboard = ClipboardMock()..install();
+        debugClipboardImageReader = () async =>
+            Uint8List.fromList([137, 80, 78, 71]);
+        debugLocalClipboardDirectory = tempDir;
+        addTearDown(() async {
+          debugDefaultTargetPlatformOverride = null;
+          debugClipboardImageReader = null;
+          debugLocalClipboardDirectory = null;
+          clipboard.uninstall();
+          localManager.dispose();
+          unawaited(fakeStdin.close());
+          if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
+        });
+
+        final localProfile = localComputerProfile(name: 'This computer');
+        await localManager.startSession(localProfile, sessionId: 'local-1');
+        final localContainer = ProviderContainer.test(
+          overrides: [
+            sshSessionManagerProvider.overrideWithValue(localManager),
+          ],
+        );
+        final localKey = GlobalKey<SessionViewState>();
+        await pumpTestApp(
+          tester,
+          Scaffold(
+            body: SessionView(
+              key: localKey,
+              sessionKey: ('local-1', localProfile),
+              viewMode: SessionViewMode.terminal,
+              isActive: true,
+              onClose: () {},
+            ),
+          ),
+          container: localContainer,
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
+
+        await tester.runAsync(() => localKey.currentState!.handlePaste());
+        await tester.pump();
+
+        final files = tempDir.listSync().whereType<File>().toList();
+        expect(files, hasLength(1));
+        expect(stdinWrites.join(), contains('"${files.single.path}"'));
+      },
+    );
+  });
+}
+
+class _FakeLocalAgent extends LocalAgentService {
+  _FakeLocalAgent({required bool windows})
+    : super(
+        operatingSystem: windows ? 'Windows' : 'Linux',
+        architecture: 'x86_64',
+        homeDirectory: r'C:\Users\tester',
+      );
+
+  @override
+  Future<String> ensureInstalled() async =>
+      r'C:\Users\tester\AppData\Local\termphin\bin\termphin-agent.exe';
+}
+
+class _FakeProcess implements Process {
+  _FakeProcess({
+    required StreamController<List<int>> stdinController,
+    required void Function(StreamController<List<int>> stdout) onStart,
+  }) : _stdin = IOSink(stdinController.sink) {
+    scheduleMicrotask(() => onStart(_stdout));
+  }
+
+  final IOSink _stdin;
+  final _stdout = StreamController<List<int>>.broadcast();
+  final _stderr = StreamController<List<int>>.broadcast();
+  final _exitCode = Completer<int>();
+
+  @override
+  Future<int> get exitCode => _exitCode.future;
+
+  @override
+  Stream<List<int>> get stdout => _stdout.stream;
+
+  @override
+  Stream<List<int>> get stderr => _stderr.stream;
+
+  @override
+  IOSink get stdin => _stdin;
+
+  @override
+  int get pid => 4242;
+
+  @override
+  bool kill([ProcessSignal signal = ProcessSignal.sigterm]) {
+    unawaited(_stdout.close());
+    unawaited(_stderr.close());
+    if (!_exitCode.isCompleted) _exitCode.complete(0);
+    return true;
+  }
 }

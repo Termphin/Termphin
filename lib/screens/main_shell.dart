@@ -12,7 +12,6 @@ import '../models/active_session.dart';
 import '../models/session_tab.dart';
 import '../models/ssh_profile.dart';
 import '../providers/anonymize_provider.dart';
-import '../providers/profiles_provider.dart';
 import '../providers/ssh_session_manager_provider.dart';
 import '../providers/terminal_overlay_provider.dart';
 import '../services/analytics/analytics_service.dart';
@@ -279,7 +278,7 @@ class _MainShellState extends ConsumerState<MainShell>
           context: ctx,
           handle: false,
           builder: (sheetCtx) => AddSessionSheetContent(
-            profiles: ref.read(profilesProvider),
+            profiles: sessionPickerProfiles(ref, Translations.of(ctx)),
             resumableFor: _manager.resumableTabsForProfile,
             onSelect: (profile) {
               Navigator.of(sheetCtx).pop();

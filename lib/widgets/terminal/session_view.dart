@@ -556,20 +556,35 @@ class SessionViewState extends ConsumerState<SessionView> {
   final _typing = TypingCounter();
 
   /// Uploads an image pasted into the terminal - a screenshot on the
-  /// clipboard - the way fast upload sends a picked file, and types its path
-  /// in once it is there: a paste asked for exactly that. Only when nothing
-  /// moved meanwhile ([uploadPasteAction]); otherwise the path is offered.
-  Future<void> _uploadPastedImage(Uint8List png) => _upload(
-    [
-      LocalUpload(
-        name: clipboardImageName(DateTime.now()),
-        open: () => Stream.value(png),
-        length: () async => png.length,
-      ),
-    ],
-    uploadDestinationSetting.value,
-    pasteAsked: true,
-  );
+  /// clipboard - or on a local ("This computer") session writes it to a temp
+  /// file and pastes its path straight into the terminal.
+  Future<void> _uploadPastedImage(Uint8List png) async {
+    final session = _manager.getSession(widget.sessionKey.$1);
+    if (session == null || !mounted) return;
+    if (session.profile.isLocal) {
+      final file = await saveLocalClipboardImage(png);
+      if (!mounted) return;
+      _pasteLocalPaths(session, [file.path]);
+      return;
+    }
+    await _upload(
+      [
+        LocalUpload(
+          name: clipboardImageName(DateTime.now()),
+          open: () => Stream.value(png),
+          length: () async => png.length,
+        ),
+      ],
+      uploadDestinationSetting.value,
+      pasteAsked: true,
+    );
+  }
+
+  void _pasteLocalPaths(ActiveSessionView session, Iterable<String> paths) {
+    final list = paths.where((path) => path.isNotEmpty).toList();
+    if (list.isEmpty || !mounted) return;
+    _paste(uploadPasteText(list, session.remoteShellType));
+  }
 
   /// Paths of an upload that finished while this terminal was out of sight,
   /// offered at the cursor the next time it is shown. A later upload
@@ -1087,7 +1102,16 @@ class SessionViewState extends ConsumerState<SessionView> {
     final data = await Clipboard.getData(Clipboard.kTextPlain);
     if (!mounted) return;
     final text = data?.text;
-    if (text != null && text.isNotEmpty) _paste(text);
+    if (text != null && text.isNotEmpty) {
+      _paste(text);
+      _clearSelection();
+      return;
+    }
+    final image = await readClipboardImage();
+    if (!mounted) return;
+    if (image != null) {
+      await _uploadPastedImage(image);
+    }
     _clearSelection();
   }
 
@@ -1656,10 +1680,27 @@ class SessionViewState extends ConsumerState<SessionView> {
   bool _dropHovering = false;
 
   /// Sends files dropped on the terminal up the way fast upload sends a
-  /// picked one, and types their paths in once they are there: dropping them
-  /// on this terminal asked for exactly that. Folders are left out, with a
-  /// word, since fast upload sends files; the file browser takes them whole.
+  /// picked one, or on a local ("This computer") session pastes their local
+  /// paths straight into the terminal.
   Future<void> _uploadDropped(List<DropItem> items) async {
+    final session = _manager.getSession(widget.sessionKey.$1);
+    if (session == null || !mounted) return;
+    if (session.profile.isLocal) {
+      final paths = <String>[];
+      for (final item in items) {
+        if (item.path.isNotEmpty) {
+          paths.add(item.path);
+        } else if (item is! DropItemDirectory) {
+          final name = item.name.isNotEmpty
+              ? item.name
+              : 'dropped-${paths.length + 1}';
+          final saved = await saveLocalTempFile(name, item.openRead());
+          paths.add(saved.path);
+        }
+      }
+      _pasteLocalPaths(session, paths);
+      return;
+    }
     final dropped = droppedUploads(items);
     if (dropped.folders > 0 && mounted) {
       AppNotifications.info(

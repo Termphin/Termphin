@@ -19,7 +19,6 @@ import 'services/platform/desktop_window.dart';
 import 'services/platform/foreground_notification_service.dart';
 import 'services/platform/ios_background_task.dart';
 import 'services/platform/local_notifications_service.dart';
-import 'services/pro/pro_hints.dart';
 import 'services/pro/pro_service.dart';
 import 'services/push/notify_prefs_store.dart';
 import 'services/push/push_service.dart';
@@ -134,7 +133,6 @@ TerminalAlerts _bindTerminalAlerts() {
           ),
         );
       }
-      unawaited(ProHints.instance.offer(ProHint.longCommand));
     },
     allows: (notification) => switch (notification.kind) {
       null => terminalSettings.programNotifications.value,
@@ -183,7 +181,7 @@ void _bindPushEnrollment() {
       if (session.isRun ||
           session.dropped ||
           session.connecting ||
-          session.sshService == null) {
+          session.transport == null) {
         continue;
       }
       unawaited(

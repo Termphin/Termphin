@@ -292,6 +292,24 @@ class LocalAgentService {
     );
   }
 
+  /// Runs a short-lived shell [command] on this computer (`sh -c` on POSIX,
+  /// `cmd /c` on Windows) so local machines can share setup and probe
+  /// commands with SSH hosts.
+  Future<Uint8List> runShellCommand(String command) async {
+    final result = isWindows
+        ? await _runProcess('cmd', ['/c', command])
+        : await _runProcess('sh', ['-c', command]);
+    final stdout = _stdoutText(result);
+    final stderr = _stderrText(result);
+    final combined = switch ((stdout.isEmpty, stderr.isEmpty)) {
+      (true, true) => '',
+      (false, true) => stdout,
+      (true, false) => stderr,
+      (false, false) => '$stdout\n$stderr',
+    };
+    return Uint8List.fromList(utf8.encode(combined));
+  }
+
   /// Lists local `termphin-agent` sessions, or an empty list if the helper is
   /// not installed yet.
   Future<List<RemoteMuxSession>> list() async {
