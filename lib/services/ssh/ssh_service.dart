@@ -13,6 +13,7 @@ import '../../utils/platform_info.dart';
 import '../storage/known_hosts_store.dart';
 import '../storage/profile_storage.dart';
 import '../storage/ssh_key_storage.dart';
+import '../terminal/session_transport.dart';
 import 'connection_quality.dart';
 import 'keepalive_pinger.dart';
 import 'local_network_permission.dart';
@@ -222,7 +223,7 @@ class _InteractiveSshSocket implements SSHSocket {
       '${_socket.remotePort})';
 }
 
-class SshService {
+class SshService implements SessionTransport {
   SshService({
     SocketConnector? socketConnector,
     KnownHostsStore? knownHosts,
@@ -269,6 +270,7 @@ class SshService {
   final Map<String, StreamSubscription<SSHForwardChannel>> _remoteForwardSubs =
       {};
 
+  @override
   Stream<Uint8List> get output => _outputController.stream;
 
   SSHClient? get client => _client;
@@ -281,8 +283,10 @@ class SshService {
   @visibleForTesting
   set session(SSHSession? value) => _session = value;
 
+  @override
   bool get isAlive => _client != null && !_client!.isClosed;
 
+  @override
   void Function()? onConnectionLost;
 
   Map<String, ServerSocket> get localListeners => _localListeners;
@@ -968,6 +972,7 @@ class SshService {
   /// aborted socket, `SSHStateError` once it is fully closed) and, uncaught,
   /// would reach the root zone as a fatal crash over a resize nobody asked to
   /// be durable.
+  @override
   void resizeTerminal(int width, int height) {
     try {
       _session?.resizeTerminal(width, height);
@@ -981,6 +986,7 @@ class SshService {
   /// dartssh2's packet writer. Nothing useful can be done with it at that
   /// point, and the health check is already on its way to noticing; crashing
   /// over one lost character is not the answer.
+  @override
   void write(Uint8List data) {
     try {
       _session?.write(data);
@@ -1094,6 +1100,7 @@ class SshService {
   /// [resizeTerminal]: a transport that is already dying throws synchronously
   /// out of dartssh2's packet writer, and that must not stop the rest of the
   /// teardown from running.
+  @override
   Future<void> disconnect() async {
     _isDisposed = true;
     stopHealthCheck();

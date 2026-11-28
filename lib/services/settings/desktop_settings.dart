@@ -8,3 +8,10 @@ final Setting<bool> closeToTraySetting = Setting.boolean(
   'desktop_close_to_tray',
   fallback: true,
 );
+
+/// Whether the pinned "This computer" card appears at the top of the machine
+/// list on desktops.
+final Setting<bool> showThisComputerSetting = Setting.boolean(
+  'desktop_show_this_computer',
+  fallback: true,
+);

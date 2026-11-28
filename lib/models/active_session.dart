@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import '../services/ssh/ssh_service.dart';
 import '../services/terminal/osc_markers.dart';
 import '../services/terminal/session_terminal.dart';
+import '../services/terminal/session_transport.dart';
 import '../services/terminal/terminal_notification.dart';
 import 'remote_shell.dart';
 import 'session_control.dart';
@@ -26,11 +27,13 @@ class ActiveSessionView {
     this.muxName,
     this.multiplexer = Multiplexer.none,
     this.sshService,
+    SessionTransport? transport,
     this.isRun = false,
     this.connecting = false,
     int columns = 80,
     int rows = 24,
-  }) : _columns = columns,
+  }) : transport = transport ?? sshService,
+       _columns = columns,
        _rows = rows,
        _outputController = StreamController<Uint8List>.broadcast();
 
@@ -41,6 +44,10 @@ class ActiveSessionView {
 
   /// Replaced when a dropped session is resumed in place.
   SshService? sshService;
+
+  /// Active byte-stream transport for this tab (an [SshService] or a local
+  /// agent process).
+  SessionTransport? transport;
 
   /// Where in the agent's output the next byte this session expects stands,
   /// once the agent has said. What a reconnect resumes from.
@@ -243,7 +250,7 @@ class ActiveSessionView {
   /// send it. Not noted as input: nobody typed it.
   void _replyFromTerminal(String data) {
     if (dropped || _disposed) return;
-    sshService?.write(Uint8List.fromList(utf8.encode(data)));
+    transport?.write(Uint8List.fromList(utf8.encode(data)));
   }
 
   String get uptimeFormatted {

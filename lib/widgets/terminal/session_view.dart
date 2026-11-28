@@ -265,6 +265,7 @@ class SessionViewState extends ConsumerState<SessionView> {
     return commandSuggestionsSetting.value &&
         session != null &&
         !session.dropped &&
+        session.sshService != null &&
         session.remoteShellType != RemoteShellType.unknown;
   }
 
@@ -612,7 +613,7 @@ class SessionViewState extends ConsumerState<SessionView> {
     bool pasteAsked = false,
   }) async {
     final session = _manager.getSession(widget.sessionKey.$1);
-    if (session == null || !mounted) return;
+    if (session == null || session.sshService == null || !mounted) return;
     final t = Translations.of(context);
 
     final String directory;
@@ -924,8 +925,12 @@ class SessionViewState extends ConsumerState<SessionView> {
     final operatingSystem = _manager
         .agentStatusFor(session.profile.id)
         ?.operatingSystem;
-    if (operatingSystem == 'Windows') {
+    if (operatingSystem == 'Windows' ||
+        session.remoteShellType == RemoteShellType.powershell) {
       return session.reportedCwd;
+    }
+    if (session.sshService == null) {
+      return null;
     }
     try {
       final sftp = SftpService(await session.sftpClient);

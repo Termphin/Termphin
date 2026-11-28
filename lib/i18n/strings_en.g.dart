@@ -448,6 +448,12 @@ class Translations$profiles$en {
 
 	/// en: 'Type it the way you would after ssh, like user@server.'
 	String get quickAddInvalid => 'Type it the way you would after ssh, like user@server.';
+
+	/// en: 'This computer'
+	String get thisComputer => 'This computer';
+
+	/// en: 'Hide this computer'
+	String get hideThisComputer => 'Hide this computer';
 }
 
 // Path: profileForm
@@ -2035,6 +2041,12 @@ class Translations$settings$en {
 
 	/// en: 'This desktop has no tray to keep Termphin in'
 	String get closeToTrayUnavailable => 'This desktop has no tray to keep Termphin in';
+
+	/// en: 'Show This computer'
+	String get showThisComputer => 'Show This computer';
+
+	/// en: 'Pin local terminal sessions at the top of your machines list'
+	String get showThisComputerSubtitle => 'Pin local terminal sessions at the top of your machines list';
 
 	/// en: 'Notifications'
 	String get notificationsSection => 'Notifications';
@@ -5695,6 +5707,8 @@ extension on Translations {
 			'profiles.quickAddHint' => 'user@host',
 			'profiles.quickAddTooltip' => 'Add this machine',
 			'profiles.quickAddInvalid' => 'Type it the way you would after ssh, like user@server.',
+			'profiles.thisComputer' => 'This computer',
+			'profiles.hideThisComputer' => 'Hide this computer',
 			'profileForm.newTitle' => 'New Machine',
 			'profileForm.editTitle' => 'Edit Machine',
 			'profileForm.connection' => 'Connection',
@@ -6102,10 +6116,10 @@ extension on Translations {
 			'settings.pinLock' => 'PIN lock',
 			'settings.pinLockEnabled' => 'Enabled - asked on launch and when you come back',
 			'settings.lockAfter' => 'Ask again',
-			'settings.lockAfterImmediately' => 'Right away',
-			'settings.lockAfter30s' => 'After 30 seconds',
 			_ => null,
 		} ?? switch (path) {
+			'settings.lockAfterImmediately' => 'Right away',
+			'settings.lockAfter30s' => 'After 30 seconds',
 			'settings.lockAfter1m' => 'After 1 minute',
 			'settings.lockAfter5m' => 'After 5 minutes',
 			'settings.pinLockDisabled' => 'Disabled',
@@ -6262,6 +6276,8 @@ extension on Translations {
 			'settings.closeToTray' => 'Keep running in the tray',
 			'settings.closeToTraySubtitle' => 'Closing the window leaves your sessions connected',
 			'settings.closeToTrayUnavailable' => 'This desktop has no tray to keep Termphin in',
+			'settings.showThisComputer' => 'Show This computer',
+			'settings.showThisComputerSubtitle' => 'Pin local terminal sessions at the top of your machines list',
 			'settings.notificationsSection' => 'Notifications',
 			'settings.notifyWhenClosed' => 'Notify me anywhere',
 			'settings.seePro' => 'See Pro',
@@ -6614,12 +6630,12 @@ extension on Translations {
 			'snippets.copyOutput' => 'Copy output',
 			'snippets.outputCopied' => 'Output copied.',
 			'snippets.runNoOutput' => 'Nothing printed yet.',
+			_ => null,
+		} ?? switch (path) {
 			'snippets.pickMachinesSelected' => ({required Object count, required Object total}) => '${count} of ${total} selected',
 			'snippets.commandSection' => 'Command',
 			'snippets.runArgumentsHint' => 'Filled in once, for every machine in this run.',
 			'toolbar.searchHint' => 'Search keys…',
-			_ => null,
-		} ?? switch (path) {
 			'toolbar.noResults' => 'No keys match',
 			'toolbar.categoryNavigation' => 'Navigation',
 			'toolbar.categoryEditing' => 'Editing',
@@ -7128,12 +7144,12 @@ extension on Translations {
 			'serversPanel.failed' => 'Could not save that. Try again.',
 			'serversPanel.phonesTitle' => 'Notifications on your phones and tablets',
 			'serversPanel.phonesSubtitle' => 'Choose below which of them get notifications. A machine sends them once you turn them on with the bell next to it.',
+			_ => null,
+		} ?? switch (path) {
 			'serversPanel.linkTitle' => 'Phones and tablets',
 			'serversPanel.linkSubtitle' => 'Which of your devices get notifications',
 			'serversPanel.devicesTitle' => 'Phones and tablets',
 			'serversPanel.buttonTooltip' => 'Notifications and live status',
-			_ => null,
-		} ?? switch (path) {
 			'serversPanel.notifications' => 'Notifications',
 			'serversPanel.live' => 'Live status',
 			'serversPanel.setUp' => ({required Object name}) => 'Done on ${name}',

@@ -85,6 +85,7 @@ const kDeviceSettings = <String>{
   'app.tabBarPosition',
   'app.lockTimeout',
   'app.editorFontSize',
+  'app.showThisComputer',
 };
 
 /// The kind settings records sync under.

@@ -2,18 +2,17 @@ import 'dart:convert';
 import 'dart:io' show gzip;
 
 import 'package:dartssh2/dartssh2.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:pointycastle/export.dart';
 
 import '../../models/remote_agent_status.dart';
 
-const _assetDirectory = 'assets/termphin-agent';
-const _remoteRelativeDirectory = '.local/lib/termphin';
-const _remoteRelativeDirectoryWindows = 'AppData/Local/termphin/bin';
-const _remoteBinaryName = 'termphin-agent';
-const _remoteBinaryNameWindows = 'termphin-agent.exe';
-const _remoteMetadataName = 'agent.meta';
+const kAgentAssetDirectory = 'assets/termphin-agent';
+const kAgentRelativeDirectoryPosix = '.local/lib/termphin';
+const kAgentRelativeDirectoryWindows = 'AppData/Local/termphin/bin';
+const kAgentBinaryNamePosix = 'termphin-agent';
+const kAgentBinaryNameWindows = 'termphin-agent.exe';
+const kAgentMetadataName = 'agent.meta';
 
 String shellQuote(String value) => "'${value.replaceAll("'", "'\\''")}'";
 
@@ -76,9 +75,9 @@ class RemoteAgentService {
   Future<DartRemoteAgentStatus> probe(SSHClient client) async {
     final posixResult = await _runPosix(client, '''
 home=\$HOME
-dir="\$home/$_remoteRelativeDirectory"
-bin="\$dir/$_remoteBinaryName"
-meta="\$dir/$_remoteMetadataName"
+dir="\$home/$kAgentRelativeDirectoryPosix"
+bin="\$dir/$kAgentBinaryNamePosix"
+meta="\$dir/$kAgentMetadataName"
 printf 'home=%s\\n' "\$home"
 printf 'os=%s\\n' "\$(uname -s 2>/dev/null || true)"
 printf 'arch=%s\\n' "\$(uname -m 2>/dev/null || true)"
@@ -96,23 +95,23 @@ if [ -r "\$meta" ]; then
   done < "\$meta"
 fi
 ''');
-    final posixValues = _parseProperties(
+    final posixValues = parseAgentProperties(
       utf8.decode(posixResult.stdout, allowMalformed: true),
     );
     if (posixResult.exitCode == 0 && (posixValues['os'] ?? '').isNotEmpty) {
       return _statusFromProbe(
         values: posixValues,
         operatingSystem: posixValues['os'] ?? '',
-        binaryName: _remoteBinaryName,
-        relativeDirectory: _remoteRelativeDirectory,
+        binaryName: kAgentBinaryNamePosix,
+        relativeDirectory: kAgentRelativeDirectoryPosix,
       );
     }
 
     final windowsResult = await _runPowerShell(client, '''
 \$h = \$env:USERPROFILE
-\$dir = "\$h/$_remoteRelativeDirectoryWindows"
-\$bin = "\$dir/$_remoteBinaryNameWindows"
-\$meta = "\$dir/$_remoteMetadataName"
+\$dir = "\$h/$kAgentRelativeDirectoryWindows"
+\$bin = "\$dir/$kAgentBinaryNameWindows"
+\$meta = "\$dir/$kAgentMetadataName"
 Write-Output "home=\$h"
 Write-Output "os=Windows"
 Write-Output "arch=\$env:PROCESSOR_ARCHITECTURE"
@@ -126,14 +125,14 @@ if (Test-Path \$meta) {
   Get-Content \$meta | ForEach-Object { Write-Output "meta.\$_" }
 }
 ''');
-    final windowsValues = _parseProperties(
+    final windowsValues = parseAgentProperties(
       utf8.decode(windowsResult.stdout, allowMalformed: true),
     );
     return _statusFromProbe(
       values: windowsValues,
       operatingSystem: windowsValues['os'] ?? '',
-      binaryName: _remoteBinaryNameWindows,
-      relativeDirectory: _remoteRelativeDirectoryWindows,
+      binaryName: kAgentBinaryNameWindows,
+      relativeDirectory: kAgentRelativeDirectoryWindows,
     );
   }
 
@@ -145,10 +144,10 @@ if (Test-Path \$meta) {
   }) async {
     final home = values['home']?.trim();
     final rawArchitecture = values['arch'] ?? '';
-    final architecture = _normalizeArchitecture(rawArchitecture);
+    final architecture = normalizeAgentArchitecture(rawArchitecture);
     final bundle = architecture == null
         ? null
-        : await _bundledAgent(operatingSystem, architecture);
+        : await bundledAgent(operatingSystem, architecture);
     if ((operatingSystem != 'Linux' &&
             operatingSystem != 'Windows' &&
             operatingSystem != 'Darwin') ||
@@ -185,7 +184,7 @@ if (Test-Path \$meta) {
             RegExp(r'^[a-f0-9]{64}$').hasMatch(metadataSha)
         ? metadataSha
         : null;
-    final state = _classify(
+    final state = classifyAgentState(
       binaryExists: binaryExists,
       remoteVersion: remoteVersion,
       remoteProtocol: remoteProtocol,
@@ -268,11 +267,13 @@ if (Test-Path \$meta) {
       throw Exception('The remote HOME directory is unavailable.');
     }
     final isWindows = operatingSystem == 'Windows';
-    final binaryName = isWindows ? _remoteBinaryNameWindows : _remoteBinaryName;
+    final binaryName = isWindows
+        ? kAgentBinaryNameWindows
+        : kAgentBinaryNamePosix;
     final relativeDirectory = isWindows
-        ? _remoteRelativeDirectoryWindows
-        : _remoteRelativeDirectory;
-    final bundle = await _bundledAgent(operatingSystem ?? '', architecture);
+        ? kAgentRelativeDirectoryWindows
+        : kAgentRelativeDirectoryPosix;
+    final bundle = await bundledAgent(operatingSystem ?? '', architecture);
     if (bundle == null) {
       throw Exception(
         'No Termphin helper is bundled for $operatingSystem on $architecture.',
@@ -280,16 +281,16 @@ if (Test-Path \$meta) {
     }
     final bytes = await loadBundledHelper(
       rootBundle,
-      '$_assetDirectory/${bundle.fileName}',
+      '$kAgentAssetDirectory/${bundle.fileName}',
     );
-    if (_sha256(bytes) != bundle.sha256) {
+    if (agentSha256(bytes) != bundle.sha256) {
       throw Exception('Bundled Termphin helper failed its SHA-256 check.');
     }
 
     final remoteDirectory = '$home/$relativeDirectory';
     final nonce = DateTime.now().microsecondsSinceEpoch.toRadixString(16);
     final binaryTemp = '$binaryName.upload-$nonce';
-    final metadataTemp = '$_remoteMetadataName.upload-$nonce';
+    final metadataTemp = '$kAgentMetadataName.upload-$nonce';
 
     final prepare = isWindows
         ? await _runPowerShell(
@@ -332,7 +333,7 @@ if (Test-Path "\$dir/$binaryName") {
   Rename-Item -Force "\$dir/$binaryName" "\$dir/$binaryName.old-$nonce"
 }
 Move-Item -Force "\$dir/$binaryTemp" "\$dir/$binaryName"
-Move-Item -Force "\$dir/$metadataTemp" "\$dir/$_remoteMetadataName"
+Move-Item -Force "\$dir/$metadataTemp" "\$dir/$kAgentMetadataName"
 # Guarded, and never last: a Remove-Item that finds nothing leaves \$? false,
 # which powershell.exe reports as exit 1 even though the install worked.
 if (Test-Path "\$dir/$binaryName.old-$nonce") {
@@ -345,7 +346,7 @@ set -e
 dir=${shellQuote(remoteDirectory)}
 chmod 700 "\$dir/$binaryTemp"
 mv -f "\$dir/$binaryTemp" "\$dir/$binaryName"
-mv -f "\$dir/$metadataTemp" "\$dir/$_remoteMetadataName"
+mv -f "\$dir/$metadataTemp" "\$dir/$kAgentMetadataName"
 "\$dir/$binaryName" version --machine
 ''');
       _throwOnFailure(activate, 'Remote helper install failed.');
@@ -412,8 +413,9 @@ mv -f "\$dir/$metadataTemp" "\$dir/$_remoteMetadataName"
   }
 }
 
-class _BundledAgent {
-  const _BundledAgent({
+/// Descriptor for a single platform binary entry in `manifest.properties`.
+class BundledAgent {
+  const BundledAgent({
     required this.architecture,
     required this.fileName,
     required this.version,
@@ -428,14 +430,27 @@ class _BundledAgent {
   final String sha256;
 }
 
+/// Reads the bundled helper version from `manifest.properties`.
+Future<String?> bundledAgentVersion({AssetBundle? assets}) async {
+  final manifest = parseAgentProperties(
+    await (assets ?? rootBundle).loadString(
+      '$kAgentAssetDirectory/manifest.properties',
+    ),
+  );
+  return manifest['version'];
+}
+
 /// Null when nothing is bundled for this OS and CPU (ARM64 Windows, say) -
 /// unsupported, not broken, so probe reports rather than throws.
-Future<_BundledAgent?> _bundledAgent(
+Future<BundledAgent?> bundledAgent(
   String operatingSystem,
-  String architecture,
-) async {
-  final manifest = _parseProperties(
-    await rootBundle.loadString('$_assetDirectory/manifest.properties'),
+  String architecture, {
+  AssetBundle? assets,
+}) async {
+  final manifest = parseAgentProperties(
+    await (assets ?? rootBundle).loadString(
+      '$kAgentAssetDirectory/manifest.properties',
+    ),
   );
   final manifestKey = switch (operatingSystem) {
     'Windows' => 'windows_$architecture',
@@ -452,7 +467,7 @@ Future<_BundledAgent?> _bundledAgent(
   if (fileName == null || sha256 == null) {
     return null;
   }
-  return _BundledAgent(
+  return BundledAgent(
     architecture: architecture,
     fileName: fileName,
     version: version,
@@ -461,7 +476,9 @@ Future<_BundledAgent?> _bundledAgent(
   );
 }
 
-Map<String, String> _parseProperties(String value) => {
+/// Parses `key=value` lines from `manifest.properties`, `agent.meta` or
+/// `version --machine`.
+Map<String, String> parseAgentProperties(String value) => {
   for (final line in const LineSplitter().convert(value))
     if (line.trim().isNotEmpty &&
         !line.trimLeft().startsWith('#') &&
@@ -471,19 +488,22 @@ Map<String, String> _parseProperties(String value) => {
           .trim(),
 };
 
-String? _normalizeArchitecture(String value) => switch (value) {
-  'x86_64' || 'amd64' || 'AMD64' => 'x86_64',
+/// Normalizes OS/CPU architecture strings to the keys used in the bundle
+/// manifest (`x86_64` or `aarch64`).
+String? normalizeAgentArchitecture(String value) => switch (value) {
+  'x86_64' || 'amd64' || 'AMD64' || 'x64' => 'x86_64',
   'aarch64' || 'arm64' || 'ARM64' => 'aarch64',
   _ when value.startsWith('armv8') => 'aarch64',
   _ => null,
 };
 
-RemoteAgentState _classify({
+/// Classifies an installed agent relative to [bundle].
+RemoteAgentState classifyAgentState({
   required bool binaryExists,
   required String? remoteVersion,
   required int? remoteProtocol,
   required String? remoteSha256,
-  required _BundledAgent bundle,
+  required BundledAgent bundle,
 }) {
   if (!binaryExists) return RemoteAgentState.missing;
   if (remoteVersion == null || remoteProtocol == null || remoteSha256 == null) {
@@ -491,13 +511,14 @@ RemoteAgentState _classify({
   }
   if (remoteProtocol != bundle.protocol) return RemoteAgentState.repair;
   if (remoteSha256 == bundle.sha256) return RemoteAgentState.current;
-  if (_compareVersions(remoteVersion, bundle.version) > 0) {
+  if (compareAgentVersions(remoteVersion, bundle.version) > 0) {
     return RemoteAgentState.newer;
   }
   return RemoteAgentState.updateAvailable;
 }
 
-int _compareVersions(String first, String second) {
+/// Compares dotted/dashed version strings segment-by-segment numerically.
+int compareAgentVersions(String first, String second) {
   final left = first.split(RegExp(r'[-.+]'));
   final right = second.split(RegExp(r'[-.+]'));
   for (var index = 0; index < left.length || index < right.length; index++) {
@@ -508,7 +529,8 @@ int _compareVersions(String first, String second) {
   return 0;
 }
 
-String _sha256(Uint8List bytes) => SHA256Digest()
+/// Computes lowercase hex SHA-256 of [bytes].
+String agentSha256(Uint8List bytes) => SHA256Digest()
     .process(bytes)
     .map((byte) => byte.toRadixString(16).padLeft(2, '0'))
     .join();
@@ -520,7 +542,6 @@ String _sha256(Uint8List bytes) => SHA256Digest()
 /// `.gz` asset and drops the extension, so the APK holds the helper itself
 /// under the name without `.gz`. Read as `.gz` there, the asset is missing,
 /// and every upload of the helper failed on Android from 1.12.0 on.
-@visibleForTesting
 Future<Uint8List> loadBundledHelper(AssetBundle assets, String path) async {
   ByteData data;
   var packed = path.endsWith('.gz');

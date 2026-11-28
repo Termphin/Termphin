@@ -322,9 +322,12 @@ those are never asked while a `TerminalView` has focus, where Esc is vim's.
   does not have yet (`LocalSshKeys`, `lib/services/platform/local_ssh_keys.dart`,
   behind `PlatformFeature.localSshFolder`), each with an Import button and
   Import all over them; one with a passphrase asks for it. The folder is
-  `HOME/.ssh`, `USERPROFILE\.ssh` on Windows. The Mac build is sandboxed, so
-  there the folder is only readable if the sandbox allows it - otherwise the
-  section is absent.
+  `HOME/.ssh`, `USERPROFILE\.ssh` on Windows. The Mac build ships as a
+  signed DMG outside the Mac App Store and is not sandboxed: "This computer"
+  runs the local agent as a child process, which under the App Sandbox would
+  inherit the sandbox and a container for `HOME`. A sandboxed build would
+  only see the folder if the sandbox allowed it - otherwise the section is
+  absent.
 
 - On Linux without a keyring the master key falls back to a private file, with
   a warning in Settings → Security (`docs/secrets-architecture.md`, D1).
