@@ -6,7 +6,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../backup/app_preferences_backup.dart';
 import '../completion/command_completion.dart';
-import '../pro/pro_hints.dart';
 import '../settings/action_dock_settings.dart';
 import '../settings/desktop_settings.dart';
 import '../settings/editor_settings.dart';
@@ -56,7 +55,6 @@ const kSyncedSettingGroups = <String, List<String>>{
     'app.sftpSortDescending',
   ],
   'app.commandSuggestions': ['app.commandSuggestions'],
-  'app.proTips': ['app.proTips'],
   'app.profileFormMoreOptions': ['app.profileFormMoreOptions'],
   'app.closeToTray': ['app.closeToTray'],
   'app.editor': [
@@ -143,7 +141,6 @@ class SettingsSync {
     sftpSortFieldSetting,
     sftpSortDescendingSetting,
     commandSuggestionsSetting,
-    proTipsSetting,
     closeToTraySetting,
     editorSettings.wordWrap,
     editorSettings.fontFamily,

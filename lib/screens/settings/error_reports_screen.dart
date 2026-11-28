@@ -47,9 +47,10 @@ class ErrorReportsScreen extends ConsumerWidget {
     List<SshProfile>? scrubFor,
   ) async {
     final info = await PackageInfo.fromPlatform();
-    final header =
-        'Termphin ${info.version} (${info.buildNumber}), '
-        '$platformName';
+    final versionLabel = info.buildNumber.isEmpty
+        ? info.version
+        : '${info.version} (${info.buildNumber})';
+    final header = 'Termphin $versionLabel, $platformName';
     return _scrub(reports.export(header: header), scrubFor);
   }
 

@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import '../../models/ssh_profile.dart' show kLocalProfileId;
 import '../ssh/ssh_session_manager.dart';
 
 /// One way to run a command on a machine and read what it printed: over a
@@ -12,6 +13,10 @@ class MachineShell {
   /// Through the connection of session [sessionId].
   factory MachineShell.session(SshSessionManager manager, String sessionId) =>
       MachineShell(sessionId, (command) => manager.exec(sessionId, command));
+
+  /// Directly on this computer without SSH.
+  factory MachineShell.local(SshSessionManager manager) =>
+      MachineShell(kLocalProfileId, manager.execLocal);
 
   final String key;
   final Future<Uint8List> Function(String command) _exec;

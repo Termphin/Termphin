@@ -1,4 +1,18 @@
+import '../../models/ssh_profile.dart';
 import 'relay_key_store.dart';
+
+/// Key identifier stored in `relayKeys` and local state for [profile]: each
+/// saved SSH machine uses its own id, while "This computer" is scoped by its
+/// host name so two computers on the same account do not share or overwrite one
+/// another's relay key.
+String relayProfileIdFor(SshProfile profile) =>
+    profile.isLocal ? '${profile.id}:${profile.host}' : profile.id;
+
+/// Label written to the account's relay key and dashboard server list for
+/// [profile]: the computer's host name for "This computer" instead of a
+/// generic label.
+String relayLabelFor(SshProfile profile) =>
+    profile.isLocal ? profile.host : profile.name;
 
 /// What a machine may do with Termphin Pro: send pushes ([notify]) and show
 /// its live status ([live]). Both off for a machine never switched on.

@@ -41,9 +41,9 @@ Future<void> switchMachine(
   final p = Translations.of(context).serversPanel;
   final name = ref.read(anonymizeProvider)
       ? IdentityAnonymizer.name(profile.id)
-      : profile.name;
+      : relayLabelFor(profile);
   final notify = change.notify;
-  if (notify != null) {
+  if (notify != null && !profile.isLocal) {
     await ref
         .read(profilesProvider.notifier)
         .setServerNotifications(profile.id, notify);
@@ -110,7 +110,7 @@ class _MachineProButtonState extends ConsumerState<MachineProButton> {
           valueListenable: PushService.instance.pendingMachines,
           builder: (context, pending, _) {
             final current = machineSwitchesFor(
-              widget.profile.id,
+              relayProfileIdFor(widget.profile),
               pending: pending,
               keys: keys,
               legacyNotify: widget.profile.serverNotifications,

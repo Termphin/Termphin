@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:termphin/services/backup/export_service.dart';
 import 'package:termphin/services/completion/command_completion.dart';
-import 'package:termphin/services/pro/pro_hints.dart';
 import 'package:termphin/services/settings/action_dock_settings.dart';
 import 'package:termphin/services/settings/anonymize_setting.dart';
 import 'package:termphin/services/settings/app_settings.dart';
@@ -42,7 +41,6 @@ List<Setting<Object?>> get _loaded => [
   sidebarCollapsedSetting,
   sidebarWidthSetting,
   commandSuggestionsSetting,
-  proTipsSetting,
   sftpShowHiddenSetting,
   sftpFollowTerminalSetting,
   sftpSortFieldSetting,
@@ -268,7 +266,6 @@ final Map<Setting<Object?>, Object?> _alternatives = {
   sidebarCollapsedSetting: !sidebarCollapsedSetting.fallback,
   sidebarWidthSetting: 300.0,
   commandSuggestionsSetting: !commandSuggestionsSetting.fallback,
-  proTipsSetting: !proTipsSetting.fallback,
   tabBarPositionSetting: TabBarPosition.bottom,
   lockTimeoutSetting: LockTimeout.minutes5,
   closeToTraySetting: !closeToTraySetting.fallback,

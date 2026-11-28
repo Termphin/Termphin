@@ -77,11 +77,11 @@ jobs:
       - name: Build
         env:
           WEB_API_KEY: ${{ vars.FIREBASE_WEB_API_KEY }}
-          BUILD_NUMBER: ${{ inputs.build_number }}
+          INPUT_BUILD_NUMBER: ${{ inputs.build_number }}
           FEED_URL: ${{ inputs.feed_url }}
         run: |
           ARGS=(--release --dart-define=FIREBASE_WEB_API_KEY="$WEB_API_KEY")
-          if [ -n "$BUILD_NUMBER" ]; then ARGS+=(--build-number="$BUILD_NUMBER"); fi
+          if [ -n "$INPUT_BUILD_NUMBER" ]; then ARGS+=(--build-number="$INPUT_BUILD_NUMBER"); fi
           if [ -n "$FEED_URL" ]; then ARGS+=(--dart-define=LINUX_APPCAST_URL="$FEED_URL"); fi
           flutter build linux "${ARGS[@]}"
 
@@ -108,11 +108,11 @@ jobs:
       - name: Write the appcast
         env:
           SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
-          BUILD_NUMBER: ${{ inputs.build_number }}
+          INPUT_BUILD_NUMBER: ${{ inputs.build_number }}
           RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
           VERSION=$(sed -n 's/^version: *\([0-9.]*\).*/\1/p' pubspec.yaml)
-          BUILD=${BUILD_NUMBER:-$(sed -n 's/^version: *[0-9.]*+\([0-9]*\).*/\1/p' pubspec.yaml)}
+          BUILD=${INPUT_BUILD_NUMBER:-$(sed -n 's/^version: *[0-9.]*+\([0-9]*\).*/\1/p' pubspec.yaml)}
           TAG=${RELEASE_TAG:-desktop-$VERSION-linux-preview.$GITHUB_RUN_NUMBER}
           python3 -m venv "$RUNNER_TEMP/venv"
           "$RUNNER_TEMP/venv/bin/pip" install --quiet cryptography

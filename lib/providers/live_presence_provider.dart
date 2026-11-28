@@ -46,6 +46,7 @@ final livePresenceControllerProvider = Provider<LivePresenceController>((ref) {
     pending: PushService.instance.pendingMachines.value,
   );
   PushService.instance.pendingMachines.addListener(syncKeys);
+  ref.listen(profilesProvider, (_, _) => controller.syncProfiles());
   ref.listen(accountProvider, (previous, user) {
     if (previous?.uid != user?.uid) {
       unawaited(relayKeys?.cancel());
@@ -161,6 +162,7 @@ class LivePresenceController {
   final void Function(SshProfile profile, String name) _adopt;
   final void Function(String profileId, Set<String> alive) _prune;
   final _seen = <String, Set<String>>{};
+  Map<String, List<PresenceSession>> _lastSessions = const {};
 
   bool _signedIn = false;
   bool _pro = false;
@@ -168,7 +170,10 @@ class LivePresenceController {
 
   set signedIn(bool value) {
     _signedIn = value;
-    if (!value) _seen.clear();
+    if (!value) {
+      _seen.clear();
+      _lastSessions = const {};
+    }
     _update();
   }
 
@@ -189,21 +194,34 @@ class LivePresenceController {
     _signedIn && _pro && (_foreground || isDesktopPlatform),
   );
 
+  /// Re-evaluates the latest reported sessions after the saved machine list
+  /// changed, such as when sync saves a presence key before profiles reload.
+  void syncProfiles() => _apply(_lastSessions);
+
   void _show(Map<String, List<PresenceSession>> sessionsByProfile) {
+    _lastSessions = sessionsByProfile;
+    _apply(sessionsByProfile);
+  }
+
+  void _apply(Map<String, List<PresenceSession>> sessionsByProfile) {
     final profiles = {for (final profile in _profiles()) profile.id: profile};
     for (final gone
         in _seen.keys
-            .where((id) => !sessionsByProfile.containsKey(id))
+            .where(
+              (id) =>
+                  !sessionsByProfile.containsKey(id) ||
+                  !profiles.containsKey(id),
+            )
             .toList()) {
       _seen.remove(gone);
     }
     for (final MapEntry(key: profileId, value: sessions)
         in sessionsByProfile.entries) {
+      final profile = profiles[profileId];
+      if (profile == null) continue;
       final names = {for (final session in sessions) session.name};
       final seen = _seen[profileId] ?? const {};
       _seen[profileId] = names;
-      final profile = profiles[profileId];
-      if (profile == null) continue;
       for (final name in names.difference(seen)) {
         if (!_isShown(profileId, name)) _adopt(profile, name);
       }

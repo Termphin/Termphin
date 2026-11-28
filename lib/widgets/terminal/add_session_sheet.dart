@@ -11,9 +11,11 @@ import '../../models/session_tab.dart';
 import '../../models/ssh_profile.dart';
 import '../../providers/anonymize_provider.dart';
 import '../../providers/groups_provider.dart';
+import '../../providers/profiles_provider.dart';
 import '../../providers/ssh_session_manager_provider.dart';
 import '../../screens/search/global_search_launcher.dart';
 import '../../services/app/identity_anonymizer.dart';
+import '../../services/settings/desktop_settings.dart';
 import '../../services/ssh/ssh_session_manager.dart';
 import '../../services/storage/group_storage.dart';
 import '../../theme/theme.dart';
@@ -31,6 +33,18 @@ import '../ui/list_key_navigation.dart';
 import '../ui/sheet_handle.dart';
 import 'new_session_row.dart';
 import 'rename_session_dialog.dart';
+
+/// Machines offered when opening a new session tab: "This computer" pinned
+/// ahead of saved SSH hosts when local sessions are enabled on a desktop.
+List<SshProfile> sessionPickerProfiles(WidgetRef ref, Translations t) {
+  final profiles = ref.read(profilesProvider);
+  final showLocal =
+      platformHas(PlatformFeature.localSessions) &&
+      showThisComputerSetting.value &&
+      (ref.read(localSessionsSupportedProvider).value ?? false);
+  if (!showLocal) return profiles;
+  return [localComputerProfile(name: t.profiles.thisComputer), ...profiles];
+}
 
 /// Where a tab comes from: a machine to open a fresh shell on, or one of the
 /// sessions already waiting on it.
@@ -74,19 +88,32 @@ class _AddSessionSheetContentState
     List<SshProfile> profiles,
     Set<String> knownGroups,
   ) {
+    final local = _selectedGroup.isEmpty
+        ? profiles.where((p) => p.isLocal).toList()
+        : const <SshProfile>[];
     final filtered = profiles.where((p) {
+      if (p.isLocal) return false;
       final effectiveGroup = knownGroups.contains(p.group)
           ? p.group
           : GroupStorage.defaultGroup;
       return _selectedGroup.isEmpty || effectiveGroup == _selectedGroup;
     }).toList();
 
-    return sortProfiles(filtered);
+    return [...local, ...sortProfiles(filtered)];
+  }
+
+  static bool _hasPrintableChar(String text) {
+    for (final unit in text.runes) {
+      if (unit >= 0x20 && unit != 0x7f) return true;
+    }
+    return false;
   }
 
   /// On a desktop, a key typed while the picker is open starts the search
   /// with it, the way a command palette does - the box above the list only
-  /// opens on a click, and the key would otherwise go nowhere.
+  /// opens on a click, and the key would otherwise go nowhere. Control
+  /// characters such as Escape (`\x1b` on GTK) are ignored so the route still
+  /// sees them.
   KeyEventResult _typeToSearch(BuildContext context, KeyEvent event) {
     final character = event.character;
     final keyboard = HardwareKeyboard.instance;
@@ -94,6 +121,7 @@ class _AddSessionSheetContentState
         event is! KeyDownEvent ||
         character == null ||
         character.trim().isEmpty ||
+        !_hasPrintableChar(character) ||
         keyboard.isControlPressed ||
         keyboard.isMetaPressed ||
         keyboard.isAltPressed) {
@@ -121,7 +149,11 @@ class _AddSessionSheetContentState
     String effectiveGroup(SshProfile p) =>
         knownGroups.contains(p.group) ? p.group : GroupStorage.defaultGroup;
 
-    final groupNames = widget.profiles.map(effectiveGroup).toSet().toList();
+    final groupNames = widget.profiles
+        .where((p) => !p.isLocal)
+        .map(effectiveGroup)
+        .toSet()
+        .toList();
     groupNames.sort((a, b) {
       if (a == GroupStorage.defaultGroup) return -1;
       if (b == GroupStorage.defaultGroup) return 1;
@@ -468,9 +500,17 @@ class _ProfileRowState extends ConsumerState<_ProfileRow> {
                 ),
                 const SizedBox(height: AppTheme.space4),
                 Text(
-                  widget.anonymize
-                      ? '${IdentityAnonymizer.username(profile.id)}@${IdentityAnonymizer.host(profile.id)}:${profile.port}'
-                      : '${profile.username}@${profile.host}:${profile.port}',
+                  () {
+                    final user = widget.anonymize
+                        ? IdentityAnonymizer.username(profile.id)
+                        : profile.username;
+                    final host = widget.anonymize
+                        ? IdentityAnonymizer.host(profile.id)
+                        : profile.host;
+                    return profile.isLocal
+                        ? '$user@$host'
+                        : '$user@$host:${profile.port}';
+                  }(),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: context.colors.uiStyle,

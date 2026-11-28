@@ -1,6 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:termphin/models/ssh_profile.dart';
 import 'package:termphin/services/push/machine_switches.dart';
 import 'package:termphin/services/push/relay_key_store.dart';
+
+import '../../support/fixtures.dart';
 
 void main() {
   const keys = [
@@ -26,6 +29,21 @@ void main() {
       machineSwitchesFor('new', pending: const {}, keys: keys),
       MachineSwitches.off,
     );
+  });
+
+  test('This computer uses its host name for relay labels and key ids', () {
+    final laptop = localComputerProfile(
+      name: 'This computer',
+      host: 'mblaptop',
+    );
+    final desktop = localComputerProfile(name: 'This computer', host: 'mbpc');
+    final remote = profileFixture(id: 'ssh-1', name: 'Prod', host: '10.0.0.5');
+
+    expect(relayLabelFor(laptop), 'mblaptop');
+    expect(relayProfileIdFor(laptop), 'this-computer:mblaptop');
+    expect(relayProfileIdFor(desktop), isNot(relayProfileIdFor(laptop)));
+    expect(relayLabelFor(remote), 'Prod');
+    expect(relayProfileIdFor(remote), 'ssh-1');
   });
 
   test("a machine's key says what it does, for every device", () {

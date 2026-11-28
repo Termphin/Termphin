@@ -11,7 +11,6 @@ import '../services/app/legal_updates_service.dart';
 import '../services/app/onboarding_service.dart';
 import '../services/app/whats_new_service.dart';
 import '../services/platform/local_notifications_service.dart';
-import '../services/pro/pro_hints.dart';
 import '../services/pro/pro_service.dart';
 import '../theme/theme.dart';
 import '../widgets/onboarding/legal_update_dialog.dart';
@@ -25,9 +24,9 @@ import '../widgets/ui/section_header.dart';
 import '../widgets/ui/settings_tile.dart';
 
 /// A button over the app, in debug builds only, that opens a sheet of
-/// everything the app shows on its own - Pro hints, the paywall, system
-/// notifications, the older-helper sheet, what's new - so each can be looked
-/// at without waiting for the moment it belongs to.
+/// everything the app shows on its own - the paywall, system notifications,
+/// the older-helper sheet, what's new - so each can be looked at without
+/// waiting for the moment it belongs to.
 ///
 /// Built only behind `kDebugMode`, which release builds compile out with
 /// everything here. Its labels are for whoever develops the app, not for
@@ -119,30 +118,6 @@ class _DebugSheet extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const SectionHeader('Pro hints'),
-            for (final hint in ProHint.values)
-              SettingsTile(
-                title: 'Hint: ${hint.name}',
-                subtitle:
-                    'Shows the card on the machine list, ignoring once-ever and Pro',
-                onTap: () => _then(context, (_) {
-                  ProHints.instance.showNow(hint);
-                }),
-              ),
-            SettingsTile(
-              title: 'Forget which hints were shown',
-              subtitle: 'They can come again at their moments',
-              onTap: () => _then(context, (app) async {
-                await ProHints.instance.forgetShown();
-                if (app.mounted) {
-                  AppNotifications.show(
-                    app,
-                    'Hints forgotten',
-                    kind: AppNotificationKind.success,
-                  );
-                }
-              }),
-            ),
             const SectionHeader('Pro'),
             SettingsTile(
               title: 'Open the paywall',

@@ -84,7 +84,6 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 	late final Translations$account$en account = Translations$account$en.internal(_root);
 	late final Translations$serversPanel$en serversPanel = Translations$serversPanel$en.internal(_root);
 	late final Translations$agentFeatures$en agentFeatures = Translations$agentFeatures$en.internal(_root);
-	late final Translations$proHints$en proHints = Translations$proHints$en.internal(_root);
 	late final Translations$proFeature$en proFeature = Translations$proFeature$en.internal(_root);
 	late final Translations$proDemo$en proDemo = Translations$proDemo$en.internal(_root);
 	late final Translations$proHub$en proHub = Translations$proHub$en.internal(_root);
@@ -1523,32 +1522,32 @@ class Translations$settings$en {
 	/// en: 'Termphin agent'
 	String get agentSheetTitle => 'Termphin agent';
 
-	/// en: 'A small helper Termphin uploads to your server over SSH. It keeps your shell running there, so closing the app or losing signal doesn't end what you were doing.'
-	String get agentSheetIntro => 'A small helper Termphin uploads to your server over SSH. It keeps your shell running there, so closing the app or losing signal doesn\'t end what you were doing.';
+	/// en: 'A small helper Termphin uploads to your servers over SSH, and runs locally for This computer on desktop. It keeps your shell running, notifies you when commands or AI agents need you, and shares live session status.'
+	String get agentSheetIntro => 'A small helper Termphin uploads to your servers over SSH, and runs locally for This computer on desktop. It keeps your shell running, notifies you when commands or AI agents need you, and shares live session status.';
 
 	/// en: 'Runs on Linux and macOS (x86_64 and arm64) and on Windows (x86_64).'
 	String get agentSheetPointPlatforms => 'Runs on Linux and macOS (x86_64 and arm64) and on Windows (x86_64).';
 
-	/// en: 'Keeps each session's shell alive. After a short drop you get only what you missed; after a longer one, the screen as it is now.'
-	String get agentSheetPointKeepsAlive => 'Keeps each session\'s shell alive. After a short drop you get only what you missed; after a longer one, the screen as it is now.';
+	/// en: 'Keeps each session's shell alive across disconnects and between devices. After a short drop you get only what you missed; after a longer one, the screen as it is now.'
+	String get agentSheetPointKeepsAlive => 'Keeps each session\'s shell alive across disconnects and between devices. After a short drop you get only what you missed; after a longer one, the screen as it is now.';
 
-	/// en: 'Opens no network port. The app reaches it through your SSH connection, over a socket only your user can open.'
-	String get agentSheetPointNoNetwork => 'Opens no network port. The app reaches it through your SSH connection, over a socket only your user can open.';
+	/// en: 'Opens no listening network port. Sessions run over a user-only socket or pipe reached through SSH. Outbound HTTPS (via curl) is used only if you enable Pro notifications or live status.'
+	String get agentSheetPointNoNetwork => 'Opens no listening network port. Sessions run over a user-only socket or pipe reached through SSH. Outbound HTTPS (via curl) is used only if you enable Pro notifications or live status.';
 
-	/// en: 'Runs as your user. No root, nothing installed system-wide, no service or cron entry.'
-	String get agentSheetPointNoRoot => 'Runs as your user. No root, nothing installed system-wide, no service or cron entry.';
+	/// en: 'Runs as your user — no root and nothing installed system-wide. Adds a user crontab entry only when live status is on, and Claude Code / Codex hooks (~/.claude/settings.json, ~/.codex/config.toml) only when push notifications are on; turning them off removes both.'
+	String get agentSheetPointNoRoot => 'Runs as your user — no root and nothing installed system-wide. Adds a user crontab entry only when live status is on, and Claude Code / Codex hooks (~/.claude/settings.json, ~/.codex/config.toml) only when push notifications are on; turning them off removes both.';
 
-	/// en: 'Everything lives in ~/.cache/termphin/sessions (%LOCALAPPDATA%\\termphin\\sessions on Windows). Ending a session deletes its folder.'
-	String get agentSheetPointFiles => 'Everything lives in ~/.cache/termphin/sessions (%LOCALAPPDATA%\\termphin\\sessions on Windows). Ending a session deletes its folder.';
+	/// en: 'The binary sits in ~/.local/lib/termphin (%LOCALAPPDATA%\\termphin\\bin on Windows), sessions and scrollback in ~/.cache/termphin/sessions (%LOCALAPPDATA%\\termphin\\sessions on Windows), and optional notification/presence configs in ~/.config/termphin. Ending a session deletes its folder.'
+	String get agentSheetPointFiles => 'The binary sits in ~/.local/lib/termphin (%LOCALAPPDATA%\\termphin\\bin on Windows), sessions and scrollback in ~/.cache/termphin/sessions (%LOCALAPPDATA%\\termphin\\sessions on Windows), and optional notification/presence configs in ~/.config/termphin. Ending a session deletes its folder.';
 
-	/// en: 'Recent output is kept in memory for picking up where you left off. A copy of the scrollback is saved in the session's folder, so it survives a server reboot.'
-	String get agentSheetPointMemory => 'Recent output is kept in memory for picking up where you left off. A copy of the scrollback is saved in the session\'s folder, so it survives a server reboot.';
+	/// en: 'Keeps up to 10,000 rows of scrollback and recent output in memory for instant resume, saving snapshots to disk so history survives a reboot. With notifications on, it watches command completion and reads recent Claude Code or Codex transcripts locally; presence reports are AES-256-GCM encrypted with your key.'
+	String get agentSheetPointMemory => 'Keeps up to 10,000 rows of scrollback and recent output in memory for instant resume, saving snapshots to disk so history survives a reboot. With notifications on, it watches command completion and reads recent Claude Code or Codex transcripts locally; presence reports are AES-256-GCM encrypted with your key.';
 
-	/// en: 'Termphin checks the helper's SHA-256 checksum before uploading it, and checks the copy already on your server the same way.'
-	String get agentSheetPointVerified => 'Termphin checks the helper\'s SHA-256 checksum before uploading it, and checks the copy already on your server the same way.';
+	/// en: 'Termphin checks the helper's SHA-256 checksum before uploading it, and checks the copy already on your server the same way. Idle sessions upgrade to new versions in place without restarting your shell.'
+	String get agentSheetPointVerified => 'Termphin checks the helper\'s SHA-256 checksum before uploading it, and checks the copy already on your server the same way. Idle sessions upgrade to new versions in place without restarting your shell.';
 
-	/// en: 'It's open source: about 5,000 lines of Rust and one library for reading the screen (vt100), so you can read exactly what it does.'
-	String get agentSheetOpenSource => 'It\'s open source: about 5,000 lines of Rust and one library for reading the screen (vt100), so you can read exactly what it does.';
+	/// en: 'It's open source (MIT): about 13,000 lines of Rust using vt100 (screen state), aes-gcm (encrypted presence), and serde_json (status and hooks), plus OS bindings (libc / windows-sys), so you can inspect everything it does.'
+	String get agentSheetOpenSource => 'It\'s open source (MIT): about 13,000 lines of Rust using vt100 (screen state), aes-gcm (encrypted presence), and serde_json (status and hooks), plus OS bindings (libc / windows-sys), so you can inspect everything it does.';
 
 	/// en: 'View the source on GitHub'
 	String get agentSheetRepoButton => 'View the source on GitHub';
@@ -2872,6 +2871,9 @@ class Translations$session$en {
 
 	/// en: 'Re-attach'
 	String get attach => 'Re-attach';
+
+	/// en: 'This session is running locally on another computer. Add that computer as an SSH machine to connect from here.'
+	String get localUnavailableHere => 'This session is running locally on another computer. Add that computer as an SSH machine to connect from here.';
 
 	/// en: 'Detach (keep running)'
 	String get detach => 'Detach (keep running)';
@@ -4641,24 +4643,6 @@ class Translations$agentFeatures$en {
 	String get newSession => 'Open a new session';
 }
 
-// Path: proHints
-class Translations$proHints$en {
-	Translations$proHints$en.internal(this._root);
-
-	final Translations _root; // ignore: unused_field
-
-	// Translations
-
-	/// en: 'Know when a command finishes, even with Termphin closed'
-	String get longCommand => 'Know when a command finishes, even with Termphin closed';
-
-	/// en: 'See Pro'
-	String get action => 'See Pro';
-
-	/// en: 'Not now'
-	String get dismiss => 'Not now';
-}
-
 // Path: proFeature
 class Translations$proFeature$en {
 	Translations$proFeature$en.internal(this._root);
@@ -4681,6 +4665,12 @@ class Translations$proFeature$en {
 
 	/// en: 'See which machines are online and which sessions are open, working or waiting for you, without connecting. The session list is encrypted on your server and opened only on your devices.'
 	String get liveBody => 'See which machines are online and which sessions are open, working or waiting for you, without connecting. The session list is encrypted on your server and opened only on your devices.';
+
+	/// en: 'Know what your AI agent needs'
+	String get aiAgentsTitle => 'Know what your AI agent needs';
+
+	/// en: 'Claude Code, Codex and other AI coding agents tell Termphin when they need your permission, have a question or are done - with what they said and what is still running. Your sessions list shows it too. Nothing to set up on the server.'
+	String get aiAgentsBody => 'Claude Code, Codex and other AI coding agents tell Termphin when they need your permission, have a question or are done - with what they said and what is still running. Your sessions list shows it too. Nothing to set up on the server.';
 
 	/// en: 'How it works'
 	String get howItWorks => 'How it works';
@@ -5233,12 +5223,6 @@ class Translations$account$pro$en {
 
 	/// en: 'Manage or cancel it in your account on the web.'
 	String get boughtOnWebSubtitle => 'Manage or cancel it in your account on the web.';
-
-	/// en: 'Pro tips'
-	String get tips => 'Pro tips';
-
-	/// en: 'A rare note about what Pro would do, where it would have helped'
-	String get tipsSubtitle => 'A rare note about what Pro would do, where it would have helped';
 
 	late final Translations$account$pro$paywall$en paywall = Translations$account$pro$paywall$en.internal(_root);
 
@@ -6101,15 +6085,15 @@ extension on Translations {
 			'settings.backgroundSuspended' => 'Sessions in the background',
 			'settings.backgroundSuspendedSubtitle' => 'The agent keeps your shell running',
 			'settings.agentSheetTitle' => 'Termphin agent',
-			'settings.agentSheetIntro' => 'A small helper Termphin uploads to your server over SSH. It keeps your shell running there, so closing the app or losing signal doesn\'t end what you were doing.',
+			'settings.agentSheetIntro' => 'A small helper Termphin uploads to your servers over SSH, and runs locally for This computer on desktop. It keeps your shell running, notifies you when commands or AI agents need you, and shares live session status.',
 			'settings.agentSheetPointPlatforms' => 'Runs on Linux and macOS (x86_64 and arm64) and on Windows (x86_64).',
-			'settings.agentSheetPointKeepsAlive' => 'Keeps each session\'s shell alive. After a short drop you get only what you missed; after a longer one, the screen as it is now.',
-			'settings.agentSheetPointNoNetwork' => 'Opens no network port. The app reaches it through your SSH connection, over a socket only your user can open.',
-			'settings.agentSheetPointNoRoot' => 'Runs as your user. No root, nothing installed system-wide, no service or cron entry.',
-			'settings.agentSheetPointFiles' => 'Everything lives in ~/.cache/termphin/sessions (%LOCALAPPDATA%\\termphin\\sessions on Windows). Ending a session deletes its folder.',
-			'settings.agentSheetPointMemory' => 'Recent output is kept in memory for picking up where you left off. A copy of the scrollback is saved in the session\'s folder, so it survives a server reboot.',
-			'settings.agentSheetPointVerified' => 'Termphin checks the helper\'s SHA-256 checksum before uploading it, and checks the copy already on your server the same way.',
-			'settings.agentSheetOpenSource' => 'It\'s open source: about 5,000 lines of Rust and one library for reading the screen (vt100), so you can read exactly what it does.',
+			'settings.agentSheetPointKeepsAlive' => 'Keeps each session\'s shell alive across disconnects and between devices. After a short drop you get only what you missed; after a longer one, the screen as it is now.',
+			'settings.agentSheetPointNoNetwork' => 'Opens no listening network port. Sessions run over a user-only socket or pipe reached through SSH. Outbound HTTPS (via curl) is used only if you enable Pro notifications or live status.',
+			'settings.agentSheetPointNoRoot' => 'Runs as your user — no root and nothing installed system-wide. Adds a user crontab entry only when live status is on, and Claude Code / Codex hooks (~/.claude/settings.json, ~/.codex/config.toml) only when push notifications are on; turning them off removes both.',
+			'settings.agentSheetPointFiles' => 'The binary sits in ~/.local/lib/termphin (%LOCALAPPDATA%\\termphin\\bin on Windows), sessions and scrollback in ~/.cache/termphin/sessions (%LOCALAPPDATA%\\termphin\\sessions on Windows), and optional notification/presence configs in ~/.config/termphin. Ending a session deletes its folder.',
+			'settings.agentSheetPointMemory' => 'Keeps up to 10,000 rows of scrollback and recent output in memory for instant resume, saving snapshots to disk so history survives a reboot. With notifications on, it watches command completion and reads recent Claude Code or Codex transcripts locally; presence reports are AES-256-GCM encrypted with your key.',
+			'settings.agentSheetPointVerified' => 'Termphin checks the helper\'s SHA-256 checksum before uploading it, and checks the copy already on your server the same way. Idle sessions upgrade to new versions in place without restarting your shell.',
+			'settings.agentSheetOpenSource' => 'It\'s open source (MIT): about 13,000 lines of Rust using vt100 (screen state), aes-gcm (encrypted presence), and serde_json (status and hooks), plus OS bindings (libc / windows-sys), so you can inspect everything it does.',
 			'settings.agentSheetRepoButton' => 'View the source on GitHub',
 			'settings.agentSheetLinkFailed' => 'Could not open the link.',
 			'settings.security' => 'Security',
@@ -6537,6 +6521,7 @@ extension on Translations {
 			'session.offlineTitle' => 'Session detached',
 			'session.offlineBody' => 'The session is still running on the server. Re-attach to pick up where you left off.',
 			'session.attach' => 'Re-attach',
+			'session.localUnavailableHere' => 'This session is running locally on another computer. Add that computer as an SSH machine to connect from here.',
 			'session.detach' => 'Detach (keep running)',
 			'session.menuSection' => 'Session',
 			'session.latency' => ({required Object ms}) => '${ms} ms',
@@ -6629,9 +6614,9 @@ extension on Translations {
 			'snippets.runAgain' => 'Run again',
 			'snippets.copyOutput' => 'Copy output',
 			'snippets.outputCopied' => 'Output copied.',
-			'snippets.runNoOutput' => 'Nothing printed yet.',
 			_ => null,
 		} ?? switch (path) {
+			'snippets.runNoOutput' => 'Nothing printed yet.',
 			'snippets.pickMachinesSelected' => ({required Object count, required Object total}) => '${count} of ${total} selected',
 			'snippets.commandSection' => 'Command',
 			'snippets.runArgumentsHint' => 'Filled in once, for every machine in this run.',
@@ -7032,8 +7017,6 @@ extension on Translations {
 			'account.pro.manage' => 'Manage subscription',
 			'account.pro.boughtOnWeb' => 'Bought on the web',
 			'account.pro.boughtOnWebSubtitle' => 'Manage or cancel it in your account on the web.',
-			'account.pro.tips' => 'Pro tips',
-			'account.pro.tipsSubtitle' => 'A rare note about what Pro would do, where it would have helped',
 			'account.pro.paywall.tagline' => 'More from your servers',
 			'account.pro.paywall.pushTitle' => 'Notifications from your servers',
 			'account.pro.paywall.pushBody' => 'A long job finished or an agent needs you: it reaches you even with Termphin closed.',
@@ -7144,9 +7127,9 @@ extension on Translations {
 			'serversPanel.failed' => 'Could not save that. Try again.',
 			'serversPanel.phonesTitle' => 'Notifications on your phones and tablets',
 			'serversPanel.phonesSubtitle' => 'Choose below which of them get notifications. A machine sends them once you turn them on with the bell next to it.',
+			'serversPanel.linkTitle' => 'Phones and tablets',
 			_ => null,
 		} ?? switch (path) {
-			'serversPanel.linkTitle' => 'Phones and tablets',
 			'serversPanel.linkSubtitle' => 'Which of your devices get notifications',
 			'serversPanel.devicesTitle' => 'Phones and tablets',
 			'serversPanel.buttonTooltip' => 'Notifications and live status',
@@ -7171,14 +7154,13 @@ extension on Translations {
 			'agentFeatures.control' => 'Taking control of the session from another device',
 			'agentFeatures.hint' => 'A new session has all of them. Programs running here keep running until you close it.',
 			'agentFeatures.newSession' => 'Open a new session',
-			'proHints.longCommand' => 'Know when a command finishes, even with Termphin closed',
-			'proHints.action' => 'See Pro',
-			'proHints.dismiss' => 'Not now',
 			'proFeature.notificationsTitle' => 'Notifications with Termphin closed',
 			'proFeature.notificationsBody' => 'Termphin tells you when a command finishes or a program needs you. With Pro this reaches you even when the app is closed, through a relay that keeps nothing.',
 			'proFeature.seePro' => 'See Pro',
 			'proFeature.liveTitle' => 'Your machines, live',
 			'proFeature.liveBody' => 'See which machines are online and which sessions are open, working or waiting for you, without connecting. The session list is encrypted on your server and opened only on your devices.',
+			'proFeature.aiAgentsTitle' => 'Know what your AI agent needs',
+			'proFeature.aiAgentsBody' => 'Claude Code, Codex and other AI coding agents tell Termphin when they need your permission, have a question or are done - with what they said and what is still running. Your sessions list shows it too. Nothing to set up on the server.',
 			'proFeature.howItWorks' => 'How it works',
 			'proDemo.notifications' => 'A locked phone with notifications from servers arriving: an agent waiting for you, a deploy and a backup finished',
 			'proDemo.liveScreenshot' => 'Termphin\'s home screen: machines online, with their sessions working and waiting',

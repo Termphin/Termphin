@@ -87,4 +87,29 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets(
+    'notifications card shows how it works tile',
+    (tester) async {
+      await pump(tester);
+
+      final notifications = find.byKey(
+        const ValueKey('howItWorks-notifications'),
+      );
+      expect(notifications, findsOneWidget);
+      await tester.tap(notifications);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(
+        tester.widget<FeatureDemo>(find.byType(FeatureDemo)).kind,
+        FeatureDemoKind.notifications,
+      );
+      expect(find.text(t.proFeature.seePro), findsNothing);
+    },
+    variant: const TargetPlatformVariant({
+      TargetPlatform.android,
+      TargetPlatform.linux,
+    }),
+  );
 }

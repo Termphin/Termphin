@@ -303,30 +303,26 @@ class _NotifyWhenClosedTilesState extends ConsumerState<NotifyWhenClosedTiles> {
         final enabled = PushService.instance.enabledNotifier.value;
         final paused = enabled && signedIn && !pro;
         if (!platformHas(PlatformFeature.receivesPush)) {
-          if (signedIn && pro) {
-            return Column(
-              children: [
-                if (widget.divided) const AppDivider(),
-                SettingsTile(
-                  key: const ValueKey('notifyPhonesNote'),
-                  icon: widget.icon,
-                  title: t.serversPanel.phonesTitle,
-                  subtitle: t.serversPanel.phonesSubtitle,
-                  trailing: SettingsTileTrailing.none,
-                ),
-              ],
-            );
-          }
           return Column(
             children: [
               if (widget.divided) const AppDivider(),
-              SettingsTile(
-                key: const ValueKey('notifyOnPhoneNote'),
-                icon: widget.icon,
-                title: t.settings.notifyOnPhone,
-                subtitle: t.settings.notifyOnPhoneSubtitle,
-                trailing: SettingsTileTrailing.none,
-              ),
+              signedIn && pro
+                  ? SettingsTile(
+                      key: const ValueKey('notifyPhonesNote'),
+                      icon: widget.icon,
+                      title: t.serversPanel.phonesTitle,
+                      subtitle: t.serversPanel.phonesSubtitle,
+                      trailing: SettingsTileTrailing.none,
+                    )
+                  : SettingsTile(
+                      key: const ValueKey('notifyOnPhoneNote'),
+                      icon: widget.icon,
+                      title: t.settings.notifyOnPhone,
+                      subtitle: t.settings.notifyOnPhoneSubtitle,
+                      trailing: SettingsTileTrailing.none,
+                    ),
+              const AppDivider(),
+              const HowItWorksTile(feature: ProFeature.notifications),
             ],
           );
         }

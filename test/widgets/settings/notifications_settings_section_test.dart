@@ -137,6 +137,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('notifyOnPhoneNote')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('howItWorks-notifications')),
+      findsOneWidget,
+    );
     expect(find.text(t.settings.notifyWhenClosed), findsNothing);
     expect(find.text(t.settings.seePro), findsNothing);
   }, variant: TargetPlatformVariant.only(TargetPlatform.linux));

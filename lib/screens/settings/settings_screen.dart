@@ -72,7 +72,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final packageInfo = await PackageInfo.fromPlatform();
     if (!mounted) return;
     setState(() {
-      _version = '${packageInfo.version} (${packageInfo.buildNumber})';
+      _version = packageInfo.buildNumber.isEmpty
+          ? packageInfo.version
+          : '${packageInfo.version} (${packageInfo.buildNumber})';
       _appVersion = packageInfo.version;
       _loading = false;
     });

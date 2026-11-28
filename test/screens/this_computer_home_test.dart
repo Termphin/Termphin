@@ -25,6 +25,7 @@ import 'package:termphin/services/ssh/ssh_session_manager.dart';
 import 'package:termphin/services/storage/group_storage.dart';
 import 'package:termphin/services/terminal/local_agent_service.dart';
 import 'package:termphin/services/terminal/local_agent_transport.dart';
+import 'package:termphin/utils/platform_info.dart';
 import 'package:termphin/widgets/settings/terminal_controls_settings_section.dart';
 import 'package:termphin/widgets/terminal/tab_menu_parts.dart';
 
@@ -422,6 +423,58 @@ void main() {
       expect(find.byType(ViewModeSegments), findsNothing);
       expect(find.text(t.portForwarding.manageTunnels), findsNothing);
       expect(find.text(t.session.rename), findsOneWidget);
+    } finally {
+      setDesktopPlatform(null);
+    }
+  });
+
+  testWidgets('Snap hides This computer card and setting on Linux', (
+    tester,
+  ) async {
+    setDesktopPlatform(TargetPlatform.linux);
+    debugSnapPackageOverride = true;
+    addTearDown(() => debugSnapPackageOverride = null);
+    try {
+      expect(platformHas(PlatformFeature.localSessions), isFalse);
+
+      final sshBackend = FakeSshBackend();
+      final manager = SshSessionManager.test(
+        remoteAgentService: FakeRemoteAgentService(sshBackend),
+        serviceFactory: sshBackend.createService,
+        localAgentService: _StubLocalAgentService(),
+      );
+      addTearDown(manager.dispose);
+
+      await pumpHome(
+        tester,
+        localSupported: true,
+        profiles: [profileFixture()],
+        manager: manager,
+      );
+
+      expect(find.byKey(const ValueKey('thisComputerCard')), findsNothing);
+
+      final container = ProviderContainer.test(
+        overrides: [
+          localSessionsSupportedProvider.overrideWith((ref) async => true),
+        ],
+      );
+      addTearDown(container.dispose);
+      await container.read(localSessionsSupportedProvider.future);
+      await pumpTestApp(
+        tester,
+        const Scaffold(
+          body: SingleChildScrollView(
+            child: TerminalControlsSettingsSection(appVersion: '1.12.0'),
+          ),
+        ),
+        container: container,
+      );
+      await tester.pump();
+      expect(
+        find.byKey(const ValueKey('showThisComputerSwitch')),
+        findsNothing,
+      );
     } finally {
       setDesktopPlatform(null);
     }

@@ -112,6 +112,8 @@ enum PlatformFeature {
   selfUpdates,
 
   /// Local persistent sessions backed by the bundled agent without SSH.
+  /// Unavailable inside a Linux Snap sandbox, where `$SHELL` would run in the
+  /// core24 container instead of the host OS.
   localSessions,
 }
 
@@ -127,6 +129,19 @@ String? get currentAppImagePath {
   if (kIsWeb) return null;
   final env = Platform.environment['APPIMAGE']?.trim();
   return env == null || env.isEmpty ? null : env;
+}
+
+/// Test override for the `SNAP` environment variable so widget tests can
+/// exercise Linux Snap behaviour without running inside a Snap container.
+bool? debugSnapPackageOverride;
+
+/// True when Termphin is running inside a Linux Snap package.
+bool get isSnapPackage {
+  final override = debugSnapPackageOverride;
+  if (override != null) return override;
+  if (kIsWeb) return false;
+  final env = Platform.environment['SNAP']?.trim();
+  return env != null && env.isNotEmpty;
 }
 
 bool platformHas(PlatformFeature feature) => switch (feature) {
@@ -155,7 +170,8 @@ bool platformHas(PlatformFeature feature) => switch (feature) {
   PlatformFeature.receivesPush => isAndroidPlatform || isIOSPlatform,
   PlatformFeature.selfUpdates =>
     isMacOSPlatform || (isLinuxPlatform && currentAppImagePath != null),
-  PlatformFeature.localSessions => isDesktopPlatform,
+  PlatformFeature.localSessions =>
+    isDesktopPlatform && !(isLinuxPlatform && isSnapPackage),
 };
 
 /// The narrowest window that gets the sidebar layout. A landscape window

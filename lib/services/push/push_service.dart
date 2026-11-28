@@ -451,7 +451,12 @@ class PushService {
     required SshSessionManager manager,
     required String sessionId,
     required SshProfile profile,
-  }) => setUpMachine(profile, MachineShell.session(manager, sessionId));
+  }) => setUpMachine(
+    profile,
+    profile.isLocal
+        ? MachineShell.local(manager)
+        : MachineShell.session(manager, sessionId),
+  );
 
   /// Switches flipped on this device that have not reached their machine
   /// yet, by profile id: the next connect to it - or the quick one
@@ -502,17 +507,18 @@ class PushService {
     required SshSessionManager manager,
     Duration connectWithin = const Duration(seconds: 8),
   }) async {
-    final earlier = pendingMachines.value[profile.id];
+    final profileId = relayProfileIdFor(profile);
+    final earlier = pendingMachines.value[profileId];
     await _savePendingMachines({
       ...pendingMachines.value,
-      profile.id: earlier?.then(change) ?? change,
+      profileId: earlier?.then(change) ?? change,
     });
-    _checks.forget(profile.id);
+    _checks.forget(profileId);
     final uid = AccountService.instance.user?.uid;
     if (uid != null && await _accountReady()) {
       try {
         for (final key in await _accountKeys(uid)) {
-          if (key.profileId != profile.id) continue;
+          if (key.profileId != profileId) continue;
           await _keys.setSwitches(
             key.keyId,
             notify: change.notify,
@@ -521,18 +527,24 @@ class PushService {
         }
       } catch (_) {}
     }
-    await _checks.idle(profile.id);
-    _checks.forget(profile.id);
+    await _checks.idle(profileId);
+    _checks.forget(profileId);
     try {
-      final outcome = await manager.withQuietClient(
-        profile,
-        (client) => setUpMachine(
-          profile,
-          MachineShell('quick:${profile.id}', client.run),
-          prepareAgent: () => manager.ensureAgentQuietly(profile, client),
-        ),
-        connectWithin: connectWithin,
-      );
+      final outcome = profile.isLocal
+          ? await setUpMachine(
+              profile,
+              MachineShell.local(manager),
+              prepareAgent: manager.ensureLocalAgentQuietly,
+            )
+          : await manager.withQuietClient(
+              profile,
+              (client) => setUpMachine(
+                profile,
+                MachineShell('quick:${profile.id}', client.run),
+                prepareAgent: () => manager.ensureAgentQuietly(profile, client),
+              ),
+              connectWithin: connectWithin,
+            );
       return outcome == MachineCheck.settled;
     } catch (_) {
       return false;
@@ -570,33 +582,34 @@ class PushService {
     MachineShell shell, {
     Future<void> Function()? prepareAgent,
   }) async {
-    if (_checks.isSettled(profile.id)) return MachineCheck.settled;
-    final run = _checks.start(profile.id);
+    final profileId = relayProfileIdFor(profile);
+    if (_checks.isSettled(profileId)) return MachineCheck.settled;
+    final run = _checks.start(profileId);
     if (run == null) return null;
     shell = _checks.guard(run, shell);
     var outcome = MachineCheck.notReady;
     MachineSwitches? applied;
     try {
-      final remembered = (await _serverKeys())[profile.id];
-      final pending = pendingMachines.value[profile.id];
+      final remembered = (await _serverKeys())[profileId];
+      final pending = pendingMachines.value[profileId];
       final uid = AccountService.instance.user?.uid;
       if (uid == null || !await _accountReady()) return outcome;
       final keys = await _accountKeys(uid);
       final given =
-          remembered != null && keyBelongsTo(remembered, profile.id, keys)
+          remembered != null && keyBelongsTo(remembered, profileId, keys)
           ? remembered
           : null;
       if (remembered != null && given == null) {
-        await _dropRemembered(profile.id);
+        await _dropRemembered(profileId);
       }
-      final own = keys.where((key) => key.profileId == profile.id).firstOrNull;
+      final own = keys.where((key) => key.profileId == profileId).firstOrNull;
       final wanted = await resolveMachineSwitches(
         change: pending,
         key: own,
         legacyKey: isLegacyServerKey(given, keys),
         hadNotifications: () =>
             _hadNotifications(shell, fallback: profile.serverNotifications),
-        hadLiveStatus: () => _hadLiveStatus(shell, profile.id),
+        hadLiveStatus: () => _hadLiveStatus(shell, profileId),
       );
       applied = wanted;
       if (!wanted.any) {
@@ -605,7 +618,7 @@ class PushService {
           final onServer = await _keyOnServer(shell, windows: windows);
           final ownIds = [
             ?given,
-            for (final key in keysOfMachine(keys, profile.id)) key.keyId,
+            for (final key in keysOfMachine(keys, profileId)) key.keyId,
           ];
           if (mayClearServer(onServer, ownIds)) {
             await shell.exec(
@@ -613,14 +626,14 @@ class PushService {
             );
             await _removePresence(shell);
           }
-          await _removeAgentHooks(shell, profile.id, windows: windows);
+          await _removeAgentHooks(shell, profileId, windows: windows);
           if (given != null) {
             try {
-              await _forget(profile.id, given);
+              await _forget(profileId, given);
             } catch (_) {}
           }
           for (final key in keys) {
-            if (key.profileId != profile.id || key.keyId == given) continue;
+            if (key.profileId != profileId || key.keyId == given) continue;
             try {
               await _deleteKey(key.keyId);
             } catch (_) {}
@@ -651,10 +664,10 @@ class PushService {
       }
       String? adopted;
       if (kept == null && given == null) {
-        adopted = adoptableKey(onServer, profile.id, keys);
+        adopted = adoptableKey(onServer, profileId, keys);
         if (adopted != null && named.contains(adopted)) {
           kept = adopted;
-          await _rememberKey(profile.id, adopted);
+          await _rememberKey(profileId, adopted);
         }
       }
       if (kept != null) {
@@ -663,14 +676,14 @@ class PushService {
       } else {
         final keyId = await installOnServer(
           shell: shell,
-          label: profile.name,
-          profileId: profile.id,
+          label: relayLabelFor(profile),
+          profileId: profileId,
           notify: wanted.notify,
           live: wanted.live,
         );
         if (given != null) await _deleteKey(given);
         if (adopted != null) await _deleteKey(adopted);
-        await _rememberKey(profile.id, keyId);
+        await _rememberKey(profileId, keyId);
         unawaited(
           AnalyticsService.instance.capture(AnalyticsEvent.relayServerAdded),
         );
@@ -681,11 +694,11 @@ class PushService {
             await prepareAgent();
           } catch (_) {}
         }
-        await _ensurePresenceKey(shell, profile.id);
+        await _ensurePresenceKey(shell, profileId);
       } else {
         await _removePresence(shell);
       }
-      await _removeAgentHooks(shell, profile.id, windows: windows);
+      await _removeAgentHooks(shell, profileId, windows: windows);
       outcome = MachineCheck.settled;
     } catch (_) {
       outcome = MachineCheck.failed;
@@ -695,9 +708,9 @@ class PushService {
     } finally {
       _checks.finish(run, outcome);
       if (outcome == MachineCheck.settled &&
-          pendingSettledBy(pendingMachines.value[profile.id], applied)) {
+          pendingSettledBy(pendingMachines.value[profileId], applied)) {
         await _savePendingMachines(
-          {...pendingMachines.value}..remove(profile.id),
+          {...pendingMachines.value}..remove(profileId),
         );
       }
     }

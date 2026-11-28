@@ -8,9 +8,12 @@ import 'package:termphin/models/profile_group.dart';
 import 'package:termphin/models/session_tab.dart';
 import 'package:termphin/models/ssh_profile.dart';
 import 'package:termphin/providers/groups_provider.dart';
+import 'package:termphin/providers/profiles_provider.dart';
 import 'package:termphin/screens/search/global_search_launcher.dart';
 import 'package:termphin/screens/search/global_search_screen.dart';
+import 'package:termphin/services/settings/desktop_settings.dart';
 import 'package:termphin/widgets/terminal/add_session_sheet.dart';
+import 'package:termphin/widgets/ui/app_sheet.dart';
 
 import '../../support/fakes.dart';
 import '../../support/fixtures.dart';
@@ -405,5 +408,150 @@ void main() {
 
       expect(selected.map((p) => p.name), ['Alpha']);
     }, variant: desktop);
+
+    testWidgets(
+      'Escape with a GTK \\x1b character closes the sheet without searching',
+      (tester) async {
+        final container = ProviderContainer.test(
+          overrides: [
+            groupStorageProvider.overrideWithValue(
+              FakeGroupStorage(
+                initialGroups: const [ProfileGroup(name: 'General')],
+              ),
+            ),
+          ],
+        );
+        await container.read(profileGroupsProvider.notifier).loadGroups();
+
+        late BuildContext rootContext;
+        await pumpTestApp(
+          tester,
+          Builder(
+            builder: (context) {
+              rootContext = context;
+              return const Scaffold(body: SizedBox.shrink());
+            },
+          ),
+          container: container,
+        );
+        await tester.pumpAndSettle();
+
+        final sheetFuture = showAppSheet<void>(
+          context: rootContext,
+          handle: false,
+          builder: (_) => AddSessionSheetContent(
+            profiles: machines,
+            resumableFor: (_) => const [],
+            onSelect: selected.add,
+            onAttach: (_, _) {},
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.byType(AddSessionSheetContent), findsOneWidget);
+
+        final sheetFocus = tester.widget<Focus>(
+          find
+              .descendant(
+                of: find.byType(AddSessionSheetContent),
+                matching: find.byWidgetPredicate(
+                  (w) => w is Focus && w.onKeyEvent != null,
+                ),
+              )
+              .first,
+        );
+        final handled = sheetFocus.onKeyEvent!(
+          sheetFocus.focusNode ?? FocusNode(),
+          const KeyDownEvent(
+            physicalKey: PhysicalKeyboardKey.escape,
+            logicalKey: LogicalKeyboardKey.escape,
+            character: '\x1b',
+            timeStamp: Duration.zero,
+          ),
+        );
+        expect(handled, KeyEventResult.ignored);
+        await tester.pump();
+        expect(find.byType(GlobalSearchScreen), findsNothing);
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(GlobalSearchScreen), findsNothing);
+        expect(find.byType(AddSessionSheetContent), findsNothing);
+        await sheetFuture;
+      },
+      variant: desktop,
+    );
+  });
+
+  group('This computer in the picker', () {
+    const desktop = TargetPlatformVariant({TargetPlatform.linux});
+
+    testWidgets(
+      'pins This computer first without a :0 port and hides it under group filters',
+      (tester) async {
+        final local = localComputerProfile(
+          name: t.profiles.thisComputer,
+          host: 'workstation',
+          username: 'alice',
+        );
+        await pump(
+          tester,
+          [
+            local,
+            profileFixture(id: 'p1', name: 'Alpha', group: 'Staging'),
+            profileFixture(id: 'p2', name: 'Beta', group: 'Prod'),
+          ],
+          groups: ['Staging', 'Prod'],
+        );
+
+        expect(rowOrder(tester, [t.profiles.thisComputer, 'Alpha', 'Beta']), [
+          t.profiles.thisComputer,
+          'Alpha',
+          'Beta',
+        ]);
+        expect(find.text('alice@workstation'), findsOneWidget);
+        expect(find.text('alice@workstation:0'), findsNothing);
+        expect(find.text('General'), findsNothing);
+
+        await tester.tap(find.text('Staging').first);
+        await tester.pumpAndSettle();
+        expect(find.text('Alpha'), findsOneWidget);
+        expect(find.text('Beta'), findsNothing);
+        expect(find.text(t.profiles.thisComputer), findsNothing);
+      },
+      variant: desktop,
+    );
+
+    testWidgets(
+      'sessionPickerProfiles prepends This computer when enabled on a desktop',
+      (tester) async {
+        await showThisComputerSetting.set(true);
+        final container = ProviderContainer.test(
+          overrides: [
+            profileStorageProvider.overrideWithValue(
+              FakeProfileStorage([profileFixture(id: 'p1', name: 'Alpha')]),
+            ),
+            localSessionsSupportedProvider.overrideWith((ref) async => true),
+          ],
+        );
+        await container.read(profilesProvider.notifier).loadProfiles();
+        await container.read(localSessionsSupportedProvider.future);
+
+        late List<SshProfile> picked;
+        await pumpTestApp(
+          tester,
+          Consumer(
+            builder: (context, ref, _) {
+              picked = sessionPickerProfiles(ref, t);
+              return const SizedBox.shrink();
+            },
+          ),
+          container: container,
+        );
+
+        expect(picked.map((p) => p.id), [kLocalProfileId, 'p1']);
+      },
+      variant: desktop,
+    );
   });
 }

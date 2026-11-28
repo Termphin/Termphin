@@ -897,7 +897,9 @@ class _MachineResult extends ConsumerWidget {
         size: 36,
       ),
       title: name,
-      subtitle: '$user@$host:${profile.port} · $groupLabel',
+      subtitle: profile.isLocal
+          ? '$user@$host · $groupLabel'
+          : '$user@$host:${profile.port} · $groupLabel',
       terms: terms,
       onTap: onTap,
       trailing: Icon(
