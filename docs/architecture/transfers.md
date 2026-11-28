@@ -31,7 +31,12 @@ cleared.
 A terminal upload that ends while its terminal is out of sight keeps its paths
 and offers them at the cursor when the terminal is back. It types them in
 unasked (`uploadAutoPasteSetting`) only if it never waited in the queue and
-nothing was typed meanwhile - `uploadPasteAction` decides.
+nothing was typed meanwhile - `uploadPasteAction` decides. An image pasted
+from the clipboard on a desktop is an upload too, and types its path in
+under the same two conditions without the setting: the paste asked for it.
+So are files dropped on a desktop terminal (`droppedUploads`, the same
+`desktop_drop` target the file browser has): files only - a folder is
+left out with a word, the file browser takes folders whole.
 
 Folders are always walked and copied file by file - no server-side `zip`/`tar`
 packing.

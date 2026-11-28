@@ -42,12 +42,63 @@ const kRelayUrl = String.fromEnvironment(
 
 const _installIdPrefsKey = 'push_install_id';
 const _enabledPrefsKey = 'push_enabled';
+const _registeredUidPrefsKey = 'push_registered_uid';
 const _serverKeysPrefsKey = 'push_server_keys';
 const _pendingMachinesPrefsKey = 'pending_machines';
+const _agentHooksPrefsKey = 'push_agent_hooks';
 
 /// The payload prefix of a push shown while the app is open: what follows
 /// is `<profileId>:<session>`.
 const kRelayPayloadPrefix = 'relay:';
+
+/// What push registration does when the signed-in account may have
+/// changed: at launch and whenever another account (or none) signs in.
+enum PushAccountStep {
+  /// Nothing is registered anywhere, or push is off.
+  nothing(rotates: false, registers: false),
+
+  /// The token is already the signed-in account's: written again, as every
+  /// launch does, so a token refreshed meanwhile is current.
+  register(rotates: false, registers: true),
+
+  /// Nothing was registered: the signed-in account gets this device.
+  registerFresh(rotates: false, registers: true),
+
+  /// Another account had this device, or nobody knows which did: the token
+  /// is thrown away first, so the other account's entry is left with a
+  /// token FCM refuses - which the relay deletes - and its pushes stop.
+  rotateAndRegister(rotates: true, registers: true),
+
+  /// Signed out: the token is thrown away, so no account reaches this
+  /// device until one signs in again.
+  rotate(rotates: true, registers: false);
+
+  const PushAccountStep({required this.rotates, required this.registers});
+
+  final bool rotates;
+  final bool registers;
+}
+
+/// Decides [PushAccountStep] from [registeredUid] - the account this
+/// device's token was last registered under: empty for none, null for an
+/// install from before that was remembered - and [currentUid], the account
+/// signed in now. An FCM token belongs to the install, not the account, so
+/// without the rotation a token registered under one account keeps that
+/// account's pushes coming after another signs in.
+PushAccountStep pushAccountStep({
+  required bool enabled,
+  required String? registeredUid,
+  required String? currentUid,
+}) {
+  if (!enabled) return PushAccountStep.nothing;
+  final registeredNowhere = registeredUid != null && registeredUid.isEmpty;
+  if (currentUid == null) {
+    return registeredNowhere ? PushAccountStep.nothing : PushAccountStep.rotate;
+  }
+  if (registeredUid == currentUid) return PushAccountStep.register;
+  if (registeredNowhere) return PushAccountStep.registerFresh;
+  return PushAccountStep.rotateAndRegister;
+}
 
 /// Push notifications from servers, a Pro feature.
 ///
@@ -84,6 +135,14 @@ class PushService {
   StreamSubscription<String>? _tokenRefresh;
   StreamSubscription<RemoteMessage>? _foreground;
   StreamSubscription<RemoteMessage>? _opened;
+
+  /// Whether account changes are followed yet: once, for the whole run.
+  bool _followsAccounts = false;
+
+  /// The account steps run one after another, so a sign-out followed at once
+  /// by a sign-in cannot register the new account before the old token is
+  /// thrown away.
+  Future<void> _accountWork = Future.value();
 
   /// Machines already set up since launch, so reconnects stay quiet.
   final _checks = MachineChecks();
@@ -136,13 +195,50 @@ class PushService {
     await _loadPendingMachines();
     unawaited(settleOldLiveSwitches());
     enabledNotifier.value = await enabled;
-    if (!enabledNotifier.value) return;
-    if (AccountService.instance.user == null) return;
+    if (!_followsAccounts) {
+      _followsAccounts = true;
+      AccountService.instance.changes
+          .map((user) => user?.uid)
+          .distinct()
+          .listen((uid) => unawaited(_followAccount(uid)));
+    }
+    await _followAccount(AccountService.instance.user?.uid);
+    if (!enabledNotifier.value || AccountService.instance.user == null) return;
     try {
-      await _register();
       final initial = await FirebaseMessaging.instance.getInitialMessage();
       if (initial != null) _openFrom(initial.data);
     } catch (_) {}
+  }
+
+  /// Moves this device's registration to the account signed in now
+  /// ([pushAccountStep]). Quiet on failure: the next launch tries again.
+  Future<void> _followAccount(String? uid) {
+    return _accountWork = _accountWork.then((_) async {
+      try {
+        final preferences = await SharedPreferences.getInstance();
+        final step = pushAccountStep(
+          enabled: await enabled,
+          registeredUid: preferences.getString(_registeredUidPrefsKey),
+          currentUid: uid,
+        );
+        if (step == PushAccountStep.nothing) return;
+        if (!await FirebaseService.instance.start()) return;
+        if (step.rotates) {
+          await _forgetToken();
+          await preferences.setString(_registeredUidPrefsKey, '');
+        }
+        if (step.registers) await _register();
+      } catch (_) {}
+    });
+  }
+
+  /// Throws this install's FCM token away. The refresh listener goes first:
+  /// it would write the new token under the account it was made for.
+  Future<void> _forgetToken() async {
+    await _tokenRefresh?.cancel();
+    _tokenRefresh = null;
+    // ignore: deprecated_member_use
+    await FirebaseMessaging.instance.deleteToken();
   }
 
   /// Turns push on for this phone. False when notifications are refused.
@@ -208,6 +304,10 @@ class PushService {
     await messaging.setAutoInitEnabled(false);
     // ignore: deprecated_member_use
     await messaging.deleteToken();
+    await (await SharedPreferences.getInstance()).setString(
+      _registeredUidPrefsKey,
+      '',
+    );
   }
 
   Future<void> _register() async {
@@ -218,7 +318,13 @@ class PushService {
     await messaging.setAutoInitEnabled(true);
     // ignore: deprecated_member_use
     final token = await messaging.getToken();
-    if (token != null) await _store(uid, token);
+    if (token != null) {
+      await _store(uid, token);
+      await (await SharedPreferences.getInstance()).setString(
+        _registeredUidPrefsKey,
+        uid,
+      );
+    }
     await _tokenRefresh?.cancel();
     // ignore: deprecated_member_use
     _tokenRefresh = messaging.onTokenRefresh.listen(
@@ -507,6 +613,7 @@ class PushService {
             );
             await _removePresence(shell);
           }
+          await _removeAgentHooks(shell, profile.id, windows: windows);
           if (given != null) {
             try {
               await _forget(profile.id, given);
@@ -578,6 +685,7 @@ class PushService {
       } else {
         await _removePresence(shell);
       }
+      await _removeAgentHooks(shell, profile.id, windows: windows);
       outcome = MachineCheck.settled;
     } catch (_) {
       outcome = MachineCheck.failed;
@@ -594,6 +702,34 @@ class PushService {
       }
     }
     return outcome;
+  }
+
+  /// Takes Termphin's hooks out of Claude Code and Codex on the machine
+  /// behind [shell] when an earlier build of this app put them there. The
+  /// app no longer writes into other programs' settings; a hook that is
+  /// wanted is set up by hand (`termphin-agent hooks install`), and one set
+  /// up that way is left alone. Quiet on failure: tried again next time.
+  Future<void> _removeAgentHooks(
+    MachineShell shell,
+    String profileId, {
+    required bool windows,
+  }) async {
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      final installed = {...?preferences.getStringList(_agentHooksPrefsKey)};
+      if (!installed.contains(profileId)) return;
+      final output = utf8.decode(
+        await shell.exec(
+          windows
+              ? agentHooksCommandWindows(install: false)
+              : agentHooksCommand(install: false),
+        ),
+        allowMalformed: true,
+      );
+      if (!agentHooksAnswered(output, install: false)) return;
+      installed.remove(profileId);
+      await preferences.setStringList(_agentHooksPrefsKey, installed.toList());
+    } catch (_) {}
   }
 
   /// Whether the machine behind [shell] had notifications before keys
@@ -777,6 +913,16 @@ class PushService {
     await _prefs.setEnabled(uid, destination, enabled);
   }
 
+  /// Gives [destination] its own [name], or takes it away with null.
+  Future<void> setDestinationName(
+    NotifyDestination destination,
+    String? name,
+  ) async {
+    final uid = AccountService.instance.user?.uid;
+    if (uid == null) return;
+    await _prefs.setName(uid, destination, name);
+  }
+
   /// The servers holding a key to this account, newest first.
   Stream<List<RelayServer>> servers() {
     final uid = AccountService.instance.user?.uid;
@@ -917,6 +1063,36 @@ RelayKey newRelayKey() {
 /// status but sends no push. Both values are URL-safe, so single quotes are
 /// all the quoting they need.
 @visibleForTesting
+/// Runs the agent's `hooks install` - or `hooks remove` - on a POSIX server
+/// when the agent is there: Termphin's hooks into Claude Code's and Codex's
+/// own settings, everything else in them left as it was.
+String agentHooksCommand({required bool install}) =>
+    'sh -c ${shellQuote('bin="\$HOME/.local/lib/termphin/termphin-agent"; [ -x "\$bin" ] && "\$bin" hooks ${install ? 'install' : 'remove'} 2>/dev/null || true')}';
+
+/// The Windows twin of [agentHooksCommand], as a PowerShell script run
+/// through [powerShellCommandLine]: the agent sits under the user's
+/// `AppData\Local\termphin\bin` there.
+String agentHooksCommandWindows({required bool install}) =>
+    powerShellCommandLine('''
+\$ProgressPreference = 'SilentlyContinue'
+\$bin = Join-Path \$env:USERPROFILE 'AppData\\Local\\termphin\\bin\\termphin-agent.exe'
+if (Test-Path -LiteralPath \$bin) { & \$bin hooks ${install ? 'install' : 'remove'} 2>\$null }
+''');
+
+/// Whether the agent's answer to [agentHooksCommand] says it did its job:
+/// one of the agents got the hooks, or had them taken out. An agent too old
+/// to know `hooks`, or a server without one, says neither.
+bool agentHooksAnswered(String output, {required bool install}) {
+  final lines = output.split('\n').map((line) => line.trim());
+  return install
+      ? lines.any(
+          (line) => line == 'claude installed' || line == 'codex installed',
+        )
+      : lines.any(
+          (line) => line == 'claude removed' || line == 'codex removed',
+        );
+}
+
 String relayInstallCommand(String url, String token, {bool quiet = false}) =>
     "umask 077 && mkdir -p ~/.config/termphin && "
     "printf '%s %s${quiet ? ' quiet' : ''}\\n' '$url' '$token' > ~/.config/termphin/relay";

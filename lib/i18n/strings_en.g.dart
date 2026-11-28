@@ -831,6 +831,12 @@ class Translations$terminal$en {
 	/// en: 'New session'
 	String get newSession => 'New session';
 
+	/// en: 'Drop to upload to this server'
+	String get dropToUpload => 'Drop to upload to this server';
+
+	/// en: 'Folders are not uploaded by dropping. Use the file browser for them.'
+	String get dropFoldersSkipped => 'Folders are not uploaded by dropping. Use the file browser for them.';
+
 	/// en: 'Terminal'
 	String get switchToTerminal => 'Terminal';
 
@@ -1335,6 +1341,15 @@ class Translations$settings$en {
 
 	/// en: 'Show typing instantly on slow connections'
 	String get predictiveEchoSubtitle => 'Show typing instantly on slow connections';
+
+	/// en: 'Scrollback'
+	String get scrollback => 'Scrollback';
+
+	/// en: '{n} lines'
+	String scrollbackLines({required Object n}) => '${n} lines';
+
+	/// en: 'How far back a session keeps its output. Fewer lines are lighter on a slow device. Applies to sessions opened or reconnected from now on.'
+	String get scrollbackSubtitle => 'How far back a session keeps its output. Fewer lines are lighter on a slow device. Applies to sessions opened or reconnected from now on.';
 
 	/// en: 'Finished commands, agents that need you, and your servers'
 	String get notificationsRowSubtitle => 'Finished commands, agents that need you, and your servers';
@@ -2800,6 +2815,33 @@ class Translations$session$en {
 
 	/// en: '{command} · {state}'
 	String activityLine({required Object command, required Object state}) => '${command} · ${state}';
+
+	/// en: '{name} needs your permission'
+	String programNeedsPermission({required Object name}) => '${name} needs your permission';
+
+	/// en: '{name} has a question'
+	String programHasQuestion({required Object name}) => '${name} has a question';
+
+	/// en: '{name} needs you to sign in'
+	String programNeedsSignIn({required Object name}) => '${name} needs you to sign in';
+
+	/// en: '{name} needs you'
+	String programNeedsYou({required Object name}) => '${name} needs you';
+
+	/// en: '{name} is working'
+	String programWorking({required Object name}) => '${name} is working';
+
+	/// en: '{name} is done'
+	String programDone({required Object name}) => '${name} is done';
+
+	/// en: '{name} stopped with an error'
+	String programFailed({required Object name}) => '${name} stopped with an error';
+
+	/// en: '{state} · {message}'
+	String programLine({required Object state, required Object message}) => '${state} · ${message}';
+
+	/// en: 'The program'
+	String get programFallback => 'The program';
 
 	/// en: 'Restores when opened'
 	String get restoresWhenOpened => 'Restores when opened';
@@ -4525,6 +4567,24 @@ class Translations$serversPanel$en {
 
 	/// en: 'Could not reach {name}. It is set up the next time you connect to it.'
 	String notReached({required Object name}) => 'Could not reach ${name}. It is set up the next time you connect to it.';
+
+	/// en: 'More'
+	String get deviceMore => 'More';
+
+	/// en: 'Rename'
+	String get renameDevice => 'Rename';
+
+	/// en: 'Use the default name'
+	String get resetDeviceName => 'Use the default name';
+
+	/// en: 'Name this device'
+	String get renameDeviceTitle => 'Name this device';
+
+	/// en: 'Name'
+	String get deviceNameLabel => 'Name';
+
+	/// en: 'Up to 40 characters'
+	String get deviceNameTooLong => 'Up to 40 characters';
 }
 
 // Path: agentFeatures
@@ -4922,8 +4982,8 @@ class Translations$settings$searchKeywords$en {
 	/// en: 'dark light mode colours colors'
 	String get themeMode => 'dark light mode colours colors';
 
-	/// en: 'font size colour color scheme cursor line height theme'
-	String get terminalAppearance => 'font size colour color scheme cursor line height theme';
+	/// en: 'font size colour color scheme cursor line height theme scrollback history lines buffer performance'
+	String get terminalAppearance => 'font size colour color scheme cursor line height theme scrollback history lines buffer performance';
 
 	/// en: 'keys keyboard esc ctrl tab arrows'
 	String get keyToolbar => 'keys keyboard esc ctrl tab arrows';
@@ -5753,6 +5813,8 @@ extension on Translations {
 			'terminal.suggestionInsert' => 'insert',
 			'terminal.suggestionClose' => 'close',
 			'terminal.newSession' => 'New session',
+			'terminal.dropToUpload' => 'Drop to upload to this server',
+			'terminal.dropFoldersSkipped' => 'Folders are not uploaded by dropping. Use the file browser for them.',
 			'terminal.switchToTerminal' => 'Terminal',
 			'terminal.switchToSftp' => 'SFTP Browser',
 			'terminal.modeTerminal' => 'Terminal',
@@ -5939,6 +6001,9 @@ extension on Translations {
 			'settings.cursorBlink' => 'Blink',
 			'settings.predictiveEcho' => 'Predictive echo',
 			'settings.predictiveEchoSubtitle' => 'Show typing instantly on slow connections',
+			'settings.scrollback' => 'Scrollback',
+			'settings.scrollbackLines' => ({required Object n}) => '${n} lines',
+			'settings.scrollbackSubtitle' => 'How far back a session keeps its output. Fewer lines are lighter on a slow device. Applies to sessions opened or reconnected from now on.',
 			'settings.notificationsRowSubtitle' => 'Finished commands, agents that need you, and your servers',
 			'settings.notificationsDemo.appLine' => 'Termphin · now',
 			'settings.notificationsDemo.finishedTitle' => 'cargo build finished',
@@ -5963,7 +6028,7 @@ extension on Translations {
 			'settings.searchHint' => 'Search settings',
 			'settings.searchEmpty' => ({required Object query}) => 'Nothing in Settings matches “${query}”',
 			'settings.searchKeywords.themeMode' => 'dark light mode colours colors',
-			'settings.searchKeywords.terminalAppearance' => 'font size colour color scheme cursor line height theme',
+			'settings.searchKeywords.terminalAppearance' => 'font size colour color scheme cursor line height theme scrollback history lines buffer performance',
 			'settings.searchKeywords.keyToolbar' => 'keys keyboard esc ctrl tab arrows',
 			'settings.searchKeywords.actionDock' => 'palette shortcuts buttons',
 			'settings.searchKeywords.tabsAtBottom' => 'tab strip position',
@@ -6039,13 +6104,13 @@ extension on Translations {
 			'settings.lockAfter' => 'Ask again',
 			'settings.lockAfterImmediately' => 'Right away',
 			'settings.lockAfter30s' => 'After 30 seconds',
+			_ => null,
+		} ?? switch (path) {
 			'settings.lockAfter1m' => 'After 1 minute',
 			'settings.lockAfter5m' => 'After 5 minutes',
 			'settings.pinLockDisabled' => 'Disabled',
 			'settings.biometricUnlock' => 'Biometric unlock',
 			'settings.biometricSubtitle' => 'Use fingerprint or face as alternative',
-			_ => null,
-		} ?? switch (path) {
 			'settings.biometricSubtitleDesktop' => 'Unlock with the computer\'s own sign-in, a fingerprint or face, instead of the PIN',
 			'settings.biometricUnavailable' => 'Not available on this device',
 			'settings.enablePinFirst' => 'Enable PIN lock first',
@@ -6441,6 +6506,15 @@ extension on Translations {
 			'session.activityWaiting' => 'Waiting for you',
 			'session.activityRunning' => 'Running',
 			'session.activityLine' => ({required Object command, required Object state}) => '${command} · ${state}',
+			'session.programNeedsPermission' => ({required Object name}) => '${name} needs your permission',
+			'session.programHasQuestion' => ({required Object name}) => '${name} has a question',
+			'session.programNeedsSignIn' => ({required Object name}) => '${name} needs you to sign in',
+			'session.programNeedsYou' => ({required Object name}) => '${name} needs you',
+			'session.programWorking' => ({required Object name}) => '${name} is working',
+			'session.programDone' => ({required Object name}) => '${name} is done',
+			'session.programFailed' => ({required Object name}) => '${name} stopped with an error',
+			'session.programLine' => ({required Object state, required Object message}) => '${state} · ${message}',
+			'session.programFallback' => 'The program',
 			'session.restoresWhenOpened' => 'Restores when opened',
 			'session.untitled' => 'Session',
 			'session.rebootRestored' => 'The remote shell was restarted - reattached in the same directory, previous shell state is gone.',
@@ -6544,6 +6618,8 @@ extension on Translations {
 			'snippets.commandSection' => 'Command',
 			'snippets.runArgumentsHint' => 'Filled in once, for every machine in this run.',
 			'toolbar.searchHint' => 'Search keys…',
+			_ => null,
+		} ?? switch (path) {
 			'toolbar.noResults' => 'No keys match',
 			'toolbar.categoryNavigation' => 'Navigation',
 			'toolbar.categoryEditing' => 'Editing',
@@ -6558,8 +6634,6 @@ extension on Translations {
 			'toolbar.quickTabAppearance' => 'Appearance',
 			'toolbar.allTerminalSettings' => 'All terminal settings',
 			'toolbar.importTitle' => 'Add toolbar layout',
-			_ => null,
-		} ?? switch (path) {
 			'toolbar.importUnnamed' => 'Shared layout',
 			'toolbar.importTextKeys' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '1 key types text', other: '${n} keys type text', ), 
 			'toolbar.importPressEnter' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '1 presses Enter', other: '${n} press Enter', ), 
@@ -7058,10 +7132,18 @@ extension on Translations {
 			'serversPanel.linkSubtitle' => 'Which of your devices get notifications',
 			'serversPanel.devicesTitle' => 'Phones and tablets',
 			'serversPanel.buttonTooltip' => 'Notifications and live status',
+			_ => null,
+		} ?? switch (path) {
 			'serversPanel.notifications' => 'Notifications',
 			'serversPanel.live' => 'Live status',
 			'serversPanel.setUp' => ({required Object name}) => 'Done on ${name}',
 			'serversPanel.notReached' => ({required Object name}) => 'Could not reach ${name}. It is set up the next time you connect to it.',
+			'serversPanel.deviceMore' => 'More',
+			'serversPanel.renameDevice' => 'Rename',
+			'serversPanel.resetDeviceName' => 'Use the default name',
+			'serversPanel.renameDeviceTitle' => 'Name this device',
+			'serversPanel.deviceNameLabel' => 'Name',
+			'serversPanel.deviceNameTooLong' => 'Up to 40 characters',
 			'agentFeatures.title' => 'Started with an older helper',
 			'agentFeatures.body' => 'This session keeps the helper it started with, so it does without:',
 			'agentFeatures.longCommandNotice' => 'A notification when a long command finishes',
@@ -7072,8 +7154,6 @@ extension on Translations {
 			'agentFeatures.deviceInfo' => 'Showing your other devices that this session is open here',
 			'agentFeatures.control' => 'Taking control of the session from another device',
 			'agentFeatures.hint' => 'A new session has all of them. Programs running here keep running until you close it.',
-			_ => null,
-		} ?? switch (path) {
 			'agentFeatures.newSession' => 'Open a new session',
 			'proHints.longCommand' => 'Know when a command finishes, even with Termphin closed',
 			'proHints.action' => 'See Pro',

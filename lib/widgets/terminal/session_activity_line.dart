@@ -68,6 +68,11 @@ class SessionActivityLine extends ConsumerWidget {
       );
     }
     final activity = reported?.activity;
+    final program = activity?.program;
+    if (activity != null && program != null) {
+      final line = _programLine(context, ref, activity, program);
+      if (line != null) return line;
+    }
     if (activity == null || activity.state == SessionActivityState.idle) {
       return const SizedBox.shrink();
     }
@@ -91,6 +96,59 @@ class SessionActivityLine extends ConsumerWidget {
         style: colors.uiSmall.copyWith(
           color: waiting ? colors.warning : colors.textTertiary,
           fontWeight: waiting ? FontWeight.w600 : null,
+        ),
+      ),
+    );
+  }
+
+  /// The line for a program that says itself what it is doing - "Claude Code
+  /// needs your permission · approve Bash" - or null for one at rest, which
+  /// the usual line covers. Its own words go along unless names are
+  /// hidden, since they can name a host or a path.
+  Widget? _programLine(
+    BuildContext context,
+    WidgetRef ref,
+    SessionActivity activity,
+    ProgramStatus program,
+  ) {
+    final t = Translations.of(context).session;
+    final colors = context.colors;
+    final name = program.app != null
+        ? programName(program.app!)
+        : (activity.command ?? t.programFallback);
+    final said = switch (program.state) {
+      ProgramState.blocked => switch (program.block) {
+        ProgramBlock.permission => t.programNeedsPermission(name: name),
+        ProgramBlock.question => t.programHasQuestion(name: name),
+        ProgramBlock.auth => t.programNeedsSignIn(name: name),
+        null => t.programNeedsYou(name: name),
+      },
+      ProgramState.working => t.programWorking(name: name),
+      ProgramState.done => t.programDone(name: name),
+      ProgramState.error => t.programFailed(name: name),
+      ProgramState.idle => null,
+    };
+    if (said == null) return null;
+    final message = ref.watch(anonymizeProvider) ? null : program.message;
+    final urgent =
+        program.state == ProgramState.blocked ||
+        program.state == ProgramState.error;
+    final color = switch (program.state) {
+      ProgramState.blocked => colors.warning,
+      ProgramState.error => colors.error,
+      ProgramState.done => colors.success,
+      _ => colors.textTertiary,
+    };
+    return Padding(
+      padding: const EdgeInsets.only(top: AppTheme.space2),
+      child: Text(
+        message == null ? said : t.programLine(state: said, message: message),
+        key: const ValueKey('sessionActivity'),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: colors.uiSmall.copyWith(
+          color: color,
+          fontWeight: urgent ? FontWeight.w600 : null,
         ),
       ),
     );

@@ -32,4 +32,21 @@ void main() {
     final target = await DownloadLocation.instance.desktopTarget();
     expect(target.path, '${Platform.environment['HOME']}/Downloads');
   });
+
+  group('desktopFolderPath', () {
+    test('turns the file URI a desktop picker answers with into a path', () {
+      expect(
+        desktopFolderPath(Uri.file('/home/me/My Downloads', windows: false)),
+        '/home/me/My Downloads',
+      );
+    });
+
+    test('is null when nothing was picked or the answer is no file URI', () {
+      expect(desktopFolderPath(null), isNull);
+      expect(
+        desktopFolderPath(Uri.parse('content://com.android/tree/primary%3A')),
+        isNull,
+      );
+    });
+  });
 }

@@ -10,6 +10,10 @@ import '../../utils/platform_info.dart';
 /// code editor keeps every key it handles itself - Escape reaches [onClose]
 /// only once nothing deeper, such as an open find bar, took it. A null
 /// [onSave] leaves Ctrl+S alone, the same as a disabled Save button.
+///
+/// On a desktop the keys work the moment the form opens: it takes the focus
+/// itself, which would otherwise stay on the page beneath until the user
+/// clicked into a field.
 class SaveShortcuts extends StatelessWidget {
   const SaveShortcuts({
     super.key,
@@ -33,7 +37,11 @@ class SaveShortcuts extends StatelessWidget {
         ): ?onSave,
         const SingleActivator(LogicalKeyboardKey.escape): ?onClose,
       },
-      child: child,
+      child: Focus(
+        autofocus: isDesktopPlatform,
+        skipTraversal: true,
+        child: child,
+      ),
     );
   }
 }

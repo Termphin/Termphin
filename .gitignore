@@ -67,7 +67,7 @@ app.*.map.json
 # Local dependency overrides (e.g. patched plugins for an older Xcode)
 /pubspec_overrides.yaml
 
-# Daily work log, local only (see CLAUDE.md)
+# Local notes, never committed
 /memories/
 
 # Firebase config, copied in from ~/.config/termphin/firebase by scripts/firebase_config.sh

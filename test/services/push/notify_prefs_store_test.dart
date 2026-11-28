@@ -147,4 +147,63 @@ void main() {
       throwsA(isA<FirestoreRestException>()),
     );
   });
+
+  test('naming a device writes only its name, trimmed', () async {
+    await store().setName(
+      'u1',
+      const NotifyDestination(id: 'tablet', platform: 'ios', hasPrefs: true),
+      '  Kitchen iPad ',
+    );
+    final sent = write(calls.single.$3);
+    expect((sent['updateMask']! as Map)['fieldPaths'], ['name']);
+    expect(((sent['update']! as Map)['fields'] as Map)['name'], {
+      'stringValue': 'Kitchen iPad',
+    });
+  });
+
+  test('a blank name takes the device\'s name away', () async {
+    await store().setName(
+      'u1',
+      const NotifyDestination(id: 'tablet', platform: 'ios', hasPrefs: true),
+      '   ',
+    );
+    final sent = write(calls.single.$3);
+    expect((sent['updateMask']! as Map)['fieldPaths'], ['name']);
+    expect(((sent['update']! as Map)['fields'] as Map), isEmpty);
+  });
+
+  test('naming a device with no settings yet keeps it switched on', () async {
+    await store().setName(
+      'u1',
+      const NotifyDestination(id: 'phone', platform: 'android'),
+      'Work phone',
+    );
+    expect(
+      (write(calls.single.$3)['updateMask']! as Map)['fieldPaths'],
+      unorderedEquals(['name', 'enabled']),
+    );
+  });
+
+  test('a device is listed with the name it was given', () async {
+    replies
+      ..add((
+        status: 200,
+        body: {
+          'documents': [device('phone', 'android', '2026-11-27T10:00:00Z')],
+        },
+      ))
+      ..add((
+        status: 200,
+        body: [
+          {
+            'found': document('notifyPrefs/phone', {
+              'enabled': {'booleanValue': true},
+              'name': {'stringValue': 'Work phone'},
+            }),
+          },
+        ],
+      ));
+    final listed = await store().fetch('u1');
+    expect(listed.single.name, 'Work phone');
+  });
 }

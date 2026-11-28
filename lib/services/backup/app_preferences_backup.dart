@@ -50,6 +50,7 @@ Future<Map<String, dynamic>> exportTerminalSettings({
     'cursorStyle': settings.cursorStyle.value,
     'cursorBlink': settings.cursorBlink.value,
     'predictiveEcho': settings.predictiveEcho.value,
+    'scrollbackLines': settings.scrollbackLines.value,
     if (formFactor == null)
       ...own
     else ...{
@@ -188,6 +189,10 @@ Future<void> importTerminalSettings(
   await restore<String>(settings.cursorStyle, ts['cursorStyle']);
   await restore<bool>(settings.cursorBlink, ts['cursorBlink']);
   await restore<bool>(settings.predictiveEcho, ts['predictiveEcho']);
+  await restore<int>(
+    settings.scrollbackLines,
+    (ts['scrollbackLines'] as num?)?.toInt(),
+  );
   await restore<bool>(
     settings.programNotifications,
     ts['programNotifications'],

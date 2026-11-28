@@ -3,11 +3,41 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:termphin/services/settings/terminal_settings.dart';
 import 'package:termphin/services/terminal/session_terminal.dart';
 import 'package:termphin/services/terminal/terminal_notification.dart';
 import 'package:termphin/services/terminal/terminal_text.dart';
 
 void main() {
+  group('scrollback', () {
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      await terminalSettings.load();
+    });
+
+    test('a new terminal keeps as many lines as the setting says', () async {
+      expect(SessionTerminal().terminal.maxLines, kTerminalScrollbackLines);
+      await terminalSettings.scrollbackLines.set(5000);
+      expect(SessionTerminal().terminal.maxLines, 5000);
+      expect(SessionTerminal(maxLines: 1000).terminal.maxLines, 1000);
+    });
+
+    test(
+      'a stored length outside the offered ones is brought back in',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          kTerminalScrollbackLinesPrefsKey: 9999999,
+        });
+        await terminalSettings.load();
+        expect(
+          terminalSettings.scrollbackLines.value,
+          kTerminalScrollbackChoices.last,
+        );
+      },
+    );
+  });
+
   Uint8List bytes(String text) => Uint8List.fromList(utf8.encode(text));
 
   String shownBy(SessionTerminal session) =>

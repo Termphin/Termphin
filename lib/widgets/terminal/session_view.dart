@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dartssh2/dartssh2.dart';
+import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -19,11 +20,13 @@ import '../../providers/ssh_connection_provider.dart';
 import '../../providers/ssh_session_manager_provider.dart';
 import '../../providers/transfer_queue_provider.dart';
 import '../../services/completion/command_completion.dart';
+import '../../services/platform/clipboard_image.dart';
 import '../../services/settings/sftp_settings.dart';
 import '../../services/settings/terminal_settings.dart';
 import '../../services/settings/upload_settings.dart';
 import '../../services/sftp/cancel_token.dart';
 import '../../services/sftp/download_service.dart';
+import '../../services/sftp/dropped_files.dart';
 import '../../services/sftp/sftp_remote_ops.dart';
 import '../../services/sftp/sftp_service.dart';
 import '../../services/sftp/transfer_queue.dart';
@@ -551,6 +554,22 @@ class SessionViewState extends ConsumerState<SessionView> {
   /// command line was touched while it ran.
   final _typing = TypingCounter();
 
+  /// Uploads an image pasted into the terminal - a screenshot on the
+  /// clipboard - the way fast upload sends a picked file, and types its path
+  /// in once it is there: a paste asked for exactly that. Only when nothing
+  /// moved meanwhile ([uploadPasteAction]); otherwise the path is offered.
+  Future<void> _uploadPastedImage(Uint8List png) => _upload(
+    [
+      LocalUpload(
+        name: clipboardImageName(DateTime.now()),
+        open: () => Stream.value(png),
+        length: () async => png.length,
+      ),
+    ],
+    uploadDestinationSetting.value,
+    pasteAsked: true,
+  );
+
   /// Paths of an upload that finished while this terminal was out of sight,
   /// offered at the cursor the next time it is shown. A later upload
   /// replaces them.
@@ -589,8 +608,9 @@ class SessionViewState extends ConsumerState<SessionView> {
   /// rather than smaller.
   Future<void> _upload(
     List<LocalUpload> picked,
-    UploadDestination destination,
-  ) async {
+    UploadDestination destination, {
+    bool pasteAsked = false,
+  }) async {
     final session = _manager.getSession(widget.sessionKey.$1);
     if (session == null || !mounted) return;
     final t = Translations.of(context);
@@ -731,7 +751,7 @@ class SessionViewState extends ConsumerState<SessionView> {
     );
     switch (uploadPasteAction(
       terminalShown: _terminalShown,
-      autoPaste: uploadAutoPasteSetting.value,
+      autoPaste: pasteAsked || uploadAutoPasteSetting.value,
       waited: waited,
       typedMeanwhile: _typing.serial != typedBefore,
     )) {
@@ -1559,7 +1579,7 @@ class SessionViewState extends ConsumerState<SessionView> {
     required ({int columns, int rows})? fixedSize,
     IconData? holderIcon,
   }) {
-    return TerminalPane(
+    final pane = TerminalPane(
       fixedSize: fixedSize,
       holderIcon: holderIcon,
       terminal: session.terminal,
@@ -1584,6 +1604,69 @@ class SessionViewState extends ConsumerState<SessionView> {
       },
       onLinkDetected: _handleLinkDetected,
       onKeyEvent: _onTerminalKey,
+      onPasteImage: live ? _uploadPastedImage : null,
+    );
+    if (!isDesktopPlatform) return pane;
+    final accent = context.colors.primary;
+    return DropTarget(
+      enable: live,
+      onDragEntered: (_) => setState(() => _dropHovering = true),
+      onDragExited: (_) => setState(() => _dropHovering = false),
+      onDragDone: (details) {
+        setState(() => _dropHovering = false);
+        unawaited(_uploadDropped(details.files));
+      },
+      child: Stack(
+        children: [
+          pane,
+          if (_dropHovering)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Container(
+                  key: const ValueKey('terminalDropTarget'),
+                  margin: const EdgeInsets.all(AppTheme.space8),
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.08),
+                    border: Border.all(color: accent, width: 1.5),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    Translations.of(context).terminal.dropToUpload,
+                    style: TextStyle(
+                      color: accent,
+                      fontSize: AppTheme.font14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Whether files are being dragged over the terminal right now.
+  bool _dropHovering = false;
+
+  /// Sends files dropped on the terminal up the way fast upload sends a
+  /// picked one, and types their paths in once they are there: dropping them
+  /// on this terminal asked for exactly that. Folders are left out, with a
+  /// word, since fast upload sends files; the file browser takes them whole.
+  Future<void> _uploadDropped(List<DropItem> items) async {
+    final dropped = droppedUploads(items);
+    if (dropped.folders > 0 && mounted) {
+      AppNotifications.info(
+        context,
+        Translations.of(context).terminal.dropFoldersSkipped,
+      );
+    }
+    if (dropped.uploads.isEmpty) return;
+    await _upload(
+      dropped.uploads,
+      uploadDestinationSetting.value,
+      pasteAsked: true,
     );
   }
 

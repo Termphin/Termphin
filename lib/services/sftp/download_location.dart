@@ -28,6 +28,16 @@ class DownloadFolder {
   final String label;
 }
 
+/// The folder a desktop picker answered with, as a path: it hands back a
+/// `file` URI there. Null when nothing was picked, or for an answer that is
+/// not a file URI, which no folder on this computer could be.
+@visibleForTesting
+String? desktopFolderPath(Uri? picked) {
+  if (picked == null || !picked.isScheme('file')) return null;
+  final path = picked.toFilePath();
+  return path.isEmpty ? null : path;
+}
+
 /// Where SFTP downloads land. Unset means the platform Downloads folder, which
 /// needs no permission on any Android this app supports.
 class DownloadLocation {
@@ -65,7 +75,7 @@ class DownloadLocation {
   Future<DownloadFolder?> pick() async {
     final DownloadFolder folder;
     if (isDesktopPlatform) {
-      final path = await FilePicker.getDirectoryPath();
+      final path = desktopFolderPath(await FilePicker.pickDirectory());
       if (path == null) return null;
       folder = DownloadFolder(uri: path, label: path);
     } else if (isAndroidPlatform) {

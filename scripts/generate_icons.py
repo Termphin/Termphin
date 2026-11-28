@@ -12,7 +12,8 @@ Produces:
   assets/icons/termphin_monochrome.png    512 silhouette, adaptive monochrome
   macos/Runner/Assets.xcassets/...        the AppIcon set, on Apple's macOS grid
   android/.../drawable-*/ic_stat_termphin.png  the notification small icon
-  assets/icons/tray.png                   64 tile, the tray icon
+  assets/icons/tray.png                   64 glyph in brand blue, no tile, the tray icon on Windows and Linux
+  windows/runner/resources/app_icon.ico   16-256 tile, the Windows app and taskbar icon
   assets/icons/tray_template.png          36 silhouette, the menu bar template
   android/.../drawable-*/splash_logo.png  the launch screen tile, Android 11 and older
   ios/Runner/Assets.xcassets/SplashLogo.imageset  the launch screen tile
@@ -126,6 +127,32 @@ def silhouette(size):
     )
 
 
+def tray_glyph(size):
+    """The mark alone in the tile's blue, the eye punched through it.
+
+    A tray icon sits straight on the taskbar or the panel, light or dark, with
+    no tile behind it: the white body of the logo would vanish on a light
+    taskbar, the blue of the tile reads on both.
+    """
+    full = LOGO_SVG.read_text()
+    body = re.search(r'<path d="(.*?)"', full, re.S).group(1)
+    eye = re.search(r"<rect x=.*?/>", full, re.S).group(0)
+    eye = re.sub(r'fill="[^"]*"', 'fill="black"', eye)
+    return (
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" '
+        f'viewBox="0 0 360 360">'
+        f'<defs><linearGradient id="tray" x1="0" y1="0" x2="0" y2="360" '
+        f'gradientUnits="userSpaceOnUse">'
+        f'<stop stop-color="#3795FB"/><stop offset="1" stop-color="#2A6FB8"/>'
+        f'</linearGradient></defs>'
+        f'<mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" '
+        f'width="360" height="360">'
+        f'<path d="{body}" fill="white"/>{eye}</mask>'
+        f'<rect width="360" height="360" fill="url(#tray)" mask="url(#cut)"/>'
+        f"</svg>"
+    )
+
+
 def padded(glyph_svg, size, scale):
     """The glyph centred on a transparent square at `scale` of the canvas."""
     inner = round(size * scale)
@@ -220,12 +247,15 @@ def main():
         tmp = pathlib.Path(tmp)
         tile, fg, bg = tmp / "tile.png", tmp / "fg.png", tmp / "bg.png"
         stat, mono = tmp / "stat.png", tmp / "mono.png"
+        tray, rounded_tile = tmp / "tray.png", tmp / "rounded.png"
         mac = tmp / "mac.png"
         render(full, 1024, tile)
         render(mac_icon(full), MAC_CANVAS, mac)
         render(padded(glyph, 1024, FOREGROUND_SCALE), 1024, fg)
         render(backdrop, 1024, bg)
         render(silhouette(1024), 1024, stat)
+        render(tray_glyph(1024), 1024, tray)
+        render(rounded(full), 1024, rounded_tile)
         # The themed-icon layer is the same silhouette as the notification
         # icon, but padded like the adaptive foreground rather than trimmed
         # like the status one - a launcher draws it through the same mask as
@@ -269,8 +299,21 @@ def main():
         for size in (16, 32, 64, 128, 256, 512, 1024):
             emit(mac, f"macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_{size}.png", size)
 
-        emit(tile, "assets/icons/tray.png", 64)
+        tray_dest = ROOT / "assets/icons/tray.png"
+        magick(
+            tray, "-trim", "+repage", "-resize", "58x58",
+            "-background", "none", "-gravity", "center",
+            "-extent", "64x64", "-strip", tray_dest,
+        )
+        written[str(tray_dest.relative_to(ROOT))] = 64
         emit_status("assets/icons/tray_template.png", 36)
+
+        ico = ROOT / "windows/runner/resources/app_icon.ico"
+        magick(
+            rounded_tile, "-background", "none",
+            "-define", "icon:auto-resize=256,128,64,48,32,24,16", ico,
+        )
+        written[str(ico.relative_to(ROOT))] = 256
 
     emit_splash(full, written)
 

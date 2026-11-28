@@ -12,6 +12,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   firebase_auth
   flutter_secure_storage_windows
   local_auth_windows
+  pasteboard
   screen_retriever_windows
   tray_kit
   url_launcher_windows

@@ -27,13 +27,98 @@ enum SessionActivityState {
   }
 }
 
+/// What a program in a session says it is doing over the terminal's
+/// program status protocol (OSC 7501): an AI coding agent working, blocked
+/// on the user, done or failed.
+enum ProgramState {
+  idle,
+  working,
+  done,
+  blocked,
+  error;
+
+  static ProgramState? fromName(Object? name) {
+    for (final state in values) {
+      if (state.name == name) return state;
+    }
+    return null;
+  }
+}
+
+/// What a blocked program needs from the user.
+enum ProgramBlock {
+  permission,
+  question,
+  auth;
+
+  static ProgramBlock? fromName(Object? name) {
+    for (final kind in values) {
+      if (kind.name == name) return kind;
+    }
+    return null;
+  }
+}
+
+/// A program's own account of itself: its [state], what a block is about,
+/// its identifier ([app], such as `claude-code`) and the line it gave.
+class ProgramStatus {
+  const ProgramStatus({
+    required this.state,
+    this.block,
+    this.app,
+    this.message,
+  });
+
+  final ProgramState state;
+  final ProgramBlock? block;
+  final String? app;
+  final String? message;
+
+  /// Reads the `program` an agent puts in a session's activity, or null for
+  /// anything that is not one.
+  static ProgramStatus? fromJson(Object? json) {
+    if (json is! Map) return null;
+    final state = ProgramState.fromName(json['state']);
+    if (state == null) return null;
+    String? text(Object? value) =>
+        value is String && value.trim().isNotEmpty ? value.trim() : null;
+    return ProgramStatus(
+      state: state,
+      block: ProgramBlock.fromName(json['kind']),
+      app: text(json['app']),
+      message: text(json['msg']),
+    );
+  }
+}
+
+/// A program's identifier as people know it: `claude-code` is Claude Code.
+/// One not known here is shown as it came.
+String programName(String app) => switch (app.toLowerCase()) {
+  'claude' || 'claude-code' || 'claudecode' => 'Claude Code',
+  'codex' || 'codex-cli' => 'Codex',
+  'amp' => 'Amp',
+  'goose' => 'goose',
+  'qwen' || 'qwen-code' => 'Qwen Code',
+  'opencode' => 'OpenCode',
+  'gemini' || 'gemini-cli' => 'Gemini CLI',
+  'copilot' || 'copilot-cli' => 'Copilot',
+  'crush' => 'Crush',
+  'droid' || 'factory-droid' => 'Droid',
+  'kiro' || 'kiro-cli' => 'Kiro',
+  'vibe' || 'mistral-vibe' => 'Mistral Vibe',
+  'antigravity' || 'antigravity-cli' || 'agy' => 'Antigravity',
+  _ => app,
+};
+
 /// A session's activity: its state and the program in front, named the way
-/// notifications name it - never what follows its first option.
+/// notifications name it - never what follows its first option - and what
+/// that program says about itself, when it says.
 class SessionActivity {
-  const SessionActivity({required this.state, this.command});
+  const SessionActivity({required this.state, this.command, this.program});
 
   final SessionActivityState state;
   final String? command;
+  final ProgramStatus? program;
 }
 
 /// One session an agent reported, as it appears in the sealed state.
@@ -133,6 +218,9 @@ OpenedPresence? openPresenceState(Uint8List key, String keyId, String state) {
                   state: activityState,
                   command: command is String && command.isNotEmpty
                       ? command
+                      : null,
+                  program: activity is Map
+                      ? ProgramStatus.fromJson(activity['program'])
                       : null,
                 ),
         ),

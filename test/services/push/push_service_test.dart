@@ -20,6 +20,97 @@ String decodedScript(String commandLine) {
 }
 
 void main() {
+  group('pushAccountStep', () {
+    PushAccountStep step(String? registered, String? current) =>
+        pushAccountStep(
+          enabled: true,
+          registeredUid: registered,
+          currentUid: current,
+        );
+
+    test('another account signing in throws the old token away first', () {
+      expect(step('old', 'new'), PushAccountStep.rotateAndRegister);
+    });
+
+    test('signing out throws the token away and registers nothing', () {
+      expect(step('old', null), PushAccountStep.rotate);
+    });
+
+    test('an install that never said whose token it has rotates once', () {
+      expect(step(null, 'new'), PushAccountStep.rotateAndRegister);
+      expect(step(null, null), PushAccountStep.rotate);
+    });
+
+    test('the same account keeps its token', () {
+      expect(step('uid', 'uid'), PushAccountStep.register);
+    });
+
+    test('a device registered nowhere just registers', () {
+      expect(step('', 'uid'), PushAccountStep.registerFresh);
+      expect(step('', null), PushAccountStep.nothing);
+    });
+
+    test('push switched off does nothing', () {
+      expect(
+        pushAccountStep(
+          enabled: false,
+          registeredUid: 'old',
+          currentUid: 'new',
+        ),
+        PushAccountStep.nothing,
+      );
+    });
+  });
+
+  group('agent hooks', () {
+    test('runs the agent\'s hooks command only when the agent is there', () {
+      final install = agentHooksCommand(install: true);
+      expect(install, startsWith('sh -c '));
+      expect(install, contains('termphin-agent'));
+      expect(install, contains('hooks install'));
+      expect(install, contains('[ -x'));
+      expect(install, contains('|| true'));
+      expect(agentHooksCommand(install: false), contains('hooks remove'));
+    });
+
+    test('runs it on Windows from the agent\'s folder there', () {
+      final script = decodedScript(agentHooksCommandWindows(install: true));
+      expect(
+        script,
+        contains(
+          r"Join-Path $env:USERPROFILE 'AppData\Local\termphin\bin\termphin-agent.exe'",
+        ),
+      );
+      expect(script, contains(r'& $bin hooks install'));
+      expect(script, contains('Test-Path'));
+      expect(
+        decodedScript(agentHooksCommandWindows(install: false)),
+        contains(r'& $bin hooks remove'),
+      );
+    });
+
+    test('counts it done once an agent took or gave up the hooks', () {
+      expect(
+        agentHooksAnswered('claude installed\ncodex absent\n', install: true),
+        isTrue,
+      );
+      expect(
+        agentHooksAnswered('claude absent\ncodex taken\n', install: true),
+        isFalse,
+      );
+      expect(
+        agentHooksAnswered('usage: termphin <command>\n', install: true),
+        isFalse,
+      );
+      expect(agentHooksAnswered('', install: true), isFalse);
+      expect(
+        agentHooksAnswered('claude removed\ncodex removed\n', install: false),
+        isTrue,
+      );
+      expect(agentHooksAnswered('claude installed\n', install: false), isFalse);
+    });
+  });
+
   group('unameSaysPosix', () {
     test('is true for the systems uname -s names', () {
       expect(unameSaysPosix('Linux\n'), isTrue);
