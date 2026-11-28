@@ -38,6 +38,7 @@ void main() {
       localDelay: delay,
       remoteDelay: delay,
       resumeGap: const Duration(hours: 1),
+      startRetry: delay,
     );
   });
 
@@ -277,5 +278,77 @@ void main() {
     await wait(delay);
 
     expect(cloud.fetches, 1);
+  });
+
+  test('an account that could not be read at sign-in is asked again, '
+      'without waiting for a relaunch', () async {
+    cloud.refusal = const SyncException(SyncFailure.network);
+    await coordinator.start();
+    expect(coordinator.active, isFalse);
+
+    cloud.refusal = null;
+    giveKey();
+    await wait(delay * 2);
+
+    expect(coordinator.active, isTrue);
+    expect(cloud.fetches, 1);
+  });
+
+  test('the network coming back retries a failed start at once', () async {
+    final patient = SyncCoordinator(
+      service: service,
+      reload: () async {},
+      startRetry: const Duration(hours: 1),
+    );
+    addTearDown(patient.dispose);
+    cloud.refusal = const SyncException(SyncFailure.network);
+    await patient.start();
+
+    cloud.refusal = null;
+    giveKey();
+    patient.networkRegained();
+    await wait(delay);
+
+    expect(patient.active, isTrue);
+  });
+
+  test('signing out drops a start waiting to be retried', () async {
+    cloud.refusal = const SyncException(SyncFailure.network);
+    await coordinator.start();
+    coordinator.stop();
+
+    cloud.refusal = null;
+    giveKey();
+    await wait(delay * 2);
+
+    expect(coordinator.active, isFalse);
+  });
+
+  test('an account whose Pro was not confirmed yet at sign-in starts once '
+      'it is', () async {
+    cloud.refusal = const SyncException(SyncFailure.notPro);
+    await coordinator.start();
+    expect(coordinator.activity.value, SyncActivity.paused);
+
+    cloud.refusal = null;
+    giveKey();
+    coordinator.proConfirmed();
+    await wait(delay);
+
+    expect(coordinator.active, isTrue);
+    expect(cloud.fetches, 1);
+  });
+
+  test('Pro confirmed starts nothing a turned-off sync left ended', () async {
+    giveKey();
+    await coordinator.start();
+    await cloud.deleteAll('u1');
+    await coordinator.syncNow();
+
+    coordinator.proConfirmed();
+    await wait(delay);
+
+    expect(coordinator.ended.value, SyncFailure.turnedOff);
+    expect(coordinator.active, isFalse);
   });
 }

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 
@@ -40,6 +41,7 @@ class SyncCoordinator {
     this.localDelay = const Duration(seconds: 4),
     this.remoteDelay = const Duration(seconds: 2),
     this.resumeGap = const Duration(minutes: 1),
+    this.startRetry = const Duration(seconds: 5),
     DateTime Function()? now,
   }) : _service = service,
        _reload = reload,
@@ -52,6 +54,12 @@ class SyncCoordinator {
   final Duration localDelay;
   final Duration remoteDelay;
   final Duration resumeGap;
+
+  /// How long [start] waits before asking again when the account could not
+  /// be read, doubled after each failure up to 32 times as long. Signing in
+  /// on a new device is when that happens most - the network or the token
+  /// not ready yet - and nothing else would start sync until a relaunch.
+  final Duration startRetry;
 
   final activity = ValueNotifier<SyncActivity>(SyncActivity.idle);
 
@@ -70,6 +78,8 @@ class SyncCoordinator {
   bool _again = false;
   Future<SyncReport?>? _running;
   Timer? _timer;
+  Timer? _startTimer;
+  int _startFailures = 0;
   StreamSubscription<void>? _remote;
   String? _watching;
 
@@ -77,15 +87,29 @@ class SyncCoordinator {
   bool get active => _active;
 
   /// Turns automatic sync on if this device can sync, and syncs. Called at
-  /// launch, on sign-in, and after a passphrase is set or entered.
+  /// launch, on sign-in, and after a passphrase is set or entered. An
+  /// account that cannot be read is asked again after [startRetry]; one
+  /// without Pro pauses until [proConfirmed].
   Future<void> start() async {
     ended.value = null;
+    _startTimer?.cancel();
+    _startTimer = null;
     SyncState state;
     try {
       state = await _service.state();
+    } on SyncException catch (error) {
+      if (error.failure == SyncFailure.notPro) {
+        stop();
+        activity.value = SyncActivity.paused;
+      } else {
+        _retryStart();
+      }
+      return;
     } catch (_) {
+      _retryStart();
       return;
     }
+    _startFailures = 0;
     if (state != SyncState.ready) {
       stop();
       return;
@@ -103,6 +127,9 @@ class SyncCoordinator {
     running.value = false;
     _timer?.cancel();
     _timer = null;
+    _startTimer?.cancel();
+    _startTimer = null;
+    _startFailures = 0;
     unawaited(_remote?.cancel());
     _remote = null;
     _watching = null;
@@ -118,12 +145,22 @@ class SyncCoordinator {
   /// The device is online again. A run that failed meanwhile is tried
   /// again at once, rather than waiting for the next edit to send it.
   void networkRegained() {
+    if (_startNowIfRetrying()) return;
     if (!_active || activity.value != SyncActivity.failed) return;
     _schedule(Duration.zero);
   }
 
+  /// The account was confirmed to have Pro. A device paused for the want of
+  /// it - often only because its first sync after sign-in ran before the
+  /// purchase reached the account - starts again.
+  void proConfirmed() {
+    if (_active || activity.value != SyncActivity.paused) return;
+    unawaited(start());
+  }
+
   /// The app came back to the foreground.
   void resumed() {
+    if (_startNowIfRetrying()) return;
     if (!_active) return;
     final last = _service.lastSynced.value;
     if (last != null && _now().difference(last) < resumeGap) return;
@@ -142,6 +179,21 @@ class SyncCoordinator {
     final run = _run();
     _running = run;
     return run;
+  }
+
+  /// Tries a [start] that could not read the account at once, rather than
+  /// after its wait - for the network coming back or the app returning.
+  /// False when none is waiting.
+  bool _startNowIfRetrying() {
+    if (_active || _startTimer == null) return false;
+    unawaited(start());
+    return true;
+  }
+
+  void _retryStart() {
+    final delay = startRetry * (1 << min(_startFailures, 5));
+    _startFailures++;
+    _startTimer = Timer(delay, () => unawaited(start()));
   }
 
   void _schedule(Duration delay) {
