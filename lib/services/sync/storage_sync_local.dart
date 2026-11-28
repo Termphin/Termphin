@@ -1,4 +1,5 @@
 import 'package:clock/clock.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../models/known_host.dart';
 import '../../models/profile_group.dart';
@@ -23,6 +24,15 @@ abstract final class SyncKind {
   static const knownHost = 'knownHost';
   static const presenceKey = 'presenceKey';
 }
+
+/// What changes on this device besides the machine, key, snippet and group
+/// lists and still has to reach the account: the synced preferences and the
+/// presence keys. A key learned on connecting used to wait for the next
+/// unrelated sync, so another device showed the machine online for minutes
+/// without being able to read its sessions.
+Listenable syncedLocalChanges({PresenceKeyStore? presence}) => Listenable.merge(
+  [...SettingsSync.listenables, (presence ?? presenceKeys).changes],
+);
 
 /// This device's machines, keys, snippets, groups, pinned host keys, the
 /// keys that open its machines' live status ([PresenceKeyStore]) and the

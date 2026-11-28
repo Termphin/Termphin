@@ -7,6 +7,7 @@ import '../../models/ssh_profile.dart';
 import '../../providers/anonymize_provider.dart';
 import '../../providers/groups_provider.dart';
 import '../../providers/live_presence_provider.dart';
+import '../../providers/sync_provider.dart';
 import '../../services/app/identity_anonymizer.dart';
 import '../../theme/theme.dart';
 import '../ui/app_card.dart';
@@ -89,7 +90,11 @@ class ProfileCard extends ConsumerWidget {
         ? IdentityAnonymizer.host(profile.id)
         : profile.host;
     final t = Translations.of(context);
-    final online = ref.watch(livePresenceProvider)[profile.id]?.online ?? false;
+    final presence = ref.watch(livePresenceProvider)[profile.id];
+    final online = presence?.online ?? false;
+    final awaitingKey =
+        online && presence!.sessions == null && ref.watch(syncRunningProvider);
+    final loading = isLoadingSessions || awaitingKey;
 
     return AppCard.segment(
       first: true,
@@ -135,7 +140,7 @@ class ProfileCard extends ConsumerWidget {
                   overflow: TextOverflow.ellipsis,
                   style: context.colors.uiStyle,
                 ),
-                if (isLoadingSessions) ...[
+                if (loading) ...[
                   const SizedBox(height: AppTheme.space4),
                   Row(
                     children: [
@@ -157,7 +162,8 @@ class ProfileCard extends ConsumerWidget {
                           ),
                         ),
                       ),
-                      if (onCancelLoadSessions != null) ...[
+                      if (isLoadingSessions &&
+                          onCancelLoadSessions != null) ...[
                         const SizedBox(width: AppTheme.space6),
                         InkResponse(
                           key: const ValueKey('cancelLoadSessions'),

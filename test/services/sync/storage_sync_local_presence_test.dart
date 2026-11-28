@@ -57,4 +57,17 @@ void main() {
     await local.delete(SyncKind.profile, 'profile-1');
     expect(await presence.keyFor('profile-1'), isNull);
   });
+
+  test('a key learned here asks for a sync, so other devices can read the '
+      'machine\'s sessions without waiting for an unrelated one', () async {
+    var changes = 0;
+    final sources = syncedLocalChanges(presence: presence);
+    void count() => changes++;
+    sources.addListener(count);
+    addTearDown(() => sources.removeListener(count));
+
+    await presence.remember('profile-1', newPresenceKey());
+
+    expect(changes, 1);
+  });
 }
